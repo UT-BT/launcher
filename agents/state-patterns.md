@@ -1,73 +1,61 @@
----
-doc: state-patterns
-read_when:
-  - "adding or changing a primary page's state, filters, sort, columns, or pagination"
-  - "deciding where a piece of UI state lives (per-visit vs persisted vs cache vs account-synced)"
-  - "adding a localStorage key, a filter preset, or tutorial state"
-  - "making a preference follow the signed-in user across devices"
-  - "wiring detail-page transient UI (tabs/search/scroll) that must survive Back/Forward"
-  - "polling server state on an interval, or following a live pick/ban session"
-  - "holding a pick/ban captain's selection, optimistic lock-in or refusal message"
-  - "sending the pick/ban selection preview (hover), or ordering pick/ban commands so each carries a fresh version"
-  - "holding a pick/ban manager's act-for selection, command in flight, confirmation or refusal"
-  - "editing a complete pick/ban's final maps (the Edit final draft and its checks)"
-keywords: [usePageState, useNavState, localStorage, PREF_KEYS, caches, querySig, presets, tutorial, persistence, controlled-page, userState, synced, badges, seen, polling, createPoller, pollOnStart, visibility, usePickBanSession, usePickBanView, mergePickBanState, structural sharing, clock offset, reconnecting, captainPlay, useCaptainPlay, withCaptainPlay, captainDockOf, optimistic lock-in, hover, hoverOf, createHoverSender, HOVER_DEBOUNCE_MS, selection preview, command queue, managerDock, useManagerDock, withManagerPlay, managerDockOf, confirmation, Reopen, editFinal, finalDraftOf, finalEditorOf, openFinalEditor, Edit final, Stream tab, StreamTabContext, event.streamAs, event.streamPanel, kit folder, deskPollEnvironment, insideObs, OBS, sceneCadence, sidebarCollapsed, sidebarPreference]
-provides: "the state tiers (incl. the account-synced tier), the localStorage key convention, how pages are controlled + hoisted, and the polling live-data tier"
-not_here:
-  - "the navigation stack / navigate() / renderView wiring → navigation.md"
-  - "the shared components used (FilterPresetsMenu, ColumnsMenu, Tutorial) → shared-components.md"
-sections: [controlled-pages-with-hoisted-state, navigation-history-per-entry-ui-state, account-synced-state, localstorage-persistence, filter-presets, tutorial-state, favorites, polling-live-data, naming-conventions]
-last_verified: 2026-10-30
-verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts, app/utils/userState.ts, app/utils/poller.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/usePickBanSession.ts, app/components/pages/events/pickban/mergePickBanState.ts, app/components/pages/events/pickban/captainPlay.ts, app/components/pages/events/pickban/useCaptainPlay.ts, app/components/pages/events/pickban/managerDock.ts, app/components/pages/events/pickban/useManagerDock.ts, app/components/pages/events/pickban/editFinal.ts, app/components/pages/events/pickban/pickBanMotionPreference.ts, app/components/pages/events/pickban/pickBanSoundPreference.ts, app/components/pages/MatchPickBanPage.tsx, app/components/navigation/nav-items.ts, app/utils/eventAttention.ts, app/components/pages/events/stream/StreamTab.tsx, app/components/pages/events/stream/StreamTabContext.tsx, app/components/pages/events/stream/streamDesk.ts, app/components/pages/events/stream/panels/kit/kitFolder.ts, app/components/stream/data/sceneCadence.ts, app/components/stream/data/streamHotStateStore.ts, app/components/stream/data/sceneReadStore.ts, app/components/pages/events/stream/streamPanels.ts, app/components/pages/events/stream/useStreamKitState.ts, app/components/pages/events/stream/panels/cams/camToolHooks.ts, lib/main/config.ts, app/seasonal/preferences.ts, app/seasonal/SeasonProvider.tsx, app/components/layout/sidebarPreference.ts]
----
-
 # State patterns
 
-How user-facing UI state is structured, hoisted, and persisted across the app.
-New pages must follow these patterns.
+Where UI state lives and how it is hoisted, restored and persisted: the state tiers,
+controlled primary pages, per-entry UI state, the account-synced store, the localStorage
+key convention, filter presets and tutorial state, and interval polling. Read it before
+adding page state, a stored preference or a poll. The history stack itself is in
+[navigation.md](navigation.md).
 
-## Controlled pages with hoisted state
+## The tiers
 
-Every primary page (`MapsPage`, `ServerBrowserPage`, etc.) is a **controlled
-component**. The page receives `state`, `onStateChange`, `caches`,
-`onCachesChange` as props. In `Main.tsx`, `caches` are shared singletons, but
-`state`/`onStateChange` are wired through **`usePageState`** (not a plain
-`useState`) so the page's state is stored **per navigation-history entry**.
+| Tier | Lives in | Survives | Use for |
+|---|---|---|---|
+| Per-entry page state | `usePageState` in `Main.tsx` | Back/Forward to that entry; its pref fields also restarts | a primary page's query state (search, filters, sort, page, scroll) and its preferences |
+| Page caches | `useState` singletons in `Main.tsx`, passed as `caches` | the session, shared by every entry | fetched data a revisit paints instantly |
+| Per-entry UI bag | `useNavState(key, default)` | Back/Forward to that entry | a detail page's transient UI (tab, search, sort, page, scroll, expansion) |
+| Component state | `useState` | until unmount | everything else; a view change unmounts the page |
+| Account-synced | `app/utils/userState.ts` | restarts and devices, when signed in | whitelisted preferences that follow the account |
+| Device-local | `localStorage`, `utbt:*` keys | restarts, this device only | preferences that stay with the device |
+| Live data | `createPoller` | while its owner is mounted | server state followed on an interval |
 
-**Why:** a page's query state (search/filters/sort/page/scroll) belongs to the
-*visit*, not the app. Going back/forward restores that entry's exact state; a
-**fresh** open (sidebar click, opening something new) starts from defaults.
-Preference fields (column layout, page-size, filters-panel-open) are the
-exception — they persist across fresh opens and restarts via localStorage. Data
-caches survive (shared singleton) so revisiting a page doesn't refetch — but only
-for data actually hoisted into that page's `caches`. Anything a page **or one of its
-children** keeps in local `useState` is refetched on every visit, because
-`renderView()` unmounts the page on a view change (see `agents/navigation.md`). A
-child that fetches for itself therefore needs its slice threaded through the page's
-`caches` too — `Home` does this for the Medal Hunt rows, the community counts and
-the first page of maps-to-review.
+A fresh `navigate()` gives both per-entry tiers their defaults; Back/Forward restores them.
 
-**Caches are shared, query state is per-entry — so a cache holds only the *last*
-query's rows.** For server-queried/paginated pages (e.g. `PlayersPage`,
-`CapItAllPage`), store the query signature the rows were fetched for as
-`caches.querySig` and gate the skeleton on it:
-`showSkeleton = caches.querySig !== currentQuerySig || (loading && rows.length === 0)`.
-Otherwise a fresh visit (query reset) briefly flashes the previous query's rows
-before the refetch lands. Pages that filter a full client-side cache
-(`WorldRecordsPage`, `ServerBrowserPage`, `MapsPage` browse mode, Achievements)
-don't need this — their filtering is synchronous, so there's no stale gap.
+## Controlled primary pages
 
-`usePageState(storageKey, default, prefKeys, getEntryState, updateEntryState)`
-returns the same `[state, setState]` shape as `useState`, so page wiring in
-`renderView` is unchanged. It: (a) stores the full page state in the active
-entry's bag (fresh entry = `{...default, ...persistedPrefs}`, Back/Forward =
-restored snapshot); (b) mirrors only `prefKeys` to localStorage. Define a page's
-`*_PREF_KEYS` in `Main.tsx` next to its `*_STORAGE_KEY`. A page with no prefs
-(e.g. Achievements) passes `[]` and persists nothing.
+Every primary page (`MapsPage`, `ServerBrowserPage`, …) is controlled: it receives
+`state`, `onStateChange`, `caches`, `onCachesChange` from `Main.tsx`.
+
+- **State is per visit.** `state` comes from `usePageState`, stored on the active history
+  entry, so Back/Forward restores that visit's query and a fresh open starts from defaults.
+  Preference fields (column layout, page size, filters-panel open) are the exception: they
+  carry across fresh opens and restarts through localStorage.
+- **Caches are shared.** `caches` is one singleton per page in `Main.tsx`, so a revisit
+  paints without waiting; the page still revalidates on mount
+  ([navigation.md](navigation.md), freshness). Only data hoisted into `caches` survives:
+  `renderView()` unmounts the page on a view change, so anything the page or any child
+  keeps in `useState` refetches on every visit. A child that fetches for itself needs its
+  slice threaded through the page's `caches` (Home does this for the Medal Hunt rows, the
+  community counts and the first page of maps to review).
+- **A shared cache holds only the last query's rows.** On a server-queried, paginated page
+  (`PlayersPage`, `CapItAllPage`, `WorldRecordsPage`) store the query signature the rows
+  were fetched for as `caches.querySig` and gate the skeleton on it:
+  `showSkeleton = !error && (caches.querySig !== querySig || (loading && rows.length === 0))`.
+  Without it a fresh visit flashes the previous query's rows before the refetch lands. A
+  page that filters a client-side list synchronously (`ServerBrowserPage`) has no stale gap
+  and needs no signature.
+
+`usePageState(storageKey, default, prefKeys, getEntryState, updateEntryState)` returns a
+`useState`-shaped tuple. It keeps the full page state in the active entry's bag (a fresh
+entry starts as `{ ...default, ...persistedPrefs }`) and mirrors only `prefKeys` to
+localStorage under `storageKey`. A page without prefs passes `[]` and persists nothing.
 
 ### Page shape
 
+State and cache types and their defaults go in `<Page>.types.ts`, because `Main.tsx` may
+import only types from a lazily loaded page module (`pageLoaders.test.ts` enforces it):
+
 ```tsx
+// FooPage.types.ts
 export interface FooPageState {
   filters: FilterState
   sortBy: FooSortField
@@ -77,173 +65,120 @@ export interface FooPageState {
   columnOrder: FooColumnId[]
   scrollTop: number
 }
-
 export interface FooPageCaches {
   items: Foo[]
   lastRefreshIso: string | null
 }
-
 export const DEFAULT_FOO_STATE: FooPageState = { ... }
 export const DEFAULT_FOO_CACHES: FooPageCaches = { ... }
 
+// FooPage.tsx
 interface FooPageProps {
   state: FooPageState
   onStateChange: (updater: (prev: FooPageState) => FooPageState) => void
   caches: FooPageCaches
   onCachesChange: (updater: (prev: FooPageCaches) => FooPageCaches) => void
-  // ...page-specific props
 }
 ```
 
-### Main.tsx wiring
+### `Main.tsx` wiring
 
 ```tsx
 const FOO_STATE_STORAGE_KEY = 'utbt:fooState:v1'
 const FOO_PREF_KEYS: readonly (keyof FooPageState)[] = ['columnVisibility', 'columnOrder']
+const FooPage = lazy(PAGE_LOADERS.foo)
+
 const [fooState, setFooState] = usePageState(FOO_STATE_STORAGE_KEY, DEFAULT_FOO_STATE, FOO_PREF_KEYS, getEntryState, updateEntryState)
 const [fooCaches, setFooCaches] = useState<FooPageCaches>(DEFAULT_FOO_CACHES)
 
-// in renderView (unchanged — usePageState returns a useState-shaped tuple):
 case 'foo':
   return <FooPage state={fooState} onStateChange={setFooState} caches={fooCaches} onCachesChange={setFooCaches} />
 ```
 
-## Navigation history & per-entry UI state
+The renderView case, sidebar item and loader entry are covered by skill: add-data-page.
 
-There are **three** state tiers. Know which one a given piece of state belongs in.
+## Per-entry UI state (`useNavState`)
 
-1. **Per-entry page state** (above, via `usePageState`). Primary-page query state
-   (search/filters/sort/page/scroll) lives in the active history entry — fresh open
-   resets, Back/Forward restores. Only pref fields (columns/page-size/panel) persist
-   to `utbt:*:v1`. Caches are shared singletons in `Main.tsx`.
-2. **Navigation history stack** — `entries: NavEntry[]` + `cursor` in `Main.tsx`,
-   in-memory only. This is the *navigation* tier; its mechanics (the single
-   `navigate()` funnel, `back()`/`forward()`, `HISTORY_CAP`, detail keying) live in
-   `agents/navigation.md`. What matters for state: tier 1 (per-entry page state)
-   and tier 3 (per-entry UI bag) are both keyed to the active entry, so
-   Back/Forward restore them; a fresh `navigate()` starts from defaults.
-3. **Per-entry UI-state bag** — `useNavState(key, default)` from
-   `app/components/navigation/useNavState.ts`. Reads/writes a key on the **active
-   history entry's** `state` bag, so the value survives Back/Forward to that entry
-   while staying scoped to that single visit. Use for **detail-page** transient UI
-   state (search/sort/active-tab/pagination/scroll/expansion) that previously died
-   on unmount (e.g. the player-profile World Records tab search).
+`useNavState(key, default)` (`app/components/navigation/useNavState.ts`) reads and writes
+one key on the active history entry's bag. Use it for a detail page's transient UI, and for
+UI inside a page-view that should come back on Back but not on a fresh open.
 
 ```tsx
-// detail sub-component
-const [query, setQuery] = useNavState('wrs.query', '')      // key convention: <card>.<field>
-const [sortDir, setSortDir] = useNavState<'asc'|'desc'>('wrs.sortDir', 'desc')
+const [query, setQuery] = useNavState('wrs.query', '')
+const [sortDir, setSortDir] = useNavState<'asc' | 'desc'>('wrs.sortDir', 'desc')
 ```
 
-Rules for `useNavState`:
-
-- **Value setter, not a functional updater.** `setX(v)` only — `setX(prev => …)`
-  does NOT work. Use the in-scope value: `setSortDir(sortDir === 'asc' ? 'desc' : 'asc')`.
-- **Don't store fetched data** in the bag — only small primitives. Detail data
-  refetches on remount (the memory tradeoff: no DOM/data keep-alive).
-- **Debounced search:** keep `queryRaw` as plain local `useState` (fast typing,
-  local re-render), persist only the debounced `query`, and **seed `queryRaw` from
-  the persisted value**: `const [query,setQuery] = useNavState('x.query',''); const
-  [queryRaw,setQueryRaw] = useState(query)`. Otherwise the debounce overwrites the
-  restored value with empty.
-- **Pagination:** pass the controlled `page`/`pageSize`/`onPageChange`/
-  `onPageSizeChange` props of `usePaginatedQuery` (in `app/hooks/useAsync.ts`) from
-  `useNavState`. The hook skips its first-render `setPage(1)` reset so a restored
-  page isn't clobbered on remount.
-- **Detail views remount per visit.** In `Main.tsx`, the three detail cases carry
-  `key={entry.id}` so a new param refetches and `useNavState` re-reads the right
-  bag. Page-type cases are intentionally NOT keyed (one reused instance).
-- Scroll: use `useNavScrollRestore(ref, loadingDone)` for detail scroll containers.
-- The event page's Stream tab (`events/stream/StreamTab.tsx`) keeps two keys:
-  `event.streamAs` (the streamer a manager is operating as, `string | null`) and
-  `event.streamPanel` (the panel the streamer last clicked: `match`, `cams`, `score`, `studio`,
-  `setup` or `guide`; default `null`, meaning "nothing chosen yet"). Both restore on Back/Forward
-  and start from defaults on a fresh open. `?tab=stream` only selects the tab.
-  **The default-panel rule** is `initialStreamPanel(remembered, kit)` (`streamPanels.ts`, pure): a
-  valid remembered id wins; an old id (`show`, `channel`, `kit`, `scenes`) or `null` falls through to
-  the kit state. Kit state `loading` opens nothing (the tab reads "Loading your stream desk…" with no
-  panel pressed, so it never flashes one panel then another); `none` (no kit downloaded yet) opens
-  Setup; `downloaded` and `unknown` (the kit read failed) open Match. The kit state comes from
-  `useStreamKitState(eventSlug, streamerId, accessToken, needed)` (`useStreamKitState.ts`): it reads the
-  kit info of the streamer being operated as, only while nothing is remembered, once per event and
-  streamer. The resolved default is never written to nav state: only a click counts as remembered.
+- **Keys** are `<area>.<field>`: a card prefix on detail pages (`wrs.query`), `event.*` on
+  the event page, `admin.<section>.<field>` in admin sections.
+- **The setter takes a value only.** `setX(prev => …)` stores the function. Compute from
+  the in-scope value: `setSortDir(sortDir === 'asc' ? 'desc' : 'asc')`.
+- **Small values only**, never fetched data: detail data refetches on remount.
+- **Debounced search:** keep the raw input in plain `useState` seeded from the stored
+  value, and store only the debounced value:
+  `const [query, setQuery] = useNavState('x.query', ''); const [queryRaw, setQueryRaw] = useState(query)`.
+  Seeding from anything else lets the debounce overwrite the restored query with empty.
+- **Pagination:** pass `page` / `pageSize` / `onPageChange` / `onPageSizeChange` from
+  `useNavState` into `usePaginatedQuery` (`app/hooks/useAsync.ts`). It resets to page 1 only
+  when its `deps` change after mount, so a restored page survives the remount.
+- **Defaults derived from data:** store `null` and resolve the default at render; write
+  only an explicit user choice. "No choice yet" then stays distinguishable from a choice,
+  and the default can follow the data (`event.scheduleView`, `event.streamPanel`).
+- **Scroll:** `useNavScrollRestore(ref, loadingDone, key = 'scrollTop')` returns an
+  `onScroll` handler for the container; it restores once `loadingDone` is true. Give a
+  second scroll container on the same entry its own key.
+- Detail cases in `renderView` carry `key={entry.id}`, so each visit remounts and reads its
+  own bag ([navigation.md](navigation.md)).
 
 ## Account-synced state (`app/utils/userState.ts`)
 
-A fourth tier: preferences that follow the **signed-in account across devices**
-(the same person uses the desktop app and the website). The store is a synced
-localStorage mirror — reads are synchronous, writes hit localStorage immediately,
-and for whitelisted keys the change is also pushed to the user's server-side
-state (debounced ~1.5 s, dirty-keys-only shallow merge, flushed on
-`pagehide`/tab-hidden). Signed out or offline it behaves exactly like plain
-localStorage.
+Preferences that follow the signed-in account across the desktop app and the website.
+The store is a localStorage mirror with a server copy:
 
-API: `getSynced(key, fallback)` / `setSynced(key, value)` /
-`subscribeSynced(key, cb)`; `initUserStateSync(token, accountId)` runs at
-sign-in (`app/app.tsx`) — server values win and overwrite localStorage
-(subscribers fire) except for keys dirtied while the fetch was in flight, and
-local-only values upload once as a migration; `stopUserStateSync()` on
-sign-out. The store remembers which account last synced
-(`utbt:syncAccount:v1`): signing in as a different account purges all synced
-keys first, so one machine's leftovers never upload into another account.
-Failed flushes retry with exponential backoff (1.5 s → 60 s cap); the
-`pagehide` flush drops `keepalive` for blobs near the 64 KB keepalive quota.
+- `getSynced(key, fallback)` reads synchronously; `setSynced(key, value)` writes memory and
+  localStorage at once and notifies subscribers (a no-op when the value serialises the
+  same); `subscribeSynced(key, cb)` returns the unsubscribe.
+- When signed in and the key is whitelisted, a write marks it dirty and a debounced
+  (1.5 s) flush sends only the dirty keys, which the server merges shallowly. The flush
+  also runs on `pagehide` and when the tab is hidden, using `keepalive` unless the body is
+  too large for the keepalive quota. Failed flushes retry with exponential backoff capped at
+  60 s. Signed out or offline it is plain localStorage.
+- `initUserStateSync(token, discordId)` runs at sign-in (`app/app.tsx`). If this device
+  last synced a different account (`utbt:syncAccount:v1`), every synced key is purged
+  first, so one account's values never upload into another. Server values then win and
+  overwrite local ones (subscribers fire), except keys written while the fetch was in
+  flight; whitelisted local values the server lacks upload once. `stopUserStateSync()` at
+  sign-out flushes and stops.
 
 Rules:
 
-- **Which keys sync is a whitelist** (`isSyncedKey` in `userState.ts`): theme,
-  tutorial seen-flags, server presets, Maps/World-Records filter presets, admin
-  `:filters:v1` presets, Medal Hunt dismissals, the display-timezone override,
-  the pick/ban page's sound (on/off and volume) and Animations preferences.
-  Map and server favorites are NOT here — each is its own account resource on
-  the API (see Favorites below).
-  Everything else (column layout, page sizes, panel-open flags, ui-scale, replay
-  volume, the collapsed sidebar rail, auth) is **deliberately device-local** — layout preferences differ
-  between a 4K desktop and a phone. Add a key to the whitelist only if the user
-  would expect it to follow their account.
-- Consumers go through the store's helpers, never raw
-  `localStorage.getItem/setItem`, for any whitelisted key — and should
-  `subscribeSynced` if a server value arriving after mount must re-render.
-- Values must be JSON round-trippable; keys keep the `utbt:<thing>:v<n>`
-  convention (bump the version to abandon a bad shape — old versions just stop
-  syncing).
-- **"New since last visit" markers are NOT in this store.** The sidebar badge
-  counts for Maps / World Records / Events / News are computed **server-side**
-  against per-account seen markers. `Main.tsx` fetches them at boot + on window
-  focus, `markViewed` (fired from `navigate()`/deep links) optimistically zeroes
-  a badge and advances the marker. Signed-out users get no badges. See
-  `agents/navigation.md` (sidebar-new-badges) and `agents/data-sources.md` for
-  the endpoints.
-  The Events badge is an exception. When the per-event to-do total (time
-  offers my team must answer, schedulable matches with no offer yet, pending
-  team invitations) is above zero, it overrides the seen-marker count. It has
-  no "mark as seen" step and clears on its own once the underlying condition
-  is gone. My team's open picks & bans lobby is not counted. It shows as a
-  separate green live dot with the same no-seen-marker rule. The cup link,
-  whose destination is its event's detail page, gets the same kind of badge,
-  scoped to just that event's own slug and also with no seen marker; badge
-  resolution — including this rule — is one
-  pure function in `app/components/navigation/nav-items.ts`, not state kept
-  here. Visiting the cup page never clears the Events "new events" count. None
-  of this is in this store either — `Main.tsx` holds the underlying attention
-  data as in-memory state, refreshed by the shell's attention poll (see
-  polling-live-data). See `agents/data-sources.md` for the derivation.
+- **The whitelist is `isSyncedKey`** in `userState.ts`: a set of exact keys plus two prefix
+  rules, `utbt:homeMedalHuntHidden:v1:<userId>` and `utbt:admin:<section>:filters:v1`. It
+  holds what a person expects to follow them (theme, tutorial seen-flags, filter presets,
+  display timezone, seasonal-themes toggle, pick/ban sound and animations, Medal Hunt
+  dismissals). Layout and device choices (columns, page sizes, panel flags, `ui-scale`,
+  replay volume, the collapsed rail, the stream kit folder) stay device-local on purpose: a
+  4K desktop and a phone want different layouts. Auth never syncs.
+- Read and write a whitelisted key only through the store helpers, never raw
+  `localStorage`, and `subscribeSynced` wherever a value arriving after mount (the sign-in
+  sync) must re-render. `useSyncedPresets` and `useTutorialState` already do.
+- Values must round-trip through JSON. Keys follow the localStorage convention below;
+  bumping the version abandons a bad shape (the old key simply stops syncing).
+- Not in this store: map and server favorites are their own account resources
+  ([api.md](api.md)); the sidebar's "new since last visit" counts are server-side and the
+  event attention data is in memory in `Main.tsx` ([navigation.md](navigation.md)).
 
-## localStorage persistence
+## localStorage
 
-### Conventions
-
-- **Versioned keys:** `utbt:<thing>:v<n>`. Bump version when shape changes
-  incompatibly.
-- **Persist preferences, not query state or caches.** For primary pages, only
-  pref fields persist (handled by `usePageState`/`loadPrefs` in `Main.tsx`).
-  Query state is per-entry; caches refetch per launch. Other persisted state
-  (presets, favorites, tutorial seen-flags) goes through the account-synced
-  store above when whitelisted, plain localStorage otherwise.
-- **Merge over defaults on load.** Persisted JSON may be missing fields you've
-  added since (or have stale fields you've removed). `loadPrefs` does this for
-  page prefs (picks `prefKeys`, falls back to the default for missing keys). Any
-  other direct loader should merge over its default the same way, e.g.:
+- **Key convention:** `utbt:<thing>:v<n>`, `<thing>` in camelCase, sub-areas separated by
+  colons (`utbt:admin:<section>:cols:v2`), `n` an integer bumped on any incompatible shape
+  change. Abandoned versions are left behind, not migrated.
+- **Persist preferences, not query state or caches.** Page prefs go through
+  `usePageState`; other persisted values go through the synced store when whitelisted and
+  plain localStorage otherwise. (`utbt:patreon:v1` is a deliberate exception: a 1 h TTL
+  cache of patron tiers.)
+- **Merge over defaults on load,** since stored JSON may lack fields added since or carry
+  removed ones, and guard every access: storage can be blocked or throw. `loadPrefs` in
+  `Main.tsx` does both for page prefs. A direct loader looks like:
 
 ```ts
 function loadFoo(): Foo {
@@ -257,555 +192,94 @@ function loadFoo(): Foo {
 }
 ```
 
-### Current storage keys
+**Finding keys.** `grep -rn "utbt:" app` lists them (it also hits window event names such
+as `utbt:login-required`). Page pref keys are the `*_STATE_STORAGE_KEY` constants in
+`Main.tsx`. Facts the use site doesn't show:
 
-The `utbt:*State:v1` keys below are written by `usePageState` and hold the
-page's **preference fields only** (the `*_PREF_KEYS` subset), not full query
-state. **Synced?** = whitelisted in the account-synced store (follows the
-signed-in user across devices); everything else is device-local.
-
-| Key | Owner | Synced? | Contents |
-|---|---|---|---|
-| `utbt:mapsPageState:v1` | `Main.tsx` (`usePageState`) | no | Maps prefs: `filtersPanelOpen`, `pageSizePreference` |
-| `utbt:mapsColumns:v1` | `MapsPage` | no | `Record<ColumnId, boolean>` |
-| `utbt:mapsColumnOrder:v1` | `MapsPage` | no | `ColumnId[]` |
-| `utbt:mapsPresets:v1` | `MapsPage` (via `filterPresets.ts`) | **yes** | `MapsPreset[]` |
-| `utbt:mapsPageTutorial:v1` | `MapsPage` (via hook) | **yes** | `{ seen, version }` |
-| `utbt:serversState:v1` | `Main.tsx` (`usePageState`) | no | Servers prefs: column visibility/order, `filtersPanelOpen` |
-| `utbt:serverPresets:v1` | `Main.tsx` | **yes** | `ServerPreset[]` |
-| `utbt:serversPageTutorial:v1` | `ServerBrowserPage` (via hook) | **yes** | `{ seen, version }` |
-| `utbt:playersState:v1` | `Main.tsx` (`usePageState`) | no | Players prefs: column visibility/order, `pageSizePreference` |
-| `utbt:playersPageTutorial:v1` | `PlayersPage` (via hook) | **yes** | `{ seen, version }` |
-| `utbt:capItAllState:v1` | `Main.tsx` (`usePageState`) | no | Cap-It-All prefs: `pageSizePreference` |
-| `utbt:worldRecordsState:v1` | `Main.tsx` (`usePageState`) | no | World Records prefs: column visibility/order, `pageSizePreference`, `filtersPanelOpen` |
-| `utbt:worldRecordsPresets:v1` | `WorldRecordsPage` (via `filterPresets.ts`) | **yes** | `FilterPreset[]` |
-| `utbt:achievementsState:v1` | `Main.tsx` (`usePageState`) | no | none (no pref fields → nothing persisted) |
-| `utbt:teamsState:v2` | `Main.tsx` (`usePageState`) | no | none persisted (no pref fields); per-entry query state = team-gallery search + directory access filter + sort field + sort direction + scroll. **v2 dropped `directoryPage`** — the gallery is unpaginated (it asks the API for `limit=0`, the whole directory) and defaults to World Records descending. Gallery caches (`myTeam`, `invitations`) live in the shared singleton, refreshed on mount and updated from each mutation's fresh `TeamDetail`. The role-aware `team-detail` page fetches its own `/teams/<id>` + `/me/team`; leave/disband/join/accept/decline invalidate the gallery cache and route back. |
-| `utbt:eventsState:v1` | `Main.tsx` (`usePageState`) | no | none persisted (no pref fields) |
-| `utbt:adminState:v1` | `Main.tsx` (`usePageState`) | no | Admin page pref: `activeSection`. Each admin section owns its own table state: column visibility/order in `utbt:admin:<section>:cols:v2` (device-local) + saved filters in `utbt:admin:<section>:filters:v1` (**synced**, via `useAdminFilterPresets` → `filterPresets.ts`); transient sort/filter/search/page via `useNavState('admin.<section>.<field>')` so it restores on Back/Forward. The Overview section additionally keeps its chosen activity date range in `utbt:admin:overview:range:v1` (device-local, `{ presetId, start, end }`) — a saved preset id re-resolves to today's dates on load, so `10y` stays rolling rather than freezing the day it was picked. No caches singleton. |
-| `utbt:homeMedalHuntHidden:v1:<userId>` | `MedalHuntCard` | **yes** | `string[]` map names dismissed from the home Medal Hunt card (already user-suffixed; the suffix is kept inside the per-account blob) |
-| `utbt:theme:v1` | `ThemeProvider` (app-global) | **yes** | `{ id }` — selected theme (`classic`/`red`/`aurum`/`amethyst`/`emerald`/`rose`/`light`/`black`) |
-| `utbt:displayTimezone:v1` | `app/utils/timezone.ts` (app-global) | **yes** | IANA timezone string override, or `null` to fall back to the browser's resolved zone. Set from the `launcher-appearance` settings panel. |
-| `utbt:seasonalThemes:v1` | `app/seasonal/preferences.ts` (app-global) | **yes** | `'on'` / `'off'` (JSON strings): the Settings → Appearance "Seasonal themes" toggle (absent means on). The `index.html` pre-paint script reads it too |
-| `utbt:season:v1` | `app/seasonal/preferences.ts`, written by `SeasonProvider` | no | `{ id, until }`: the season the date resolves to and the epoch ms its window ends, so the pre-paint script can set `data-season` before React mounts. Removed outside every season; never written for a preview |
-| `utbt:seasonOverride:v1` | `app/seasonal/preferences.ts` (**sessionStorage**) | never | `halloween` / `christmas` / `easter` / `none`: a session-only season preview from `?season=` (web) or the dev-only select (desktop) |
-| `utbt:replayVideoVolume:v1` | `app/utils/replayVideoVolume.ts` | no | replay player volume `0..1` |
-| `utbt:sidebarCollapsed:v1` | `app/components/layout/sidebarPreference.ts`, read and written by `AppLayout` (app-global) | no | JSON boolean: the sidebar's collapsed-rail choice. `readSidebarCollapsed()` is `AppLayout`'s `useState` initialiser, so a collapsed rail paints on the first frame; only a stored `true` counts, and a missing key, any other value, invalid JSON or a storage error all read as expanded. `writeSidebarCollapsed()` never throws and is called only by the toggle (the toggle row and `Ctrl+B` / `⌘B`). Ignored below `lg`, where the drawer is always full width, but kept for the next time the window is wide. Device-local on purpose: it is not in the `userState.ts` whitelist and never syncs (see `agents/navigation.md`, the collapsed rail) |
-| `utbt:pickBanMotion:v1` | `events/pickban/pickBanMotionPreference.ts` | **yes** | `'on'` / `'off'` (JSON strings): the pick/ban page's Animations toggle (absent means on) |
-| `utbt:pickBanSound:v1` | `events/pickban/pickBanSoundPreference.ts` | **yes** | `{ enabled, volume }`: the pick/ban page's sound switch and Volume (`0..1`), merged over `{ enabled: false, volume: 0.4 }`. `enabled` counts only when it is `true`; a volume that is missing or not a number reads as 0.4; any other stored field (such as an older `pack`) is ignored. The page subscribes to both keys, so an account value arriving after it opened updates it live |
-| `utbt:streamKitFolder:v1` | `events/stream/panels/kit/kitFolder.ts` | no | `{ [userId]: folder }`: the Windows folder each signed-in user keeps the stream kit in (drive-letter path, backslashes, no trailing one). Read through `loadKitFolder`, which falls back to `C:\UTBT-StreamKit` for a missing or invalid value; written by `saveKitFolder`. On desktop the value comes from the native folder picker (`streamKit.selectKitFolder`); the web build types it. Device-local |
-| `utbt:patreon:v1` | `app/utils/patreon.ts` | no | cached patron tier map, 1 h TTL (pure cache) |
-| `ui-scale` | `LauncherGeneralSettings` | no | renderer zoom percent (pre-dates the key convention) |
-| `utbt:webAuth:v1` | `app/platform/web/auth-web.ts` (**web build only**) | never | `AuthProfile` — Discord identity + access/refresh tokens + expiry; the web equivalent of the desktop main-process auth config. Secrets never sync. |
-| `utbt:syncAccount:v1` | `userState.ts` (store-internal) | never | Discord id of the account that last synced on this device; a different id at sign-in purges all synced keys before syncing (no cross-account bleed) |
-| `utbt-server-browser-settings` | DEPRECATED | — | (old shape — can ignore) |
-
-Legacy per-device badge markers (`utbt:newMapsSeen:v1`, `utbt:newRecordsSeen:v1`,
-`utbt:newEventsSeen:v1`, `utbt:newsSeen:v1`) are **migration inputs only**: on the
-first badge fetch after sign-in, a still-unset server marker is seeded from the
-local value and the local key is removed once that seeding call succeeds (a
-failed seed keeps the key and retries on the next badge fetch). No code writes
-them anymore.
-
-`utbt:theme:v1` is an **app-global** preference, not per-page — read + written
-by `app/theme/ThemeProvider.tsx` through the synced store. A pre-paint inline
-script in `app/index.html` still reads the raw localStorage value (the store
-mirrors it) so the theme applies before first paint without a flash.
-
-`utbt:highlightSince:<view>` (`maps` / `world-records` / `events` / `news`) is the one **sessionStorage**
-key — a transient navigate-time hand-off written by `markViewed` (inside `Main.tsx`'s
-`navigate()`) via `writePendingHighlight` and consumed **once** on the next page mount by
-`useNewItemHighlight`. It is **not** a persisted preference; it just tells the
-freshly-mounted page which rows to ring. See `agents/navigation.md`
-(`sidebar-new-badges`). The web build adds one more sessionStorage key:
-`utbt:webAuthFlow:v1`, the in-flight OAuth redirect state (PKCE verifier + CSRF
-state + return path), written on login start and consumed once on `/auth/callback`.
+- The page state keys (`utbt:serversState:v1`, `utbt:mapsPageState:v1`, …) hold only that
+  page's `*_PREF_KEYS`, never the query state. `MapsPage` keeps its column visibility and
+  order in its own keys (`utbt:mapsColumns:v1`, `utbt:mapsColumnOrder:v1`).
+- Admin sections: column layout in `utbt:admin:<section>:cols:v2` (device-local, via
+  `useAdminTable`), saved filters in `utbt:admin:<section>:filters:v1` (synced, via
+  `useAdminFilterPresets`), transient sort/filter/search/page in
+  `useNavState('admin.<section>.<field>')`.
+- `utbt:homeMedalHuntHidden:v1:<userId>` is user-suffixed and synced; the suffix stays in
+  the account blob.
+- `utbt:streamKitFolder:v1` is one device-local map `{ [userId]: folder }`.
+- `app/index.html`'s pre-paint script reads `utbt:theme:v1`, `utbt:seasonalThemes:v1` and
+  `utbt:season:v1` from localStorage and `utbt:seasonOverride:v1` from sessionStorage before
+  React mounts (the synced store mirrors to localStorage, so this works). Change one of
+  these shapes and update that script in the same commit.
+- `utbt:syncAccount:v1` is internal to the synced store.
+- Legacy badge markers and the `utbt:highlightSince:<view>` sessionStorage hand-off:
+  [navigation.md](navigation.md). Web auth (`utbt:webAuth:v1`, `utbt:webAuthFlow:v1`):
+  [web-target.md](web-target.md).
+- `ui-scale` predates the convention (renderer zoom percent; written by Settings, applied
+  by `AppLayout` at mount).
 
 ## Filter presets
 
-Use `FilterPresetsMenu<TFilters>` from
-`app/components/shared/FilterPresetsMenu.tsx`. Parent owns:
-- `presets: FilterPreset<TFilters>[]` + persistence
-- `activePresetId` local state
-- `useEffect` that clears `activePresetId` when current filters drift away
-  from the active preset (so the highlight goes away when the user starts
-  tweaking)
+The menu is `FilterPresetsMenu<TFilters>` (`app/components/shared/FilterPresetsMenu.tsx`,
+see [shared-components.md](shared-components.md)). The parent page owns:
 
-Capture logic (parent provides `captureCurrentFilters: () => TFilters`):
+- the presets and their persistence, through `useSyncedPresets(storageKey, migrate?,
+  validate?)` / `persistPresets` (`app/utils/filterPresets.ts`);
+- `activePresetId` in local state, plus an effect that clears it once the current filters
+  stop matching the active preset (`presetFiltersMatch`), so the highlight goes when the
+  user starts tweaking;
+- `captureCurrentFilters`, which returns what a preset saves (filters plus sort).
 
-```ts
-const captureCurrentFilters = () => ({
-  filters: state.filters,
-  sortBy: state.sortBy,
-  sortDir: state.sortDir,
-})
-```
-
-Presets are account-synced, so another device or app version can write shapes
-or enum values this build doesn't know. `loadPresets` / `useSyncedPresets`
-(`app/utils/filterPresets.ts`) skip entries without a string `id`/`name` and an
-object `filters`, and accept an optional `validate` predicate (after `migrate`)
-— presets failing it are skipped, siblings survive. Pages must also sanitize on
-apply: never blind-spread `preset.filters` into state; filter enum arrays to
-the page's known values and validate sort fields (see `handleLoadPreset` in
-MapsPage / WorldRecordsPage / ServerBrowserPage and `sanitizeServerFilters` in
-`app/utils/server-utils.ts`).
+Presets sync across devices and app versions, so stored shapes and enum values may be ones
+this build doesn't know. `loadPresets` skips entries without a string `id` and `name` and an
+object `filters`, then runs `migrate` and the optional `validate`; a failing entry is
+skipped and its siblings survive. On apply, never spread `preset.filters` into state blind:
+filter enum arrays to known values and validate sort fields (each page's
+`handleLoadPreset`; `sanitizeServerFilters` in `app/utils/server-utils.ts`).
 
 ## Tutorial state
 
-Use `useTutorialState(storageKey)` from
-`app/components/shared/useTutorialState.ts`. Returns `{ seen, markSeen, resetSeen }`.
-
-Pattern:
-- First-time `<Modal>` checks `!tutorial.seen && !tutorialActive` and prompts.
-- HelpCircle icon-button in page header reopens via `startTutorial()`.
-- `Tutorial` component fires `onClose` when user skips or finishes; that
-  closes any opened panels (filter panel, columns menu, presets menu).
-
-Tutorial steps live in a per-page file:
-`app/components/pages/<page>/<page>TutorialSteps.ts`. Re-export
-`TutorialStep` from the shared module so types stay aligned.
-
-## Favorites — different sync models per kind
-
-### Map favorites — dual sync (DB + ini)
-
-Driven by `Main.tsx`:
-- Source of truth: the backend (via the API).
-- Mirror: `UTBT.ini` (so the game itself sees them).
-- On login: diff DB vs ini, prompt user via `FavoritesSyncModal` on mismatch.
-- On toggle: optimistic DB write + mirror to ini, rollback on failure.
-- On game-close event: re-read ini → replace DB.
-
-Don't bypass `toggleFavorite` in `Main.tsx`.
-
-### Server favorites — account resource (no local tier)
-
-Server favorites are **not** UI state and are not in the synced localStorage
-store. They are their own account resource on the API, loaded by
-`app/hooks/useServerFavorites.ts` and owned by `Main.tsx`: optimistic toggle,
-write, rollback on failure. Keyed by the server's API `id` (NOT hostname or
-`ip:port` — both can change; the API rejects anything that is not a resolved
-server id).
-
-Unlike `useFavorites` (maps), the server-favorites hook serialises toggles per
-server id and rolls back by reversing the one failed operation against the live
-set rather than restoring a snapshot, and it distinguishes a failed read
-(`favoritesLoadFailed`) from an empty one. See `agents/data-sources.md`.
-
-Signed out there are no favorites at all: the set is empty and
-`toggleServerFavoriteOrLogin` in `Main.tsx` raises the sign-in modal instead of
-writing, so nothing is stored on the device.
-
-They were previously `utbt:serverFavorites:v2` in the synced store; that key is
-retired and no longer whitelisted.
+`useTutorialState(storageKey)` (`app/components/shared/useTutorialState.ts`) returns
+`{ seen, markSeen, resetSeen }`, stored synced as `{ seen, version }`. The page pattern:
+a first-visit `Modal` open while `!tutorial.seen && !tutorialActive`; a help button in the
+header calls `startTutorial()`; the `Tutorial` component's `onClose` (skip or finish)
+closes any panel the tour opened. Steps live in `app/components/pages/<area>/<area>TutorialSteps.ts`
+and re-export `TutorialStep` from `app/components/shared/Tutorial.tsx` so the types stay
+aligned.
 
 ## Polling live data
 
-Some screens have to follow server state closely: the pick/ban page and its stream view.
-The shell polls the signed-in player's event attention the same way, to drive the cup
-link and Events badges. They poll on an interval instead of fetching once on mount. This
-is a data tier, not UI state. Nothing in it is persisted, and the data lives only while
-the page (or the shell) that polls it is mounted.
+Screens that follow server state poll on an interval instead of fetching once. This is a
+data tier: nothing is persisted, and the data lives only while the poller's owner is
+mounted. `Main.tsx`'s event attention poll is one; the pick/ban session store
+([pick-ban-ui.md](features/pick-ban-ui.md)) and the stream desk and scene stores
+([stream-kit.md](features/stream-kit.md)) are built on the same scheduler.
 
-**`createPoller` (`app/utils/poller.ts`) is the reusable scheduler.** It takes
-`poll(signal)`, `intervalMs()` (read again after every attempt, so the cadence can follow
-the data), `alwaysPoll`, `pollOnStart`, and an optional visibility environment that
-defaults to `document`. How it behaves:
+**Use `createPoller` (`app/utils/poller.ts`) for every interval poll** instead of an ad hoc
+`setInterval`. It takes `poll(signal)`, `intervalMs()` (read again after every attempt, so
+the cadence can follow the data), `alwaysPoll`, `pollOnStart`, `onSettled` and an optional
+visibility `environment` (default: `document`).
 
-- `start()` polls at once, even in a hidden document, so a page never opens empty. After
+- `start()` polls at once, even in a hidden document, so a page never opens empty; after
   that it polls one interval after each attempt settles.
-- `pollOnStart: false` makes `start()` wait one interval before the first poll instead,
-  for a caller that already holds fresh data when it starts, like the Schedule tab's
-  All Matches bracket refresh (see `agents/data-sources.md`). A later `stop()` and
-  `start()` waits a full interval again, and the document showing again still polls at
-  once. Left out, it defaults to `true`, so every other caller polls on start.
+- `pollOnStart: false` makes `start()` wait one interval first, for a caller that already
+  holds fresh data. Every `start()` then waits a full interval; the document showing again
+  still polls at once.
 - Attempts never overlap: `pollNow()` during an attempt returns the one in flight.
-- `refresh()` is for right after a write: it aborts the attempt in flight (which started
-  before the write, so its answer may be stale) and polls afresh. The aborted attempt
-  reports nothing.
-- It rests while the document is hidden and polls the moment the document shows again.
-  `alwaysPoll` ignores visibility.
-- `stop()` aborts the attempt in flight, and nothing is reported after it. `start()` can
-  follow straight away, which React StrictMode's double mount relies on.
-- `onSettled` reports every outcome together with the count of consecutive failures.
+- `refresh()`, for right after a write, aborts the attempt in flight (it started before the
+  write, so its answer may be stale) and polls afresh. An aborted attempt reports nothing.
+- It rests while the document is hidden and polls the moment it shows again; `alwaysPoll`
+  ignores visibility.
+- `stop()` aborts the attempt in flight and reports nothing after; `start()` may follow at
+  once (React StrictMode's double mount relies on it).
+- `onSettled` reports each outcome with the count of consecutive failures.
 - `reschedule()` re-reads the interval after the data changed outside a poll.
 
-Reuse it for new interval polls instead of an ad hoc `setInterval`. `poller.test.ts` covers
-it with fake timers.
-
-**The pick/ban session store** (`events/pickban/pickBanSession.ts`) is `createPoller` plus
-the data. Like `useServerFavorites`, it is a `useSyncExternalStore` store. Its snapshot is
-`{ state, clockOffsetMs, loading, error, reconnecting }`.
-
-- **Loading.** `loading` is true only until the first answer. Show a skeleton only while
-  `loading && !state`. Later polls refresh silently in the background.
-- **Failures.** A failed poll keeps `state`. Show the reconnecting indicator only when
-  `reconnecting` is set. `error` holds the last failure, which is how a first load that
-  never succeeded is reported.
-- **Merge with identity.** Every fresh payload goes through `mergePickBanState`, which
-  shares structure with the previous state:
-  - pool cards are matched by map name, plan steps by plan index and members by user id
-  - so every unchanged card, step and member keeps its object identity
-  - a 304 keeps the whole state object
-
-  Use the same values as React keys, so nothing remounts or replays an animation on
-  refresh.
-- **Clock offset.** The store keeps the median of recent server-clock samples (see
-  `agents/data-sources.md`). Pass it to the view model with `Date.now()`, and never compare
-  server timestamps against the raw local clock.
-- **Commands.** `sendCommand(command, input)` and `sendManagerCommand(command, input)` fill
-  in the current `version`. `sendManagerCommandAt(version, command, input)` sends the
-  version it is given instead, for a command that must fail with `version_conflict` if
-  anything changed since the manager looked (the dock's Reopen and Edit final). They apply
-  the returned state at once, so the actor never waits for a poll, and resample the clock.
-  A refused command triggers an immediate poll, then rethrows the `ApiError`.
-- **One command at a time.** Every command, participant or manager, runs after the one
-  before it has settled, and only then reads the `version` to send. Every command bumps the
-  version, a hover included, so this is what lets a Lock In pressed while a hover is in
-  flight go out with the version that hover answered with instead of failing with
-  `version_conflict`. A refused command doesn't hold up the next one.
-
-**Captain play** (`events/pickban/captainPlay.ts`, pure apart from the hover sender below,
-Vitest without a DOM) is the
-captain's own transient state on top of the polled data. It lives in `useState` on the match
-page for as long as the page is mounted, and is never persisted or put in nav state. Its
-`CaptainPlay` holds four things:
-
-- the selected map, tied to the plan index it was chosen for
-- the command in flight
-- the lock-in being sent
-- the last refusal's message
-
-Screens never read those fields. They go through the functions below.
-
-- `withCaptainPlay(view, play)` layers the play onto a built `PickBanView`. It marks the
-  selected card `selected`. While a lock-in is in flight, it shows that card as `lockedIn`,
-  the turn as `lockedIn` and the step as `locked_in`, and makes nothing selectable. That is
-  the optimistic "Locked In", shown before the command answers. A selection only shows while
-  its plan index is the awaited step and its card is still `selectable`, so a step that moved
-  on, an undo or a map that became unavailable drops it without extra bookkeeping. While the
-  captain has a selection on their own turn, or a lock-in is in flight, it clears every card's
-  `previewed`: the server's preview is only the echo of an earlier selection, so it would keep
-  the old map highlighted until the next poll.
-- `captainDockOf(view, play)` is the dock model: `ready`, `choose`, `locked_in`, `locked`
-  (the intro, a spotlight or a pause, with the view's `countdown` and the next `turn`) or
-  `waiting` (the other side's turn), plus the refusal message. It is `null` for anyone
-  without `affordances.actingSide`: a spectator, a teammate, a replaced captain or a
-  manager. It is also `null` once the last step is in, apart from the actor's own "Locked
-  in" during its reveal lead. The one exception is a refusal still showing after the refresh
-  took the viewer's controls away.
-- `selectMap`, `beginLock` and `beginReadyToggle` return the next play, and the begin
-  functions also return the command and body to send. They return `null` while a command is
-  in flight or when the controls aren't open, which is the double-submit guard.
-- `commandSucceeded` and `commandRejected(play, error)` settle a command. On success, the
-  returned state takes over the "Locked In". On a refusal, the stable error code becomes a
-  worded message (the server's own message for any code without wording), and the selection
-  is kept for another try.
-
-**Selection preview.** While the viewer's own side is choosing, every other viewer and the
-stream view see which map it has selected. Two pieces in `captainPlay.ts` decide what to send
-and when:
-
-- `hoverOf(play, view)` is the hover body (`{ map }`) for the captain's current selection,
-  or `null`. It is `null` unless the dock is `choose`, which only a captain or acting
-  captain gets on their side's turn, never a manager acting for a team. It is also `null`
-  once Lock In is pressed, and for a map the board already shows as `previewed`, so
-  selecting the same map again sends nothing.
-- `createHoverSender(target, send)` debounces it. `request()` restarts a
-  `HOVER_DEBOUNCE_MS` (300 ms) timer. When the timer fires, it asks `target()` for the body
-  right then, so a Lock In, a pause or an already-previewed map in between sends nothing.
-  It never sends the map whose hover is still in flight. `cancel()` drops a pending hover.
-  A failed hover is swallowed: no refusal message, no busy state, and it never blocks
-  Lock In.
-- It also re-sends a preview that got lost, because the captain keeps the selection while the
-  preview goes away: a pause clears it on the server, and a refused or rate-limited hover never
-  set it. `sync()` is called whenever the view or the play changes. It requests a hover only
-  when `target()` goes from `null` to a body, for example when the turn reopens after a pause
-  with the kept selection no longer `previewed`, so each return to the turn sends at most
-  once. A failed hover is sent once more after the debounce; if that fails too it stops until
-  the captain selects again. Neither can loop: a re-send needs a new selection, a return to
-  the turn, or the first failure of a fresh request.
-
-`useCaptainPlay(view, sendCommand)` (`events/pickban/useCaptainPlay.ts`) wires it to the
-store. It keeps the latest play in a ref as well as in state, so a second click in the same
-tick is refused before React re-renders. `select` also requests a hover, and an effect calls
-`sync()` after every render that changes the view or the play. `lockIn` cancels a pending
-hover before it submits, and the store's one-command-at-a-time rule covers a hover already in
-flight. The pending hover is cancelled on unmount too.
-
-**The side choice (step 0)** doesn't go through captain play. The view model's `side` block
-(see `agents/data-sources.md`) says when it runs (`side.phase` is `side_choice`, then
-`side_spotlight`) and whether this viewer may choose (`side.canChoose`). The match page
-(`MatchPickBanPage.tsx`) handles it:
-
-- While a step-0 phase runs, anyone with `affordances.actingSide` gets the captain dock with
-  `side={view.side}`, even when `captainDockOf` is `null`. That happens during
-  `side_choice`, because no lettered turn is open yet.
-- The chooser sees the two side cards (`CaptainDock`). The selected card is plain
-  `useState` inside the dock, so it is dropped once the phase ends. Lock In sends
-  `sendCommand('side', { choice })`.
-- While the choice is closed for the chooser (a pause), `side.viewerChooses` keeps their dock
-  on "Choose Red or Blue" with locked controls rather than the other captain's waiting row.
-- The other captain sees "X are choosing their side". In `side_spotlight` both captains
-  see the reveal and their own colour. Under it, `captainDockOf` gives the usual `locked`
-  controls (reason `spotlight`) with the countdown to step 1.
-- The page keeps `{ choosing, rejection }` in `useState`. `choosing` disables the cards
-  and spins the button. A refusal becomes the dock's refusal message, worded for
-  `side_not_open`, `not_authorized`, `version_conflict`, `wrong_status`, `paused` and
-  `no_session`, with the server's own message for anything else. Dismiss clears it.
-
-**The Hard-map veto** runs before step 0 and doesn't go through captain play either. The view
-model's `veto` block says when it runs (`veto.phase` is `veto_choice`, then `veto_spotlight`)
-and what this viewer may do (`veto.canVeto`, `veto.viewerChooses`, `veto.waiting`). The match
-page handles it like the side choice:
-
-- While a veto phase runs, anyone with `affordances.actingSide` gets the captain dock with
-  `veto={view.veto}` and the view's countdown. The dock's lettered `controls` are dropped
-  during both veto phases, so its rows never announce step 1 before the side choice.
-- An eligible captain who hasn't chosen sees the two veto cards. The selected card is plain
-  `useState` inside the dock. Lock In sends `sendCommand('veto', { choice })`.
-- The page keeps `{ choosing, rejection }` for the veto in its own `useState`; a refusal is
-  worded by `vetoRejection` (`events/pickban/captainVeto.ts`) and shows as the dock's refusal.
-  Dismiss clears both the veto and the side refusal.
-
-**Manager play** (`events/pickban/managerDock.ts`, pure, Vitest without a DOM) is the same
-idea for a viewer with `can_manage`, on its own path so a manager never goes through the
-captain's select. `ManagerPlay` holds the act-for selection (tied to its plan index), the
-command in flight, the act-for lock-in being sent, the request awaiting confirmation
-(Reopen, Restart, Cancel, or an Edit final save with its list), the open Edit final
-draft, and the last refusal with the command it answered.
-
-The dock's commands (`ManagerCommand`) are the manager wire commands plus `reopen`.
-`ManagerAction` is what the dock asks for, and `ManagerRequest` is what goes over the
-wire. Most actions are their own request. `{ command: 'reopen' }` is sent as
-`{ command: 'undo', version }`, pinned to the view's `version` when its confirmation
-opens. `{ command: 'edit-final' }` is sent as the open draft's list with the version the
-draft was seeded from. A request with a `version` goes through the store's
-`sendManagerCommandAt`, so anything that changed in between (another manager's edit, or
-a reopen that completed again) answers `version_conflict` instead of being overwritten.
-Restart and Cancel keep the latest version: captain hovers bump it constantly while a
-session runs. Reopen only applies to a complete session, and Undo only to a running or
-paused one, so neither can run as the other.
-
-- `withManagerPlay(view, play)` marks the act-for selection `selected`, and shows the
-  act-for lock-in as "Locked In". It shares `captainPlay.ts`'s `StepChoice`,
-  `selectedMapOf`, `withSelectedMap` and `withOptimisticLock`, adding only the manager's own
-  gate (the awaited step is open to act for). The lock-in stays until its step reveals,
-  since the returned state only marks a lock-in for the side's own captain.
-- `managerDockOf(view, play)` is the dock model, `null` without `affordances.manager`.
-  Every button carries its label, a one-line `hint` and a `disabled` flag (every one is
-  disabled while a command is in flight, and `submitting` names that command). It holds:
-  - `status` (the session's) and `phase`, a status line: `Waiting for Start`, `Starting`,
-    `Intro`, `Step 0 · Side choice` and `Step 0 · Revealing` (`sidePhaseLabel` in
-    `pickBanStatus.ts`), `Map veto` and `Map veto · Revealing` (`vetoPhaseLabel`), `Step 3 of 7 · Azure Owls (pick)`, `Step 3 of 7 · Revealing`,
-    `Step 3 of 7` while paused, `Final maps written` or `Final maps edited`. For a manager who plays in
-    the match (`lockForSide` false) the awaiting line is just `Step 3 of 7`, without whose
-    turn it is
-  - `primary`, the one call to action for the status: Open Lobby (none, cancelled or
-    voided), Start (lobby), Pause (running) or Resume (paused). Start also carries
-    `blocked`, the worded blocking reason with a `fix` naming what clears it (or `null`),
-    and `readiness`, each team's Ready mark, A first. Once complete it is `null`, and
-    `done` says the final maps are in the match.
-  - `sides`, while the session is in the lobby, running or paused (Red/Blue first, A/B
-    alongside, since admin tools show both). Every window below comes from
-    `affordances.manager`, so the dock and `beginManagerCommand` agree:
-    - `tiles`, one per team, A first: letter, colour, name, and the roster with who is in
-      control (choosing the captain sends `user_id: null`). `confirmed` is the side's;
-      while it is false the tiles read "Sides TBC".
-    - `badge`, where the side came from: `Step 0`, `Admin`, `Caster` or `Backfill` from
-      `side.source`, or `Sides TBC` while unconfirmed, each with a one-line hint.
-    - `basis`, "The sides are set, so step 0 is skipped." in a lobby whose side an admin
-      set; otherwise the chooser rule in the lobby, or while running with the side
-      unconfirmed ("T04 choose: higher pre-cup seed (9 vs 3)", the view's
-      `side.chooserLine`; `null` while no chooser is known).
-    - `chooser` (`sideChooser`: lobby, unless an admin set the side): both teams in `team_a`, `team_b`
-      order with their pre-cup seeds and the current chooser checked. `undetermined` while
-      no chooser is known, which is when Start is blocked by `side_chooser_undetermined`
-      (its fix points here). Choosing the other team sends `side-chooser`.
-    - `setSides` (`setSides`: lobby, or running before step 1): both teams with the Red
-      one checked once confirmed; choosing sends `sides` with `red`. Outside its window
-      it stays visible but disabled, with a `reason`: paused before step 1 (no step
-      revealed and none to undo) says resume first, otherwise that step 1 is in and the match editor changes the sides now.
-    - `swap`, shown in the same window as Set sides, enabled only once the side is
-      confirmed (`affordances.manager.swap`); while it is TBC its hint says there is
-      nothing to swap.
-    - `stepZero` (`actForSideChoice`: running, phase `side_choice`, a manager who doesn't
-      play): Act for team on step 0, the chooser team's name and a Red and a Blue option
-      titled and led from `side.cards` ("Red · Side A", "Ban 1st, pick 2nd"; "Acts
-      first"/"Acts second" without cards). Choosing one asks for confirmation first, then
-      sends `side` with `choice`.
-  - `veto`, when the stage has a choice rule (`null` otherwise, and `null` once the match is
-    live with nobody eligible):
-    - `lobbyLine`, in the lobby only: "Hard-map veto: T15 eligible", "Hard-map veto: both
-      teams eligible" or "No veto: neither team eligible" (the veto's `tag` leads)
-    - `teams`, once live and while the veto is active: each eligible team with its `state`
-      (`deciding`, `veto` or `play`) and `label` (Deciding, Veto, Play)
-    - `outcome`, once resolved: "T15 vetoed the Hard maps · 9 maps" (naming `vetoed_by`) or "Hard
-      maps stay in · 13 maps"
-    - `actFor` (`affordances.manager.actForVeto`: running, phase `veto_choice`, a manager who
-      doesn't play): one entry per eligible team that hasn't chosen, with a `Veto Hard maps` /
-      "Play 9 maps" option and a `Play Hard maps` / "Play 13 maps" option. Choosing one asks for
-      confirmation first, then sends `veto` with `side` and `choice`. A confirmation goes stale
-      when that team has chosen meanwhile.
-  - `sequence`, in the same statuses: the preset's label (or Custom sequence), the step
-    count and best-of, whether it was changed for this match and from which stage, the
-    choice keys it matches (the stage it was copied from, then its preset), and whether it
-    can change (lobby only)
-  - `history` (Undo, Reopen, Edit Final Maps…; Undo reads Undo Last Step, Undo Side Choice or
-    Undo Veto by what `undoTarget` says it takes back) and `danger` (Restart, Cancel
-    Picks & Bans), each listed only while it applies
-  - the results warning, the voided banner, the open editor, the pending confirmation
-    (title, message, confirm and dismiss labels, and whether it is `destructive`), the
-    act-for controls, and the refusal. A refused `side`, `sides` or `side-chooser` with
-    `side_not_open` is worded by what it tried (step 0 is over, step 1 is in, the lobby
-    has closed)
-
-  The act-for controls are a `CaptainDock` model, so the captain's dock renders
-  them, and a refused lock-in shows there rather than in the panel. They mirror the
-  captain's: `choose` while the awaited step is open to act for, `locked_in` for the
-  manager's own lock-in until it reveals, `locked` with the view's `countdown` and the
-  next `turn` through the start lead, the intro, a spotlight or a pause, and `waiting`
-  while someone else's lock-in is in its reveal lead or on the viewer's own turn as
-  captain. So the strip stays up from Start to the last lock-in, and is `null` in the
-  lobby and once the session is complete. For a manager who plays in the match they are
-  always `null`, and `playingNote` (set while the session is running or paused) says an
-  admin who isn't playing has to lock in on a team's behalf.
-- `beginManagerCommand(play, view, action)` returns the next play and the request to
-  send, or `null` when the control isn't open, a command is in flight, or an Edit final
-  save has no open, valid, current draft. For `reopen`, `restart`, `cancel`, `edit-final`,
-  the step-0 `side` and the `veto` it first returns a play holding the resolved request awaiting confirmation
-  and no request; `confirmManagerCommand` sends exactly that request (an edit-final with
-  the list and version as they were confirmed) and `dismissManagerConfirm` drops it.
-  Asking again just asks again: only the confirmation sends. `selectActForMap` and
-  `beginActForLock` are the act-for select-then-Lock In, which sends `lock` with the side,
-  map and plan index.
-- `openFinalEditor(play, view)` starts an Edit final draft from the view (only while Edit
-  final applies and nothing is in flight). Calling it with a draft open reloads it from
-  the current summary and version, and drops any refusal the editor showed.
-  `changeFinalEditor(play, change)` applies one of `editFinal.ts`'s draft changes, and
-  `closeFinalEditor` drops the draft with any refusal it was showing. The dock's
-  `finalEditor` is `finalEditorOf` plus `saving` (its save is in flight) and its own
-  `rejection`: a refused save shows there, not in the panel, and the draft stays for
-  another try. A save refused with `version_conflict` says the final maps changed since
-  the editor opened. Once the view shows the newer version the editor is `outdated`,
-  which replaces that refusal and holds Save until the draft is reloaded. A save that
-  succeeds closes the editor.
-- `managerCommandSucceeded` and `managerCommandRejected(play, error)` settle a command, and
-  `dismissManagerRejection` clears the refusal. A refusal without a stable code falls back
-  to the captain's `unwordedRejection` (the unreachable-network words, else the error's own
-  message). `sequenceChoices(stages, sequence)` lists the override
-  options: every preset, then each stage that has a block, each keyed by its preset id or
-  stage key so two stages with the same name and best-of never collide. The first of the
-  dock sequence's keys that is listed is marked `current`.
-- `settleManagerPlay(play, view)` drops a confirmation the session no longer allows, an
-  open Edit final draft once Edit final no longer applies (the session left `complete`),
-  and an act-for lock-in whose step is awaited again (an undo, by anyone). Any later manager
-  command drops the lock-in too. So none of them comes back later, a Reopen confirmed
-  after someone else reopened never undoes another step, and a step the team locks after an
-  undo is never shown as the manager's.
-
-**Edit final draft** (`events/pickban/editFinal.ts`, pure, Vitest without a DOM) is the
-editor's model:
-
-- `finalDraftOf(view)` seeds a `FinalDraft` from `view.summary`, in play order, and
-  records `view.version` as the version to save against. Each entry has a stable `key`,
-  its map, its picked-by side and its decider flag. Edit final only applies once the last
-  spotlight is over, so every slot is revealed by then.
-- The changes each take the draft and an entry key and return a new draft:
-  `setFinalMap`, `setFinalSide`, `setFinalDecider` (marking only works on the last entry,
-  and unmarks any other; the entry keeps its side for when it is unmarked),
-  `moveFinalEntry(draft, key, -1 | 1)` (never past either end), `addFinalEntry` (a blank
-  entry, placed before a trailing decider) and `removeFinalEntry`.
-- `finalEditorOf(draft, view)` is the render model: numbered rows with move and decider
-  availability and an `invalid` flag, the map choices (the pool's non-excluded cards with
-  their display names), both sides with their A/B letter and team name, whether Add still
-  applies (fewer rows than eligible maps), one worded problem per broken rule, the
-  request `body` only when there are none, and `outdated` once the view's `version` has
-  moved past the draft's. The rules are the server's: at least one map;
-  every map chosen and in the eligible pool; no map listed twice; at most one decider,
-  and only the last; every other entry with a picked-by side. The decider always goes out
-  with `picked_by: null`.
-
-`useManagerDock(view, { sendManagerCommand, sendManagerCommandAt })`
-(`events/pickban/useManagerDock.ts`) wires it to the store the same way `useCaptainPlay`
-does, and settles the play whenever the view changes. It hands each request to the store
-through a per-command switch, so every body is checked against
-`PickBanManagerCommandBodies` without a cast, and a request with a pinned `version` goes to
-`sendManagerCommandAt`. `run(action)` begins an action, and `openFinalEditor` (which also
-reloads), `changeFinalEditor` and `closeFinalEditor` drive the draft. The page passes it
-the captain-played view, so both layers show, and the session itself, which carries both
-senders.
-
-**Hooks** (`events/pickban/usePickBanSession.ts`):
-
-- `usePickBanSession({ accessToken, slug, matchId, alwaysPoll })` keeps one store per slug,
-  match and mode. It reads the token through a ref, so a token refresh triggers a poll
-  instead of resetting the state.
-- `usePickBanView(state, clockOffsetMs)` builds the view model on every render. It also
-  re-renders by itself at the view's `nextBoundaryAt`, so reveals and phase changes land on
-  their timestamps rather than whenever a poll arrives.
-- It deliberately doesn't re-render every frame. Drive continuous countdowns and progress
-  bars from `countdown.endsAt` (local epoch ms) on animation frames. `CountdownText` and
-  `CountdownBar` (`events/pickban/components/Countdown.tsx`) already do this.
-
-### Stream tab and scene polling
-
-**The Cam FPS preference is not renderer state.** It is the launcher config's `camFps` (`60` or
-`120`, default 120), read and saved through `window.conveyor.streamKit.getCamFps()` / `setCamFps(fps)`
-(`lib/main/README.md`, `lib/conveyor/README.md`), so it survives restarts and is per device. The
-Cams tool loads it on mount (Launch waits for it), saves on each click and puts the value on every
-cam request; if saving fails, the choice still holds for the session and an amber line says it will
-reset on restart. It is not in `usePageState`, `useNavState` or `utbt:*` storage, and it does not sync
-across devices. The Cam volume preference works the same way: the config's `camVolume` (whole percent,
-default 50) through `getCamVolume()` / `setCamVolume(volume)`, saved when the slider is released.
-The cam server passwords are the opposite: they live only in nav state (`event.camPasswords`), so they
-are never written to disk and are gone once the launcher closes.
-
-**Cam choices are keyed by team id.** The Cams tool keeps its server choices in nav state
-`event.camServers` as `{ matchId, teams: { <teamId>: choice } }`, and its passwords in
-`event.camPasswords` as `{ teams: { <teamId>: password } }`. A choice is `{ mode: 'detected' }`, or
-`{ mode: 'list' | 'typed', address }`. `cams/camChoices.ts` converts between them and the per-letter
-`{ A, B }` the view model takes:
-- `camTeamIds(match)` maps each letter to a team id through the desk's `sides` mapping.
-- `readCamServerChoices` and `readCamPasswords` give the per-letter values.
-- `storeCamServerChoice` and `storeCamPassword` write one letter's value under its team.
-So a Red/Blue swap moves each team's server and password to its new letter. Server choices for
-another match read as detection, but passwords carry over to the team's next match. Both readers take
-the stored value as `unknown` and keep only entries under `teams` with the right shape. Older values
-keyed by `A` / `B` are dropped, and the caster picks again. A letter with no team yet can't store a
-server, and its picker is disabled.
-
-**The Stream tab's context** (`events/stream/StreamTabContext.tsx`). `StreamTab` builds one
-identity (`eventSlug`, `streamerId`, `isManager`, `accessToken`) and wraps the open panel in
-`StreamTabProvider`. It owns one desk store (`createStreamDeskStore`, `streamDesk.ts`) per
-event and streamer, which polls the desk every `DESK_POLL_MS` (2 s) with `If-None-Match` and
-keeps the median clock offset like the pick/ban store. Panels read it with `useStreamTab()`:
-the identity plus `desk`, `deskLoading`, `deskError`, `clockOffsetMs` and `refresh()`. Call
-`refresh()` right after a write, as with `createPoller`'s `refresh`. The token is read through
-a ref, so a refresh doesn't reset the store; nothing is persisted.
-
-**Polling that ignores Page Visibility in OBS.** An OBS browser dock or source can report
-`document.visibilityState === 'hidden'` while it is on air, and a poller that rests when
-hidden would freeze. Two places handle it, both keyed off the `window.obsstudio` object OBS
-injects:
-
-- **The Stream tab desk** uses `deskPollEnvironment()` (`streamDesk.ts`) as the poller's
-  visibility environment. `insideObs(window)` detects OBS, and `deskPollActive(pageHidden,
-  inObs)` keeps polling whenever it is in OBS. Outside OBS the desk rests while the tab is
-  hidden, like every other poller.
-- **The scene pages** (`app/components/stream/data/`) ignore Page Visibility altogether. Their
-  hot-state and read stores are `createPoller` with `alwaysPoll: true`, and
-  `createSceneCadenceStore` (`sceneCadence.ts`) picks the interval from OBS's
-  `obsSourceActiveChanged` and `obsSourceVisibleChanged` events: 2 s (hot state) and 30 s
-  (composite reads) while the source is active or visible, 30 s and 120 s otherwise, with an
-  immediate refetch of the hot state and every mounted composite read when a source turns active. Outside OBS the page is always active,
-  and `preview=1` counts as inactive (the slow cadence).
+`poller.test.ts` covers it with fake timers.
 
 ## Naming conventions
 
-- State / cache types: `PascalCaseState`, `PascalCaseCaches`
-- Default consts: `DEFAULT_FOO_STATE`, `DEFAULT_FOO_CACHES`
-- localStorage keys: `utbt:<area>:v<n>` (kebab-case area, integer version)
-- Updater callbacks: `onStateChange: (updater) => void` — always a functional
-  updater, not a value setter, so updates compose with stale-state safety
+- State and cache types: `FooPageState`, `FooPageCaches`; defaults `DEFAULT_FOO_STATE`,
+  `DEFAULT_FOO_CACHES`; `Main.tsx` constants `FOO_STATE_STORAGE_KEY`, `FOO_PREF_KEYS`.
+- localStorage keys: `utbt:<thing>:v<n>` (above). `useNavState` keys: `<area>.<field>`.
+- `onStateChange` / `onCachesChange` take a functional updater, so successive updates
+  compose without reading stale state.

@@ -1,83 +1,79 @@
 # CLAUDE.md
 
-Guidance for Claude Code (claude.ai/code) working in the UTBT launcher repo.
+Guidance for Claude Code working in the UTBT launcher repo.
 
 ## Project
 
 Electron desktop launcher for UTBT (UT99 BunnyTrack). React 19 + Vite 7 +
 TypeScript + Tailwind 4, built with `electron-vite`. Renderer code under `app/`;
 main-process code under `lib/main/`; typed renderer↔main IPC under `lib/conveyor/`.
-The renderer also ships as a static website (`agents/web-target.md`) — shared UI
-must stay desktop-agnostic behind `app/platform/`.
-**This repo is public** — keep docs and code about the launcher only. Never put
-backend internals here (repo names, filesystem paths, tech stack, internal
-endpoints or patterns); document only the client-side contract the launcher uses.
+The renderer also ships as a static website ([web-target.md](agents/web-target.md)), so shared
+UI stays desktop-agnostic behind `app/platform/`.
+**This repo is public.** Docs and code describe the launcher and the client-side API
+contract it uses, nothing more: no backend repo names, server paths, server stack,
+internal endpoints or infrastructure.
 
-## Router — open the RIGHT doc, not all of them
+## Router
 
-Match the task to ONE row and read that first. Skills auto-trigger and pull their
-own references. Don't pre-load the whole `agents/` set; `agents/_map.md` indexes
-every doc.
+Read the one row that matches the task. Skills in `.claude/skills/` (add a sidebar page, add a
+table column, add an IPC channel, wire new API data, audit the docs) trigger on their own.
 
-| If the task is… | Read FIRST | Gives you |
-|---|---|---|
-| add/modify a sortable or toggleable table column | skill: add-table-column | the column diff + token sections |
-| add a brand-new sidebar page | skill: add-data-page | controlled-page contract + Main/AppLayout wiring |
-| add a renderer↔main IPC channel | skill: add-ipc-channel | api + handler + schema + register |
-| wire NEW data from the API into the UI | skill: consume-api-data | api.ts fetcher + render |
-| audit docs vs code (maintenance / pre-release) | skill: doc-audit | drift + confidentiality leak gate |
-| style any UI (color / table / button / form) | agents/styling.md | locked tokens; don't invent variants |
-| use or choose a shared component | agents/shared-components.md | PlayerInfo, DataTable, modals, inventory |
-| persist UI state / add a localStorage key | agents/state-patterns.md | the 3 state tiers + key convention |
-| navigation / Back-Forward / detail pages | agents/navigation.md | navigate(), renderView, sidebar, events |
-| call the API / asset URLs / favorites | agents/data-sources.md | endpoints + favorites/patreon sync |
-| stream kit: Stream tab, OBS scene pages, cam tool, OBS kit | agents/data-sources.md (stream kit section) | desk/scene reads + writes (score editor, local-time countdown, casters, next-map read), polling cadences, `preview=1`, Cam FPS, where the fetchers live |
-| Stream tab panels / default panel / Admin → Streamers | agents/navigation.md (Stream tab) + agents/state-patterns.md | panel order, the default-panel rule, the nav keys, the admin section |
-| streamer roster API, map fly-through videos, `mapVideoUrl` | agents/data-sources.md (Admin API, avatar URLs) | roster and video fetchers, the video URL helper |
-| build or style an OBS scene / use the broadcast module | agents/shared-components.md + agents/styling.md | broadcast module, scene frame + helpers, overlay and Next Map layouts, transparent stage, scene stylesheet, screenshot conventions |
-| make a feature work or hide on the web build / platform gating | agents/web-target.md | platform layer + capability gates + web build |
-| IPC channels / window.conveyor / events | lib/conveyor/README.md | channel inventory + add pattern (incl. Cam FPS) |
-| main-process / services / file access | lib/main/README.md | services + path/url safety + config (incl. `camFps`, what the cam plan writes) |
-| settings panels / UT99 ini keys | app/components/pages/settings/README.md | sections + ini flow + constants |
-| run / build / lint / typecheck / commit | agents/build.md | commands + pre-commit gate |
+| Task | Read first |
+|---|---|
+| style any UI: colour, table, button, form, animation; add a theme | [agents/styling.md](agents/styling.md) |
+| use or choose a shared component (PlayerInfo, DataTable, modals) | [agents/shared-components.md](agents/shared-components.md) |
+| persist UI state, add a storage key, poll live data | [agents/state-patterns.md](agents/state-patterns.md) |
+| navigation, Back/Forward, detail pages, sidebar, URL sync | [agents/navigation.md](agents/navigation.md) |
+| call the API, asset URLs, favorites, Patreon tiers | [agents/api.md](agents/api.md) |
+| web build, platform gating, responsive layout, bundle budget | [agents/web-target.md](agents/web-target.md) |
+| IPC channels, `window.conveyor`, main → renderer events | [lib/conveyor/README.md](lib/conveyor/README.md) |
+| main process: file and URL safety, config, cams, auto-updates | [lib/main/README.md](lib/main/README.md) |
+| settings panels, UT99 ini keys | [app/components/pages/settings/README.md](app/components/pages/settings/README.md) |
+| run, build, lint, commit | [agents/build.md](agents/build.md) |
+| write tests, fix a red gate, update screenshot baselines | [agents/testing.md](agents/testing.md) |
+| player, map and cap pages, World Records, Cap It All, replays | [agents/features/records.md](agents/features/records.md) |
+| teams and clans: directory, roles, lineups, tags | [agents/features/teams.md](agents/features/teams.md) |
+| Home dashboard widgets | [agents/features/home.md](agents/features/home.md) |
+| game: install, launch and join, map install, demos, window chrome | [agents/features/game.md](agents/features/game.md) |
+| events: brackets, stats, predictions, achievements; add an event tab | [agents/features/events.md](agents/features/events.md) |
+| event scheduling: proposals, slots, the Schedule tab | [agents/features/event-scheduling.md](agents/features/event-scheduling.md) |
+| pick/ban server contract: state, commands, setup, sides, veto | [agents/features/pick-ban-api.md](agents/features/pick-ban-api.md) |
+| pick/ban client: session store, docks, visuals, sound, match page | [agents/features/pick-ban-ui.md](agents/features/pick-ban-ui.md) |
+| stream kit: Stream tab, OBS scene pages, broadcast styling | [agents/features/stream-kit.md](agents/features/stream-kit.md) |
+| admin dashboard API, Admin → Streamers, map videos; add an admin section | [agents/features/admin.md](agents/features/admin.md) |
+| Admin → Map Uploads | [agents/features/map-uploads.md](agents/features/map-uploads.md) |
 
 ## Hard rules
 
-1. **`PlayerInfo` is mandatory for every player display.** Never render `alias`
-   as raw text or hand-roll an avatar `<img>`. See `agents/shared-components.md`.
-2. **Tables use `DataTable.*` primitives.** No inline `<th>` / `<td>` styling.
-   See `agents/styling.md`.
-3. **Use `cn` from `lib/utils.ts`** for any conditional class composition — it
-   resolves Tailwind conflicts via tailwind-merge.
-4. **Native `<select>` needs `style={{ colorScheme: 'dark' }}`** so Chromium
-   renders dark form chrome on Windows.
-5. **Modals use `app/components/ui/modal.tsx`** with `offsetSidebar` when the
-   modal should respect the navigation rail.
-6. **Persist state in the right tier; navigate via `navigate()` only.** Primary-
-   page state → `usePageState` in `Main.tsx` with a versioned `utbt:<thing>:v<n>`
-   key; detail-page transient UI → `useNavState`. Never a raw `setCurrentView` or
-   a second back/forward mechanism. See `agents/navigation.md` + `agents/state-patterns.md`.
-7. **No `text-gray-*` / `bg-gray-*` / `border-gray-*`.** Use `muted-foreground` /
-   `white/<n>` / `card/<n>`. See `agents/styling.md`.
-8. **Extend the API, don't hack the renderer.** When the launcher needs data the
-   API doesn't expose, get the field added to the API rather than deriving or
-   working around it in the renderer. See skill: consume-api-data.
-9. **Desktop-only behavior gates via `app/platform/` capabilities** (the
-   `usePlatform()` hook or its named exports), never raw `window.conveyor`
-   presence checks or direct `__WEB_TARGET__` reads. The renderer ships to
-   desktop AND web — see `agents/web-target.md`.
-10. **Every UI change must work at every viewport — phone (360px) through 4K —
-    on BOTH targets.** Tables get `responsive` configs + `compactContent` card
-    rows (never horizontal scroll); heroes/tiles wrap instead of truncating key
-    data; controls stay tappable at 390px. And it must stay cheap: respect the
-    bundle budget (`npm run check:bundle`; lazy anything post-user-action) and
-    the CSS runtime budget (no per-row `backdrop-blur` / infinite animations).
-    See `agents/styling.md` (responsive-columns, css-runtime-cost) and
-    `agents/web-target.md` (responsive-layout, performance).
+1. **Every player display goes through `PlayerInfo`**: alias, avatar, title and flag together,
+   never a raw `alias` string or a hand-rolled avatar `<img>`.
+2. **Tables use the `DataTable.*` primitives**, with no inline `<th>` / `<td>` styling.
+3. **Compose conditional classes with `cn`** from `lib/utils.ts`; it resolves Tailwind
+   conflicts through tailwind-merge.
+4. **A native `<select>` gets `style={{ colorScheme: 'dark' }}`** so Chromium draws dark form
+   chrome on Windows.
+5. **Modals use `app/components/ui/modal.tsx`**, with `offsetSidebar` when the modal should
+   respect the navigation rail.
+6. **State lives in its tier; views change only through `navigate()`.** Primary-page state:
+   `usePageState` in `Main.tsx` with a versioned `utbt:<thing>:v<n>` key. Detail-page transient
+   UI: `useNavState`. One back/forward mechanism: the nav stack.
+7. **Neutral colours use theme tokens**: `text-foreground`, `text-muted-foreground`,
+   `*-hairline/<n>` and `bg-card/<n>`. They flip with the theme, so the Light theme works
+   unedited; `gray-*`, `white/<n>` and dark hex stay out ([styling.md](agents/styling.md)).
+8. **Missing data is an API change.** When the launcher needs a field the API doesn't expose,
+   get it added to the API (skill: consume-api-data) instead of deriving it in the renderer.
+9. **Desktop-only behaviour gates through `app/platform/` capabilities** (`usePlatform()` or its
+   named exports), not `window.conveyor` presence checks or `__WEB_TARGET__` reads.
+10. **Every UI change works from a 360 px phone to 4K on both targets, and stays cheap.**
+    Tables get `responsive` configs with `compactContent` card rows instead of horizontal
+    scroll; heroes and tiles wrap instead of truncating key data; controls stay tappable at
+    390 px. Lazy-load anything opened after a user action and keep `npm run check:bundle`
+    green; no per-row `backdrop-blur` or infinite animations
+    ([styling.md](agents/styling.md), [web-target.md](agents/web-target.md)).
 
 ## Keeping docs honest
 
-Every doc carries `verify_against` frontmatter naming the launcher files it
-documents. If your change touches one of those files, update that doc and bump
-its `last_verified` in the same commit. `agents/_map.md` is the index;
-`agents/build.md` has the pre-commit check.
+`agents/verify.json` maps each doc to the code it describes. Run `npm run docs:check` before
+committing: it fails on missing paths, broken links and unlisted docs, and lists the docs whose
+sources changed on this branch. Update each listed doc in the same commit, or confirm it still
+holds. A new doc gets an entry in `agents/verify.json`.

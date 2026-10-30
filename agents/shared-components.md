@@ -1,46 +1,24 @@
----
-doc: shared-components
-read_when:
-  - "writing JSX that shows a player, a table, a modal, a filter/columns menu, or a tutorial"
-  - "about to hand-roll UI that might already be a shared component"
-  - "deciding whether to extract a new shared component"
-keywords: [broadcast module, BroadcastStage, BroadcastBackdrop, TeamPlate, ReconnectingBadge, broadcastTone, broadcastMotion, broadcastFonts, stageScale, SceneFrame, OverlayFrame, IdleFrame, BlankFrame, sceneHelpers, SceneTicker, stinger, OBS scene, StreamCard, StreamPlaceholder, StreamLoading, useStreamTab, PlayerSearchInput, UncertifiedServerWarning, OverlayHub, OverlayMapStrip, NextMapScene, mapNumber, PlayerInfo, DataTable, Modal, ColumnsMenu, FilterPresetsMenu, Tutorial, CapTimeLink, MapNavLink, NavLink, MapThumbnail, PatreonBadge, shared, pick/ban, StepTrack, MapBoard, StageScenes, Countdown, FinalSummary, CountdownBar, PickBanStatusChip, CaptainDock, ManagerDock, EditFinalEditor, PickBanMotion, usePickBanPreload, stageMotion, reduced motion, framer-motion, useCopyFeedback, copy link, PickBanSoundControl, sound control, Segmented, LiveDot, live dot, Tooltip, phrasing content]
-provides: "the inventory of reusable components + when to use each"
-not_here:
-  - "the class strings / design tokens → styling.md"
-  - "how detail pages open via events (open-player / open-cap) → navigation.md"
-  - "page/query state + persistence → state-patterns.md"
-sections: [hard-rule-playerinfo, player-cap-links, map-links, tables-datatable-primitives, columns-columnsmenu, filter-presets, tutorial, visual-primitives, pick-ban-visual-core, broadcast-module, stream-scene-kit, stream-tab-pieces, event-stats-pieces, ui-primitives, admin-form-pieces, utilities, when-to-extract]
-last_verified: 2026-10-29
-verify_against: [app/components/shared/PlayerInfo.tsx, app/components/shared/DataTable.tsx, app/components/shared/CapTimeLink.tsx, app/components/shared/MapNavLink.tsx, app/components/shared/MapNameCell.tsx, app/components/shared/ColumnsMenu.tsx, app/components/shared/FilterPresetsMenu.tsx, app/components/shared/Segmented.tsx, app/components/pages/events/pickban/components/MatchBanner.tsx, app/components/pages/events/pickban/components/MapBoard.tsx, app/components/pages/events/pickban/components/StepTrack.tsx, app/components/pages/events/pickban/components/PickBanStage.tsx, app/components/pages/events/pickban/components/FinalSummary.tsx, app/components/pages/events/pickban/components/Countdown.tsx, app/components/pages/events/pickban/components/PickBanBannerNote.tsx, app/components/pages/events/pickban/components/PickBanStatusChip.tsx, app/components/broadcast/BroadcastBackdrop.tsx, app/components/broadcast/BroadcastStage.tsx, app/components/broadcast/ReconnectingBadge.tsx, app/components/broadcast/TeamPlate.tsx, app/components/broadcast/broadcastFonts.ts, app/components/broadcast/broadcastMotion.ts, app/components/broadcast/broadcastTone.ts, app/components/broadcast/stageScale.ts, app/components/stream/sceneHelpers.ts, app/components/stream/SceneTicker.tsx, app/components/stream/useSceneCues.ts, app/components/stream/frame/SceneFrame.tsx, app/components/stream/frame/IdleFrame.tsx, app/components/stream/frame/SceneBranding.tsx, app/components/stream/data/useStreamData.ts, app/components/stream/scenes/intermission/SceneMapTile.tsx, app/components/stream/scenes/brb/SeriesScoreCard.tsx, app/components/stream/scenes/overlay/OverlayHub.tsx, app/components/stream/scenes/overlay/OverlayMapStrip.tsx, app/components/stream/scenes/overlay/OverlayNameTag.tsx, app/components/stream/scenes/overlay/OverlaySeamRails.tsx, app/components/stream/scenes/overlay/overlayLayout.ts, app/components/stream/scenes/NextMapScene.tsx, app/components/stream/scenes/nextMap/NextMapHero.tsx, app/components/stream/scenes/nextMap/NextMapColumn.tsx, app/components/pages/teams/PlayerSearchInput.tsx, app/components/pages/events/stream/UncertifiedServerWarning.tsx, app/components/pages/events/stream/streamPanels.ts, app/components/pages/events/stream/panels/channel/channelControlStyles.ts, app/components/pages/events/stream/panels/match/ScoreSection.tsx, app/components/pages/events/stream/panels/studio/CastersSection.tsx, app/components/pages/events/stream/useStreamKitState.ts, app/components/stream/stinger/Stinger.tsx, app/components/pages/events/stream/StreamCard.tsx, app/components/pages/events/stream/StreamTabContext.tsx, app/components/pages/events/pickban/components/CaptainDock.tsx, app/components/pages/events/pickban/components/ManagerDock.tsx, app/components/pages/events/pickban/components/EditFinalEditor.tsx, app/components/pages/events/pickban/components/PickBanMotion.tsx, app/components/pages/events/pickban/components/stageMotion.ts, app/components/pages/events/pickban/pickBanBeats.ts, app/components/pages/events/pickban/usePickBanPreload.ts, app/hooks/usePrefersReducedMotion.ts, app/hooks/useCopyFeedback.ts, app/components/pages/events/pickban/components/PickBanSoundControl.tsx, app/components/shared/LiveDot.tsx, app/components/ui/tooltip.tsx, app/components/modals/MapScreenshotModal.tsx, app/components/modals/mapScreenshotCrop.ts, app/components/pages/admin/components/AuthorPicker.tsx, app/components/pages/admin/components/TagEditor.tsx, app/components/pages/events/stats/StageChips.tsx, app/components/pages/events/stats/TeamCard.tsx, app/components/pages/events/stats/TeamCardsGrid.tsx, app/components/pages/events/stats/OverviewTeamLink.tsx, app/components/pages/events/stats/CupAtAGlance.tsx, app/components/pages/events/stats/MapStatsTable.tsx, app/components/pages/events/stats/team/teamShared.tsx, app/components/pages/events/stats/team/RunRow.tsx, app/components/pages/events/stats/team/TeamTable.tsx, app/components/pages/events/stats/team/TeamStageChips.tsx, app/components/pages/events/stats/team/MatchTimeline.tsx, app/components/ui/spinner.tsx]
----
+# Shared components
 
-# Shared components reference
+The reusable UI and when to use each piece. Check here before writing inline JSX or a
+one-off helper; use or extend the shared piece rather than forking it. Class strings
+and tokens are in [styling.md](styling.md).
 
-Single source of truth for reusable UI. **Before writing inline JSX or a one-off
-helper, check this list.** When in doubt, use the shared component or extend it;
-don't fork it.
+Feature components are documented with their feature: the pick/ban visual core in
+[pick-ban-ui.md](features/pick-ban-ui.md), the broadcast module, scene kit and Stream
+tab pieces in [stream-kit.md](features/stream-kit.md), event stats pieces in
+[events.md](features/events.md).
 
-## Hard rule: PlayerInfo for every player display
+## PlayerInfo: every player display
 
-`app/components/shared/PlayerInfo.tsx`
+`app/components/shared/PlayerInfo.tsx`. Render every player (review author,
+leaderboard row, cap history, achievement, roster) through `PlayerInfo`, never a raw
+`alias` or a hand-rolled avatar `<img>`. It handles the Discord avatar and its
+fallback, skips the avatar when `userId` is missing or 5 characters or fewer
+(string-only authors, bots), shows the active title with per-rarity styling, the
+Patreon badge, the "You" highlight, and links to the player profile.
 
-Any UI that shows a player (review author, leaderboard row, cap history, achievement,
-server roster, etc.) MUST render through `PlayerInfo`. Never render `alias` as raw
-text or hand-roll an avatar `<img>`. Handles:
-
-- Discord avatar via `getAvatarUrl(userId)` + fallback on error
-- Skips avatar when `userId` missing or `< 6` chars (string-only authors, bots)
-- Active title display + per-rarity styling (color, weight, glow, legendary pulse)
-- "You" highlight (emerald tint + badge)
-- `horizontal` / `vertical` layout, `sm` / `md` / `lg` sizing
-- Avatar-only presentation for compact roster stacks, with the same fallback and
-  active-title border styling
-- Name-only presentation for narrow table cells, keeping the click-through and
-  title/Patreon styling without the avatar
-
-Props are flat primitives — `userId`, `alias`, `title`. Never pass nested
-user/record shapes; destructure at the call site.
+Props are flat primitives; destructure nested user or record shapes at the call site:
 
 ```tsx
 <PlayerInfo
@@ -53,138 +31,94 @@ user/record shapes; destructure at the call site.
 />
 ```
 
-Pass `interactive={false}` to suppress the click-through to the player profile when
-the whole row is itself a button/clickable (e.g. the compare-run picker), so a click
-on the name compares/selects instead of navigating away.
+- `interactive={false}` drops the profile link when the whole row is itself
+  clickable (the compare-run picker), so a click selects instead of navigating.
+- `presentation="avatar"` renders only the avatar, for compact identity collections
+  (`TeamAvatarStack`); the surrounding component exposes names through a label or
+  roster tooltip.
+- `presentation="name"` drops the avatar for narrow cells (the Maps author column).
+  The name links whenever `userId` is set and is plain text otherwise, so linked and
+  string-only authors need no branch. The wrapper is `w-fit`: centre it with `mx-auto`,
+  not `justify-center`.
+- `layout` is `horizontal` or `vertical`; `size` is `sm`, `md` or `lg`.
 
-If the API payload you're rendering lacks `active_title`, get the field added to
-the API endpoint rather than working around it in the launcher (see the
-`consume-api-data` skill).
+When a payload lacks `active_title`, get the field added to the API rather than working
+around it (skill: consume-api-data).
 
-Use `presentation="avatar"` only inside compact identity collections such as
-`TeamAvatarStack`. The surrounding component must expose names through an
-accessible label or roster tooltip.
+Title styling outside `PlayerInfo` (a hero panel) imports the helpers from
+`app/utils/titleStyles.ts` (`getAvatarBorderStyle`, `getTitleTextStyle`,
+`getReadableTitleColor`, `hasTitle`). Rarity 5 animates with the
+`legendaryAvatarPulse` / `legendaryTitlePulse` keyframes in `app/styles/globals.css`.
 
-Use `presentation="name"` when a narrow column has no room for an avatar (e.g.
-the Maps author column). The name still links to the player profile whenever
-`userId` is set, and falls back to plain uninteractive text when it is not — so
-linked and string-only authors need no branch at the call site. The wrapper is
-`w-fit`, so center it with `mx-auto` rather than `justify-center`.
+### Patreon badge
 
-Rarity styling (1–5) lives in `app/utils/titleStyles.ts`
-(`getAvatarBorderStyle`, `getTitleTextStyle`, `getReadableTitleColor`, `hasTitle`).
-`PlayerInfo` consumes those helpers; if you need title styling outside
-`PlayerInfo` (e.g. a hero panel), import from `titleStyles.ts` — don't re-implement.
-Rarity 5 uses `legendaryAvatarPulse` / `legendaryTitlePulse` keyframes in
-`app/styles/globals.css`.
+`PlayerInfo` adds a `PatreonBadge` by itself: it calls `usePatreonTier(userId)`
+(`app/utils/patreon.ts`; the lookup is in [api.md](api.md)). Surfaces that render
+identity by hand (`playerDetail/HeroSection.tsx`) call `usePatreonTier` and render
+`<PatreonBadge tier={tier} />` from `app/components/shared/PatreonBadge.tsx` rather than
+drawing a heart. Clicking a badge stops propagation and fires the `open-patreon` window
+event; `PatreonModal` (mounted once in `Main.tsx`) shows the "Support UTBT" info.
+Open it from elsewhere with `openPatreonInfo()` from `PatreonBadge.tsx`.
 
-### Patreon supporters
+## Links to players, caps and maps
 
-`PlayerInfo` auto-renders a `PatreonBadge` (heart) next to the name when the
-player is a Patreon member — you don't pass anything. It calls
-`usePatreonTier(userId)` (`app/utils/patreon.ts`), which resolves the member's
-tier from a cached gateway list (see `agents/data-sources.md`). Players with no
-`userId` (string-only authors) never match, so they get no badge.
+Detail pages open through window events that `Main.tsx` turns into navigation; the
+event architecture and `NavLink` semantics are in [navigation.md](navigation.md).
+These components dispatch for you, and all render through `NavLink`, so on web they
+are real `<a href>` elements (middle-click and "open in new tab" work):
 
-`app/components/shared/PatreonBadge.tsx` — `{ tier: 1|2|3; size?: 'sm'|'md'|'lg' }`.
-Per-tier flair: t1 outline rose · t2 filled rose + glow · t3 gold + star +
-`patreonPulse` keyframe. Tooltip names the tier. For surfaces that render
-identity by hand (e.g. `playerDetail/HeroSection.tsx`, which doesn't use
-`PlayerInfo`), call `usePatreonTier(userId)` and drop in `<PatreonBadge>`
-directly — don't hand-roll a heart.
-
-Clicking a badge fires the `open-patreon` window event (it `stopPropagation`s
-so it doesn't also open the player profile when nested in a clickable row).
-`PatreonModal` (`app/components/modals/PatreonModal.tsx`) is mounted once in
-`Main.tsx`, listens for that event, and shows a "Support UTBT" info modal (tiers
-preview + how to get the badge + Patreon link). Open it from elsewhere via
-`openPatreonInfo()` exported from `PatreonBadge.tsx`.
-
-## Player + cap links
-
-Detail pages aren't URL-routed; clicking identity/time UI dispatches a `window`
-event that `Main.tsx` turns into navigation. The **event architecture lives in
-`agents/navigation.md`** — here are the two components you render so it happens:
-
-- **`PlayerInfo`** opens the Player Detail page on click (dispatches `open-player`).
-  Don't dispatch by hand — render `PlayerInfo` (above).
-- **`CapTimeLink`** (`app/components/shared/CapTimeLink.tsx`) — render every cap
-  time through it:
+- **Player**: render `PlayerInfo` (dispatches `open-player`).
+- **Cap time**: render every cap time through `CapTimeLink`
+  (`app/components/shared/CapTimeLink.tsx`):
 
   ```tsx
-  <CapTimeLink capId={entry.id} seconds={entry.cap_time_seconds} className={...} />
+  <CapTimeLink capId={entry.id} seconds={entry.cap_time_seconds} className={…} />
   ```
 
-  It renders `formatCapTime(seconds)` and, when `capId` (or `teamCapId`) is a real
-  id, makes it a `NavLink` that `stopPropagation`s (so it works inside rows that
-  already open the map) and dispatches `open-cap` / `open-team-cap` → the Cap Detail
-  page. Pass `capId={undefined}` for aggregate times with no backing cap (medians,
-  medal thresholds, distribution buckets) — it falls back to plain text. Don't
-  hand-roll `formatCapTime` in a clickable span. `openCap(capId)` is also exported
-  for the rare non-time trigger (e.g. the movement "best run" link).
-
-Both render through `NavLink`, so on the web build they are real `<a href>`
-elements — middle-click / ctrl-click / "Open in new tab" work. See
-`agents/navigation.md` → link semantics.
-
-## Map links
-
-Never wire a map click as a bare `<button onClick={() => onMapSelect(name)}>`.
-Render one of:
-
-- **`MapNameCell`** (`app/components/shared/MapNameCell.tsx`) — the table cell:
-  thumbnail + favorite star + name, thumbnail and name each linking to the map.
-- **`MapNavLink`** (`app/components/shared/MapNavLink.tsx`) — the generic wrapper
-  for any other clickable map surface (poster tiles, hero art, compact rows):
+  It formats with `formatCapTime` and, given a `capId` or `teamCapId`, links to the Cap
+  Detail or Team Cap Detail page, stopping propagation so it works inside a row that
+  opens the map. With neither id (medians, medal thresholds, distribution buckets) it
+  renders plain text. `openCap(capId)` / `openTeamCap(teamCapId)` are exported for a
+  non-time trigger.
+- **Map**: render `MapNameCell` (`app/components/shared/MapNameCell.tsx`) in a table
+  cell (thumbnail, favourite star and name, thumbnail and name each linking), or wrap
+  any other clickable map surface in `MapNavLink`
+  (`app/components/shared/MapNavLink.tsx`):
 
   ```tsx
-  <MapNavLink mapName={map.name} onMapSelect={onMapSelect} className={...}>
-      <MapThumbnail mapName={map.name} className="size-10 rounded-md" />
+  <MapNavLink mapName={map.name} onMapSelect={onMapSelect} className={…}>
+    <MapThumbnail mapName={map.name} className="size-10 rounded-md" />
   </MapNavLink>
   ```
 
-  Omitting `onMapSelect` renders a plain inert `<span>` — so the same JSX covers
-  the "not navigable here" case, and the click still reaches an enclosing
-  clickable row. It is a thin `NavLink` bound to
-  `maps-detail`, so the web build gets a real `/maps/<name>` anchor.
+  Without `onMapSelect` it renders an inert `<span>`, so the same JSX covers "not
+  navigable here" and the click still reaches an enclosing row. Style hover and cursor
+  with `cn` conditionals, not Tailwind's `enabled:` variant: `:enabled` never matches
+  an `<a>`, so those rules silently die on web.
 
-`MapNameCell`/`MapNavLink` use `cn(...)` conditionals for their hover/cursor
-classes — do **not** reach for Tailwind's `enabled:` variant around them; `:enabled`
-never matches an `<a>`, so those rules silently die on the web build.
+## Tables: `DataTable.*`
 
-## Tables — `DataTable.*` primitives
+`app/components/shared/DataTable.tsx`. Build every table from these primitives; they
+own the locked shell styling, the page owns columns, sort state and cell content.
+Width, alignment and the responsive contract are in [styling.md](styling.md).
 
-`app/components/shared/DataTable.tsx`. Use these for ANY tabular page. They
-encode the locked styling decisions (padding, font, hover, sort icons). Pages
-own their column definitions and cell content; primitives own the shell.
-
-| Component | Purpose |
+| Component | Role |
 |---|---|
-| `DataTableShell` | Scroll container + `<table>`. Pass `scrollRef`, `onScroll` for persisted scroll state. `minWidth` floors the table width so a flex column scrolls instead of collapsing at small sizes. Opt-in `responsive={{ columns, onResolve, compactContent, compactAriaLabel }}` adds width-driven condensed density + priority auto-hide, and below the required-fit width renders `compactContent` (stacked card rows) instead of the table — mandatory for every primary tabular surface; see `styling.md` → Responsive columns. |
-| `DataTableHeaderRow` | Sticky `<thead>` + bordered `<tr>`. `theadDataAttr` writes a data-attr for tutorial z-lift. |
-| `DataTableHeaderCell` | `<th>` with locked padding/font. `sortable` + `sortDirection` + `onSort` for sortable headers. `align`, `width`, `className`, `buttonRef` overrides. |
-| `DataTableRow` | Body `<tr>` with locked hover/border styling. Spread-through tr props. |
-| `DataTableCell` | `<td>` with locked padding. `align`, `width`, `className` overrides. `forwardRef` so per-cell measurements (tutorial) work. |
-| `DataTableEmpty` | Centered empty-state row. Text only, no icon. |
-| `DataTableSkeletonRow` | Uniform shimmer row for pages without per-column custom skeletons. |
-| `SortIcon` | Standalone sort-direction icon (`asc` / `desc` / `null`). Rarely needed — `DataTableHeaderCell` renders it via `sortable`. |
-
-Locked styling defined in `styling.md`. Don't override padding/font/hover
-inline — use the primitives or extend them. See **Column layout** in
-`styling.md` for the width/alignment convention: one width-less flex text
-column, an explicit `width` on every other column (else right-aligned numerics
-float under `table-fixed`); numbers right + `tabular-nums`, text left,
-icons/badges/actions center.
-
-Example:
+| `DataTableShell` | Scroll container and `<table>`. `scrollRef` / `onScroll` for persisted scroll. `responsive` adds density, priority auto-hide and compact cards. |
+| `DataTableHeaderRow` | Sticky `<thead>` and its `<tr>`. `theadDataAttr` writes a data attribute for the tutorial z-lift. |
+| `DataTableHeaderCell` | `<th>`. `sortable` + `sortDirection` + `onSort` render the sort button and icon; `align`, `width`, `buttonRef`. |
+| `DataTableRow` | Body `<tr>` with locked hover and border; spreads `<tr>` props. |
+| `DataTableCell` | `<td>` with locked padding; `align`; forwards its ref for measuring. |
+| `DataTableEmpty` | Text-only empty-state row. |
+| `DataTableSkeletonRow` | Uniform shimmer row for pages without custom skeletons. |
 
 ```tsx
-<DataTableShell scrollRef={scrollRef} onScroll={onScroll}>
+<DataTableShell scrollRef={scrollRef} onScroll={onScroll} responsive={…}>
   <DataTableHeaderRow theadDataAttr="data-utbt-foo-thead">
     <DataTableHeaderCell sortable sortDirection={dir('name')} onSort={() => sort('name')}>
       Name
     </DataTableHeaderCell>
-    <DataTableHeaderCell align="center" width="2.5rem">Score</DataTableHeaderCell>
+    <DataTableHeaderCell align="right" width="6rem">Score</DataTableHeaderCell>
   </DataTableHeaderRow>
   <tbody>
     {rows.length === 0
@@ -192,62 +126,47 @@ Example:
       : rows.map(r => (
           <DataTableRow key={r.id}>
             <DataTableCell>{r.name}</DataTableCell>
-            <DataTableCell align="center">{r.score}</DataTableCell>
+            <DataTableCell align="right" className="font-mono tabular-nums">{r.score}</DataTableCell>
           </DataTableRow>
         ))}
   </tbody>
 </DataTableShell>
 ```
 
-## Columns customization — `ColumnsMenu`
+## ColumnsMenu
 
-`app/components/shared/ColumnsMenu.tsx`. Generic drag-reorder + visibility
-checkboxes for tables with column customization. Generic over a `TColumnId`
-string union.
+`app/components/shared/ColumnsMenu.tsx`: drag-to-reorder plus visibility checkboxes,
+generic over a `TColumnId` string union. The parent owns order and visibility and
+mutates them in `onToggle` / `onReorder`. `requiredColumns` can't be hidden;
+`excludeFromList` keeps a column in the order but out of the menu (the Maps `tags`
+pseudo-column); `renderExtra(id)` adds a per-row control (Maps' nested "Show Tags").
+`triggerRef`, `menuOpen` and `onMenuOpenChange` let a tutorial drive it. Hide it while
+a responsive table shows compact cards.
 
-Key props:
-- `columnOrder: TColumnId[]`, `columnVisibility: Record<TColumnId, boolean>`, `columnLabels`
-- `onToggle`, `onReorder` — parent owns mutation
-- `requiredColumns?: Set` — never hideable
-- `excludeFromList?: Set` — column exists in order but doesn't appear in menu (e.g. Maps `tags` pseudo-column)
-- `renderExtra?: (id) => ReactNode` — per-row addon (Maps uses this for nested "Show Tags" checkbox)
-- `triggerRef`, `menuOpen`, `onMenuOpenChange` — for tutorial control
+## FilterPresetsMenu
 
-## Filter presets — `FilterPresetsMenu`
+`app/components/shared/FilterPresetsMenu.tsx`, generic over the preset payload
+`TFilters`. It owns the dropdown, the save modal and the delete confirm; the parent
+owns the preset array, its persistence (see [state-patterns.md](state-patterns.md)),
+and `captureCurrentFilters()` / `onLoad` to read and apply filters. `hasActiveFilters`
+enables Save; `onResetFilters` adds a Clear Filters button; `triggerRef`, `menuOpen`
+and `onMenuOpenChange` serve the tutorial.
 
-`app/components/shared/FilterPresetsMenu.tsx`. Generic over preset payload
-shape (`TFilters`). Owns dropdown + save modal + delete-confirm modal. Parent
-owns the preset array + persistence + capture/apply logic.
-
-Key props:
-- `presets`, `activePreset` (highlighted state)
-- `hasActiveFilters` — controls Save enablement
-- `onSave(name, filters)`, `onLoad(preset)`, `onDelete(preset)`
-- `captureCurrentFilters()` — parent callback returning current `TFilters`
-- `onResetFilters?` — adds a Clear-Filters button next to the menu
-- `triggerRef`, `menuOpen`, `onMenuOpenChange` — for tutorial control
-- `label`, `placeholderExample` — defaults: "Saved Filters", "e.g. Easy maps from 2024"
-
-## Tutorial — `Tutorial` + `useTutorialState`
+## Tutorial
 
 `app/components/shared/Tutorial.tsx` + `useTutorialState.ts`.
 
-`useTutorialState(storageKey)` — `{ seen, markSeen, resetSeen }` persisted to
-localStorage. Use a versioned key per page (e.g. `utbt:serversPageTutorial:v1`).
+- `useTutorialState(key)` returns `{ seen, markSeen, resetSeen }`, stored under a
+  versioned per-page key (`utbt:serversPageTutorial:v1`); how such keys persist and
+  sync is in [state-patterns.md](state-patterns.md).
+- `<Tutorial steps step setStep onClose ariaLabel />`. Each `TutorialStep` has `id`,
+  `title`, `body`, an optional `targetRef` or `targetRefs`, and `onEnter` / `onExit`.
+- Steps live in a per-page file (`app/components/pages/<page>/<page>TutorialSteps.ts`)
+  because they reference page refs; that file re-exports `TutorialStep`.
 
-`Tutorial` — overlay component. Takes:
-- `steps: TutorialStep[]` — each step has `id`, `title`, `body`, optional `targetRef` / `targetRefs`, `onEnter`, `onExit`
-- `step`, `setStep` — current step index
-- `onClose` — fires on skip or Done
-- `ariaLabel` — required, e.g. "Servers page tutorial"
-
-Tutorial steps belong in a per-page file (`app/components/pages/<page>/<page>TutorialSteps.ts`) since they reference page-specific refs. Re-export `TutorialStep` from the shared module.
-
-### Sticky-thead gotcha
-
-Sticky `<thead>` with `z-index` creates a stacking context that traps inline
-z-index lifts on children. If a tutorial step targets a header button, lift
-the whole thead during the step:
+A sticky `<thead>` with a z-index is a stacking context that traps the tutorial's
+inline z-index lift on its children. When a step targets a header button, lift the
+whole thead through the `theadDataAttr` hook:
 
 ```ts
 {
@@ -258,245 +177,97 @@ the whole thead during the step:
 }
 ```
 
-`DataTableHeaderRow` accepts a `theadDataAttr` prop for this purpose.
+| Layer | z |
+|---|---|
+| Sticky thead | 2 |
+| Dim overlay | 5 |
+| Highlighted target (inline, `data-tutorial-highlight`) / lifted thead | 60 |
+| Ring | 70 |
+| Tutorial card | 80 |
 
-### Z-index map
-
-| Layer | Z | Notes |
-|---|---|---|
-| dim overlay | 5 | Backdrop |
-| sticky thead default | 2 | Above scrolling rows |
-| sticky thead during tutorial sort step | 60 | `!z-[60]` via data-attr |
-| highlighted target (inline) | 60 | Set by `Tutorial` via `data-tutorial-highlight` |
-| ring (box-shadow glow) | 70 | Transparent div; box-shadow paints around target |
-| tutorial card | 80 | Top |
-
-## Visual primitives
+## Visual pieces and modals
 
 | Component | Use for |
 |---|---|
-| `app/components/shared/MapThumbnail.tsx` | Any map screenshot tile. Pass `mapName` + `className` for sizing. Falls back to `default.png` on error. Optional `version` (the map's `screenshot_updated`) appends a cache-busting `?v=` — pass it wherever you have it so a replacement swaps instantly. Stored screenshots are square; in a non-square box pass `fit="blend"` (contains the image over a blurred copy of itself) instead of letting `object-cover` crop it a second time. |
-| `app/components/modals/MapScreenshotModal.tsx` | The one square-crop screenshot UI, shared by the map hero, the profile Maps Authored tab and the admin Maps section. Drag-to-pan + zoom, then a canvas-rendered PNG goes to one of two places the caller picks: pass `accessToken` + `hasScreenshot` + `onUploaded` to upload it to an existing map (the updated map comes back through `onUploaded`), or pass `onCropped(image, filename)` to receive the image yourself (optional `previewUrl` shows the current image behind the drop zone). The modal awaits `onCropped`, shows its error if it throws, and closes when it resolves. The crop rules (accepted types, 256 px minimum edge, 1024 px output, zoom cap) live in `mapScreenshotCrop.ts`. Gate on who may open it (linked author or staff) at the call site — see `agents/data-sources.md`. |
-| `app/components/shared/ActiveFilterChip.tsx` | Removable blue-tinted chip for active filter pills shown above the data table. Props: `label`, `value`, `onClear`. Pages compose a row of these from their own filter state (one chip per filter value). |
-| `app/components/shared/LiveDot.tsx` | The one pulsing emerald "happening right now" dot (`size-2.5`, `aria-hidden`), used by the sidebar live badge, the "Needs your attention" lobby row and the picks & bans Join banner. `className` positions it or adds a cutout ring; never re-draw the dot inline. See `agents/styling.md`, sidebar badges. |
-| `app/components/shared/FavoriteStar.tsx` | Generic favorite toggle. Prop is `name: string` (not `mapName`); pass whatever identifier you store (map name, server ID, etc.). |
-| `app/components/shared/IconActionButton.tsx` | Locked-style icon button used in table action cells. `variant: 'review' \| 'replay' \| 'download'` (orange for review, amber for replay, blue for download). Props: `icon` (lucide), `tooltip`, `onClick`, optional `loading`, `disabled`, `iconFill`. Stops click propagation by default so it works inside clickable rows. |
-| `app/components/shared/DemoDownloadStatusModal.tsx` | Modal that shows demo-download progress / success / error. Pair with the `useDemoDownload()` hook (`app/hooks/useDemoDownload.ts`) which exposes `download`, `start(entry, mapName)`, `clear()`. |
-| `app/components/ui/modal.tsx` | Primary modal shell (header/footer, focus trap, Escape, stacking). Pass `offsetSidebar` so it respects the navigation rail. (`app/components/shared/Modal.tsx` is a simpler framer-motion variant used by `ErrorModal`.) |
-| `app/components/shared/ConfirmModal.tsx` | Yes/no confirmation dialog. |
-| `app/components/shared/BackButton.tsx` | "← Back" button. |
+| `shared/MapThumbnail.tsx` | Every map screenshot. `size` (`thumb`, `card`, `hero`) picks the resized image; on error it falls back to the full image, then the default screenshot. Pass `version` (the map's `screenshot_updated`) wherever you have it so a replaced screenshot shows at once. Screenshots are square: in a non-square box pass `fit="blend"` (contained over a blurred copy) instead of cropping again with `object-cover`. |
+| `modals/MapScreenshotModal.tsx` | The one square-crop screenshot UI (map hero, profile Maps Authored, admin Maps). Pass `accessToken` + `hasScreenshot` + `onUploaded` to upload to an existing map, or `onCropped(image, filename)` (+ optional `previewUrl`) to take the PNG yourself; it awaits `onCropped`, shows a thrown error, and closes on success. Crop rules are in `mapScreenshotCrop.ts`. Gate who may open it (linked author or staff) at the call site; the endpoint is in [api.md](api.md). |
+| `shared/ActiveFilterChip.tsx` | One removable chip per active filter value (`label`, `value`, `onClear`). |
+| `shared/LiveDot.tsx` | The one pinging emerald "happening now" dot (`aria-hidden`). Position it or add a cutout ring through `className`. |
+| `shared/MetaPill.tsx` | Info pill in detail-page headers (`icon`, `label`, `value`, `tone`, `tooltip`, `href` or `onClick`); wraps by itself. |
+| `shared/FavoriteStar.tsx` | Favourite toggle. The prop is `name`: pass whatever id you store (map name, server id). |
+| `shared/IconActionButton.tsx` | Icon button for table action cells, `variant` `review` / `replay` / `download`. Stops click propagation by default, so it works inside clickable rows. |
+| `shared/DemoDownloadStatusModal.tsx` + `hooks/useDemoDownload.ts` | Demo download progress, success and error. `MapDownloadStatusModal` + `useMapDownload` do the same for maps. |
+| `shared/ReplayVideoModal.tsx` + `hooks/useReplayWatch.ts` | Watch a cap's replay video: `openReplay({ capId, mapName, time?, alias? })`, then render the modal from `video`. |
+| `shared/MarkdownBody.tsx` | Render markdown text with the app's typography. |
+| `shared/MapSearchInput.tsx` | Pick one map by searching (`accessToken`, `value`, `onChange`). |
+| `pages/teams/PlayerSearchInput.tsx` | Pick a UTBT player: `accessToken`, `onPick(player)`, `excludeIds?` (a `Set` of user ids to leave out, such as current members), `disabled?`, `placeholder?`. Searches by alias from 2 characters with a 300 ms debounce, shows up to 8 results through `PlayerInfo`, and clears after a pick. Used by Admin → Streamers, Roles and Events, event sign-up, team members and Stream tab casters. It takes no label, so wrap it in a labelled `role="group"`. |
+| `ui/modal.tsx` | The modal shell: header and footer, focus trap, Escape closes only the top-most modal (`data-modal-backdrop`). Pass `offsetSidebar` so it centres on the content area. |
+| `shared/ConfirmModal.tsx` | Yes/no confirmation (built on the simpler framer-motion `shared/Modal.tsx`). |
+| `shared/AuthRequiredModal.tsx` | Prompt a signed-out user: call `requestLogin({ feature, description? })`; the modal is mounted once in `Main.tsx`. |
+| `shared/BackButton.tsx` | "← Back". |
 
-## Pick/ban visual core
+### Team identity
 
-`app/components/pages/events/pickban/components/` holds the pieces a pick/ban screen is
-built from. The match page uses them; the chromeless stream view has its own broadcast
-layout (below) built on the same view model, tones, choreography and reveal effects. Each
-takes slices of the view model (`PickBanView`,
-see `agents/data-sources.md`) and nothing from the raw payload. Who acts and what they do
-read from the view model's `actorLabel` and `actionLabel`; no component rebuilds a team
-label from a name and a letter.
-
-| Component | Props | Renders |
-|---|---|---|
-| `MatchBanner` | `view` | The page's header: an `sr-only` `h1` with the match title, then two team plates in the side colours around the status chip, a VS and `matchSubtitle` (below `@3xl/banner` the plates sit side by side under a row with the chip and subtitle, the VS hidden, and each plate lists its members in a column). Each plate is a `section` labelled with the team's name: the A/B chip, stage seed, "Currently choosing" while the team is on turn or Ready / Not ready in the lobby, the name in `font-pickban`, every member through `PlayerInfo` (with their selected title) with a presence dot and a captain or acting-captain badge, and "N of M online". The on-turn plate brightens. |
-| `MapTile` | `card`, `previewActor` (the side whose selection preview is shown), `actorLabels` (`actorLabelsOf(left, right)`), `dimmed`, `imageSize` (`MapThumbnailSize`), `onSelect?: (map) => void` | One square map tile, shared by the page board and the stream. It is its own `@container/tile` and sizes its text and badges in `cqw`, so it looks the same at 100px and 320px. Banned: grey under a ban mark and "Banned" in the banning side's colour, "By <team>" under the name. Picked: a coloured frame and glow, a "Map N" badge and "Picked by <team>". Decider: gold with a star. A card waiting on the team-chosen veto (`pendingLabel`) gets a neutral "Hard?" badge in the top-left corner. The page never passes an excluded map (see `ExcludedMaps`); the stream board passes the maps a team vetoed, which grey out like a ban under a slanted gold "VETOED" stamp, with "By <team>" under the name and the label "<map>, vetoed by <team>". The previewed map lifts with "Considering"; a `selected` one with "Selected", a `lockedIn` one with "Locked In", both in `previewActor`'s colour. With `onSelect`, every `selectable` tile gets a full-tile button (`aria-pressed` = `selected`) and a hover lift. The root carries `title` = the map name. Badges enter and exit and the grey transitions, so an undo reverses them. |
-| `MapBoard` | `cards` (the eligible ones, `eligibleCardsOf(view.cards)`), `previewActor`, `actorLabels`, `onSelect?`, `className?` | The page's pool: `MapTile`s in centred rows (`@container/board`, padded so a lifted tile stays inside). The column count per container width comes from `boardColumnVars(count)` (`boardColumns.ts`: the largest balanced column count under each breakpoint's cap of 3 to 8), passed as CSS variables, so a tile's size is pure CSS (`min(18rem, …100cqw…)`), never measured, and the board's height depends only on its width and the pool size. While another team's map is previewed, the other open tiles dim. From `@3xl/board` a tile is also capped by the window height (`100dvh` less the space the banner, caption and dock need, divided by the row count from `--rows-N`, never below 9rem), and the row is as wide as its column count, so the maps and the dock under them fit one screen on desktop. |
-| `StepTrack` | `entries`, `skippedBans`, `size` (`'page'` or `'broadcast'`), `className?` | One slot per plan step, centred: the step's map art once revealed (greyed under a ban mark for a ban), otherwise the action icon, with "Ban", "Pick · Map N" or "Decider" under it. Each slot is a `@container/slot`, sized in `cqw`. A divider sits between segments and a dashed "Skipped" slot wherever a ban was dropped. The ring on the current step is a shared layout element, so it glides to the next step, and back on an undo. On the page the slots wrap onto more rows at narrow widths. |
-| `ExcludedMaps` | `cards` | Maps excluded for this match, kept off the board: an "Excluded" row of small greyed chips (thumbnail and name, the reason in the title) and each distinct reason under it. A map a team vetoed adds a gold "VETOED · <team>" stamp to its chip. `ExcludedMaps.tsx` also exports `eligibleCardsOf`, `excludedCardsOf` and `exclusionReasonsOf`. |
-| `PickBanStage` | `view`, `summaryAction?`, `onSelect?`, `className?` | The page's stage, a `section` labelled "Picks & Bans Stage" (`@container/arena`): `StageCaption` over a `MapBoard` of the eligible maps, with a glow on the acting side. The intro, a reveal, the final lineup ("Maps in play order", `FinalSummary`, `summaryAction`) and the cancelled or voided notice are overlays: each `view.scene` is one keyed presence child in a `@container-size/stage` box over the board, and the board fades out (and is `inert`) under it but keeps its space, so the stage keeps one height per width in every state. A new scene mounts in the same render that reached its moment (so a reveal starts exactly at `reveal_at`), while the old one fades out in place; on an undo (`sceneDirection` of -1) the old scene plays its entrance backwards and the returning one waits a short handoff. A scene that `playsEntrance` rules out appears settled. A paused overlay fades in and out over whatever the pause froze. |
-| `StageCaption` | `view` | The line over the board: the step (and map) count, "<team> (Red) to ban" or "to pick" in `font-pickban` with chevrons pointing at the acting team, and a detail line ("Your turn: select a map, then lock in", "<team> is considering this map…", "Waiting for <team> to lock in" or "Locked in, revealing now!"); during the veto "Veto or play the Hard maps" for an eligible captain who still chooses, else "<team> are deciding on the Hard maps" or "Waiting for <team>" over "13 or 9 maps", then "<team> veto the Hard maps" or "Hard maps stay in" in gold; during step 0 "Choose Red or Blue" for the chooser or "<team> are choosing their side", then the reveal ("T04 → RED · bans first") in the chosen colour with the viewer's own colour; in the lobby "Waiting for an admin to start" (kicker "Lobby open · Sides TBC" while unconfirmed), before it "Not open yet". Exports `Chevrons` for the stream. |
-| `IntroCard`, `RevealCard`, `StageNotice`, `PausedOverlay` | exported from `StageScenes.tsx`; `IntroCard` and `RevealCard` take `entranceMs?` (`view.scene.entranceMs`) | The page's scenes, sized by the `stage` size container around them. The intro slides the names in from their sides with the VS between. A reveal scales the square in; a ban then greys the screenshot and slams the BANNED stamp; a pick drops its "Map N" badge; under the map name the byline reads "Banned by <team>", "Picked by <team>" or, for the decider, "Left by both teams", then "Next: <team> to ban" (`nextStepLabel`). The decider grows more slowly with a gold glow, sheen and ribbon. Every beat is a share of `entranceMs`, and each plays in reverse when an undo removes the step. `StageScenes.tsx` also exports what the stream's own scenes reuse: `useSceneDirection`, `stageAnnouncement`, `revealKindOf`, `shakeOf`, `frameOf`, `revealByline`, `nextStepLabel`, `endReasonOf`, `DISCARDED` and `DECIDER_LETTERS`. |
-| `CaptainDock` | `dock: CaptainDock` (from `captainDockOf`, see `agents/state-patterns.md`), `ab` (the viewer's side letter, for its colour), `reconnecting`, `actingFor?` (a team name, for the manager dock's act-for: the dock is labelled "Act for a team", the turn's eyebrow reads "Acting for <team>" instead of "Your turn", and Waiting says there is nothing to act for right now), `onLockIn`, `onToggleReady?`, `side?` (the view's `side` block, passed while step 0 runs), `choosingSide?` (the colour being sent), `onChooseSide?`, `veto?` (the view's `veto` block, passed while the veto runs), `vetoCountdown?`, `choosingVeto?` (the choice being sent), `onVeto?`, `onDismiss`, `className?` | The captain's controls, as a bar the page places right under the stage, between the maps and the step track. It is `sticky bottom-3`, so it only pins to the bottom of the window when the board is taller than the window (on phones); on wider layouts `MapBoard` sizes its tiles to the window height so it stays in place under the maps. It shows Ready or Unready in the lobby; on their turn, what to do, the selected map and a Lock In button in the side's colour, disabled until a map is selected; Locked In with the map; or a disabled Locked button with what's next and a gliding countdown (`CountdownText` + `CountdownBar`) through the intro, a spotlight or a pause. During the veto an eligible captain who hasn't chosen sees two gold veto cards ("Veto Hard maps" with "Play 9 maps" and the four maps, "Play Hard maps" with "Play 13 maps") and a Lock In button; while paused, "Veto or play the Hard maps" with locked controls; everyone else "<team> are deciding on the Hard maps" or "Waiting for <team>"; during the veto spotlight the outcome with its countdown. During step 0 the chooser sees two side cards ("Red · Side A", "Blue · Side B", each with its lead and this match's steps, a `radiogroup` of tone-bordered cards, one column on phones) and a Lock In button in the selected colour; the other captain sees "<team> are choosing their side"; while the chooser can't choose yet (a pause), the chooser sees "Choose Red or Blue" with locked controls instead; during the side spotlight both see the reveal and their "You’re Red" chip above the locked controls. A refusal shows above them as a dismissible alert, and a Reconnecting line below replaces the page's toast while the dock shows. The page renders it when `captainDockOf` returns a dock, and for an acting captain while the veto or step 0 runs or a veto or side refusal shows (with empty controls; the lettered controls are dropped during the veto), so spectators, teammates and replaced captains never see a button. The button wraps under the text at phone widths. Match-page only: the stream view never renders it. Its dismissible refusal alert is exported as `Rejection` for the manager dock. |
-| `ManagerDock` | `manager` (`useManagerDock`'s result; it renders from `manager.dock`, the `managerDockOf` model, see `agents/state-patterns.md`, and nothing while that is `null`), `slug`, `accessToken`, `links` (`buildMatchLinks`'s player and stream links) | A manager's "Match Control" panel, loaded with `lazy()` by the page only while `manager.dock` is set, placed below the pool so nothing in it moves the stage, timeline or grid. It is its own `@container/dock`. The header shows the status chip and the model's status line, with Copy Player Link and Copy Stream Link as icon buttons (tooltips, a check and a polite "copied" status while copied). Under it: a voided banner (`PickBanBannerNote`, heavier border), the results warning (a `PickBanBannerNote` warning), a dismissible refusal, then the model's `playingNote` for a manager who plays in the match, a quiet one-line note. The act-for controls (`dock.actFor`) are not part of this panel: the page renders them as a `CaptainDock` with `actingFor` in the captain dock's slot under the stage, from Start to the last lock-in (locked with the countdown through the intro, a reveal or a pause). Then two columns from `@3xl/dock` (stacked below it). Left: the primary card, one big context button (Open Lobby, Start in emerald, Pause in amber, Resume) with its hint; beside Start each team's Ready mark and, while Start is refused, an amber "Start is blocked" callout with the reason and its fix. Once complete, a Pick/ban complete card instead. Under it the Sequence card: in the lobby a Radix dropdown (presets, then each stage's sequence, the current one checked, loaded with `fetchPickBanConfig` when the lobby dock mounts) that sends the override on select; otherwise plain text. Under that, the Map Veto card when the stage has a choice rule: the lobby line (whether a veto will happen), then each eligible team's Deciding / Veto / Play chip and the outcome, and, for each team that hasn't chosen, an "Act for" block with a "Veto Hard maps" and a "Play Hard maps" button (gold, 44px below `sm`), each opening a confirmation before it is sent. Right: the Sides board, its label beside a source badge (Step 0 in emerald, Admin in accent, Caster in sky, Backfill neutral, or a dashed amber Sides TBC; the badge's hint is its tooltip). During step 0, for a manager who doesn't play, an "Act for" block with a Red · Side A and a Blue · Side B button in their tones (stacked below `sm`), each with its lead ("Ban 1st, pick 2nd"); either opens a (non-red) confirmation before the side is sent. In the lobby, unless an admin set the side, the Chooser: a segmented `radiogroup` of both teams with their pre-cup seeds (arrow keys move and choose; the indicator slides with `INDICATOR_TRANSITION`), framed in amber with a prompt while no chooser is known, plain as an override otherwise. Then one tile per team, A first, in its A or B colour (letter, name, and "Red · Side A" / "Blue · Side B", or "Sides TBC"), with a round ⇄ Swap between them in Swap's window (on a swap it turns and the tiles glide past each other; it points ⇅ when the tiles stack; while the sides are TBC it is disabled and the reason shows under the tiles). Under the tiles, the chooser rule (the view's `side.chooserLine`, "T04 choose: higher pre-cup seed (9 vs 3)") or, once an admin set the side in the lobby, "The sides are set, so step 0 is skipped." Last, Set sides: a "who is Red" `radiogroup` with a crimson indicator on the Red team; outside its window it is dimmed and its hint turns amber with the reason. Each tile has an "In Control" dropdown of the roster through `PlayerInfo` (`interactive={false}`), with online dots and the captain tagged; choosing the captain gives control back. A footer separates History (Undo, labelled for what it takes back: "Undo Last Step", "Undo Side Choice" or "Undo Veto"; Reopen; Edit Final Maps…) from the red-outlined Dangerous Actions group (Restart, Cancel Picks & Bans), each button with an icon and its hint as a tooltip. Every control is a 44px target below `sm`, and a control in flight shows a spinner. Reopen, Restart and Cancel confirm in a `ui/modal` saying what will change (red confirm button, from the model's `destructive`). Edit Final Maps… (shown once the last spotlight is over) opens `EditFinalEditor` in a wider modal whose Save… asks for its own confirmation (Keep Editing returns to the draft). Save… is held while the draft is invalid or `outdated`. The editor is hidden while its confirmation shows, so only one modal is ever open. A dropdown or the editor closes by itself once the session stops allowing it. Every dock modal is portalled to `document.body`: the dock sits inside the page's `@container`, which would otherwise trap a fixed overlay. Match-page only. |
-| `EditFinalEditor` | `editor` (the dock's `finalEditor`: `finalEditorOf` from `events/pickban/editFinal.ts` plus `saving` and `rejection`, see `agents/state-patterns.md`), `resultsWarning`, `onChange` (applies an `editFinal.ts` draft change), `onReload` (starts the draft again from the current summary), `onDismissRejection` | The body of the Edit final modal, rendered by `ManagerDock`. While the draft is `outdated` (the session moved past the version it opened on), an amber notice says the final maps changed since the editor opened, with a Reload button. One row per map in play order: "Map N" in the picking side's colour (gold for the decider), a native map select over the eligible pool, a picked-by select with both team names (disabled for the decider), a Decider checkbox (enabled on the last row, or on a row that is still marked), and move up, move down and remove buttons. Rows with a problem get a red border, and every problem is listed under Add a Map in a polite live region. A refused save shows as a dismissible alert above the rows, with the results warning when results exist. Rows are three-line cards (44px targets) below a 42rem `@container/final`, and a single line at or above it, so the layout follows the modal's width rather than the viewport's. |
-| `FinalSummary` | `entries`, `className?` | Maps in play order as square cards with a coloured frame and a "Map N" badge, who picked each, the decider in gold with a star, and a placeholder for any slot not revealed yet. The slots stagger in when the stage enters the summary. |
-| `PickBanMotion` | `animate`, `children` | Wraps any tree of the visual core (the match page, the stream view). A framer-motion `MotionConfig` driven by `animate`, not by the OS reduced-motion switch: pick/ban reveals are the show, and Windows reports "reduce" whenever its Animation effects are off. The match page takes `animate` from its Animations toggle (`pickBanMotionPreference.ts`, key `utbt:pickBanMotion:v1`, on by default, account-synced); the stream view animates unless its URL carries `motion=0`. With `animate` off, every enter, exit and layout animation below it is instant and the information shown is the same. Its wrapper carries `data-motion="on"` while animating, which exempts the subtree from `shared.css`'s reduced-motion rule. `usePickBanAnimate()` reads the value below it. |
-| `PickBanSoundControl` | `preference` (`{ enabled, volume }`), `onToggle(enabled)`, `onChange` (the whole next preference), `onPreview()`, `className?` (the trigger's classes) | The match page's header sound control: a button showing `preference.enabled` ("Sound On"/"Sound Off") that opens a small panel with a Sound switch (`ui/switch`, labelled by its row) and a Volume `ui/slider` 0–100% with the number shown. The slider keeps a local draft while it moves and calls `onChange` then `onPreview` only on release (pointer up, key up or blur); while sound is off a line says to turn it on to hear a preview. It is a disclosure (`aria-expanded`, a labelled group under the button), not a Radix menu, so Tab and the arrow keys reach the switch and slider; Escape, an outside pointer or focus leaving closes it. 44px rows below `sm`. It holds no sound state itself: the page wires it to `usePickBanSound` and `pickBanSoundPreference.ts` (see `agents/navigation.md` → `match-pickban-page`). |
-| `usePickBanPreload(cards, sizes?)` | `view?.cards`, and the `MapThumbnailSize`s to fetch (default `['card']`, the size the core renders; the stream view passes `['card', 'hero']`); returns nothing | Fetches and decodes every non-excluded pool screenshot at each size (following `MapThumbnail`'s derived → canonical → default fallback), and loads the fonts. It holds the decoded images while mounted and keys on the list of URLs, so rebuilding the view doesn't refetch anything. Call it from the lobby on and when the stream view loads. |
-| `stageMotion.ts` | `choreography(entranceMs)` | The pick/ban choreography only; the curves and presets it builds on (`SCENE_VARIANTS`, `staggeredCard`, `CHIP_MOTION`, `STAMP_MOTION`, `FADE_MOTION`, `INDICATOR_TRANSITION`) live in the broadcast module (below). Everything animates `transform`, `opacity` or a one-shot `filter`: nothing loops and nothing blurs per card. The hits inside an entrance (`IMPACT`, `STAMP_HIT`, `DECIDER_IMPACT`, `VS_HIT`, each a share of `entranceMs`) live in `events/pickban/pickBanBeats.ts`, which the sound cues read too, so a sound's hit and the picture's can't drift apart. |
-| `CountdownText` / `CountdownBar` | `countdown`, `tone` (bar only), `className?` | A countdown and a shrinking bar, painted on animation frames from `countdown.endsAt` straight into the DOM, so nothing re-renders per frame. A frozen countdown holds still at `remainingMs`. With animations off (`usePickBanAnimate()` from the surrounding `PickBanMotion`), the bar steps once a second with the text instead of gliding. |
-| `PickBanBannerNote` | `banner`, `className?` | One view-model banner (voided, cancelled, paused, skipped bans or a warning) with its icon and tint. |
-| `PickBanStatusChip` | `status: PickBanSessionStatus`, `className?` | A session status in the words and colours of `pickBanStatus.ts`: Not Open, Cancelled and Voided muted, Lobby in the accent, Live emerald, Paused amber, Complete neutral. The Manage queue and the watch page both use it, so a status reads the same everywhere. |
-| `YoureSide` | `color: SideColor`, `className?` | The player's own colour, "You’re **Red**" or "You’re **Blue**", as a small chip in that colour's tone (`sideColorTone`). The pick/ban page shows it to a player in the match once the side is confirmed, and My Matches shows it on an Upcoming card from `side_color`. |
-| `broadcastTone.ts` | `PICK_BAN_TONES`, `PICK_BAN_HUES`, `teamTone(ab)`, `stepTone(actor)`, `tint(hue, percent)` | Moved to the broadcast module (below): every pick/ban component reads its tones from there. |
-
-They size themselves with container queries (`/banner`, `/arena`, `/board`, `/tile`,
-`/slot`, the `stage` size container), not viewport breakpoints, so they work the same in a
-phone column, beside the sidebar at 4K and in the stream's fixed stage. Keys are the view
-model's (member id, map name, plan index, map number), and the two team plates sit in fixed
-left and right slots, so a poll never remounts them. Display text (team names, the caption,
-tile and track labels, the scenes) is set in `font-pickban`, which `PickBanStage` loads.
-
-### Stream broadcast layout
-
-`events/pickban/stream/` renders the stream view for a 1920×1080 OBS source, in its own
-layout, fixed in pixels, sharing `MapTile`, `StepTrack` and `Chevrons` with the page.
-`StreamBroadcast` (`view`, `eventName`) stacks:
-
-| Piece | Renders |
-|---|---|
-| `BroadcastHeader` | Two angled `TeamPlate`s in the side colours (stage seed, name sized down for long names, every member through `PlayerInfo` with `interactive={false}`), with the event name, "Picks & Bans" and `matchSubtitle` between them. The side on turn brightens and shows "Currently choosing"; in the lobby each plate shows Ready or Not ready. Once the side is confirmed (from the step-0 reveal on, or from the start when an admin set it) each plate leads with its RED or BLUE tag (`plateSideTagOf` in `stream/broadcastMoment.ts`). |
-| `BroadcastCaption` | A line over the board: "<team> (Red) to ban" or "to pick" with the step (and map) count and chevrons pointing at the acting team; during step 0 "Side choice" with "<team> are choosing their side", then "Sides set" with the reveal in the chosen colour; while the teams decide on a team-chosen veto, "Hard-map veto · 13 or 9 maps" over who is deciding; or the lobby and not-open notices. |
-| `BroadcastBoard` | The eligible maps as big square `hero`-size `MapTile`s, laid out by `boardLayout(count, width, height, gap, maxTile)` (the column count that keeps tiles largest, capped at 320px), and one muted line under them per exclusion tag ("Hard maps are out: …"). Maps vetoed by a team stay on the board with a VETOED stamp instead (`broadcastBoardOf`). While a map is previewed the other open maps dim. |
-| `StepTrack` | `size="broadcast"`: fixed 128px slots in one row. |
-| `BroadcastIntro`, `BroadcastReveal` | The intro (names from their sides, players, VS, countdown, and "Sides set by admin" under it when step 0 is skipped) and the reveal (card, stamp or map badge, map name, byline, countdown, next turn) at broadcast size, from the same `choreography(entranceMs)`, `RevealEffects` and `StageScenes.tsx` helpers as the page's scenes. |
-| `BroadcastSideChoice`, `BroadcastSideReveal` | Step 0: the choosing team's name, "choose their side" and a RED and a BLUE option card with each colour's lead ("Ban 1st, pick 2nd", or "Acts first"/"Acts second" with no planned steps); then the reveal, a slab in the chosen colour with RED or BLUE, the reveal line ("T04 → RED · bans first"), the countdown to step 1 and the next turn. In a stage with a team-chosen veto, the choice also shows the chooser line ("T15 choose: lower group finish (4th vs 3rd)"). |
-| `BroadcastVetoReveal` | The team-chosen veto's outcome: the tag's maps as four gold-bordered cards that get stamped VETOED (or badged "In play") at `reveal_at`, the outcome line, the map count, the countdown to the veto spotlight's end and what comes next. Its stamp timing comes from `vetoRevealMotion(leadS)` in `StageScenes.tsx`. |
-| `BroadcastLineup`, `BroadcastNotice`, `BroadcastPaused` | The maps in play order once complete, the cancelled or voided notice (`endReasonOf`, `DISCARDED`), and the paused overlay. |
-
-`broadcastMomentOf(view)` (`stream/broadcastMoment.ts`, pure and tested) picks the overlay: the
-veto reveal during the veto spotlight, the side choice or side reveal while step 0 runs, else the intro, a map reveal, the lineup or a
-notice by `stagePhase`, or none. `broadcastBackdropLit` picks the lit half (the team that just
-took its colour during the reveal, the team that vetoed during the veto reveal, else the acting
-side).
-
-The intro, the step-0 moments, a reveal, the lineup and the notices are overlays keyed by `view.scene.key` and
-entered with `SCENE_VARIANTS`, `useSceneDirection` and `playsEntrance`, so a source loaded
-mid-scene doesn't replay it; the board fades out under them. A backdrop tints each side in
-its colour and glows on the acting side. The turn chevrons are the layout's one looping
-animation. Text uses `font-pickban` (see `agents/styling.md`), whose faces it loads on mount.
-
-All motion here is framer-motion, driven by the view model's timeline (`view.scene`, card
-states and timeline statuses), never by a poll arriving. So two screens play a reveal at the
-same moment. Don't use the `animate-in` / `fade-in` / `slide-in` utility classes: their
-plugin isn't imported, so they emit no CSS. Wrap each root that renders the core in
-`PickBanMotion`, and import it, like framer-motion, only from lazily loaded modules.
-
-## Broadcast module
-
-`app/components/broadcast/` is what the pick/ban stream view and every OBS scene share, so
-none of them re-derive tones, curves, the stage or the fonts. Import from here, never from a
-scene or from `pickban/`.
-
-| File | Exports | Use for |
-|---|---|---|
-| `broadcastTone.ts` | `PICK_BAN_TONES` (class sets per `'a'`, `'b'`, `'gold'`, `'neutral'`: `text`, `border`, `line`, `soft`, `solid`, `onSolid`, `ring`, `wash`), `PICK_BAN_HUES`, `BROADCAST_SURFACE`, `teamTone(ab)`, `stepTone(actor)`, `tint(hue, percent)`, types `PickBanTone`, `PickBanToneClasses` | Side colours (never spell `pickban-a` classes out), the root surface class of an opaque scene, and a `color-mix` alpha for gradients and glows. |
-| `broadcastMotion.ts` | `EASE_OUT`, `EASE_IN`, `EASE_OVERSHOOT`, `SLAM`, `SCENE_VARIANTS`, `staggeredCard(order)`, `CHIP_MOTION`, `STAMP_MOTION`, `FADE_MOTION`, `REVEAL_FLASH_MOTION`, `REVEAL_POP`, `REVEAL_RING_MOTION`, `INDICATOR_TRANSITION` | Every enter, exit and reveal in a scene: use these curves and durations instead of new numbers. |
-| `BroadcastStage` | `transparent?`, `children` | The 1920×1080 fixed-pixel stage, scaled to the window with `computeStageScale` (`stageScale.ts`: `STAGE_WIDTH`, `STAGE_HEIGHT`). Opaque by default (black letterbox, `bg-background`); `transparent` leaves both clear so OBS composites the page. |
-| `BroadcastBackdrop` | `left`, `right`, `lit?` (`PickBanTone`s and the lit side) | The two-side tinted grid backdrop behind an opaque scene. |
-| `TeamPlate` | `team: PlateTeam \| null`, `align`, `lit?`, `tag?`, `chips?` | The angled team plate (seed, name sized to length, members through `PlayerInfo`; no A/B letter, `ab` only picks the colour). `tag` (`PlateTag`: `label`, `tone`) leads the top row as a solid chip, for the RED/BLUE side tag. |
-| `ReconnectingBadge` | none | The corner badge shown while the feed keeps failing. Frames render it for you. |
-| `broadcastFonts.ts` | `useBroadcastFonts()`, `BROADCAST_FONTS` | Loads the Barlow Condensed faces (`broadcastFonts.css`) and preloads them. Call it in every root (the frames already do); `BROADCAST_FONTS` is what a screenshot waits on. |
-
-`BROADCAST_SURFACE` is `bg-[#05070c] font-pickban text-white`. Colours, fonts and the stage
-are described in `agents/styling.md`.
-
-## Stream scene kit
-
-The OBS scene pages (`app/components/stream/`, mounted by `mountStreamSceneRoot.tsx` from
-`streamScenes.ts`'s registry) are built from a few reusable layers. Reuse them before adding
-a scene.
-
-| Piece | Use it when |
-|---|---|
-| `useSceneMatch()`, `useStreamHotState()`, `useSceneRead<T>(path)`, `useSceneNow(stepMs)`, `useSceneCadence()`, `useStreamData()` (`stream/data/useStreamData.ts`) | Any scene reads through these, never `fetch`. `useSceneMatch` returns the resolved phase (`loading`, `idle` or a match); `useSceneRead` is a conditional-request poll of one composite read whose cadence follows the OBS source state; `useSceneNow` ticks the server-corrected clock (every second by default, coarser to save renders). See `agents/data-sources.md` for the cadences. |
-| `SceneFrame` (`stream/frame/SceneFrame.tsx`) | An opaque scene: branding, stage line, title and optional kicker in a 152px header, the body in `<main>`, the ticker strip and the reconnecting badge. Props: `scene`, `title`, `kicker?`, `subtitle?`, `ticker?`, `backdrop?`. `backdrop={false}` gives a transparent scene with the same header. |
-| `OverlayFrame` | A fully transparent scene with no header: the stage, fonts and reconnecting badge only. |
-| `BlankFrame` / `IdleFrame` (`stream/frame/IdleFrame.tsx`) | The two states before a scene has a match: `BlankFrame` while the first read is `loading` (empty, `aria-busy`, no flash), `IdleFrame` when there is nothing to show (logo, event name, utbt.net). |
-| `SceneBranding`, `SceneLogo` | The logo and event/stage lockup, inside frames. |
-| `SceneTicker` (`stream/SceneTicker.tsx`, model in `stream/ticker/`) | The bottom strip; `SceneFrame` mounts it (`data-scene-ticker`, 64px). Screenshots mask it. |
-| `sceneHelpers.ts` | Pure text and series helpers, so scenes agree: `stageLine`, `formatLabel` (unit-less, "Bo4 · first to 2"), `mapNumber(ordinal)` (the 1-based number every scene shows for a 0-based map ordinal: never `index + 1` or the raw ordinal), `seriesTarget`, `seriesFlags` (both take the score block's `drawn_maps` out of the race: a four-map series with one drawn map is first to two), `drawnMapsText`, `mapDrawn` (a decided map with no winner), `sceneTimeText`, `utcTimeText`, `relativeTimeText`, `sideTone`, `sideToneClasses`. |
-| `useSceneCues(sound)` (`stream/useSceneCues.ts`) | Sound cues (`map-win`, `match-winner`, `countdown-zero`); scenes wrap it in a small hook (`useMapReveal`, `useWinnerCue`, `useCountdownCue`) and gate on `options.sound`. |
-| `SceneMapTile`, `SeriesScoreCard`, `SeriesTable` | Map art with tone framing (intermission), the series score with won/open flags (BRB, caster, Next Map; a side-coloured bar and score, no A/B letter; `sideTags` adds a `SceneSideTagChip` after each name, which only Next Map passes) and the per-map series table (intermission and post-match each have their own). Reuse before drawing a map or a score. No scene shows an A/B chip. |
-| `scenes/overlay/` (`OverlayHub`, `OverlayMapStrip`, `OverlayNameTag`, `OverlaySeamRail`, `overlayLayout.ts`) | The transparent Match overlay (layout 06): four name tags on the outer edges, flush against the horizontal seam (Team A's above it, Team B's below it; round avatar and alias on a soft scrim with team light, no box, 300×60, plus a "Sides TBC" note from the tag's `sidesNote` while the side is unconfirmed), 3px seam rails in the team colours that run from the frame edges and fade out against the centre box (anchored to the seam row, so they follow the strip's width), and the centre cross of two 376×46 score rows (team bar, name, win pips, the current map's caps) around a 30px solid map strip. The strip has one cell per map (played dimmed with its result, the current one underlined, upcoming outlined in the picker's colour) and an FT2 chip at its right end; past 560px it collapses played maps to number and score. `overlayView` returns null when idle; its `strip` and `pips` fields drive it. There is no map plate, format line, "Picked by" or slot label. Positions are constants in `overlayLayout.ts`; keep every part clear of the four cam timer zones. |
-| `NextMapScene` (`scenes/nextMap/`: `NextMapHero`, `NextMapColumn`, `nextMapView.ts`) | The Next Map scene: a 1280×720 hero (the map's WebM, muted and looping, else the screenshot with a slow pan; both still under `motion=0`) with the "Map N" chip in the picker's tone, the name, mapper and pick line under it, and a side column of the BRB series card (with each team's RED/BLUE or "Sides TBC" tag from `sceneSideTags(match.side_status)`), Team WR, Lineup PBs and Cup history. It shows "Maps to be decided" until the hot state has the map row, "Series complete" or "Series drawn" once decided, and "Series level" while a knockout waits for a decider. Data rules are in `agents/data-sources.md` (stream kit). |
-| `ending/`, `stinger/` | The ending scene's credits and next-matches views, and the stinger page (`stinger/stingerPage.tsx`, timed by `stingerTimeline.ts`). |
-
-A scene is a default-exported component in `stream/scenes/` taking `StreamSceneProps`
-(`eventSlug`, `streamerId`, `options`: `sound`, `animate`, `preview`), lazily imported by
-`mountStreamSceneRoot.tsx`. Keep the pure shaping in a `<scene>View.ts` and the read path
-and type in `<scene>Read.ts` so both test under vitest. Each frame stamps
-`data-stream-scene` on its root, which the screenshot specs wait on. Scene text uses
-`font-pickban`. Pick/ban is the one scene that renders the pick/ban stream view instead of a frame.
-
-## Stream tab pieces
-
-`app/components/pages/events/stream/` holds the event page's Stream tab (`StreamTab`, its
-panels loaded lazily from `streamPanels.ts`). Panels share:
-
-| Piece | Use for |
-|---|---|
-| `StreamCard` (`title`, `description?`, `className?`) | The one card every panel section sits in: a labelled `section` with a heading and optional description. |
-| `StreamPlaceholder`, `StreamLoading` | The dashed empty or not-available note and the "Loading …" line, so panels look the same in those states. |
-| `useStreamTab()` (`StreamTabContext.tsx`) | The operating identity and the polled desk. See `agents/state-patterns.md`. |
-| `panels/match/scoreControlStyles.ts`, `panels/channel/channelControlStyles.ts` | `ACTION_SHAPE`, `ACCENT_ACTION`, `MUTED_ACTION` (panel action buttons), and the channel sections' control classes. |
-| `streamPanels.ts` | The panel registry: `match`, `cams`, `score`, `studio` (group `live`), then `setup` and `guide` (group `setup`). The tab draws a `role="separator"` divider where the group changes, and all six buttons fit at 390px. `initialStreamPanel(remembered, kit)` picks the default (see `agents/state-patterns.md`). |
-| `panels/MatchPanel.tsx`, `ScorePanel.tsx`, `StudioPanel.tsx`, `SetupPanel.tsx` | The panel shells. Match: Current match, Lineup, Streaming on, Countdown (`match/matchSections.ts`). Score: the per-map editor (`ScoreSection`: Match live, the Live counting switch, then a row per map with steppers, a number input and a Winner select, Reset and Reset all). Studio: Casters, BRB, Webcam. Setup: your own Twitch channel, then the OBS kit card, then the scene links card. `CamsPanel` and `GuidePanel` are their own panels. |
-| `UncertifiedServerWarning` | The amber "Uncertified server" note under a team's server in lineup detection and the Cams server picker. |
-| `panels/studio/CastersSection.tsx` | Casters: a "UTBT Player Lookup" (`PlayerSearchInput`, which saves at once and leaves already-added UTBT casters out) and a "Non-UTBT Player" free-text field, up to four, reorderable. |
-
-`PlayerSearchInput` (`app/components/pages/teams/PlayerSearchInput.tsx`; props `accessToken`, `onPick(player)`, `excludeIds?`, `disabled?`, `placeholder?`) is the player search box: 2+ characters, a 300 ms debounce, up to 8 results by alias, each through `PlayerInfo`. Reuse it wherever staff or a streamer picks a UTBT player: Admin → Streamers, Roles and Events, event sign-up, team members, and the Studio casters (which pass `excludeIds`). It has no label prop, so wrap it in a labelled `role="group"`.
-
-## Event stats pieces
-
-`app/components/pages/events/stats/` holds the Teams tab overview and the team page. Components are thin over
-the pure view-model `statsView.ts` (see `agents/data-sources.md`, Event stats reads); reach for these before
-writing a team, run or stat row.
-
-| Piece | Use for |
-|---|---|
-| `StageChips` / `team/TeamStageChips` | The "All" plus one pill per stage row, an `aria-pressed` group over `stageChips()`. The overview and the team page each have one (same look). |
-| `TeamCardsGrid` (`TeamSortControl`, the grid) and `TeamCard` | The overview team cards: an overlapped `PlayerInfo` avatar stack with an accent ring, the standing chip, path, record, form pips and cup-record note. The whole card is one `NavLink` to the team page. |
-| `OverviewTeamLink` | A team name that links to its `event-team` page, coloured with its accent. |
-| `CupAtAGlance` | The headline grid: typed tiles (`map`, `rate`, `team`, `upset`) from `cupAtAGlanceView(records, teams)`, a tile left out when its record is null. Team names link to their page; nothing links to a pick & ban. |
-| `MapStatsTable` (`MapName`) | The overview map table: `DataTable` with the view-model's `responsive` columns and `compactContent` card rows, and `CapTimeLink` with the team cap id for the fastest run. |
-| `team/teamShared.tsx` | The team page building blocks: `TeamPageContext`/`useTeamPage()` (`eventSlug`, `names`, `accentOf`), `TeamLink` (a real link to an opponent's page), `TeamAvatars` (accent-ringed `PlayerInfo` avatars, both names as the label), `ResultBadge`, `FormPips`, `StandingChip`, `SECTION_LABEL`. |
-| `team/RunRow` / `UnrecordedRow` | One run: the team time through `CapTimeLink` (team cap id, falling back to the cap id), both players as `PlayerInfo`, each followed by their own cap time inline (no hover tooltip), the region (hidden on phones) and a replay link; and the dashed "Time not recorded" row. |
-| `team/TeamTable` (`TeamTable`, `MapName`) | The scaffolding the map profile and runs tables share: heading and caption, empty state, `DataTableShell` with `responsive` + `compactContent`, sortable header row. |
-| `team/MatchTimeline`, `MatchCard`, `PickBanSteps`, `MapRow` | The match timeline: a match node with its expandable body, the pick and ban steps, and a map row with the two sides' runs. |
-
-Rules: every player is a `PlayerInfo`, every run time a `CapTimeLink`, every navigation target a real
-`NavLink`; tables use `responsive` columns with `compactContent` for phones (`agents/styling.md`, responsive
-columns); a team's colour comes from its accent slot, never a hand-picked hex (`agents/styling.md`, Event stats
-styling). The overview strip keeps its own small avatar stack rather than importing `team/teamShared.tsx`, which
-would have split a shared chunk.
+Team runs and rosters still render each member through `PlayerInfo`, via:
+`TeamHolders` (a stacked list of members), `TeamAvatarStack` (overlapping avatars with
+a roster tooltip) and `TeamRosterBadge` (a "Team" pill whose tooltip lists the roster).
+Members are `TeamHolderMember` (`userId`, `alias`, `activeTitle`); pass
+`currentUserId` to highlight the viewer.
 
 ## UI primitives (`app/components/ui/`)
 
 | Component | Use for |
 |---|---|
-| `pagination.tsx` — `PaginationBar`, `buildPageList`, `PAGE_SIZE_OPTIONS` | Page count + per-page dropdown + prev/next + ellipsis. Pass optional `meta` ("search" / "filtered") for the count badge. Below `sm` it swaps itself for a touch bar (`‹ Prev [editable page]/total Next ›`) — pages get mobile pagination for free; never hand-roll a second pager. |
-| `multi-filter-dropdown.tsx` — `MultiFilterDropdown` | Multi-select with optional fuzzy search and per-option icons. Empty selection = show all. |
-| `filter-panel-row.tsx` — `FilterPanelRow` | Label + flex-wrap children. Used inside a filter panel. |
-| `dropdown-menu.tsx` | Radix dropdown primitive. Use for any click-to-open menu of choices. A panel that holds a slider or a switch is not a menu (Radix takes Tab and the arrow keys inside one): make it a disclosure like `PickBanSoundControl`. |
-| `tooltip.tsx` — `Tooltip` | Hover and focus tooltip, its popup portalled to `document.body`. The trigger wraps `children` in an inline `<span className="relative inline-flex items-center">` (plus `className`) so it stays valid inside a `<button>` or `<a>`: pass phrasing content only (`span`, `button`, `img`, icons, components with such a root), never a `div`, `p` or heading. Where a block is needed, use a `span` with an explicit `block` / `flex` class. |
-| `badge.tsx`, `button.tsx`, `switch.tsx`, `checkbox.tsx`, `input.tsx`, `slider.tsx` | shadcn-derived primitives. |
-| `spinner.tsx` — `Spinner` | The loading spinner. Use it instead of `<Loader2 className="animate-spin" />`: it takes the same props and adds `animate-spin` itself. While a season shows it renders the season glyph (see `agents/styling.md` → Seasonal themes). `WebBootScreen` keeps a plain `Loader2` on purpose. |
-| `app/components/shared/Segmented.tsx` — `Segmented` | A single toggle button for a small segmented control (`active`, `label`, `onClick`); render one per option inside your own `role="group"` wrapper, as the Schedule tab's All Matches / My Matches switch does (`ScheduleTabContainer.tsx`, see `agents/data-sources.md`). Not a Radix primitive — it carries no keyboard-group behavior beyond being a row of buttons, so give the wrapping group an `aria-label`. |
+| `pagination.tsx`: `PaginationBar` | Page count, per-page select, prev/next and ellipsis; optional `meta` ("search", "filtered") labels the count. Below `sm` it renders a touch bar (`‹ Prev [page]/total Next ›`), so pages need no second pager. |
+| `multi-filter-dropdown.tsx`: `MultiFilterDropdown` | Multi-select with optional fuzzy search (`searchable`) and per-option icons (`iconFor`). Empty selection means all. |
+| `filter-panel-row.tsx`: `FilterPanelRow` | Label plus wrapping children inside a filter panel. |
+| `dropdown-menu.tsx` | Radix dropdown for any click-to-open menu of choices. A panel holding a slider or switch is a disclosure instead (Radix takes Tab and the arrow keys inside a menu); `PickBanSoundControl` is the model. |
+| `tooltip.tsx`: `Tooltip` | Hover and focus tooltip, portalled to `document.body`. The trigger wraps `children` in an inline `<span>` so it stays valid inside a `<button>` or `<a>`: pass phrasing content only (`span`, `button`, `img`, icons), and use a `span` with a `block` / `flex` class where a block is needed. With no children it renders an info icon. Sides are in [styling.md](styling.md). |
+| `spinner.tsx`: `Spinner` | The loading spinner, in place of `<Loader2 className="animate-spin" />` (same props). It shows the season glyph while a season is active; `WebBootScreen` keeps a plain `Loader2`. |
+| `badge`, `button`, `switch`, `checkbox`, `input`, `slider` | shadcn-derived primitives. |
+| `shared/Segmented.tsx`: `Segmented` | One toggle button of a small segmented control (`active`, `label`, `onClick`). Render one per option inside your own `role="group"` with an `aria-label`; it adds no keyboard-group behaviour. Example: `events/schedule/ScheduleTabContainer.tsx`. |
+
+## Form kit (`app/components/pages/teams/teamsShared.tsx`)
+
+`ErrorBanner`, `SectionCard`, `teamInputClass` and `StatusBadge` back the forms in Teams and
+across Events (signup, manage, schedule, predictions); reuse them before writing a new form
+shell ([teams.md](features/teams.md)).
 
 ## Admin form pieces (`app/components/pages/admin/components/`)
 
-| Component | Use for |
-|---|---|
-| `AuthorPicker.tsx` — `AuthorPicker`, `AuthorModeToggle`, `AuthorUser` | A map author as a linked player or free text: a Player / Name toggle (callers default to Player and fall back to Name for a stored free-text author), a text input, or a debounced (300 ms) player search that renders `PlayerInfo` rows. Fully controlled: `mode` + `setMode`, `authorStr` + `setAuthorStr`, `authorUser` + `setAuthorUser`, and the staff `token` the search uses. `showModeToggle={false}` leaves the toggle out so the caller can place `AuthorModeToggle` itself (Map Uploads puts it in the field's label row); `invalid` gives the input a red border. |
-| `TagEditor.tsx` — `TagEditor` | Edits a list of map tags: type to filter `suggestions`, Enter or **Add** to add, case-insensitive de-duplication, an "Add new tag" row for unknown tags, removable chips. Props: `tags`, `onChange`, `suggestions`. |
+- `AuthorPicker` (`AuthorPicker.tsx`): a map author as a linked player or free text.
+  A Player / Name toggle (default Player; fall back to Name for a stored free-text
+  author), a text input, or a 300 ms debounced player search rendering `PlayerInfo`
+  rows using the staff `token`. Fully controlled (`mode`, `authorStr`, `authorUser` and
+  their setters). `showModeToggle={false}` lets the caller place `AuthorModeToggle`
+  itself; `invalid` adds a red border.
+- `TagEditor` (`TagEditor.tsx`): edit a list of map tags (`tags`, `onChange`,
+  `suggestions`): filter suggestions as you type, Enter or Add to add,
+  case-insensitive de-duplication, an "Add new tag" row, removable chips.
+- Admin sections are assembled from `SectionShell`, `TableControls` + `useAdminTable`,
+  and the controls in `controls.tsx` (search, pager, select, confirm dialog, date
+  range); reuse them in a new section.
 
 ## Utilities
 
-| Module | Exports |
+| Module | Reuse it for |
 |---|---|
-| `lib/utils.ts` | `cn(...inputs)` — clsx + tailwind-merge. Use for all conditional classes. |
-| `app/utils/scoreColors.ts` | `scoreTextColor`, `scoreBgColor`, `scoreSliderAccent` (pass `inverted` for lower-is-better dims). `difficultyTextColor`, `difficultyBgColor` for 1–10 map difficulty (paired with `DIFFICULTY_RANGES`). Don't re-implement thresholds. |
-| `app/utils/format.ts` | `formatCapTime` (`MM:SS.mmm`), `formatDelta`, `formatAddedDate`, `isNew` (30-day window), `displayMapName` (strips `CTF-BT-` / `CTF-BT+` prefix). |
-| `app/utils/titleStyles.ts` | `hasTitle`, `getReadableTitleColor`, `getAvatarBorderStyle`, `getTitleTextStyle`. Use when rendering title-aware UI outside `PlayerInfo`. |
-| `app/utils/roles.ts` | `ROLE_LABELS` — maps `utbt_role` (1=Moderator, 2=Admin, 3=Cup Admin; 0/undefined = no badge) to `{ label, className }`. Shared by the profile hero and Players page; use it for any role badge rather than re-defining the colors. Also `ROLE` (numeric enum), `ADMIN_DASHBOARD_ROLES` / `ADMIN_ONLY_ROLES` (allow-lists), `isStaff(profile)`, and `canActOn(actor, target)` — the staff-gating helpers behind the admin page. |
-| `app/utils/search.ts` | `fuzzyMatch(text, query)` — substring-first, ordered-subsequence fallback. |
-| `app/utils/server-utils.ts` | Server-specific: `trimServerName`, `getServerType`, `getServerRegion`, `getRegionFlag`, `getGameStatusText`, `sortServers`, `filterServers`. Types: `ServerType`, `FilterState`, `ServerSortField`, `SortDir`, `ServerPreset`, `ServerPresetFilters`. |
-| `app/utils/api.ts` | Data fetching + URL builders. See `data-sources.md`. |
-| `app/hooks/useCopyFeedback.ts` | `useCopyFeedback(onError)` → `{ copiedKey, copy(key, text) }`. Copies to the clipboard and sets `copiedKey` for 1.5 s, for a transient "Copied" label; the timer is cleared on unmount. A failed copy goes to `onError`. Use it for any copy-link button. |
+| `lib/utils.ts`: `cn` | All conditional class composition. |
+| `app/utils/scoreColors.ts` | Score colours (`inverted` for lower-is-better dimensions) and 1–10 difficulty colours. The thresholds live only here. |
+| `app/utils/format.ts` | Cap times (`MM:SS.mmm`), deltas, dates, relative time, the 30-day "new" window, `displayMapName` (strips `CTF-BT-` / `CTF-BT+`). |
+| `app/utils/titleStyles.ts` | Title-aware styling outside `PlayerInfo`. |
+| `app/utils/roles.ts` | Role badges (`ROLE_LABELS` for `utbt_role` 1 Moderator, 2 Admin, 3 Cup Admin) and staff gating (`ROLE`, `isStaff`, `canActOn`, the admin allow-lists). |
+| `app/utils/search.ts`: `fuzzyMatch` | Substring-first, ordered-subsequence fallback search. |
+| `app/utils/server-utils.ts` | Server names, types, regions, flags, status text, sorting and filtering. |
+| `app/utils/api.ts` | Every fetcher and URL builder; see [api.md](api.md). |
+| `app/hooks/useCopyFeedback.ts` | Any copy-link button: `copy(key, text)` sets `copiedKey` for 1.5 s; a failed copy goes to `onError`. |
 
-## When to extract a NEW shared component
+## When to extract a shared component
 
-Extract when:
-- The same JSX/logic appears in 2+ places and could appear in more
-- Visual / behavioral consistency matters (table styling, modal chrome, etc.)
-- You're tempted to copy-paste
+Extract when the same JSX or logic appears in two places and could appear in more, or
+when visual and behavioural consistency matters (table styling, modal chrome). Keep it
+local when it is tied to one page's data shape (the server table's bot Twitch link), or
+when the shared version would need so many flags it is worse than two siblings.
 
-Don't extract when:
-- It's tightly coupled to one page's data shape (e.g. `ServerRow`'s bot Twitch
-  link, spectator opacity — page-local concern)
-- The "shared" version would need so many flags it's worse than two siblings
-- It's a one-off and unlikely to recur
-
-Put new shared visual components in `app/components/shared/`, lower-level
-primitives in `app/components/ui/`, utility functions in `app/utils/`.
+New shared visual components go in `app/components/shared/`, lower-level primitives in
+`app/components/ui/`, utility functions in `app/utils/`.

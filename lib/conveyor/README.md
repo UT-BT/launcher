@@ -1,173 +1,155 @@
----
-doc: conveyor-ipc
-read_when:
-  - "calling the main process from the renderer (window.conveyor.* / window.auth / window.ut*)"
-  - "adding or changing an IPC channel"
-  - "subscribing to a main→renderer event (game closed, patch status, updater state)"
-keywords: [conveyor, ipc, window.conveyor, invoke, handle, Zod, schema, preload, contextBridge, channel]
-provides: "the renderer↔main IPC contract: the channel inventory, the api/handler/schema pattern, and the event bridges"
-not_here:
-  - "HTTP calls to the API → agents/data-sources.md"
-  - "the step-by-step add-a-channel procedure → .claude/skills/add-ipc-channel/SKILL.md"
-  - "the main-process services behind the handlers → lib/main/README.md"
-sections: [overview, the-channel-inventory, calling-from-the-renderer, adding-a-channel, event-bridges, conventions]
-last_verified: 2026-10-30
-verify_against:
-  - lib/conveyor/api/index.ts
-  - lib/conveyor/schemas/index.ts
-  - lib/main/app.ts
-  - lib/preload/preload.ts
-  - lib/conveyor/schemas/stream-kit-schema.ts
-  - lib/conveyor/api/stream-kit-api.ts
-  - lib/conveyor/handlers/stream-kit-handler.ts
-  - lib/conveyor/schemas/legacy-install-schema.ts
----
+# Conveyor IPC
 
-# Conveyor — type-safe IPC
+Typed request/response calls from the renderer to the Electron main process, plus the
+separate preload bridges for login, logging and main → renderer events. Read this before
+calling main from the renderer, adding or changing a channel, or subscribing to a main
+event. HTTP to the backend API does not go through Conveyor; it lives in
+`app/utils/api.ts` ([agents/api.md](../../agents/api.md)). The services behind the
+handlers are in [lib/main/README.md](../main/README.md).
 
-`request → response` calls from the renderer to the Electron main process. Each
-channel is one triple kept in three folders:
+None of these bridges exist in the web build. Shared UI reaches desktop behaviour through
+`app/platform/` capability gates and web fallbacks, never through `window.conveyor`
+presence checks ([agents/web-target.md](../../agents/web-target.md)).
 
-- **`lib/conveyor/api/`** — renderer-side classes (`extends ConveyorApi`) whose
-  methods call `this.invoke('<channel>', ...args)`. Bundled into the `conveyor`
-  object in `api/index.ts` and exposed as `window.conveyor`.
-- **`lib/conveyor/handlers/`** — main-side implementations registered with
-  `handle('<channel>', fn)` (from `@/lib/main/shared`). `handle` validates args,
-  runs the fn, validates the return, logs errors.
-- **`lib/conveyor/schemas/`** — Zod `{ args, return }` per channel, spread into
-  `ipcSchemas` in `schemas/index.ts`. This is the single source of types; the
-  global `window.conveyor` type in `lib/conveyor/conveyor.d.ts` is **auto-derived**
-  from the `conveyor` object — no manual type updates.
+## The channel triple
 
-> This is for renderer↔main calls. HTTP to the backend API does **not** go
-> through Conveyor — it lives in `app/utils/api.ts` (see `agents/data-sources.md`).
+Every channel is one name shared by three pieces:
 
-> **Web target:** none of these bridges exist in the web build. Shared UI must
-> reach desktop functionality through `app/platform/` (capability gates + web
-> fallbacks), never via raw `window.conveyor` presence checks. See
-> `agents/web-target.md`.
+- **`api/<ns>-api.ts`**: a class extending `ConveyorApi` whose methods call
+  `this.invoke('<channel>', ...args)`. The classes are collected in the `conveyor` object
+  in `api/index.ts` and exposed as `window.conveyor.<ns>`. The preload side does no
+  validation.
+- **`schemas/<ns>-schema.ts`**: Zod `{ args, return }` per channel, spread into
+  `ipcSchemas` in `schemas/index.ts`. This is the single source of types; the global
+  `window.conveyor` type (`conveyor.d.ts`) derives from the `conveyor` object.
+- **`handlers/<ns>-handler.ts`**: `handle('<channel>', fn)` from `lib/main/shared.ts`,
+  inside a `register<Ns>Handlers(window)` that `createAppWindow` in `lib/main/app.ts`
+  calls. `handle` validates the args, runs `fn`, validates the return, and logs and
+  rethrows errors.
 
-## The channel inventory
+To add a channel, follow the `add-ipc-channel` skill
+(`.claude/skills/add-ipc-channel/SKILL.md`); it covers the three registration points.
 
-`window.conveyor.<namespace>.<method>()` — every method returns a `Promise`.
+## Finding a channel
 
-| Namespace | Methods (renderer name → channel) |
-|---|---|
-| `app` | `version`, `getOSInfo`; install/ISO: `selectInstallDirectory`, `validateAndSetInstallPath`, `validateCurrentInstallation`, `get/setUt99InstallPath`, `downloadUt99Iso`, `cancelUt99Download`, `mountAndRunUt99Iso`; patches: `fetchPatches`, `installPatch`, `get/setInstalledPatch`; config: `get/setGatewayConfig`, `get/setDemoWatcherConfig`, `get/setWindowBehavior`; profiles: `createProfile`, `getProfiles`, `switchProfile`, `deleteProfile`, `renameProfile`, `getActiveProfile`, `checkProfileSync`; logs: `getUploadLogs`, `addUploadLog`, `updateUploadLogStatus`, `extractBtpogId` |
-| `window` | `windowInit`, `windowMinimize`, `windowMaximize`, `windowMaximizeToggle`, `windowClose`, `windowIsMinimizable`, `windowIsMaximizable`, `webSetLocked`, `web{Undo,Redo,Cut,Copy,Paste,SelectAll,Reload,ToggleDevtools,ZoomIn,ZoomOut,OpenUrl,…}` |
-| `game` | `launchGame(ip,port)`, `launchGameStandalone()`, `fetchServers()` (`/server-info`), `fetchPatrons()` (`/patreon` → `{tier1,tier2,tier3}` of Discord ids), `pingServer(ip)`, `validateCurrentInstallation()`, `isGameRunning()` |
-| `ini` | `readIniValue(path,section,key)`, `writeIniValue(path,section,key,value,createIfMissing?)`, `readIniSection(path,section)` |
-| `favorites` | `readIni()` → `{ ok, mapNames }`, `writeIni(mapNames)` — favorites in the user's `UTBT.ini` |
-| `maps` | `extractToInstall(mapName, bytes)` → extract a map zip into the install dir without overwriting |
-| `demos` | `saveToSystem(filename, bytes)` → write a demo into `{install}/System` |
-| `updater` | `check(manual?)`, `download()`, `quitAndInstall()`, `getState()` |
-| `legacyInstall` | `getStatus()` → `{ found: false }` or `{ found: true, uninstallerName, offer }`, `dismiss()`, `remove()` → `{ outcome: 'removed', pinLost }` or `{ outcome: 'declined' | 'failed' | 'gone' }` — the old all-users copy (Windows desktop only) |
-| `streamKit` | Cam tool (Windows desktop only): `planCams(req)`, `launchCams(req)`, `retitleCams()`, `getCamStatus()`, `restartCam(slot, req?)`, `stopCams()`, `getCamFps()`, `setCamFps(fps)`; kit: `selectKitFolder(current)`, `extractKit({url,token,folder})` → channel `extractStreamKit` |
-| `logging` | `log/info/warn/error/debug(message, context?, data?)`, `getLogFilePath()`, `getRecentLogs(lines?)` |
+Namespaces are the keys of `conveyor` in `api/index.ts` (`app`, `window`, `logging`,
+`game`, `ini`, `favorites`, `demos`, `maps`, `updater`, `legacyInstall`, `streamKit`,
+plus `electron`, the toolkit's raw API). To trace a call, grep its channel name: it
+appears in the api class's `invoke`, the schema key and the handler's `handle`, and all
+three must match exactly.
 
-Renderer method names and channel names sometimes differ (e.g.
-`favorites.writeIni` → channel `writeFavoritesIni`, `maps.extractToInstall` →
-`extractMapToInstall`, `streamKit.extractKit` → `extractStreamKit`). The channel name is what appears in the api class's
-`this.invoke(...)`, the schema key, and the handler's `handle(...)` — all three
-must match exactly.
-
-### Stream kit channels
-
-Schemas, types and error codes live in `schemas/stream-kit-schema.ts`
-(`CamRequest`, `CamToolStatus`, `KitExtractRequest`, `KitProgress`).
-
-- **Cam calls** take `CamRequest` = `{ lineup: { A1, A2, B1, B2 }, servers: { A, B }, passwords?: { A, B }, fps, volume }`
-  (lineup, servers and passwords are strings or null; a password is at most 64 characters; `fps` is required and is `60` or `120`;
-  `volume` is required and is a whole percent `0`-`100`). The renderer never sends paths, command lines or ini text;
-  main reads the install itself. `plan`/`launch`/`restart` return `{ ok: true, … }`
-  or `{ ok: false, errors }` (coded, e.g. `missing-slot`, `missing-server`,
-  `invalid-password`, `no-install`, `unsupported-platform`; `invalid-password` names only the
-  team, never the password); `retitle`/`getCamStatus`/`stopCams`
-  return `CamToolStatus` = `{ supported, retitle: { available, error }, cams }`
-  (always four slots A1, A2, B1, B2).
-- **`restartCam(slot, null)`** relaunches from the plan the cam started with (including its
-  frame rate); with a request it rebuilds that slot from the current lineup, servers, passwords, `fps` and `volume`.
-- **`getCamFps()` / `setCamFps(fps)`** read and save the Cam FPS preference (`camFpsSchema`,
-  `60 | 120`). `getCamFps` answers 120 when nothing valid is stored. The renderer reads it, puts it
-  on the `CamRequest`, and main's cam plan writes the frame-rate limits from it (see `lib/main/README.md`).
-- **`getCamVolume()` / `setCamVolume(volume)`** do the same for the Cam volume preference
-  (`camVolumeSchema`, a whole number `0`-`100`, default 50). Main's cam plan writes each cam's
-  `SoundVolume` and `SpeechVolume` from the request's `volume`.
-- **`selectKitFolder(current)`** opens the native folder picker (starting at `current` when it
-  is a valid drive path) and returns the chosen folder, or `null` when cancelled. The Kit card
-  on desktop fills its read-only folder field from it; the web build keeps a typed path.
-- **`extractKit`** downloads the kit ZIP with the caller's bearer token and
-  extracts it into `folder`. Returns `{ ok: true, folder, files }` or
-  `{ ok: false, reason, status? }`; reasons cover folder, URL/token, HTTP and
-  archive failures. Progress arrives on `window.utStreamKit.onKitProgress`.
-- Both are Windows-only in main (`unsupported-platform` elsewhere); the renderer
-  gates on `capabilities.camTool`.
-
-Don't sprinkle `window.conveyor.*` through the renderer — wrap a channel in a
-hook or thin utility if it's used in more than one place (e.g. `useDemoDownload`,
-`useFavorites`).
+- **Renderer method names can differ from channel names**: `favorites.readIni` /
+  `writeIni` → `readFavoritesIni` / `writeFavoritesIni`, `maps.extractToInstall` →
+  `extractMapToInstall`, `demos.saveToSystem` → `saveDemoToSystem`,
+  `streamKit.extractKit` → `extractStreamKit`, and every `window`, `updater` and
+  `legacyInstall` method (see naming below).
+- **Channel names are global.** `ipcSchemas` is one flat object and `handle` removes any
+  earlier handler for the name, so a name reused in two namespaces collapses to the last
+  one registered. `validateCurrentInstallation` exists in both `app` and `game` with
+  identical schemas and the same service call; keep any other reuse identical too.
+- **`app.getPathForFile(file)`** is assigned in `lib/preload/preload.ts` from Electron's
+  `webUtils`: synchronous, no channel.
 
 ## Calling from the renderer
 
 ```ts
 const { valid, version } = await window.conveyor.app.validateCurrentInstallation()
-// or, in a component:
-import { useConveyor } from '@/app/hooks/use-conveyor'
-const conveyor = useConveyor()
-await conveyor.maps.extractToInstall(mapName, bytes)
 ```
 
-## Adding a channel
-
-The full ordered procedure (and the easy-to-miss "register in three places" step)
-is the **`add-ipc-channel` skill**. In short — for channel `doThing`:
-
-1. **Schema** — add to a file in `schemas/` and ensure that file is spread into
-   `ipcSchemas` in `schemas/index.ts`:
-   ```ts
-   doThing: { args: z.tuple([z.string()]), return: z.object({ ok: z.boolean() }) }
-   ```
-2. **API** — add a method to the relevant class in `api/` (the class must be in
-   the `conveyor` object in `api/index.ts`):
-   ```ts
-   doThing = (name: string) => this.invoke('doThing', name)
-   ```
-3. **Handler** — implement in a file in `handlers/` and make sure its
-   `register*Handlers(window)` is called in `lib/main/app.ts → createAppWindow`:
-   ```ts
-   handle('doThing', async (name: string) => ({ ok: true }))
-   ```
-
-Zod validates args + return on the main side (`handle`), so keep schema and impl
-in sync. The `window.conveyor` global type updates itself.
-
-## Event bridges (main → renderer)
-
-Push notifications (not request/response) are **separate** `contextBridge`
-exposures in `lib/preload/preload.ts`, **not** part of `conveyor`. Each `on*`
-returns an unsubscribe function — call it on cleanup.
-
-| Global | Purpose |
-|---|---|
-| `window.auth` | `login()`, `logout()`, `getProfile()` (Discord OAuth, main-driven) |
-| `window.utInstall` | `onProgress`, `onStatus`, `onConfirm`/`respondConfirm`, `onIsoDownloadProgress` |
-| `window.utPatch` | `onStatus`, `onPatchInstallStatus`, `onPatchInstallProgress`, `onInstallationPathUpdated`, `onAnnouncerInstall*` |
-| `window.utProfile` | `onChanged` — profile refreshed |
-| `window.utFavorites` | `onGameClosed` — game exited; re-read ini favorites |
-| `window.utbtUpdater` | `onStateChanged` — updater state push |
-| `window.utStreamKit` | `onKitProgress` — kit download/extract progress `{ phase: 'downloading' \| 'extracting', done, total }` (`total` null without a content length) |
-| `window.uiScale` | `set(factor)` / `get()` — zoom |
-
-```ts
-useEffect(() => window.utFavorites.onGameClosed(() => refetchFavorites()), [])
-```
+`useConveyor()` (`app/hooks/use-conveyor.ts`) returns the same object inside components.
+Wrap a channel used in more than one place in a hook or helper rather than scattering
+`window.conveyor.*` calls (`useDemoDownload`, `useFavorites`, and the `app/platform/`
+modules, which also carry the web fallback).
 
 ## Conventions
 
-- **Match the existing channel-name style in the namespace you touch.** `window`
-  uses kebab-case (`window-minimize`); `updater` and `legacyInstall` use `namespace:method`; the newer
-  game/ini/maps/demos/app channels use camelCase. Don't introduce a fourth style.
-- **Always define the Zod schema** for both `args` and `return` — no `any`.
-- **Handlers are the security boundary.** File/process access happens here, not in
-  the renderer. Validate untrusted inputs (paths via `resolveWithin`, see
-  `lib/main/README.md`).
+- **Channel names follow the namespace's style.** `window` uses kebab-case
+  (`window-minimize`, `web-open-url`); `updater` and `legacyInstall` use
+  `namespace:method` (`updater:check`, `legacyInstall:remove`); every other namespace uses
+  camelCase. Match the namespace you touch; do not add a fourth style.
+- **Define a Zod schema for both `args` and `return`**, with real types.
+  (`readIniSection`'s `return` is `z.any()`, the one exception.)
+- **Handlers are the security boundary.** File and process access happens there, and
+  every untrusted input is validated (paths via `resolveWithin`; see
+  [lib/main/README.md](../main/README.md)). The renderer sends intent, not paths or
+  command lines.
+
+## Channels with rules the schema does not show
+
+### `ini`
+
+Paths are relative to `{install}/System` and contained there. `readIniValue` returns the
+first value of a duplicated key, `readIniSection` returns duplicates as arrays,
+`writeIniValue(path, section, key, value | null, createIfMissing?)` deletes the key on
+`null` and rewrites the whole file (comments are lost). Details in
+[lib/main/README.md](../main/README.md); the settings panels are the consumer.
+
+### `game`
+
+`fetchServers` / `fetchPatrons` fetch the gateway from main. Renderer code calls them
+through `app/platform/gateway.ts`, which normalises the server list and takes the web
+path on the web build.
+
+### `streamKit` (Windows desktop only)
+
+Every call refuses with `unsupported-platform` off Windows; the renderer gates the UI on
+`capabilities.camTool`. Types and error codes are in `schemas/stream-kit-schema.ts`.
+
+- **Cam calls** (`planCams`, `launchCams`, `restartCam`) take a `CamRequest`: lineup
+  (Discord ids per slot A1–B2), the two team servers, optional per-team passwords (≤ 64
+  characters), `fps` (`60 | 120`) and `volume` (whole percent `0`-`100`). Main reads the
+  install itself. They return `{ ok: true, … }` or `{ ok: false, errors }` with coded
+  errors; `invalid-password` names only the team, never the password.
+  `retitleCams`, `getCamStatus` and `stopCams` return `CamToolStatus`
+  (`{ supported, retitle: { available, error }, cams }`, always four slots).
+- **`restartCam(slot, null)`** relaunches from the plan that cam started with (including
+  its fps and volume); with a request it rebuilds that slot from the current lineup,
+  servers, passwords, fps and volume.
+- **`getCamFps` / `setCamFps`, `getCamVolume` / `setCamVolume`** read and save the
+  launcher-config preferences. Getters answer the default (120, 50) when nothing valid is
+  stored; setters return the stored, normalised value. The renderer puts both values on
+  every `CamRequest`; what the cam plan writes from them is in
+  [lib/main/README.md](../main/README.md).
+- **`selectKitFolder(current)`** opens the native folder picker (starting at `current`
+  when it is a valid drive path) and returns the folder, or `null` when cancelled. The
+  desktop Kit card fills its read-only folder field from it; the web build keeps a typed
+  path and downloads instead.
+- **`extractKit({ url, token, folder })`** (channel `extractStreamKit`) downloads the kit
+  ZIP with the caller's bearer token and extracts it into `folder`: `{ ok: true, folder,
+  files }` or `{ ok: false, reason, status? }`. Progress arrives on
+  `window.utStreamKit.onKitProgress`.
+
+### `legacyInstall`
+
+The old all-users copy (Windows desktop only). `getStatus().offer` is false once the
+current version was dismissed. The flow and the safety rules are in
+[lib/main/README.md](../main/README.md).
+
+## Bridges outside `conveyor`
+
+`lib/preload/preload.ts` exposes these as separate `contextBridge` globals. Each `on*`
+returns an unsubscribe function: return it from the effect.
+
+```ts
+useEffect(() => window.utFavorites?.onGameClosed(() => refetchFavorites()), [])
+```
+
+| Global | What | Main side |
+|---|---|---|
+| `window.auth` | `login()`, `logout()`, `getProfile()` (desktop Discord OAuth) | `auth:login`, `auth:logout`, `auth:get-profile`: raw `ipcMain.handle` in `lib/main/main.ts`, no Zod |
+| `window.logging` | `log/info/warn/error/debug(message, context?, data?)`, `getLogFilePath()`, `getRecentLogs(lines?)`; used by `useLogger` and `ErrorBoundary` | the `logMessage`, `getLogFilePath`, `getRecentLogs` channels |
+| `window.utPatch` | `onPatchInstallStatus`, `onPatchInstallProgress`, `onInstallationPathUpdated`, `onAnnouncerInstallProgress`, `onAnnouncerInstallComplete` | `patch-install-*`, `installation-path-updated`, `announcer-install-*` |
+| `window.utInstall` | `onIsoDownloadProgress` | `iso-download-progress` |
+| `window.utProfile` | `onChanged`: profile refreshed | `profile-changed` |
+| `window.utFavorites` | `onGameClosed`: game exited, re-read ini favorites | `favorites:game-closed` |
+| `window.utbtUpdater` | `onStateChanged`: updater state push | `updater:state-changed` |
+| `window.utStreamKit` | `onKitProgress`: `{ phase: 'downloading' \| 'extracting', done, total }` (`total` null without a content length) | `stream-kit:kit-progress` |
+| `window.uiScale` | `set(factor)` / `get()`: zoom through `webFrame`, no IPC | none |
+
+`utInstall.onProgress`, `onStatus`, `onConfirm` / `respondConfirm` and `utPatch.onStatus`
+listen on channels (`ut-install-progress`, `ut-install-status`, `ut-install-confirm`,
+`ut-patch-status`) that nothing in main sends; do not build on them.
+
+To add a bridge, expose it in both branches of `preload.ts` (the `contextIsolated` branch
+and the fallback that assigns `window.*` directly), and declare its type in
+`app/index.d.ts`: unlike `window.conveyor`, these globals are typed by hand.

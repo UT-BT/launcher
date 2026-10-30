@@ -61,7 +61,6 @@ const COLUMN_PRIORITY: Partial<Record<CapColumnId, number>> = {
 
 const REQUIRED_COLUMNS = new Set<CapColumnId>(['map', 'time'])
 
-// CapType enum values (mirror data_service/endpoints/cap/model.py)
 const CAP_TYPE_UTBT_CERTIFIED = 2
 const CAP_TYPE_I4GAMES = 3
 

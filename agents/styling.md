@@ -1,37 +1,345 @@
----
-doc: styling
-read_when:
-  - "styling a new page, button, table, form, chip, card, or modal"
-  - "choosing a color, radius, spacing, or animation"
-  - "you see drift from a token and are tempted to add a variant"
-keywords: [broadcast, BROADCAST_SURFACE, broadcastTone, broadcastMotion, broadcastFonts, transparent stage, streamScenes.css, theme.css, @source not, screenshot, toHaveScreenshot, broadcast project, tailwind, cn, DataTable, tokens, colors, button, card, white/5, bg-card, animation, framer-motion, reduced motion, table-fixed, align, sidebar, collapsed rail, rail tile, caption, --sidebar-width, offsetSidebar, Tooltip side]
-provides: "the locked design tokens + the canonical class strings"
-not_here:
-  - "which component to use → shared-components.md"
-  - "state / persistence → state-patterns.md"
-sections: [class-merging, tables-locked, responsive-columns, page-layout, sidebar-width, tooltip-sides, filter-panel, buttons-toggle-states, collapsed-rail, form-inputs, card-backgrounds-borders, text, color-palette, seasonal-themes, animation, css-runtime-cost, event-stats-styling, broadcast-styling, scene-stylesheet, screenshot-conventions, donts]
-last_verified: 2026-10-30
-verify_against: [app/components/shared/DataTable.tsx, app/components/shared/LiveDot.tsx, app/components/shared/chipStyles.ts, app/styles/globals.css, app/styles/theme.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts, app/components/broadcast/broadcastTone.ts, app/components/broadcast/broadcastMotion.ts, app/components/broadcast/broadcastFonts.ts, app/components/broadcast/broadcastFonts.css, app/components/broadcast/BroadcastStage.tsx, app/components/stream/streamScenes.css, app/components/stream/frame/SceneFrame.tsx, e2e/streamHarness.ts, playwright.config.ts, app/components/stream/scenes/overlay/overlayLayout.ts, app/components/stream/scenes/betting/bettingLayout.ts, app/components/stream/scenes/nextMap/NextMapHero.tsx, e2e/audio-balance.broadcast.spec.ts, app/components/stream/scenes/PredictorStandingsScene.tsx, app/components/stream/scenes/standings/predictorStandingsFit.ts, app/components/stream/scenes/standings/predictorStandingsView.ts, app/components/stream/scenes/standings/PredictorStandingsBoard.tsx, app/components/pages/events/stats/teamAccents.css, app/components/pages/events/stats/teamAccent.ts, app/components/pages/events/stats/teamAccent.test.ts, app/components/pages/events/stats/teamCards.css, app/components/pages/events/stats/overviewStats.css, app/components/pages/events/stats/team/teamPageAccents.css, app/components/pages/events/stats/team/teamPageView.ts, app/components/pages/events/stats/CupAtAGlance.tsx, app/components/pages/events/stats/MapStatsTable.tsx, app/styles/seasons.css, app/styles/seasons.test.ts, app/seasonal/seasons.ts, app/seasonal/SeasonProvider.tsx, app/seasonal/lazyDecor.tsx, app/seasonal/SeasonalDecor.tsx, app/seasonal/logos.ts, scripts/render-seasonal-logos.mjs, app/seasonal/decor/ambient.tsx, app/seasonal/decor/ambient.css, app/seasonal/decor/burst.ts, app/seasonal/decor/glyphs.tsx, e2e/seasonal.spec.ts, app/components/layout/AppLayout.tsx, app/components/layout/sidebar/SidebarNavItem.tsx, app/components/layout/sidebar/SidebarBrand.tsx, app/components/layout/sidebar/SidebarActions.tsx, app/components/layout/sidebar/SidebarCollapseToggle.tsx, app/components/layout/sidebar/SidebarUserCard.tsx, app/components/ui/tooltip.tsx, app/components/ui/modal.tsx]
----
+# Styling
 
-# Styling reference
+The locked design tokens and class strings for every UI change: colours, themes,
+tables, layout, buttons, forms, the sidebar, motion and the CSS runtime budget. When
+you find drift, move the code onto these patterns rather than adding a variant. Which
+component to render is in [shared-components.md](shared-components.md).
 
-Design tokens + locked styling decisions. Future pages must use these patterns
-to stay visually consistent. When you spot drift, fix it — don't add a new
-variant.
+Feature styling lives with its feature: pick/ban sides and veto cards in
+[pick-ban-ui.md](features/pick-ban-ui.md), event stats in
+[events.md](features/events.md), broadcast and OBS scenes in
+[stream-kit.md](features/stream-kit.md).
 
 ## Class merging
 
-Always use `cn` from `lib/utils.ts` for conditional classes. It's clsx +
-tailwind-merge, so later classes win on Tailwind conflicts:
+Compose conditional classes with `cn` from `lib/utils.ts` (clsx + tailwind-merge), so
+a later class wins a Tailwind conflict:
 
 ```ts
 cn('px-4 py-3', condition && 'px-2')  // → 'py-3 px-2'
 ```
 
-## Tables — locked
+## Colour tokens
 
-Set inside `app/components/shared/DataTable.tsx`. Don't override inline.
+Write colours with tokens that follow the theme, so every component works in the
+dark themes and in Light without per-component edits:
+
+| For | Use | Not |
+|---|---|---|
+| Primary text | `text-foreground` | `text-white` |
+| Secondary / inactive text | `text-muted-foreground` | `text-gray-*` |
+| Borders, dividers, subtle fills | `*-hairline/<n>` (`border-hairline/10`, `bg-hairline/5`) | `white/<n>`, `border-gray-*` |
+| Card and panel surfaces | `bg-card/<n>` | `bg-gray-*`, dark hex (`bg-[#0f1115]`) |
+| Menus, popovers, `<option>`s | `bg-popover` | dark hex |
+| Chrome accent | `accent-*` | `blue-*` |
+
+`text-white` is right only on a solid coloured fill (`bg-accent-500 text-white` count
+badges), which stays white in every theme. `white/<n>` survives in older event code;
+new code uses `hairline`.
+
+### The themeable scale: `accent-*`
+
+`accent-50…950` is the only scale a theme changes. Use it for all chrome: primary
+actions, active states, links, sort icons, count badges, CTAs, focus rings. Classic
+(the default) is Tailwind blue.
+
+### Fixed colours
+
+These keep their literal Tailwind colour in every theme:
+
+- **Functional**: destructive / errors `red-500` / `red-300`; positive / save
+  `emerald-500` / `emerald-300`; warning `amber-300`, `rose-400` / `rose-300` (full
+  server, demos); favourites `yellow-400`.
+- **Game identity**: world record blue (`text-blue-300`); champion and rank-1 time
+  red (`text-red-300`); medals bronze `amber-500`, silver `slate-200`, gold
+  `yellow-300`; delta gained emerald, lost red (`DELTA_COLORS` in
+  `app/components/pages/capDetail/capStats.ts`); roles (`app/utils/roles.ts`),
+  Patreon, verified, certified, cap type, team and compare-runner A/B colours.
+- **Brand moments**: splash, login and marketing gradients (`--utbt-*` in
+  `app/styles/shared.css`).
+- **Pick/ban sides**: team A crimson `pickban-a`, team B azure `pickban-b`, decider
+  gold `pickban-gold`, defined once in the `@theme` block of `app/styles/theme.css`
+  so every utility and opacity step works (`text-pickban-a`, `border-pickban-b/45`,
+  `bg-pickban-gold/20`). Read them through `PICK_BAN_TONES`
+  (`app/components/broadcast/broadcastTone.ts`); a gradient, glow or shadow takes the
+  raw value from `PICK_BAN_HUES` and alpha from `tint(hue, percent)` in the same file.
+
+Score and difficulty colours come from `app/utils/scoreColors.ts`; rarity and title
+colours from `PlayerInfo` / `app/utils/titleStyles.ts`. Keep those thresholds in
+those files.
+
+## Themes
+
+Themes swap CSS variable values only, with identical structure. Values live in
+`app/styles/themes.css` (`:root` = Classic, `:root[data-theme='…']` for the rest);
+the registry is `app/theme/themes.ts`, the provider `app/theme/ThemeProvider.tsx`
+(key `utbt:theme:v1`). The picker is Settings → Appearance
+(`LauncherAppearanceSettings.tsx`). Steps: [Adding a theme](#adding-a-theme).
+
+What a theme sets:
+
+- **Accent** `--accent-50…950` → `accent-*`.
+- **Surface tint**: `--card`, `--background`, `--muted`, `--border` at Classic's
+  lightness with a faint hue.
+- **Glow** `--accent-glow-rgb` (space-separated RGB) for
+  `drop-shadow-[…rgb(var(--accent-glow-rgb)/<a>)]` (the sidebar logo, count bubbles).
+- **Nebula** `--nebula-1…4` (comma-separated RGB) are the gradient stops of the
+  animated `.nebula-bg` backdrop in `shared.css`. A gradient theme sets all four, or
+  it inherits Classic's blue swirl.
+- **Hairline** `--hairline-rgb` backs `--color-hairline`: white on dark themes, dark
+  in Light.
+- **Window chrome**: the titlebar's `--window-c-*` vars in `app/styles/window.css`
+  map to theme tokens (`--secondary`, `--popover`, `--foreground`, `--border`), so
+  titlebar colours follow the theme without hard-coding.
+
+`window.css` is desktop-only: only `renderer-desktop.tsx` imports it, through
+`app/styles/desktop.css`. `color-scheme` lives in `globals.css` instead, because it
+drives native form controls and scrollbars on both targets; moved into `window.css`
+it silently breaks the website's `<select>` and scrollbars. The web entry sets
+`--window-titlebar-height: 0px` before React mounts, which shared components
+position against.
+
+### Registry flags
+
+- `group: 'gradients' | 'solid'` splits the picker. Solid themes (`light`, `black`,
+  `slate-blue-squared`) hide `.nebula-bg` in `themes.css` for a flat background.
+- `exclusive: true` gates the jewel themes (`aurum`, `amethyst`, `emerald`, `rose`)
+  to Patreon supporters. `AppLayout` passes
+  `unlockExclusive = patreonTier > 0 || utbt_role > 0` down to the picker, from data
+  already loaded (no extra request). A locked card shows a lock and a Patreon tag and
+  opens patreon.com/utbt. Staff unlock is silent: the card never mentions roles. The
+  gate is soft by design; the CSS ships to everyone.
+- `slate-blue-squared` sets every `--radius-*` to 0. Keep radii on Tailwind's named
+  scale so they follow it; `rounded-full` (avatars, pills) is off that scale and stays
+  round.
+
+### Light
+
+`light` is the one theme that removes the `dark` class (in `ThemeProvider` and the
+`app/index.html` pre-paint script); every other theme keeps `.dark`, and `theme.css`
+defines `dark:` as class-based. `:root[data-theme='light']` flips the surface vars and
+`--hairline-rgb`, uses an accent ramp whose text shades (`accent-200/300/400`) are
+dark, and overrides the brand and functional text shades (`--color-blue-300`,
+`--color-red-300`, …) to dark legible values. That flips every plain coloured text
+utility. Opacity variants such as `text-blue-300/40` compile to a fixed colour and do
+not flip; fix those per spot.
+
+Player title colours are per-title RGB, computed in JS (`app/utils/titleStyles.ts`):
+in Light they map to a darker, contrast-targeted tone without the text outline.
+`PlayerInfo` reads `useTheme`, so they update live.
+
+### Seasonal themes
+
+Halloween, Christmas and Easter decorate the launcher each year; the code is in
+`app/seasonal/`.
+
+- **Windows** (`seasons.ts`, viewer's local date, inclusive): Halloween Oct 24 – Nov
+  7, Christmas Dec 18 – Jan 15, Easter Sunday ± 7 days (Western, computed). Adding a
+  season: [Adding a theme](#adding-a-theme).
+- **Precedence**: a preview beats the toggle, the toggle beats the date. The preview
+  is `?season=halloween|christmas|easter|none` on web or a dev-only select in
+  Settings → Appearance on desktop, for the session; the toggle is "Seasonal themes"
+  in Settings → Appearance (`utbt:seasonalThemes:v1`). `SeasonProvider` (inside
+  `ThemeProvider` in both app roots) sets `data-season` on `<html>` and re-checks on
+  window focus and hourly. The `app/index.html` pre-paint script sets it from the
+  cached season so the accent never swaps after load; it skips the stream paths, and
+  the stream roots never mount the provider.
+- **Tint** (`app/styles/seasons.css`): selectors are
+  `:root[data-season='…']:not([data-theme])`, so only Classic is tinted, and only
+  `--accent-*`, `--accent-glow-rgb` and `--nebula-*` change. `seasons.test.ts`
+  enforces both and checks contrast: accent-200/300/400 text on the background and
+  white on accent-500 reach AA, or at least Classic's own ratio where Classic is below.
+- **Logo**: `app/assets/seasonal/logo-<season>.webp`, rendered from
+  `app/public/icon-512.png` by `node scripts/render-seasonal-logos.mjs [--preview <dir>]`;
+  replacing a file under the same name needs no code change. `useLogo()` /
+  `logoFor()` (`app/seasonal/logos.ts`) pick it for the sidebar, the mobile top bar,
+  the desktop splash and the web boot screen. The favicon, titlebar, installer icons,
+  stream scenes and stinger keep `logo.webp`. Only the active season's file downloads.
+- **Decorations** are one lazy chunk (`SeasonalDecor.tsx`), requested only while a
+  season shows. Mount them through `lazyDecor.tsx` (`SeasonalAmbient`,
+  `SeasonalSpinnerGlyph`, `fireSeasonalBurst`): Suspense plus a silent boundary, so a
+  failed import renders nothing, and the web `vite:preloadError` reload ignores this
+  chunk.
+  - Burst: clicking the sidebar logo, 10 s cooldown, off under reduced motion.
+  - Ambient layer: Home only, behind content, `pointer-events: none`, at most 16
+    particles (half hidden below 768px), paused on window blur or a hidden page, not
+    rendered under reduced motion. Flight paths come from nested elements each running
+    one `transform` animation at periods that don't line up. Animate only `transform`
+    and `opacity` (`e2e/seasonal.spec.ts` asserts it); `offset-path` runs on the main
+    thread.
+  - Spinner: `<Spinner>` shows the season glyph instead of `Loader2`.
+- **e2e**: the desktop and mobile Playwright projects preset the toggle to off
+  (`storageState` in `playwright.config.ts`) so shell specs don't depend on the run
+  date; `seasonal.spec.ts` forces each season with `?season=`.
+
+## Adding a theme
+
+Copy Slate Blue Squared (#205) for a solid theme, `red` for a gradient one, `aurum` for a
+Patreon one. A theme is CSS variables plus one registry entry; Settings, persistence and
+the pre-paint script pick it up.
+
+1. **Palette.** A `:root[data-theme='<id>']` block in `app/styles/themes.css` setting what
+   [Themes](#themes) lists: the `--accent-50…950` ramp, `--accent-glow-rgb`,
+   `--nebula-1…4` for a gradient theme, and the surfaces (`--background`, `--card`,
+   `--popover`, `--secondary`, `--muted`, `--accent`, `--border`, `--input`). Anything left
+   out comes from Classic (`:root` in `themes.css`, then `globals.css`). Write
+   `--background` and `--card` as `hsl(…)`:
+   `app/components/pages/events/stats/teamAccent.test.ts` reads them from every
+   theme block and fails when a team accent drops under 4.5:1 on them, and it skips a value
+   in any other notation. Optional: `--window-c-titlebar-background` (desktop titlebar),
+   `--radius-*` (Slate Blue Squared sets all to 0).
+2. **Solid only:** add the theme's `.nebula-bg` selector to the `display: none` rule at the
+   end of `themes.css`.
+3. **Registry.** Append a `ThemeMeta` to `THEMES` (`app/theme/themes.ts`): `id` (the
+   selector's value), `label`, `description`, `swatch` (the picker dot), `group`, and
+   `exclusive: true` for a Patreon theme ([Registry flags](#registry-flags)). `isThemeId`
+   reads the list, so a stored id missing from it falls back to Classic.
+4. **No edit for Settings or storage.** `LauncherAppearanceSettings` renders `THEMES` by
+   `group` and locks `exclusive` ones; the choice syncs with the account under
+   `utbt:theme:v1`. Seasons tint Classic only, so the new theme never shows one.
+5. **No pre-paint edit for a dark theme.** The `app/index.html` script sets `data-theme`
+   from `utbt:theme:v1` before React mounts, so the first frame is already themed. Only
+   `light` drops the `dark` class: a second light theme generalises the `=== 'light'`
+   checks in that script, `applyThemeId` (`ThemeProvider.tsx`) and
+   `app/utils/titleStyles.ts`, the `select` / `option` rules in `themes.css`, and the light
+   team-accent blocks ([events.md](features/events.md)). It also sets what the `light` block
+   sets ([Light](#light)): `--hairline-rgb`, the foregrounds, an accent ramp with dark
+   200–400 shades, the functional text shades and `--chart-*`.
+6. **Verify.** `npm test` passes, `teamAccent.test.ts` now covering the new block. In
+   `npm run dev:web`, pick the theme in Settings → Appearance and reload: no Classic flash;
+   accent text, a table, a modal, a `<select>` and an event's Stats tab stay legible. Light
+   still looks as before. A Playwright spec can preset the theme the way
+   `e2e/pickban-watch.spec.ts` does (`addInitScript` writing `utbt:theme:v1`).
+
+**A season** (copy Easter, #296) is one tint for Classic plus decorations. It touches
+`SeasonId`, `SEASON_IDS` and `SEASONS` (the window) in `app/seasonal/seasons.ts`, with a
+window case in `app/seasonal/seasons.test.ts`; a `:root[data-season='<id>']:not([data-theme])`
+block in `app/styles/seasons.css` and the id pattern in `app/styles/seasons.test.ts`; the
+`valid` list in the `app/index.html` pre-paint script; a palette in
+`scripts/render-seasonal-logos.mjs`, its `app/assets/seasonal/logo-<id>.webp` and
+`SEASONAL_LOGOS` (`app/seasonal/logos.ts`); its branches in `app/seasonal/decor/`
+(`ambient.tsx`, `ambient.css`, `burst.ts`, `glyphs.tsx`); the preview option in
+`LauncherAppearanceSettings.tsx`; and the lists in `e2e/seasonal.spec.ts`. Verify: `npm test`
+and `npx playwright test e2e/seasonal.spec.ts` pass, and `/?season=<id>` shows the tint, logo
+and decorations.
+
+## Surfaces and radii
+
+| Layer | Background | Border |
+|---|---|---|
+| Page | `bg-background` (root) | — |
+| Card, filter panel, table scroll container | `bg-card/30` | `border border-hairline/5` (`/10` for stronger) |
+| Card hover | `bg-card/80` | `border-hairline/20` |
+| Inline chip / badge | `bg-hairline/5` | `border border-hairline/5` |
+| Sticky thead | `bg-card/95 backdrop-blur` | — |
+| Modal (`ui/modal.tsx`) | `bg-card` | `border border-border`, header and footer `bg-muted/50` |
+
+Radii: `rounded-xl` big containers, `rounded-lg` buttons and inputs, `rounded-md` chips
+and small actions, `rounded` badges.
+
+## Text
+
+| Use | Class |
+|---|---|
+| Page title | `text-2xl font-bold text-foreground leading-tight` |
+| Section label (small caps) | `text-[10px] uppercase tracking-wider text-muted-foreground` |
+| Table header | `text-xs uppercase tracking-wider font-medium text-muted-foreground` |
+| Body | `text-sm` |
+| Subtitle / hint | `text-xs text-muted-foreground` |
+| Numbers (times, ping, ranks) | `font-mono tabular-nums` |
+| Player / map name | `text-sm font-semibold text-foreground` |
+
+Body text stays on the system font. `font-pickban` (Barlow Condensed) is the pick/ban
+and broadcast display face. Its `@font-face` rules are in
+`app/components/broadcast/broadcastFonts.css`, loaded only by the lazy pick/ban and
+stream code (`useBroadcastFonts` in `broadcastFonts.ts`, or a direct CSS import as in
+`PickBanStage`), so the entry CSS doesn't carry them. The font files are imported
+assets under `app/assets/fonts/barlow-condensed/` rather than `app/public/` files,
+because the desktop build has no public dir and loads over `file://`. Four faces
+ship: 600 and 700 upright, 800 and 900 italic.
+
+## Page layout
+
+```tsx
+<div className="space-y-4 h-full flex flex-col overflow-hidden">
+  <header />          {/* title block, shrink-0 */}
+  <toolbar />         {/* search / Filters / Columns, shrink-0 */}
+  <filterPanel />     {/* collapsible, shrink-0 */}
+  <error />           {/* conditional banner */}
+  <DataTableShell />  {/* flex-1 min-h-0 */}
+  <PaginationBar />   {/* optional, shrink-0 */}
+  <modals />
+</div>
+```
+
+Title block:
+
+```tsx
+<div className="flex items-end justify-between shrink-0">
+  <div>
+    <h1 className="text-2xl font-bold text-foreground leading-tight">{title}</h1>
+    <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
+  </div>
+  <div className="flex items-center gap-1">{/* tutorial + refresh icon buttons */}</div>
+</div>
+```
+
+Header icon button:
+`p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-pointer`.
+
+Filter panel:
+
+```tsx
+<div className="bg-card/30 border border-hairline/10 rounded-xl p-4 space-y-4 shrink-0">
+  <FilterPanelRow label="…"><MultiFilterDropdown … /></FilterPanelRow>
+  <div className="flex items-center justify-between gap-3 pt-2 border-t border-hairline/5">
+    <FilterPresetsMenu … onResetFilters={resetFilters} />
+  </div>
+</div>
+```
+
+### Hero and stat-tile rows wrap
+
+Detail-page title rows pair a `line-clamp-2 break-all` title (map names have no
+spaces) with a `flex-wrap` actions group; a `truncate` title beside a `shrink-0` button
+row squeezes the title to nothing around 1024px. Stat tiles use responsive grid steps
+(`grid-cols-2 sm:grid-cols-3 xl:grid-cols-5`), labels and subtext wrap
+(`leading-tight`, no `truncate` on key data), and `w-px` flex dividers get
+`max-sm:hidden` so a wrapped row doesn't strand a bar. `MetaPill` wraps internally;
+leave `whitespace-nowrap` off it.
+
+### Sidebar width
+
+The sidebar's width is one property, `--sidebar-width`, which `AppLayout` sets on
+`document.documentElement` in a layout effect before first paint: `16rem` expanded,
+`5rem` collapsed, `0px` below `lg` (where the sidebar is a drawer, `max-lg:w-72`). It
+is removed on unmount, so an overlay rendered before the layout falls back to `0px`.
+
+Anything beside the rail reads `var(--sidebar-width,0px)`, always with the fallback,
+instead of `16rem`, `lg:pl-64` or `256px`:
+
+- a modal passes `offsetSidebar`, which pads the backdrop
+  `pl-[calc(var(--sidebar-width,0px)_+_1rem)]`, centring the dialog on the content
+  area in both rail modes and on the viewport on phones;
+- a full-height overlay starts at `left-[var(--sidebar-width,0px)]` (`ErrorModal`'s
+  non-fullscreen backdrop, the Game Input key-capture overlay and bind-conflict
+  dialog);
+- a centred banner uses `left-[calc(50%_+_var(--sidebar-width,0px)/2)]` and
+  `w-[calc(100vw_-_24px_-_var(--sidebar-width,0px))]` (`AnalyticsConsentBanner`).
+
+### Tooltip sides
+
+`Tooltip` (`app/components/ui/tooltip.tsx`) takes `side="top"` (default), `"bottom"` or
+`"right"`. Top and bottom flip when there is no room. `right` sits 10px right of the
+trigger, vertically centred, clamped 8px inside the titlebar's bottom and the viewport
+bottom, with the arrow on the trigger's middle. Use `right` for everything in the
+collapsed rail, so tooltips open over the page instead of the rail.
+
+## Tables
+
+Table styling is locked inside `app/components/shared/DataTable.tsx`; render tables
+with the `DataTable.*` primitives (see [shared-components.md](shared-components.md))
+and extend them rather than styling cells inline.
 
 | Element | Class |
 |---|---|
@@ -39,987 +347,291 @@ Set inside `app/components/shared/DataTable.tsx`. Don't override inline.
 | `<table>` | `w-full table-fixed text-sm` |
 | `<thead>` | `sticky top-0 z-[2] bg-card/95 backdrop-blur` |
 | `<thead> <tr>` | `border-b border-hairline/10` |
-| `<th>` | `px-4 py-3 text-muted-foreground font-medium text-xs uppercase tracking-wider` (+ align) |
+| `<th>` | `px-4 py-3 text-muted-foreground font-medium text-xs uppercase tracking-wider` + align |
 | `<th>` sort button | `inline-flex items-center gap-1 hover:text-foreground transition-colors cursor-pointer` |
 | `<tbody> <tr>` | `border-b border-hairline/5 hover:bg-hairline/[0.03] transition-colors group` |
-| `<td>` | `px-4 py-3` (→ `px-3 py-2` when the shell is in condensed density) |
-| Empty state `<td>` | `px-4 py-16 text-center text-muted-foreground` — text only, no icon |
+| `<td>` | `px-4 py-3` (`px-3 py-2` in condensed density) |
+| Empty state `<td>` | `px-4 py-16 text-center text-muted-foreground`, text only, no icon |
 
-Sort icons: `ArrowUpDown` (size-3 opacity-30) when not sorted; `ChevronUp` /
-`ChevronDown` (size-3 text-accent-400) when active.
+Sort icons: `ArrowUpDown` (`size-3 opacity-30`) unsorted; `ChevronUp` / `ChevronDown`
+(`size-3 text-accent-400`) active.
 
-### Column layout
+### Column widths and alignment
 
-`<table>` is `table-fixed` — **column widths come from the header row**. Give
-every `DataTableHeaderCell` an explicit `width` *except* the one primary text
-column (Player / Name / Map / Rusher), which stays width-less to absorb the
-slack. Skip this and `table-fixed` splits every column evenly: a right-aligned
-numeric column then floats its value to the far edge (the Players "rank" bug).
+`table-fixed` takes column widths from the header row. Give every
+`DataTableHeaderCell` an explicit `width` except the one primary text column (Player,
+Name, Map, Rusher), which stays width-less and absorbs the slack. Without widths,
+`table-fixed` splits columns evenly and a right-aligned number floats to the far edge.
 
-### Responsive columns (opt-in)
+| Content | `align` |
+|---|---|
+| Numbers: rank, points, ping, times, %, counts | `right`, plus `font-mono tabular-nums` |
+| Text: name, author, role, dates | `left` (default) |
+| Icon, status badge, actions, difficulty, medal icon + count | `center` |
 
-`DataTableShell` takes an optional `responsive` prop that makes a table degrade
-gracefully on narrow windows (the app floor is ~960px of content width, less
-under ui-scale zoom). Pass `responsive={{ columns, onResolve, nameFloorRem?, extraRem? }}`
-where `columns: ResponsiveColumn[]` (`{ id, width?, priority?, required? }`)
-describes the **currently-visible** columns in display order — reuse the exact
-same width literal the header cell uses (the resolver normalizes `rem`/`px`/`%`;
-`%`/undefined = the flex column). The shell measures its own box
-(`useElementWidth` → ResizeObserver), then, in this precedence:
+Body cells inherit width from the header and need only the matching `align`. A table
+built entirely of centred composite cells (Maps WR / PB: time over a sub-label) stays
+all-centred for internal consistency.
 
-1. **Condenses** padding (`px-4 py-3` → `px-3 py-2`) below ~58rem;
-2. **Auto-hides** the lowest-`priority` columns that don't fit (higher priority
-   survives longer; `required` columns and the flex column are never dropped);
-3. **Scrolls** via a `minWidth` floor recomputed from the *surviving* columns,
-   only when even those overflow.
+### Responsive columns
 
-The surviving ids come back via `onResolve(visibleIds)`. Intersect them with your
-own render gate — `effective = userVisible AND resolved.has(id)` — applied to
-**both the header and the body** (a one-sided gate desyncs `table-fixed` tracks).
-This overlay is **render-time only**: never write `resolved` to persisted state /
-localStorage / `columnVisibility`, or it clobbers the user's column prefs. Keep
-`onResolve` in a `useCallback` and the `columns` array in a `useMemo` (loop
-safety). Mark any tutorial-spotlighted column `required` so auto-hide can't null
-its ref. Co-locate priorities as a `COLUMN_PRIORITY: Partial<Record<TColumnId, number>>`
-beside the existing column records. Reference: `PlayersPage.tsx` (ColumnsMenu page)
-and `CapItAllPage.tsx` (fixed-column card). The legacy `minWidth` string prop
-still works for a scroll-only floor without auto-hide.
+Every tabular surface passes `responsive` to `DataTableShell` so it fits any width
+from a 360px phone up, never by horizontal scroll:
 
-**Phone widths — compact card rows are mandatory, not optional.** Horizontal
-table scroll is a design failure on the web target. Every primary/tabular
-surface must pass `compactContent` (+ `compactAriaLabel`) so that when even the
-`required` columns can't fit, rows render as stacked cards instead of a
-side-scrolling table. Rules for the compact renderer:
+```tsx
+responsive={{ columns, onResolve, compactContent, compactAriaLabel, onCompactChange, nameFloorRem?, extraRem? }}
+```
 
-- It must show the page's **core metric** (time / count / points) — that's the
-  reason the row exists. Identity renders through `PlayerInfo`, times through
-  `CapTimeLink` (hard rules still apply inside cards).
-- Handle skeleton and empty states in the compact branch too — `compactContent`
-  replaces the whole `<table>`, including `DataTableSkeletonRow` / `DataTableEmpty`.
-- Make the core metric column `required` (or top-priority) so mid widths never
-  silently drop it before compact mode engages — a leaderboard showing only
-  rank + name is a bug.
-- Canonical examples: `WorldRecordsPage.tsx` (both tabs), `ServerBrowserPage.tsx`,
-  `CapItAllPage.tsx`, `PlayersPage.tsx`, `home/LatestRecordsCard.tsx`,
-  `mapDetail/LeaderboardCard.tsx` (team table), `teams/TeamActivityPanel.tsx`.
-- **Table-only controls must hide while cards show.** Pass
-  `onCompactChange: (compact) => ...` in the `responsive` config and gate
-  `ColumnsMenu` (and any sort-header-dependent control) with `!compactMode` —
-  a Columns menu that visibly does nothing in card view is a bug. See
-  `WorldRecordsPage.tsx` / `PlayersPage.tsx` / `ServerBrowserPage.tsx`.
-- The header cell `width` literals and the `ResponsiveColumn.width` values MUST
-  match — a header forcing e.g. `18rem` on the flex column while the resolver
-  assumes the `nameFloorRem` makes the real table wider than the computed
-  `minWidth` floor and silently reintroduces horizontal scroll (the home
-  RecentCaps bug). The flex column's header takes no `width` at all.
+- `columns: ResponsiveColumn[]` (`{ id, width?, priority?, required? }`) lists the
+  currently visible columns in display order. Each `width` is the same literal as its
+  header cell; `rem` and `px` are measured, `%` or no width counts as the flex column
+  at `nameFloorRem` (default 12).
+- The shell measures itself (`useElementWidth`) and then, in order: condenses
+  padding below 58rem; hides optional columns that don't fit, lowest `priority` first
+  (default 50; `required` columns always stay); sizes the table's `minWidth` from the
+  surviving columns; and, when even the required columns don't fit, renders
+  `compactContent` (a `role="list"` labelled `compactAriaLabel`) instead of the table.
+- Mark the flex (name) column and the page's core metric (time, count, points)
+  `required`, so mid widths never drop them before cards engage; a leaderboard
+  showing only rank and name is a bug. Mark any tutorial-spotlighted column
+  `required` so auto-hide can't null its ref. Keep priorities beside the column
+  records as `COLUMN_PRIORITY: Partial<Record<TColumnId, number>>`.
+- `onResolve(visibleIds)` returns the surviving ids. Render
+  `userVisible && resolved.has(id)` on both the header and the body (a one-sided gate
+  desyncs `table-fixed` tracks). The result is render-time only: keep it out of
+  persisted state and `columnVisibility`, or it overwrites the user's column prefs.
+  Wrap `onResolve` in `useCallback` and `columns` in `useMemo`.
+- `onCompactChange(compact)` reports the switch to cards. Hide `ColumnsMenu` and any
+  sort-header control while `compact` is true.
+- Header `width` literals and `ResponsiveColumn.width` values must match. A header
+  forcing a width on the flex column makes the real table wider than the computed
+  `minWidth` and brings back horizontal scroll.
 
-**Hero / stat-tile rows must wrap, never clip.** Detail-page title rows pair a
-`line-clamp-2 break-all` title (map names have no spaces) with a `flex-wrap`
-actions group — never `truncate` beside a `shrink-0` button row (that squeezes
-the title to zero at ~1024px). Stat tiles use responsive grid steps
-(`grid-cols-2 sm:grid-cols-3 xl:grid-cols-5`), labels/subtext wrap
-(`leading-tight`, no `truncate` on key data), and `w-px` flex dividers get
-`max-sm:hidden` so a wrapped row doesn't strand a floating bar. `MetaPill`
-wraps internally — don't re-add `whitespace-nowrap`.
+Compact card rows show the core metric, render identity through `PlayerInfo` and
+times through `CapTimeLink`, and handle skeleton and empty states themselves, since
+`compactContent` replaces the whole table including `DataTableSkeletonRow` and
+`DataTableEmpty`.
 
-Align by content type:
+Reference pages: `PlayersPage.tsx`, `WorldRecordsPage.tsx`, `ServerBrowserPage.tsx`
+(with ColumnsMenu and `onCompactChange`), `CapItAllPage.tsx`,
+`home/LatestRecordsCard.tsx`, `mapDetail/LeaderboardCard.tsx`,
+`teams/TeamActivityPanel.tsx`.
 
-| Content | `align` | Notes |
+## Buttons and chips
+
+### Toolbar toggle (Filters and similar)
+
+```ts
+// shape
+'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer'
+// inactive
+'bg-card/50 border-hairline/10 text-muted-foreground hover:text-foreground hover:border-hairline/20'
+// active (panel open)
+'bg-accent-500/20 border-accent-500/50 text-accent-300'
+```
+
+Count badge inside it:
+`text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-accent-500 text-white`.
+`Segmented` uses the same inactive and active colours at `px-3 py-1.5 text-xs`.
+
+### Tinted button family
+
+Shape: `h-8 px-3 rounded-md text-xs font-medium border transition-colors cursor-pointer flex items-center gap-2`.
+
+| Intent | Rest | Hover |
 |---|---|---|
-| Numbers — rank, points, ping, times, %, counts | `right` | + `font-mono tabular-nums` so digits line up |
-| Text — name, author, role, dates | `left` (default) | |
-| Icon / status badge / action buttons / difficulty / medal icon+count | `center` | reads as a unit |
+| Accent (primary, active toggle) | `bg-accent-500/15 border-accent-500/40 text-accent-200` | `bg-accent-500/25 border-accent-500/60` |
+| Emerald (positive, save) | `bg-emerald-500/10 border-emerald-500/30 text-emerald-300` | `bg-emerald-500/25 text-emerald-200 border-emerald-500/50` |
+| Red (destructive, clear) | `bg-red-500/10 border-red-500/30 text-red-300` | `bg-red-500/25 text-red-200 border-red-500/50` |
+| Rose (warning, demos) | `bg-rose-500/10 border-rose-500/30 text-rose-300` | `bg-rose-500/25 text-rose-100 border-rose-500/50` |
+| Amber (warning, overtime) | `bg-amber-500/10 border-amber-500/30 text-amber-300` | — |
 
-Body cells inherit the column width from the header under `table-fixed`, so they
-only need a matching `align`. Exception: a deliberately all-centered table with
-composite stacked cells (Maps WR/PB = time + sub-label) keeps everything
-`center` — internal consistency within that table wins over the cross-table rule.
+### Row actions (Join, Spec)
 
-## Page layout
-
-```tsx
-<div className="space-y-4 h-full flex flex-col overflow-hidden">
-  <header />     {/* h1 + subtitle + icon buttons, shrink-0 */}
-  <toolbar />    {/* Filters / Columns / search, shrink-0 */}
-  <filterPanel /> {/* Collapsible, shrink-0 */}
-  <error />      {/* Conditional banner */}
-  <DataTableShell>...</DataTableShell>  {/* flex-1 min-h-0 */}
-  <PaginationBar /> {/* Optional, shrink-0 */}
-  <modals />
-</div>
+```ts
+// primary
+'inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium border border-accent-500/30 bg-accent-500/10 text-accent-300 hover:bg-accent-500/25 hover:text-accent-100 hover:border-accent-500/50 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed'
+// secondary
+'inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium border border-hairline/10 bg-hairline/5 text-muted-foreground hover:bg-hairline/10 hover:text-foreground hover:border-hairline/20 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed'
 ```
 
-### Page title block
-
-```tsx
-<div className="flex items-end justify-between shrink-0">
-  <div>
-    <h1 className="text-2xl font-bold text-white leading-tight">{Title}</h1>
-    <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
-  </div>
-  <div className="flex items-center gap-1">
-    {/* HelpCircle tutorial button + RefreshCw button */}
-  </div>
-</div>
-```
-
-Icon buttons in header: `p-2 rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors cursor-pointer`.
-
-### Sidebar width
-
-The sidebar's width is one CSS custom property, `--sidebar-width`, which
-`AppLayout` sets on `document.documentElement`: `16rem` expanded, `5rem` collapsed,
-`0px` below `lg` (where the sidebar is a drawer over the page). It is set in a
-layout effect before first paint and removed on unmount, so an overlay that renders
-before the layout (the boot-time `ErrorModal`) falls back to `0px`. The `aside`
-itself is `w-[var(--sidebar-width,0px)]`; the drawer's `max-lg:w-72` wins below `lg`.
-
-Anything that sits beside the rail reads the property, always with the `0px`
-fallback, and never hard-codes `16rem`, `lg:pl-64` or `256px`:
-- `Modal` `offsetSidebar` (`app/components/ui/modal.tsx`) pads the backdrop
-  `pl-[calc(var(--sidebar-width,0px)_+_1rem)]`, the rail plus the backdrop's own
-  1rem, so an offset dialog is centred exactly over the content area in both modes,
-  and centred on the viewport on phones;
-- `ErrorModal`'s non-fullscreen backdrop, the Game Input key-capture overlay and the
-  bind-conflict dialog start at `left-[var(--sidebar-width,0px)]`;
-- `AnalyticsConsentBanner` centres on the content area with
-  `left-[calc(50%_+_var(--sidebar-width,0px)/2)]` and
-  `w-[calc(100vw_-_24px_-_var(--sidebar-width,0px))]`.
-
-A new overlay that should leave the rail visible uses the same pattern; a modal
-uses `offsetSidebar`.
-
-### Tooltip sides
-
-The shared `Tooltip` (`app/components/ui/tooltip.tsx`) takes `side="top"`
-(default), `"bottom"` or `"right"`. Top and bottom flip when there is no room.
-`right` places the box 10px right of the trigger, vertically centred on it,
-clamped between the titlebar's bottom + 8px and the viewport bottom − 8px and kept
-inside the viewport horizontally; the arrow points left at the trigger's middle.
-Use `right` for anything in the collapsed rail (nav tiles, the toggle, the disabled
-Play tile), so the tooltip opens over the page instead of over the rail.
-
-## Filter panel
-
-```tsx
-<div className="bg-card/30 border border-white/10 rounded-xl p-4 space-y-4 shrink-0">
-  <FilterPanelRow label="...">
-    <MultiFilterDropdown ... />
-  </FilterPanelRow>
-  ...
-  <div className="flex items-center justify-between gap-3 pt-2 border-t border-white/5">
-    <FilterPresetsMenu ... onResetFilters={resetFilters} />
-  </div>
-</div>
-```
-
-## Buttons & toggle states
-
-### Toolbar toggle button (Filters, etc.)
-
-```tsx
-// Inactive
-"bg-card/50 border border-white/10 text-muted-foreground hover:text-white hover:border-white/20"
-// Active (panel open)
-"bg-accent-500/20 border border-accent-500/50 text-accent-300"
-// Shared shape
-"flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer"
-```
-
-Count badge inside toggle: `text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-accent-500 text-white`.
-
-### Sidebar Quick Actions
-
-Primary CTA (driving users to a key action):
-```
-"w-full h-11 bg-accent-500/15 border border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-foreground hover:border-accent-500/60 hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition font-semibold rounded-lg"
-```
-
-Secondary action (muted):
-```
-"w-full h-9 bg-card/50 border border-hairline/10 text-muted-foreground hover:text-foreground hover:bg-card/80 hover:border-hairline/20 transition-colors rounded-lg font-medium"
-```
-
-The CTA uses `transition`, not `transition-all`, so its colour and glow still
-animate but its size doesn't when the rail collapses (see collapsed rail below). In
-the collapsed rail `w-full h-11` / `w-full h-9` is swapped for the tile shape.
-
-### Sidebar status tag
-
-A sidebar event link (a `NavItem` `eventLink`, e.g. the cup) gets the events `Live`
-chip while it is live: through its `liveUntil` day in the viewer's local time, gone
-from the next local midnight (`isEventLinkLive`, see `agents/navigation.md`, the
-sidebar registry). The chip sits alone in the row's right-aligned trailing slot,
-never inside the label text, and never a row background, left bar or accent colour,
-so it can't be mistaken for the active item. It stays static so it never competes
-with the live dot.
-The chip comes from `app/components/shared/chipStyles.ts`: `CHIP_SHAPE` is the shape
-`EventStatusBadge` and the bracket `Chip` use, and `LIVE_CHIP_STYLE` is the live-match
-colouring (`MATCH_STATUS_STYLES.live`). Compose them, never re-type the classes:
-```
-cn('relative z-10 ml-auto shrink-0', CHIP_SHAPE, LIVE_CHIP_STYLE)
-```
-
-### Sidebar badges
-
-Sidebar badges sit on the item's icon, never in the row, so they can't squeeze the
-label or the status tag in the 16rem rail. The icon-to-label gap is `gap-4` to leave
-room for them.
-- **Count bubble**: top-right of the icon, static, accent, with a `ring-card` cutout.
-  It shows at most `99+` and grows leftwards over the icon, never into the label.
-  ```
-  "absolute -top-1.5 -right-1.5 inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-accent-500 text-white text-[10px] font-black leading-none tabular-nums ring-2 ring-card shadow-[0_0_8px_rgb(var(--accent-glow-rgb)/0.5)]"
-  ```
-- **Live dot**: `<LiveDot>` (`app/components/shared/LiveDot.tsx`), the pulsing emerald
-  `size-2.5` dot, at the icon's bottom-right. The sidebar adds its position and
-  `ring-card` cutout through `className`:
-  ```
-  "absolute -bottom-1 -right-1 ring-2 ring-card"
-  ```
-  It is the rail's only *kind* of pinging mark, for something happening right now (an
-  open picks & bans lobby), and it can show on more than one item at once: while a
-  lobby is open, the event link and Events both carry it. The event page's "Needs your
-  attention" lobby row and the Schedule tab's picks & bans Join banner render the same
-  component, so all three read as one signal.
-
-Both marks are `aria-hidden`. Their meaning goes into a `sr-only` span after the
-label, and into the shared `Tooltip` on the icon, one line per detail. In the
-collapsed rail the marks stay on the icon, placed for the rail tile (see collapsed
-rail, icon marks), and lose their own tooltip; the lines join the tile's
-right-side tooltip instead.
-
-### Collapsed rail
-
-At `lg` and up the sidebar can collapse to a 5rem rail (`--sidebar-width: 5rem`,
-see sidebar width; behaviour in `agents/navigation.md`, sidebar parts and the
-collapsed rail). Switching modes is instant: nothing in the sidebar may use
-`transition-all` or animate width, padding, gap or size. Use `transition` or
-`transition-colors`, so only colour, shadow and the logo's hover scale animate.
-
-- **Rail tile** (`SidebarNavItem`, collapsed): the icon over a caption, at least
-  44px tall, and the full width of the nav (79px less `px-1.5`), so the whole tile
-  is the click target. The active overlay and hover look are the expanded row's.
-  ```
-  "flex-col items-center justify-center gap-1 min-h-11 px-1 py-1.5 [@media(max-height:800px)]:py-1"
-  ```
-- **Caption**: `navItemCaption(item)`, one line, never wrapped, plain centred text
-  with nothing before it.
-  ```
-  "max-w-full truncate text-[10px] leading-tight font-medium"
-  ```
-  **The "labels about 110px" rule covers captions too.** A caption has about 59px
-  at 10px (`system-ui`): "Achievements" measured 63px and overflowed, which is why
-  it captions as "Awards". When a label won't fit that box, give the item a
-  `shortLabel`; never let a caption truncate. The rail e2e asserts no caption
-  overflows.
-- **Icon marks**: one corner of the icon per signal, each `aria-hidden` with the
-  `ring-2 ring-card` cutout. The rail places them for its tile, not with the
-  expanded offsets:
-  - **Live dot**, top-left: the collapsed form of the sidebar status tag, a static
-    red dot the size of the lobby dot. It never animates, so it reads apart from the
-    pinging emerald lobby dot (red vs emerald, top-left vs bottom-right, static vs
-    pinging). The tooltip's "Live" line uses the chip's text red, `text-red-300`.
-    ```
-    "absolute -top-px -left-2.5 size-2.5 rounded-full bg-red-500 ring-2 ring-card"
-    ```
-    It moves out to `-left-4.5` when the count shows `99+`, so the wider bubble
-    never meets it.
-  - **Count bubble**, top-right: the expanded bubble's look at
-    `absolute -top-px -right-[5px]`. It grows leftwards over the icon.
-  - **Lobby dot**, bottom-right: `<LiveDot className="ring-2 ring-card" />` in an
-    `absolute -bottom-px -right-5 flex` wrapper.
-
-  The tile leaves 6px above the icon (4px under `max-height: 800px`) and 4px under
-  it before the caption, so no mark sits more than 1px past the icon's top or
-  bottom edge, and every ring stays inside the tile's `overflow-hidden`. That
-  leaves no height to stack the bubble over the lobby dot, so the lobby dot sits to
-  the right of the bubble instead, and the bubble grows left. Counts up to 99 clear
-  the Live dot where it sits; `99+` clears it once the dot moves out. The caption
-  stays where a non-live item's is. The marks e2e
-  (`e2e/sidebar-collapse-marks.spec.ts`) checks at 1280×900 and 1024×720, active
-  tile included, that every mark, ring included, stays inside its tile, sits on
-  its own corner, and meets no other mark and no caption.
-- **Dividers**: section titles become `sr-only`, and every section, the first
-  included, starts with an `aria-hidden` line:
-  ```
-  "mx-3 mb-2 border-t border-hairline/10"
-  ```
-- **Nav**: `px-1.5 space-y-2`, `overflow-x-hidden` and a hidden scrollbar
-  (`[scrollbar-width:none]`), because a Windows scrollbar would take about 11px of
-  the 80px rail. The list still scrolls by wheel, touch and focus. Expanded keeps
-  its scrollbar.
-- **Action tiles** (`SidebarActions`, desktop only): Join and Play are stacked squares, 48px
-  (44px under `max-height: 800px`), the icon (`size-5`) over a `text-[10px]`
-  caption, each keeping its expanded colouring and disabled look:
-  ```
-  "size-12 [@media(max-height:800px)]:size-11 flex-col gap-0.5 px-0 has-[>svg]:px-0"
-  ```
-- **Logo** (`SidebarBrand`): `size-10` with `px-4 pb-4 pt-14` (`px-2 pb-2 pt-12` on
-  short windows); the taller top padding leaves room for the toggle above it.
-- **Toggle** (`SidebarCollapseToggle`): a 36px (`size-9`) icon-only ghost button with a
-  `size-5` icon,
-  `rounded-lg text-muted-foreground hover:text-foreground hover:bg-hairline/10 transition-colors`.
-  `SidebarBrand` places it `absolute left-[22px] top-3` (`top-2` on short windows), so
-  it is centred 40px from the sidebar's left edge at the same spot in both modes.
-- **User card**: collapsed, it sizes to its content. The rarity border and glow move from the card
-  rectangle to a ring around the avatar: from rarity 3 a 2px ring in the title
-  colour, and at rarity 5 also the 15px glow with the existing
-  `animate-pulse-slow` on the ring (one per page, so within the runtime budget).
-  Signed out, the Discord button is a `size-10` square. The collapsed login-error
-  popover is `bg-popover/95` with a red border and no backdrop blur.
-
-### Action chips inside table rows (Join, Spec, etc.)
-
-```tsx
-// Primary action
-"h-7 px-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md uppercase text-[10px] font-bold tracking-widest"
-// Ghost action
-"h-7 px-2 text-muted-foreground hover:text-foreground rounded-md hover:bg-white/5 text-[10px] font-bold uppercase tracking-widest gap-1"
-```
+Icon-only action cells use `IconActionButton`.
 
 ### Active filter chips
 
-For "what's filtered right now" pills above a data table, use
-`<ActiveFilterChip>` (`app/components/shared/ActiveFilterChip.tsx`). One chip
-per filter value. Pattern:
+Show what is filtered with one `ActiveFilterChip` per filter value
+(`[LABEL value ×]`, accent-tinted, styling locked in the component), in a row between
+the toolbar and the filter panel, rendered only while filters are active.
 
-```
-[LABEL: value ×]
-```
+### Status chips
 
-Styling locked inside the component (blue-tinted, removable via X button).
-Page composes the chip row from its own filter state and renders it between
-the toolbar and the filter panel — only when `hasActiveFilters`.
-
-### Color-tinted button family
-
-| Intent | bg / border / text | Hover |
-|---|---|---|
-| Accent (active / primary toggle) — themeable, swaps per theme | `bg-accent-500/15 border-accent-500/40 text-accent-200` | `bg-accent-500/25 border-accent-500/60` |
-| Emerald (positive / save) | `bg-emerald-500/10 border-emerald-500/30 text-emerald-300` | `bg-emerald-500/25 text-emerald-200 border-emerald-500/50` |
-| Red (destructive / clear) | `bg-red-500/10 border-red-500/30 text-red-300` | `bg-red-500/25 text-red-200 border-red-500/50` |
-| Rose (warning / demos) | `bg-rose-500/10 border-rose-500/30 text-rose-300` | `bg-rose-500/25 text-rose-100 border-rose-500/50` |
-| Amber (warning / overtime) | `bg-amber-500/10 border-amber-500/30 text-amber-300` | — |
-
-Shared shape for these chips: `h-8 px-3 rounded-md text-xs font-medium border transition-colors cursor-pointer flex items-center gap-2`.
+`app/components/shared/chipStyles.ts` holds the shared chip: `CHIP_SHAPE` (the shape
+`EventStatusBadge` and the bracket `Chip` use) and `LIVE_CHIP_STYLE` (live red).
+Compose them with `cn` instead of retyping the classes.
 
 ## Form inputs
 
-### Text input
+Text input:
+`px-3 py-2 bg-card/50 border border-hairline/10 rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50`.
+Search variant: `pl-9 pr-9`, a `<Search>` icon at
+`absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none`,
+and while there is a value a clear button at `absolute right-2` with `<X className="size-3.5" />`.
+
+Checkbox: `accent-[var(--accent-500)] cursor-pointer` (favourites:
+`accent-yellow-400`), wrapped in
 
 ```tsx
-"px-3 py-2 bg-card/50 border border-white/10 rounded-lg text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50"
-```
-
-Search variant: add `pl-9` and absolute-positioned `<Search>` icon at `left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground`. Clear button (when value): absolute right-2 + `<X size-3.5>`.
-
-### Checkbox
-
-```tsx
-<input type="checkbox" className="accent-[var(--accent-500)] cursor-pointer" />
-// Yellow-accent variant for favorites
-<input type="checkbox" className="accent-yellow-400 cursor-pointer" />
-```
-
-Wrapped in:
-```tsx
-<label className="flex items-center gap-2 px-3 py-2 bg-card/50 border border-white/10 rounded-md text-sm text-white cursor-pointer hover:border-white/20 self-end">
-  <input ... />
+<label className="flex items-center gap-2 px-3 py-2 bg-card/50 border border-hairline/10 rounded-md text-sm text-foreground cursor-pointer hover:border-hairline/20 self-end">
+  <input type="checkbox" … />
   <span>Label</span>
   {count > 0 && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-accent-500/20 text-accent-300 border border-accent-500/30">{count}</span>}
 </label>
 ```
 
-### Native select
+Native `<select>`: always `style={{ colorScheme: 'dark' }}`, so Chromium draws dark form
+chrome on Windows (Light overrides it in `themes.css`).
 
-ALWAYS set `style={{ colorScheme: 'dark' }}` so Chromium renders dark form chrome on Windows.
+## Sidebar
 
-## Card backgrounds + borders
+Visual tokens for the sidebar parts. What each part does, the nav registry, badges'
+data and the collapse behaviour are in [navigation.md](navigation.md).
 
-| Layer | Background | Border |
-|---|---|---|
-| Page surface | `bg-background` (root) | — |
-| Card (filter panel, scroll container, event to-do panel) | `bg-card/30` | `border border-white/5` (or `/10` for stronger) |
-| Card hover state | `bg-card/80` | `border-white/20` |
-| Inline chip / badge | `bg-white/5` | `border border-white/5` |
-| Sticky thead | `bg-card/95 backdrop-blur` | — |
-| Modal | `bg-card` | `border border-accent-500/40` (when interactive) |
+### Quick actions (`SidebarActions`, desktop only)
 
-Standard radii: `rounded-xl` for big containers, `rounded-lg` for buttons / inputs, `rounded-md` for chips / small actions, `rounded` for badges.
+```ts
+// primary CTA (Join Server)
+'bg-accent-500/15 border border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-foreground hover:border-accent-500/60 hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition font-semibold rounded-lg'
+// secondary (Launch Game)
+'bg-card/50 border border-hairline/10 text-muted-foreground hover:text-foreground hover:bg-card/80 hover:border-hairline/20 transition-colors rounded-lg font-medium'
+```
 
-## Text
+Expanded they add `w-full h-11` / `w-full h-9`; collapsed they swap that for the tile
+shape below.
 
-| Use | Class |
-|---|---|
-| Page title | `text-2xl font-bold text-white leading-tight` |
-| Section label (small caps, e.g. the event to-do panel heading) | `text-[10px] uppercase tracking-wider text-muted-foreground` |
-| Table header | `text-xs uppercase tracking-wider font-medium text-muted-foreground` |
-| Body | `text-sm` |
-| Subtitle / hint | `text-xs text-muted-foreground` |
-| Monospace nums (times, ping) | `font-mono tabular-nums` |
-| Player / map name | `text-sm font-semibold text-white` |
+### Status tag
 
-`font-pickban` (Barlow Condensed, bundled from `app/assets/fonts/barlow-condensed/` with
-its OFL licence) is the pick/ban and broadcast display face: team names, the turn caption,
-map tiles, the step track, the reveal scenes and every OBS scene. The token lives in
-`theme.css`; its `@font-face` rules live in `app/components/broadcast/broadcastFonts.css`,
-imported by `broadcastFonts.ts` (`useBroadcastFonts`), which the scene frames, the stinger page
-and the pick/ban stream broadcast call (`PickBanStage` imports the CSS directly), all lazily loaded, so the entry CSS doesn't carry them. The files are imported
-assets rather than `app/public/` files so the desktop build, which has no public dir and
-loads over `file://`, gets them too. It ships four faces: 600 and 700 upright, 800 and 900
-italic. Body text and everything outside pick/ban stays on the system font.
+A live event link shows the live chip alone in the row's right-aligned trailing slot:
+`cn('relative z-10 ml-auto shrink-0', CHIP_SHAPE, LIVE_CHIP_STYLE)`. It stays out of
+the label text, adds no row background, left bar or accent colour (those mean
+"active"), and never animates, so it doesn't compete with the live dot.
 
-## Color palette
+### Icon marks (expanded)
 
-- **accent-500 / accent-400 / accent-300** — the one **themeable** scale (chrome:
-  primary action, active states, links, sort icons, count badges, CTAs, focus
-  rings). Default = Classic blue, so untouched it looks like the original. See
-  **Themes** below.
-- **emerald-500 / emerald-300** — positive, save, "go", populated state
-- **amber-300 / yellow-500** — warnings, certified/highlighted, favorites
-- **red-500 / red-300** — destructive, clear, errors
-- **rose-400 / rose-300** — alternate warning (full server, demos)
-- **muted-foreground** — secondary text, inactive
-- **white/10**, **white/5** — borders and subtle backgrounds (don't use `border-gray-*`)
+Marks sit on the item's icon, never in the row, so they can't squeeze the label or
+the tag; the icon-to-label gap is `gap-4` to leave room.
 
-### Brand colours (fixed across every theme)
+- **Count bubble**, top-right, shows at most `99+` and grows leftwards over the icon:
+  `absolute -top-1.5 -right-1.5 inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-accent-500 text-white text-[10px] font-black leading-none tabular-nums ring-2 ring-card shadow-[0_0_8px_rgb(var(--accent-glow-rgb)/0.5)]`
+- **Lobby dot**, bottom-right: `<LiveDot className="absolute -bottom-1 -right-1 ring-2 ring-card" />`.
+  `LiveDot` is the only pinging mark in the rail, the "happening now" signal; the
+  event page's lobby row and the Schedule tab's Join banner render the same component.
 
-Game identity, not chrome — keep these **literal**, never route through `accent-*`:
+Marks are `aria-hidden`; their meaning goes in a `sr-only` span after the label and in
+the icon's `Tooltip`, one line per detail.
 
-- **World record** = blue (`text-blue-300`, medal `world record`)
-- **Champion** = red (`text-red-300`); rank-1 leaderboard time = red
-- **Medals** — bronze `amber-500`, silver `slate-200`, gold `yellow-300`
-- **Delta** — gained `emerald`, lost `red` (`DELTA_COLORS`, `capDetail/capStats.ts`)
-- **Roles / Patreon / verified / certified / cap-type / team & compare-runner A-B**
-  (`utils/roles.ts`, `PatreonBadge`, the `CapTypeBadge`/team/runner colours)
-- **Functional** — destructive `red`, success `emerald`, warning `amber`/`rose` are
-  usability constants and also overlap brand, so they stay fixed too.
-- Splash / login / marketing gradients (`shared.css`, `--utbt-*`) — a brand moment.
-- **Pick/ban sides** — team A crimson `pickban-a` (`#e6394f`), team B azure `pickban-b`
-  (`#1fa6e6`) and the decider's gold `pickban-gold` (`#f0b429`). They are defined once, in
-  the `@theme` block of `theme.css`, so every colour utility and opacity step works
-  (`text-pickban-a`, `border-pickban-b/45`, `bg-pickban-gold/20`), and no theme overrides
-  them, Light included. Pick/ban components read them through `PICK_BAN_TONES`
-  (`app/components/broadcast/broadcastTone.ts`) rather than spelling the classes out. A
-  gradient, glow or shadow that needs the raw colour takes it from `PICK_BAN_HUES` in the
-  same file (a `var(--color-pickban-*)` value, mixed with `color-mix()` for alpha).
+### Collapsed rail
 
-### Red/Blue sides: wording and labels
+At `lg` and up the sidebar can collapse to a 5rem rail. Switching modes is instant:
+nothing in the sidebar uses `transition-all` or animates width, padding, gap or size.
+Use `transition` or `transition-colors`, so only colour, shadow and the logo's hover
+scale animate.
 
-A match has one Red team and one Blue team for the whole series. **Red is side A and acts
-first, Blue is side B**, and the tones keep their meaning: Red is the crimson `pickban-a`
-tone, Blue the azure `pickban-b` one.
+- **Rail tile** (`SidebarNavItem`): icon over caption, at least 44px tall, full nav
+  width, keeping the expanded row's active overlay and hover:
+  `flex-col items-center justify-center gap-1 min-h-11 px-1 py-1.5 [@media(max-height:800px)]:py-1`.
+- **Caption** (`navItemCaption(item)`), one line, centred, nothing before it:
+  `max-w-full truncate text-[10px] leading-tight font-medium`. A caption has about
+  59px at 10px; give a longer label a `shortLabel` ("Achievements" captions as
+  "Awards"). The rail e2e fails on any overflowing caption.
+- **Icon marks**: one corner per signal, each `aria-hidden` with `ring-2 ring-card`.
+  - Live, top-left, the collapsed status tag: a static red dot,
+    `absolute -top-px -left-2.5 size-2.5 rounded-full bg-red-500 ring-2 ring-card`,
+    moved to `-left-4.5` when the count shows `99+`. Red, top-left and static, so it
+    reads apart from the pinging emerald lobby dot. Its tooltip line is `text-red-300`.
+  - Count bubble, top-right: the expanded bubble at `absolute -top-px -right-[5px]`.
+  - Lobby dot, bottom-right: `<LiveDot className="ring-2 ring-card" />` in an
+    `absolute -bottom-px -right-5 flex` wrapper, beside the bubble, because the tile
+    has no height to stack them.
 
-- **Wording.** Player- and caster-facing text leads with Red/Blue and keeps A/B secondary:
-  step labels read "Crimson Cats (Red) bans", a side card's title reads "Red · Side A", the
-  reveal reads "T04 → RED · bans first", and a player's own colour reads "You’re **Red**".
-  Admin tools show both. Until the side is confirmed, show "Sides TBC" rather than a colour
-  you can't stand behind.
-- **Labels.** Build every one of these from `app/utils/sideLabels.ts`, never by hand:
-  `sideColorName` (`Red`), `sideColorTag` (`RED`), `sideColorTitle` (`Red · Side A`),
-  `sideLetterOf` / `sideColorOfLetter` (Red ↔ A), `otherSideColor`, `withSideColor(name,
-  color)` (`T04 (Red)`, and just the colour when the name already is one), `sideTagOf(color,
-  confirmed)` (the tag, or `SIDES_TBC` while unconfirmed) and `youreSideLabel(color)`
-  (`You’re Red`, or `null`).
-- **Tones.** `sideColorTone(color)` maps a colour to its `PICK_BAN_TONES` / `PICK_BAN_HUES`
-  key (`a` or `b`).
-- **"You’re Red" chip.** `events/pickban/components/YoureSide.tsx` renders it in the colour's
-  tone, on the pick/ban page and on My Matches cards.
-- **On stream.** Scenes say RED and BLUE (`sideColorTag`), never "Side A"; the colour bar and
-  wash already carry the side.
-  - *Scene tags.* `stream/sceneSideTags.ts` turns the hot state's `side_status` into one tag per
-    stream side: `RED` on the top/left team and `BLUE` on the bottom/right one, in their tones,
-    or "Sides TBC" in the neutral tone while unconfirmed. `stream/SceneSideTagChip.tsx` draws it
-    beside a team name: a solid chip in the side's tone, or a white/30 outlined chip at
-    white/75 for "Sides TBC". The Match preview puts it after each team plate's name, and the
-    Next Map scene's series card (`SeriesScoreCard` `sideTags`) after each row's name; BRB and
-    Caster Cam pass no `sideTags`, so their cards are unchanged.
-  - *Overlay name tags.* While unconfirmed each tag adds a 13px bold uppercase "Sides TBC" note
-    at white/75 on the side away from the seam (above an upper tag's player, below a lower
-    tag's), inside the 300×60 box. A confirmed side adds nothing: the seam rails and team light
-    already say it.
-  - *Pick & Ban scene.* `TeamPlate` takes a `tag` (`PlateTag`: `label`, `tone`), drawn first in
-    the plate's top row as a solid chip with a 2px white/80 border. `plateSideTagOf` sets it once the
-    side is confirmed and outside step 0's choice, so the plates read RED and BLUE from the
-    reveal on, and from the start when an admin set the side. The two step-0 moments are
-    overlays like the intro and the map reveal (see `agents/shared-components.md`, stream
-    broadcast layout): the choice names the chooser at 112px over two 480px option cards in
-    the colours' tones ("RED" at 112px, the card's lead such as "Ban 1st, pick 2nd" in the
-    tone); the reveal slams a 560×256 slab in the chosen colour with the tag at 168px, the
-    reveal line ("T04 → RED · bans first") at 64px in the tone, the countdown to step 1 and
-    the next turn, with the chosen team's half of the backdrop lit. The intro adds the
-    `introLine` ("Sides set by admin") under its countdown when step 0 is skipped.
+  The tile leaves 6px above the icon (4px under `max-height: 800px`) and 4px below it,
+  so no mark sits more than 1px past the icon and every ring stays inside the tile's
+  `overflow-hidden`. `e2e/sidebar-collapse-marks.spec.ts` checks at 1280×900 and
+  1024×720 that every mark stays in its tile, on its corner, clear of other marks and
+  the caption. Collapsed, marks drop their own tooltip and their lines join the
+  tile's right-side tooltip.
+- **Section dividers**: titles become `sr-only`; every section, the first included,
+  starts with `<div aria-hidden className="mx-3 mb-2 border-t border-hairline/10" />`.
+- **Nav**: `overflow-x-hidden [scrollbar-width:none] px-1.5 space-y-2`, since a Windows
+  scrollbar would take about 11px of the rail; it still scrolls by wheel, touch and
+  focus. Expanded keeps its scrollbar.
+- **Action tiles**: 48px squares (44px under `max-height: 800px`), a `size-5` icon
+  over a `text-[10px]` caption, same colouring and disabled look:
+  `size-12 [@media(max-height:800px)]:size-11 flex-col gap-0.5 px-0 has-[>svg]:px-0`.
+- **Logo** (`SidebarBrand`): `size-10` in `px-4 pb-4 pt-14` (`px-2 pb-2 pt-12` on short
+  windows), leaving room for the toggle.
+- **Toggle** (`SidebarCollapseToggle`): `size-9` ghost button, `size-5` icon,
+  `rounded-lg text-muted-foreground hover:text-foreground hover:bg-hairline/10 transition-colors`,
+  placed by `SidebarBrand` at `absolute left-[22px] top-3` (`top-2` short), the same
+  spot in both modes.
+- **User card**: sizes to content. The rarity border and glow move to a ring round the
+  avatar: from rarity 3 a 2px ring in the title colour, at rarity 5 also a 15px glow
+  with `animate-pulse-slow`. Signed out, the Discord button is a `size-10` square. The
+  login-error popover is `bg-popover/95` with a red border and no backdrop blur.
 
-### Hard-map veto: cards and pool states
+## Motion
 
-A team-chosen veto removes the tagged maps (Hard) for both teams. It runs before the side
-step, while no team has a colour yet, so its controls never use the Red or Blue tones.
+- `animate-in`, `fade-in`, `slide-in-*` and `zoom-in-*` emit no CSS: `tw-animate-css` is
+  a dependency but never imported, so those classes (still present on some modals and
+  the tutorial) do nothing. Animate with framer-motion.
+- Skeletons: `animate-pulse` with `bg-hairline/5`. Legendary titles and avatars:
+  `legendaryAvatarPulse` / `legendaryTitlePulse` in `globals.css`.
+- framer-motion stays out of the web entry: import it only from lazily loaded
+  modules. The curves and presets are in `app/components/broadcast/broadcastMotion.ts`,
+  and the pick/ban choreography built on them in
+  `app/components/pages/events/pickban/components/stageMotion.ts`; use them as the
+  reference. Variants follow view-model state, so a change reverses when the state does
+  (an undo). `AnimatePresence` handles enter and exit; a shared `layoutId` makes an
+  indicator glide. Animate `transform` and `opacity` (a one-shot `filter` is fine). A
+  plain colour or filter change on a card can be a CSS `transition-[…]`, since it
+  reverses by itself.
+- One-shot effects (bursts, rings, sparks, flashes, as in
+  `pickban/components/RevealEffects.tsx`) are variant children whose keyframes start
+  invisible and end invisible or on a settled glow, so a scene mounted settled
+  (`initial={false}`) or under reduced motion lands on a clean last frame. Keep them
+  bounded: a fixed handful of absolutely positioned elements animated once, and at most
+  one stage-level element looping while its scene is up.
 
-- **Veto cards** (captain dock). Two cards in a `radiogroup`, built like the side cards
-  (`rounded-xl border-2`, `bg-card/40` until selected, one column on phones), in the
-  `PICK_BAN_TONES.gold` tone: "**Veto Hard maps**" with "Play 9 maps" and the four maps as
-  small chips, and "**Play Hard maps**" with "Play 13 maps". The Lock In button turns gold once
-  a card is selected and reads "Lock In Veto" or "Lock In Play".
-- **Waiting.** The other captain, or one who has chosen, gets the usual locked control row:
-  "T15 are deciding on the Hard maps" or "Waiting for T16".
-- **Outcome.** The stage caption and the dock's reveal row say "T15 veto the Hard maps" or
-  "Hard maps stay in" in `text-pickban-gold`, with "9 maps" or "13 maps" in the muted detail.
-- **Pending cards.** While teams decide, each tagged tile keeps its normal look and gets a
-  top-left badge "Hard?" (the tile's `BADGE` shape, `bg-black/65 text-white/85` with an inset
-  `ring-white/30`): neutral, neither banned nor picked.
-- **Vetoed cards.** They leave the board like any excluded map and sit in the `ExcludedMaps`
-  row (grey thumbnail and name), each with a gold outlined stamp "VETOED · T15"
-  (`border-pickban-gold/55 text-pickban-gold`, 10px black uppercase). The reason under the
-  row names the team: "Hard maps are vetoed by T15."
-- **Played.** When the maps stay in, the cards are plain again.
-- **Before the plan exists** the step track's place shows "13 or 9 maps" in `font-pickban`
-  with "The steps appear once the Hard maps are decided." under it.
-- **On stream** (the Pick & Ban scene), still in the gold tone:
-  - *Deciding.* The board keeps every map, the tagged tiles wear the "Hard?" badge, and the
-    caption reads "Hard-map veto · 13 or 9 maps" over "T16 are deciding on the Hard maps".
-  - *Veto moment.* An overlay in the step-0 card style (`BroadcastVetoReveal`): the
-    "Hard-map veto" kicker, the four maps as 360px square cards with a 5px gold border and glow,
-    each map's name under its card, then the outcome at 72px ("T15 veto the Hard maps" or
-    "Hard maps stay in") with "9 maps in play" / "13 maps in play" in gold, a gold countdown
-    bar and "Next: T15 choose their side" (or the first step when the side is already set).
-    The cards carry the "Hard?" badge until `reveal_at`; then, 0.12s apart, a vetoed card
-    greys out under a slanted gold "VETOED" stamp (the BANNED stamp's shape), or a kept card
-    gets a solid gold "In play" badge. The lit half of the backdrop is the team that vetoed.
-  - *Stamped cards.* After the veto the vetoed maps stay on the board, not in the line under
-    it: the tile greys out like a banned one, with a slanted gold outlined "VETOED" stamp and
-    "By T15" in gold. Auto exclusions still leave the board for the "Hard maps are out" line.
-  - *Side choice after a veto.* When the stage has a team-chosen veto, the step-0 choice adds
-    the chooser line under "choose their side" ("T15 choose: lower group finish (4th vs 3rd)",
-    28px white/70 uppercase). Stages without one keep the step-0 choice exactly as before.
+### Reduced motion
 
-## Themes
+`shared.css` cuts every CSS animation and transition to nothing under
+`prefers-reduced-motion: reduce`, except inside `[data-motion='on']`. JS-driven motion
+reads the same preference through `usePrefersReducedMotion()`
+(`app/hooks/usePrefersReducedMotion.ts`): wrap a framer-motion tree in a
+`MotionConfig` whose `skipAnimations` follows it, so every animation is instant and
+shows the same information, and make an animation-frame loop step coarsely instead of
+gliding (as `CountdownBar` does).
 
-The accent is the **only** themeable scale. Themes swap CSS-variable *values* only —
-identical structure and luminance, so there's nothing extra to QA between dark themes.
-**Light** is the one exception — a genuine second target (see below).
+The pick/ban visual core is the exception, because its reveals are the broadcast and
+Windows reports `reduce` whenever its animation effects are off: `PickBanMotion` takes
+an explicit `animate` flag, sets `reducedMotion="never"`, and marks its wrapper
+`data-motion="on"` while animating (details in
+[pick-ban-ui.md](features/pick-ban-ui.md)).
 
-- **Accent** `--accent-50…950` → Tailwind `accent-*`. Default (Classic) = Tailwind
-  blue. Use `accent-*` for **all** chrome.
-- **Surface tint** — each theme faintly hues `--card`/`--background`/`--muted`/`--border`
-  at the *same* lightness as Classic (subtle, never "in your face").
-- **Glow** `--accent-glow-rgb` (space-separated RGB) for arbitrary
-  `drop-shadow-[…rgb(var(--accent-glow-rgb)/<a>)]` (e.g. the sidebar logo).
-- **Nebula** `--nebula-1…4` (comma-separated RGB triples) are the animated
-  `.nebula-bg` backdrop's gradient stops (`app/styles/shared.css` consumes them via
-  `rgba(var(--nebula-N), <a>)`). Each gradient theme overrides them with its own
-  hue family so the backdrop matches the accent (Classic = the blue/cyan/red brand
-  swirl; UTBT Red = crimson; jewel themes = their gem hue). A new gradient theme
-  **must** set all four or it inherits Classic's blue swirl.
-- **Hairline** `--color-hairline` (white on dark themes) backs `*-hairline/<n>`
-  borders/fills; it flips dark in the **Light** theme.
-- **Window chrome** (titlebar) is driven by the `--window-c-*` vars in
-  `app/styles/window.css`, mapped to theme tokens (`--secondary`/`--popover`/
-  `--foreground`/`--border`), so it follows every theme — white in Light,
-  tinted-dark in the dark themes. Don't hardcode titlebar colours.
+## CSS runtime cost
 
-  `window.css` is **desktop-only** — it is reached through `app/styles/desktop.css`,
-  which only `renderer-desktop.tsx` imports, so none of it ships to the website.
-  `color-scheme` deliberately does *not* live there: it drives native form
-  controls and scrollbars on both targets, so it sits in `globals.css`. Moving it
-  back into `window.css` would regress the website's `<select>` and scrollbar
-  rendering with no build error. On web, `renderer-web.tsx` sets
-  `--window-titlebar-height: 0px` before React mounts, which is what stands in
-  for the `:root` default — several shared components position against that var.
+The renderer runs on phones and in Electron beside the game, so styles have a
+compositor cost:
 
-Values live in `app/styles/themes.css` (`:root` = Classic, `:root[data-theme="…"]`
-for the rest). Registry + provider: `app/theme/themes.ts`, `app/theme/ThemeProvider.tsx`
-(`utbt:theme:v1`). Add a theme = one `[data-theme]` block + one registry entry. Picker:
-Settings → Appearance (`LauncherAppearanceSettings.tsx`).
-
-An `exclusive: true` registry flag gates a theme to Patreon supporters (the four jewel
-themes: `aurum`, `amethyst`, `emerald`, `rose`). The picker locks the card for ungated
-users (lock + a Patreon tag, click opens patreon.com/utbt). Unlock = **patron OR staff**:
-AppLayout computes `unlockExclusive = patreonTier > 0 || utbt_role > 0` (Moderator/Admin/
-Cup Admin) and threads the boolean → SettingsModal → Settings → Appearance. Both signals
-are already loaded (`usePatreonTier` cache + `/users/me` profile) — **zero extra API
-calls**. Staff unlock is **silent** — the card never mentions roles (you can't sign up to
-be staff); they just see it unlocked like a patron. It's a deliberately soft, client-side
-gate: the CSS exists for everyone, so a determined user could set it via localStorage.
-
-A `group: 'gradients' | 'solid'` registry field splits the picker into **Gradients**
-(the colour themes — these keep the animated `.nebula-bg` backdrop and a tinted surface)
-and **Solid Colours** (White/Black — `.nebula-bg` is hidden via
-`:root[data-theme='light'|'black'] .nebula-bg { display:none }`, so the background is a
-flat surface colour).
-
-### Light theme
-
-`light` is a single theme (crisp white), not a per-accent mode. It's the one theme
-that also toggles the `dark` class **off** (`ThemeProvider` + the `index.html`
-pre-paint script); every dark theme keeps `.dark` on. `theme.css` (imported by `globals.css`) defines
-`@custom-variant dark (&:where(.dark, .dark *))` so Tailwind `dark:` is class-based.
-
-`:root[data-theme="light"]` does three things and needs **no per-component colour
-edits**:
-1. flips the surface vars to light + `--hairline-rgb` to dark;
-2. uses a blue accent ramp whose *text* shades (`--accent-200/300/400`) are dark;
-3. overrides the brand/functional **text-shade** colour vars (`--color-blue-300`,
-   `--color-red-300`, `--color-emerald-300`, …) to dark, legible values. Tailwind
-   emits `text-blue-300` as `var(--color-blue-300)`, so this flips every plain
-   coloured text. (Opacity variants like `text-blue-300/40` inline to a hex and
-   don't flip — rare; fix per-spot if a light screenshot shows one.)
-
-This works only because the surface sweep moved components onto the flippable
-tokens: `*-hairline/<n>` (not `white/<n>`) for borders/fills and `text-foreground`
-(not `text-white`) for primary text. `text-white` survives **only** on solid
-coloured fills (e.g. `bg-accent-500 text-white` count badges), which stay white in
-both modes.
-
-Player **title** colours are arbitrary per-title RGB, so they're computed in JS
-(`app/utils/titleStyles.ts`), not via the CSS-var override. In Light they're mapped
-to a hue-preserving, saturation-boosted, luminance-targeted (~4:1 on white) jewel
-tone and the dark text-outline is dropped. `PlayerInfo` recomputes them on theme
-change (it reads `useTheme`), so they update live.
-
-### Seasonal themes
-
-Halloween, Christmas and Easter decorate the launcher on their own each year. Everything lives in
-`app/seasonal/`.
-
-- **When.** The `seasons.ts` registry holds the windows, inclusive and in the viewer's local date:
-  Halloween Oct 24 – Nov 7, Christmas Dec 18 – Jan 15, Easter Sunday ± 7 days (Western, computed).
-  Adding a season is one registry entry, one palette block and its decorations.
-- **Which season shows.** A preview beats the toggle, and the toggle beats the date. The preview is
-  `?season=halloween|christmas|easter|none` on the web, or a dev-only select in Settings → Appearance
-  on desktop, and lasts for the session. The toggle is "Seasonal themes" in Settings → Appearance.
-  `SeasonProvider` (inside `ThemeProvider` in both app roots) sets `data-season` on `<html>` and
-  re-checks on window focus and hourly. The `index.html` pre-paint script sets the attribute from the
-  cached season so the accent never swaps after load; it skips the stream view and stream scene paths,
-  and the stream roots never mount the provider.
-- **Tint** (`app/styles/seasons.css`). Selectors are `:root[data-season='…']:not([data-theme])`, so
-  only Classic is tinted; any chosen theme, Patreon ones included, keeps its colours. Only
-  `--accent-*`, `--accent-glow-rgb` and `--nebula-*` change, never a brand or functional colour.
-  `seasons.test.ts` enforces both and checks contrast: accent-200/300/400 text on the background and
-  white on accent-500 must reach AA, or at least Classic's own ratio where Classic is below it.
-- **Seasonal logo.** Each season has its own redrawn logo: same outline and composition, new colours and
-  details (a scarred, blood-spattered bunny with a glowing eye; a Santa bunny with hat, beard and rosy
-  cheek; a pastel spring bunny with pink ears and a flower crown). The files are
-  `app/assets/seasonal/logo-<season>.webp` (256 px, about 25–30 KiB each), rendered from
-  `app/public/icon-512.png` by `node scripts/render-seasonal-logos.mjs [--preview <dir>]`; better art can
-  replace a file under the same name with no code change. `useLogo()` / `logoFor()` in
-  `app/seasonal/logos.ts` pick the file: the sidebar, the mobile top bar, the desktop splash and the web
-  boot screen use it, on every theme. The favicon, the titlebar and installer icons, the stream scenes
-  and the stinger keep `logo.webp`. Only the active season's file is ever downloaded.
-- **Decorations** are one lazy chunk (`SeasonalDecor.tsx`), loaded only while a season shows and never
-  requested otherwise. Mount them through `lazyDecor.tsx` (`SeasonalAmbient`, `SeasonalSpinnerGlyph`,
-  `fireSeasonalBurst`): Suspense plus a silent boundary, so a failed import renders nothing, and
-  the web `vite:preloadError` reload ignores this chunk.
-  - **Burst.** Clicking the sidebar logo fires a one-off burst (bats, snow or petals) through
-    `fireSeasonalBurst`, with a 10 s cooldown, off under reduced motion.
-  - **Ambient layer.** Home only, behind content, `pointer-events: none`, at most 16 particles (half
-    of them hidden below 768 px), paused on window blur or a hidden page, not rendered under reduced
-    motion. Bats and the butterfly fly through nested elements that each run one transform animation
-    at periods that don't line up (cross, swoop, flutter, bank and a flap per wing; cross, meander,
-    hop, tilt and flap-then-glide), so no path is a straight line. Only `transform` and `opacity`
-    animate, and `e2e/seasonal.spec.ts` asserts it; `offset-path` is out because it runs on the main
-    thread.
-  - **Spinner.** `<Spinner>` (`app/components/ui/spinner.tsx`) shows the season glyph instead of
-    `Loader2`: the pumpkin and egg wobble, the snowflake spins.
-- **e2e.** The desktop and mobile projects preset the toggle to off (`storageState` in
-  `playwright.config.ts`), so app-shell specs never depend on the run date; `seasonal.spec.ts` forces
-  each season with `?season=`.
-
-## Animation
-
-- **`animate-in` / `fade-in` / `slide-in-*` / `zoom-in-*` emit no CSS.** Their plugin
-  (`tw-animate-css`) is never imported, so the older page-enter, modal and tutorial classes
-  (`animate-in fade-in slide-in-from-bottom-4 duration-200` and the like) do nothing today.
-  Don't add new uses. Animate with framer-motion instead.
-- Skeleton: `animate-pulse` with `bg-white/5`
-- Legendary title/avatar: `legendaryAvatarPulse` / `legendaryTitlePulse` keyframes in `globals.css`
-- **framer-motion** is the motion library. It stays out of the web entry, so import it only
-  from lazily loaded modules. The curves and presets
-  live in `app/components/broadcast/broadcastMotion.ts` and the pick/ban choreography built on
-  them in `events/pickban/components/stageMotion.ts`; use those as the reference. Variants follow view-model
-  state, so a change reverses when the state does (an undo). `AnimatePresence` handles
-  enter and exit, and a shared `layoutId` makes an indicator glide. Animate `transform`
-  and `opacity` (a one-shot `filter` is fine). A plain colour or filter change on a card
-  can be a CSS `transition-[…]` instead, since it reverses by itself.
-- **One-shot effects** (the reveal's bursts, shockwave rings, sparks, confetti and flashes in
-  `events/pickban/components/RevealEffects.tsx`) are variant children whose `shown`
-  keyframes start invisible and end invisible or on a settled glow. A scene that mounts
-  settled (`initial={false}`) or runs under reduced motion lands on that last keyframe, so
-  no effect is left half-played. Keep them bounded: a fixed handful of absolutely positioned
-  elements animated once, never a particle per row, and at most one stage-level element
-  looping while its scene is up (the decider's rays).
-- **Reduced motion.** `shared.css` cuts every CSS animation and transition to nothing under
-  `prefers-reduced-motion: reduce`. Motion driven from JS never sees that rule, so it reads
-  the same switch through `usePrefersReducedMotion()` (`app/hooks/usePrefersReducedMotion.ts`):
-  - For framer-motion, wrap the tree in a `MotionConfig` whose `skipAnimations` follows
-    the hook. Every enter, exit and layout animation below it is then instant and shows
-    the same information.
-  - The pick/ban visual core is the one exception: its reveals are the broadcast, and
-    Windows reports `reduce` whenever its Animation effects are off. `PickBanMotion` takes
-    an explicit `animate` (the match page's Animations toggle, the stream view's `motion=0`)
-    and sets `reducedMotion="never"`. Its wrapper carries `data-motion="on"` while
-    animating, and `shared.css`'s rule skips everything inside `[data-motion='on']`.
-  - An animation-frame loop that writes styles steps coarsely instead of gliding, as
-    `CountdownBar` does.
-
-### CSS runtime cost (RAM/CPU)
-
-The renderer runs on phones and in the Electron shell alongside a game — style
-choices have a compositor cost, not just a look:
-
-- `backdrop-blur` is the most expensive effect in the app. The budget is the
-  existing chrome (sidebar, top bar, sticky theads, modals, and the pick/ban stage's
-  paused overlay, which exists only while paused). Never apply it per-row or per-card in a
-  list: one blurred surface, not N.
-- Infinite animations (`animate-pulse`, `animate-ping`, the legendary pulses)
-  animate `opacity`/`transform`/`box-shadow` and each one keeps the compositor
-  awake. Keep them for singletons (badges, one hero) — never one per row.
-  Skeleton `animate-pulse` is fine: it exists only while loading.
-- Prefer `transform`/`opacity` transitions over animating layout properties
-  (`width`/`height`/`top`) — the drawer slides with `translate-x` for this reason.
-- Large `box-shadow` glows on hover are fine; permanent glows on hundreds of
-  elements are not.
-- A page must stay smooth with its largest realistic dataset at its largest
-  page size (200 rows) — if a per-row effect can't survive that, it doesn't ship.
-
-## Event stats styling
-
-The Teams tab overview and the team page (`app/components/pages/events/stats/`) share a small set of
-tokens and rules on top of the locked ones above. Nothing here is a new design system: reuse before adding.
-
-- **Team accent palette.** `--team-accent-0` … `--team-accent-11` are defined once on `:root` (every dark
-  theme) and again under `:root[data-theme='light']` in `events/stats/teamAccents.css`. A team's slot is
-  `(seed − 1) mod 12` (see `agents/data-sources.md`, Event stats reads), so two teams share a colour only
-  when their seeds are 12 apart; slot 11 is a low-chroma slate and the fallback for a team with no slot.
-  Use them through `teamAccentColor(slot)` (→ `var(--team-accent-N)`, any integer wraps) and
-  `teamAccentStyle(slot)` (→ `{ --team-accent: … }`) from `events/stats/teamAccent.ts`, never as raw hex.
-  `teamAccent.test.ts` parses the real CSS and fails if a slot leaves the sRGB gamut, drops under 4.5:1 text
-  contrast against the `--background` or `--card` of any theme block in `app/styles/themes.css`, comes within
-  25° of hue of the reserved pick/ban Red, Blue or decider-gold tones, or sits within 15° of another
-  chromatic slot. Add a slot or change a value only with that test green. The team page imports an identical
-  copy of the stylesheet (`team/teamPageAccents.css`) and a same-named helper in `team/teamPageView.ts`;
-  change all of them together until one replaces the other.
-- **Standing chips and form pips** use the functional palette, not the accents: Alive emerald, Eliminated
-  muted, Champion the brand red, Withdrawn and Disqualified amber; W emerald, D amber, L red. The "cup record"
-  badge is the medal gold (`yellow`), never the pick/ban decider gold. A match's Red or Blue tag uses the
-  `pickban-a` / `pickban-b` tones (`sideColorTag`).
-- **Bespoke rules live in lazy stylesheets.** Tailwind puts every utility it finds in the sources into the one
-  entry stylesheet, lazy chunk or not, and the initial CSS budget (36 KiB gzip) has almost no headroom.
-  So a rule that needs `--team-accent` or a one-off template goes in a stats stylesheet imported by the lazy
-  chunk: `teamCards.css` (`.team-cards` grid, `.team-card` accent glow and hover border,
-  `.team-card-avatar` accent ring), `overviewStats.css` (the map table's pick and ban bars, the glance map-art
-  scrim, team-accent glow, picker ring and its container-query tile grid). Everything else reuses utilities the app already uses; a
-  never-before-used utility class anywhere can fail `npm run check:bundle`, so check it after adding one.
-- **Cup at a glance.** No outer box and no footnotes: each headline is a number, a unit word and its subject.
-  Map headlines are map-art cards (the map's `card` screenshot under a dark scrim, white text whatever the
-  theme, a dark fallback colour when the image fails); the picker rate is a conic-gradient ring; team
-  headlines glow in the team's accent; the biggest upset spans two columns with both seeded teams around the
-  score. Tiles go 4 across, then 2 below a 56rem container width, then 1 below 18rem, packed densely so the
-  wide upset tile never leaves a hole. The team page header keeps its one statically blurred backdrop of its
-  most played map. Do not add per-tile blur (see CSS runtime cost).
-- **Tables.** The overview map table, the team page map profile and the runs table are `DataTable` with a
-  `responsive` column list and `compactContent` card rows from the view-model (`mapTableView`,
-  `mapProfileView`, `teamRunsView`), so they never scroll sideways. The identifying columns (the map, and the
-  headline time, W-D-L or run) are required and the rest drop out by priority as the width shrinks; when even
-  those do not fit, the compact rows take over. Dates align left.
-  The team page itself uses viewport breakpoints (`sm`/`md`/`lg`), not container queries, to stay inside the CSS
-  budget.
-- **Live marker.** The shared emerald `LiveDot` is the only infinite animation on the team page, and renders
-  only for a live match.
-
-## Broadcast styling
-
-The pick/ban stream view and the OBS scenes share `app/components/broadcast/` (inventory in
-`agents/shared-components.md`). The tokens:
-
-- **Surface.** `BROADCAST_SURFACE` (`broadcastTone.ts`: `bg-[#05070c] font-pickban text-white`)
-  is the root class of an opaque scene. It is a fixed dark surface, deliberately not a theme
-  token: a broadcast looks the same under every theme, Light included.
-- **Tones.** Team A crimson, team B azure, decider gold and a neutral, always through
-  `PICK_BAN_TONES` (classes) and `PICK_BAN_HUES` plus `tint(hue, percent)` (raw colour for
-  gradients, glows and shadows). Map a stream side with `sideTone` / `teamTone`; never
-  hand-write `pickban-*` classes or hex values.
-- **Motion.** The curves (`EASE_OUT`, `EASE_IN`, `EASE_OVERSHOOT`, `SLAM`) and presets
-  (`SCENE_VARIANTS`, `staggeredCard`, `CHIP_MOTION`, `STAMP_MOTION`, `FADE_MOTION`,
-  `REVEAL_*`) live in `broadcastMotion.ts`. `stageMotion.ts` keeps only the pick/ban
-  choreography. Scenes take `animate` from the `motion=0` URL option through `PickBanMotion`.
-- **Fonts.** `useBroadcastFonts()` loads the four Barlow Condensed faces (600, 700, italic
-  800 and 900) and calls `document.fonts.load` on them, so the first frame doesn't paint a
-  fallback. Every frame calls it.
-- **The stage.** `BroadcastStage` is a fixed 1920×1080 box scaled to the window. Opaque by
-  default (black letterbox, `bg-background`). `transparent` (the overlay and caster scenes,
-  `transparent: true` in `streamScenes.ts`) leaves the stage and the letterbox clear, and
-  `mountStreamSceneRoot` also clears the document, body and root backgrounds, so OBS
-  composites the page over the game. A transparent scene must not paint a full-frame fill.
-
-### Scene stylesheet
-
-The scene pages don't load the app's stylesheet, so scene classes stay out of the app's
-startup CSS:
-
-- `app/styles/theme.css` holds the `@custom-variant dark` and the `@theme` block (theme
-  colour tokens, `pickban-*`, `font-pickban`), shared by both stylesheets.
-- `app/styles/globals.css` imports it and excludes the stream folder from class scanning with
-  `@source not '../components/stream'`.
-- `app/components/stream/streamScenes.css` builds only the theme and the utilities layers (no
-  preflight) and scans the stream folder. It is imported by `mountStreamSceneRoot.tsx`, by
-  `stinger/stingerPage.tsx` and by the scene-frame test harness (`e2e/sceneFrameHarness.ts`).
-  Import it from any new scene entry point, or its classes won't exist there.
-
-A class used only in a scene lives in the scene CSS bundle, and a class shared with the app
-must be in a file the app scans. The bundle check budgets the two separately
-(`agents/web-target.md`).
-
-### Scene layouts
-
-- **No A/B letters.** No scene draws an A/B chip or a "Team A" slot label: a side is its colour bar,
-  wash and tone, and the team's name. `TeamPlate`'s `ab` only picks the colour.
-- **Predictor Standings scene** (`PredictorStandingsScene`, `scenes/standings/predictorStandings*`, opaque,
-  1792×824 body). Every predictor at once, never scrolled or paged:
-  - *Fit* (`standingsFit(count, box)` in `predictorStandingsFit.ts`): 22px column heads, a 6px gap, then
-    a 796px rows box. Row heights step 44 → 40 → 36 → 33 → 30 (18, 19, 22, 24, 26 rows per column);
-    at each step try 3 columns then 4 (24px gutter, so 581.3px or 430px wide), and take the first
-    that holds everyone, filled column by column in rank order (`ceil(n / columns)` per column).
-    1–54 predictors: 44px × 3; 55–72: 44px × 4; 73–76: 40px; 77–88: 36px; 89–96: 33px;
-    97–104: 30px. Only past the 30px floor does the tail fold: 4 × 26 slots, 103 rows and
-    "+ N more predictors" in the last slot (17px 700, white/45).
-  - *Density* (`standingsDensity`): primary number 22/22/21/20/20px, secondary 19/19/18/18/17,
-    rank 26/25/24/23/22, movement 18/17/17/16/16, chip 15/15/14/14/14 at 44/40/36/33/30. The
-    avatar zooms (one `PlayerInfo size="sm"` at `zoom: 1.5`: 36px avatar, 18px name) only at 44
-    and 40 in a column at least 480px wide; otherwise a native 24px `presentation="avatar"` (kept
-    from shrinking) plus a 10px gap and a `presentation="name"` at `zoom: 1.5`, so the name is
-    18px at every density. The title shows only at 44 with the zoom.
-  - *Row* (a grid per row, `minmax(0,1fr)` for the name, 6px gap and padding, `rounded-lg`, white/3%
-    zebra on even rows): rank (900 italic, white/80, rank 1 `pickban-gold`), movement (▲n
-    emerald-400, ▼n red-400, – white/30, NEW a gold chip at chip size − 2), avatar + name, projected
-    profit (`profitTone`), the sky Pending chip, the "won/decided" record (white/60). Number cells
-    are sized from the longest value on screen: characters × 0.5em (rank 0.55em), the movement cell
-    `ceil((1 + digits × 0.5) × size)` and at least the NEW chip, the chip cell `ceil(3.5em + 16px)`.
-    The movement cell always keeps at least the arrow width, even when every row's is empty (the
-    match-less read, a voided market); the chip cell is left out when no row is
-    pending. Heads: `# · Predictor · Profit · Won`, 14px 700 uppercase, white/50.
-  - *Header*: "Predictor Standings", kicker "Projected" while any payout is pending. No status row.
-- **Match overlay (layout 06)** (`scenes/overlay/`, transparent). Everything sits on the frame's
-  edges or its centre and stays clear of the four cam timer zones (360×96, checked by the spec). The
-  lower cams' zones start below the seam rail (y 543), since the rail only touches their top edge.
-  - *Seam rails* (`OverlaySeamRail`, `SEAM_RAIL`): 3px lines on the seam, Team A's crimson just
-    above it (y 537–540) and Team B's azure just below (y 540–543), one pair per side. They are
-    children of the hub's seam row (`data-overlay-seam`, as wide as the map strip or the score rows,
-    whichever is wider), anchored to its edges and sized `calc(961px - 50%)` out to the frame edge (1px
-    past it, so an odd strip width never leaves a sub-pixel gap; the frame clips it). So they always
-    end against the centre box, however many maps the strip holds, with no measuring. Each line is
-    solid from the frame edge to 226px from the box, then fades through 55% tint to transparent 6px
-    from it. The hub's drop shadow sits on the rows and the strip, not the hub, so the rails cast none.
-    They replace the old per-tag side bar and hairline.
-  - *Name tags* (`OverlayNameTag`, 300×60): round avatar and alias (`PlayerInfo` `sm` at zoom
-    1.6, with a soft text shadow), plus a "Sides TBC" note while the side is unconfirmed, no box: a `#05070c` 72% scrim faded away from the seam (solid to 45%
-    of the height) plus team light rising off the rail (46%→14% tint), both masked so they fade out
-    inward (solid to 35% of the width). Masks are nested rather than composited, so older browser
-    sources render them. Every tag sits flush against the horizontal seam on the outer left or right
-    edge: A1 and A2 on the bottom of their cams (y 480–540), B1 and B2 on the top of theirs (y
-    540–600), so each side's pair meets at the seam beside the hub. 300px is the most that clears the
-    lower cams' timer zones (x 300 and 1260); a 15-character alias still fits untruncated.
-  - *Score rows* (`OverlayHub`, 376×46, centred at 50%/50%): `#05070c` at 86% with a 1px white/12
-    ring and 10px radius, a 6px team bar and a 30%→8% team wash, the team name in 900 italic (29px, 25px
-    over 15 characters), 7×18 skewed win pips (the majority for a first-to series, the best-of for
-    all-maps, both counted over the maps that were not drawn, so each drawn map takes one pip off), and a 46×38 score box at 38px holding the current map's caps. The rows sit at y 479–525
-    and 555–601.
-  - *Map strip* (`OverlayMapStrip`): a band up to 560px wide and 30px tall, centred on the seam at y
-    540, on solid `#05070c` (never see-through) with an 8px radius and 16px text. Played cells are dimmed with their
-    result (a drawn map adds a "Draw" word after its score), the current cell has a white underline and lighter wash, upcoming cells are outlined in the
-    picker's colour (gold for the decider), and once the series is decided the maps never played are skipped cells: outlined like
-    upcoming at 35% with a faded name. Played names cap at 110px, upcoming at 140px, the current
-    one is uncapped. A width estimate in the view model (the Draw word included) collapses played and skipped cells to number and score
-    when the band would pass 560px; if it still overflows, the upcoming-name cap steps down 8px at a
-    time to 40px, then upcoming cells show the number badge only. The **FT2 chip** (`FT{caps_to_win}`) sits outside the clipped cell
-    box at the band's right end so it is never cut off; with no chip and no maps the band is not drawn.
-  - The layout numbers live in `overlayLayout.ts`.
-- **Next Map scene** (`scenes/nextMap/`, opaque, 1792×824 body): a 1280×720 hero (video or
-  screenshot, with the "Map N" chip in the picker's tone, the name, mapper and pick line under it) and
-  a 472px column of panels (series card with RED/BLUE or "Sides TBC" by each name, Team WR,
-  Lineup PBs, Cup history). The screenshot's slow pan is
-  one stage-level framer-motion loop (scale 1.12, x ±3%, 26s, mirrored), within the animation budget,
-  and it stops under `motion=0`, where the video also stays paused on its first frame.
-
-- **Predictions scene** (`scenes/betting/`, opaque, 1792×824 body). Before the market closes it shows the
-  odds plates at full width. After that it names every bettor on every outcome in groups A | Draw | B
-  (no Draw group on a two-way market), in the order the API serves them (potential payout, highest
-  first). Once the result is official, a losing group re-sorts by stake, biggest loss first; the
-  winning group keeps the served order. Nothing scrolls or pages, so
-  every source shows the same frame. The fit is the pure `bettingLayout(counts, box)` (`bettingLayout.ts`):
-  - the body stacks a 52px status row (with the "Biggest bet" ring legend on the right), 12px, 64px group
-    plates, 8px, 20px column heads, 4px, and a 664px rows box;
-  - one row height for the whole scene, stepping 44 → 40 → 36 → 33 → 30 until every group fits in at most
-    4 columns (fewest columns first). Each group gets `max(1, ceil(n / rowsPerColumn))` columns, so an
-    outcome nobody backed keeps a column reading "No bettors on this outcome";
-  - only when nothing fits at 30 does a group fold: the spare columns go one at a time to the group with
-    the most bettors per column, and an overflowing group shows `columns × 22 − 1` rows and a
-    "+ N more · X staked" line, cutting the lowest potential payouts (the biggest bet replaces the last row
-    if it would be cut);
-  - columns share one width, `(1792 − (C − G) × 16 − (G − 1) × 32) / C` (16px between a group's columns,
-    32px between groups), and fill top to bottom;
-  - densities: primary number 22/22/21/20/20px, secondary 19/19/18/18/17px, chip 15/15/14/14/14px;
-    the multiplier ("Odds") column drops at 33 and 30. The avatar zooms to 36px only at 44/40 in columns
-    of 480px or more, otherwise it stays 24px beside an 18px name (`PlayerInfo` `sm` at zoom 1.5);
-  - number columns are sized from the longest value in the whole scene (characters × 0.5em at the
-    column's size; the profit column never narrower than its head), chips from the widest label present.
-  Before the result rows show stake, locked payout and multiplier. After it they show stake, payout,
-  profit and a Pending/Paid chip, winners washed emerald and losers at 0.42 opacity with their lost stake;
-  a voided market refunds every row and lights nobody. The layout depends only on the bettor counts, so
-  closed → awaiting → paying out → settled never moves a row.
-
-### Screenshot conventions
-
-Scenes are checked visually at 1920×1080 with Playwright (`playwright.config.ts`):
-
-- **Project and file names.** Specs named `*.broadcast.spec.ts` run only in the `broadcast`
-  project (Desktop Chrome, 1920×1080, `deviceScaleFactor: 1`); the `desktop-chromium` and
-  `mobile-chromium` projects ignore them.
-- **Baselines** are committed under `e2e/__screenshots__/`, from the template
-  `{testDir}/__screenshots__/{testFilePath}/{arg}{-projectName}{-platform}{ext}`, for example
-  `e2e/__screenshots__/betting-scene.broadcast.spec.ts/betting-open-broadcast-win32.png`. They
-  are per platform (`win32`, `linux`, `darwin`), because font and gradient rasterisation
-  differ. A platform with no baseline fails its first run and writes one; commit the
-  new files.
-- **Defaults** (`expect.toHaveScreenshot`): `threshold: 0.2`, `maxDiffPixelRatio: 0.001`,
-  `animations: 'disabled'`, `caret: 'hide'`, `scale: 'css'`.
-- **Update** the baselines with `npx playwright test --project=broadcast --update-snapshots`
-  (add a spec path to update one file), then review the changed images.
-- **Determinism** (`e2e/streamHarness.ts`, used by every scene spec):
-  - freeze the clock with `page.clock.setFixedTime(STREAM_T0)` (`openScene` does this);
-  - serve the API from fixtures with `serveStreamApi` (no live network; the hot state, reads,
-    pick/ban state, screenshots and avatars are all fulfilled, avatars and map art as
-    generated SVGs);
-  - open the scene with `sound=0&motion=0` (`SCENE_OPTIONS`);
-  - deny analytics consent so no banner shows;
-  - assert through `expectSceneScreenshot`, which first runs `settleScene` (waits for all
-    four Barlow faces and every image to load) and masks the ticker strip, whose rotation
-    is time-driven, with magenta.
-- **Transparency** is asserted, not eyeballed: the overlay spec screenshots the page with
-  `omitBackground`, composites it over the four-quadrant sample image (`e2e/overlay-quadrants.jpg`) and checks that every part sits on an edge
-  or the centre, that no pixel differs from the image more than a 40px shadow margin outside a part's box, and that
-  the four timer zones have no alpha at all.
-- **Video scenes** (Next Map): the spec serves a small WebM fixture (`e2e/next-map-flythrough.webm`)
-  with range support through `page.route`, added after `serveStreamApi`, and waits for the video's
-  `readyState` before the baseline. A video baseline runs with `motion=0` so it is the first frame.
-- **Sound** has its own guard: `e2e/audio-balance.broadcast.spec.ts` decodes the shipped cue files
-  (see `agents/data-sources.md`, pick/ban sound).
-- **Fixtures** live beside the scene code (`stream/data/streamFixtures.ts`,
-  `stream/scenes/<scene>/<scene>Fixtures.ts`): synthetic teams, players and maps only.
-
-## Don'ts
-
-- Don't `text-gray-*` — use `text-muted-foreground` or `text-white/*`.
-- Don't `border-gray-*` — use `border-white/5` or `border-white/10`.
-- Don't `bg-gray-*` for cards — use `bg-card/<n>`.
-- Don't hardcode `blue-*` for chrome — use `accent-*` (themeable). Leave brand /
-  functional colours (WR blue, champion/danger red, emerald, amber, rose) literal.
-- Don't hardcode dark hex backgrounds (`bg-[#0a0a0b]`, `bg-[#0f1115]`) — use
-  `bg-card` / `bg-popover` so modals + `<option>`s flip in the Light theme. Use
-  `*-hairline/<n>` not `white/<n>`, and `text-foreground` not `text-white` (except
-  text on a solid colour fill, which stays white).
-- Don't hard-code the sidebar width (`16rem`, `lg:pl-64`, `256px`) — read
-  `var(--sidebar-width,0px)` or use `Modal` `offsetSidebar` (see sidebar width).
-- Don't re-roll table styling inline — use `DataTable.*` primitives.
-- Don't re-roll preset menus, columns menus, player avatars, map thumbnails, favorite stars — use the shared components.
-- Don't put rarity/title styling outside `PlayerInfo`.
-- Don't put score-color thresholds outside `scoreColors.ts`.
+- `backdrop-blur` is the most expensive effect. The budget is the existing chrome:
+  sidebar, top bar, sticky theads, modals, tooltips and popover menus, and the
+  pick/ban stage's paused overlay (present only while paused). Blur one surface, never each row or card of a
+  list.
+- Infinite animations (`animate-pulse`, `animate-ping`, the legendary pulses) keep the
+  compositor awake. Use them on singletons (a badge, one hero), never per row.
+  Skeleton `animate-pulse` is fine because it exists only while loading.
+- Transition `transform` / `opacity` rather than layout properties
+  (`width`, `height`, `top`); the drawer slides with `translate-x` for this reason.
+- Large `box-shadow` glows on hover are fine; permanent glows on hundreds of elements
+  are not.
+- A page stays smooth with its largest realistic dataset at the largest page size (200
+  rows); a per-row effect that can't survive that doesn't ship.

@@ -27,6 +27,7 @@
     "test:e2e": "playwright test",
     "test:e2e:live": "cross-env UTBT_LIVE_API=1 playwright test --grep @live",
     "check:bundle": "node scripts/check-web-bundle.mjs",
+    "docs:check": "node scripts/check-docs.mjs",
     "quality:web": "npm-run-all typecheck:web lint test build:web check:bundle"
   },
   "repository": {
