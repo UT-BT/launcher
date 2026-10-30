@@ -727,6 +727,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
         return <Home
           userProfile={userProfile as any}
           installationStatus={installationStatus}
+          newsSeenIso={badgeSeen['news'] ?? null}
           favoriteMapNames={favoriteMapNames}
           favoriteServerIds={favoriteServerIds}
           favoriteServersLoadFailed={favoriteServersLoadFailed}
@@ -905,6 +906,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
       default:
         return <Home
           userProfile={userProfile as any}
+          installationStatus={installationStatus}
           newsSeenIso={badgeSeen['news'] ?? null}
           favoriteMapNames={favoriteMapNames}
           favoriteServerIds={favoriteServerIds}

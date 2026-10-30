@@ -398,7 +398,8 @@
     "app/components/pages/home/SpotlightSection.tsx",
     "app/components/pages/home/capItAllProgress.ts",
     "app/components/pages/home/news/NewsCard.tsx",
-    "app/utils/api.ts"
+    "app/utils/api.ts",
+    "e2e/home-freshness.spec.ts"
   ],
   "agents/features/map-uploads.md": [
     "app/components/modals/MapScreenshotModal.tsx",

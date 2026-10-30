@@ -26,6 +26,7 @@ the seasonal ambient layer (Home only) in [styling.md](../styling.md).
 | `home/LatestRecordsCard.tsx`, `RecentCapsCard.tsx` | `DataTable` widgets with compact card rows |
 | `home/news/` | `NewsCard`, `ArticleCard`, `CategoryChip`; also used by the News pages and Admin → News |
 | `home/ClosingSoonBanner.tsx` | the "Predictions closing" strip |
+| `e2e/home-freshness.spec.ts` | Playwright: the News New pill, a reviewed map leaving Maps to Review, the step back from an emptied page, the silent revisit of cached reviews and counts |
 
 ## What renders for whom
 
@@ -58,9 +59,10 @@ Personal widgets live only in the signed-in branch and take `userProfile.accessT
 - **Cached data renders at once and the main load runs anyway** (stale-while-revalidate).
 - **Self-fetching widgets keep their data in `caches`**: Medal Hunt rows (`medalHunt`), the
   community counts (`mapsCount`, `playersCount`), the first Maps to Review page
-  (`pendingReviews`) and the Cap It All progress (`capItAllProgress`). Medal Hunt refetches
-  in the background on every mount. The counts and the first review page are served from
-  cache without a refetch until Refresh clears them.
+  (`pendingReviews`) and the Cap It All progress (`capItAllProgress`). Medal Hunt, the counts
+  and Maps to Review render what is cached at once and refetch in the background on every
+  mount and every `refreshKey` bump, without a skeleton or spinner over the shown data. A
+  failed count refetch keeps the cached count.
 - **Not cached**: the closing-soon strip (refetched each mount), Maps to Review pages after
   the first, and Medal Hunt's filters, sort and page (component state, reset on every visit).
 - **Achievement Progress reads `achievementsCaches`** from `Main.tsx`, shared with the
@@ -73,8 +75,9 @@ Personal widgets live only in the signed-in branch and take `userProfile.accessT
   Home ignores it when they differ from the signed-in profile, and it expires after
   `CAP_IT_ALL_CACHE_MS` (5 min).
 - A submitted review (`ReviewModal.onSuccess`) reruns `loadData` and bumps
-  `reviewsRefreshKey`, but `MapsToReviewCard` serves a cached first page without fetching,
-  so the reviewed map stays listed until Refresh.
+  `reviewsRefreshKey`; `MapsToReviewCard` refetches its current page, so the reviewed map
+  leaves the list without Refresh. A page left empty by the refetch steps back to the last
+  page.
 
 ## Feed contract
 
@@ -133,14 +136,14 @@ achievements carry a Team chip.
 - Join and Spec call `useServerJoin`, the same hook the server browser uses; Home shows its
   notice (launch error or game already running) in a modal. The behaviour is in
   [game.md](game.md).
-- `installationStatus` reaches Home only through `case 'home'` in `Main.tsx`, not the
-  `default` case.
+- `Main.tsx` renders Home from both `case 'home'` and the `default` case; both pass
+  `installationStatus` and `newsSeenIso`, so keep their props in step.
 
 ### News
 
 `NewsCard` shows the five newest, sized to show two and scroll. An article gets the New pill
-when `publishedAt > newSince`. `Main.tsx` passes that marker (`newsSeenIso`) only from its
-`default` case, so the `home` view renders no New pill.
+when `publishedAt > newSince`. `newSince` is `newsSeenIso`, the viewer's server-side news
+seen marker (`badgeSeen['news']` in `Main.tsx`); signed out there is no marker and no pill.
 
 ### Closing-soon strip
 
@@ -152,8 +155,8 @@ Market and locking rules: [events.md](events.md).
 ### Community stats
 
 Players total (`fetchPlayersCount`) with "online" summed from the gateway servers'
-`player_count`; Maps total (`fetchMapsCount`) with the new-maps count. A failed count stays a
-skeleton.
+`player_count`; Maps total (`fetchMapsCount`) with the new-maps count. A failed count with
+nothing cached stays a skeleton.
 
 ## Layout rules
 
