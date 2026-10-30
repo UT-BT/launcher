@@ -41,13 +41,14 @@ function ActionContent({ icon: Icon, iconClassName, caption, label, collapsed }:
 
 export function SidebarActions({ installValid, collapsed, onJoinServer }: SidebarActionsProps) {
     const { capabilities } = usePlatform()
+    if (!capabilities.game) return null
+
     const playContent = <ActionContent icon={Play} iconClassName="fill-current" caption="Play" label="Launch Game" collapsed={collapsed} />
 
     return (
         <div className={cn(
             'mb-6 [@media(max-height:800px)]:mb-3 relative z-10',
             collapsed ? 'px-2 flex flex-col items-center gap-2' : 'px-4 space-y-2',
-            !capabilities.game && 'max-lg:hidden max-lg:mb-0',
         )}>
             <Button
                 asChild
@@ -61,7 +62,7 @@ export function SidebarActions({ installValid, collapsed, onJoinServer }: Sideba
                     <ActionContent icon={Server} caption="Join" label="Join Server" collapsed={collapsed} />
                 </NavLink>
             </Button>
-            {capabilities.game && (installValid ? (
+            {installValid ? (
                 <Button
                     variant="ghost"
                     className={cn(
@@ -85,7 +86,7 @@ export function SidebarActions({ installValid, collapsed, onJoinServer }: Sideba
                         {playContent}
                     </Button>
                 </Tooltip>
-            ))}
+            )}
         </div>
     )
 }

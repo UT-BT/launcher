@@ -10,7 +10,7 @@ not_here:
   - "which component to use → shared-components.md"
   - "state / persistence → state-patterns.md"
 sections: [class-merging, tables-locked, responsive-columns, page-layout, sidebar-width, tooltip-sides, filter-panel, buttons-toggle-states, collapsed-rail, form-inputs, card-backgrounds-borders, text, color-palette, seasonal-themes, animation, css-runtime-cost, event-stats-styling, broadcast-styling, scene-stylesheet, screenshot-conventions, donts]
-last_verified: 2026-10-29
+last_verified: 2026-10-30
 verify_against: [app/components/shared/DataTable.tsx, app/components/shared/LiveDot.tsx, app/components/shared/chipStyles.ts, app/styles/globals.css, app/styles/theme.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts, app/components/broadcast/broadcastTone.ts, app/components/broadcast/broadcastMotion.ts, app/components/broadcast/broadcastFonts.ts, app/components/broadcast/broadcastFonts.css, app/components/broadcast/BroadcastStage.tsx, app/components/stream/streamScenes.css, app/components/stream/frame/SceneFrame.tsx, e2e/streamHarness.ts, playwright.config.ts, app/components/stream/scenes/overlay/overlayLayout.ts, app/components/stream/scenes/betting/bettingLayout.ts, app/components/stream/scenes/nextMap/NextMapHero.tsx, e2e/audio-balance.broadcast.spec.ts, app/components/stream/scenes/PredictorStandingsScene.tsx, app/components/stream/scenes/standings/predictorStandingsFit.ts, app/components/stream/scenes/standings/predictorStandingsView.ts, app/components/stream/scenes/standings/PredictorStandingsBoard.tsx, app/components/pages/events/stats/teamAccents.css, app/components/pages/events/stats/teamAccent.ts, app/components/pages/events/stats/teamAccent.test.ts, app/components/pages/events/stats/teamCards.css, app/components/pages/events/stats/overviewStats.css, app/components/pages/events/stats/team/teamPageAccents.css, app/components/pages/events/stats/team/teamPageView.ts, app/components/pages/events/stats/CupAtAGlance.tsx, app/components/pages/events/stats/MapStatsTable.tsx, app/styles/seasons.css, app/styles/seasons.test.ts, app/seasonal/seasons.ts, app/seasonal/SeasonProvider.tsx, app/seasonal/lazyDecor.tsx, app/seasonal/SeasonalDecor.tsx, app/seasonal/logos.ts, scripts/render-seasonal-logos.mjs, app/seasonal/decor/ambient.tsx, app/seasonal/decor/ambient.css, app/seasonal/decor/burst.ts, app/seasonal/decor/glyphs.tsx, e2e/seasonal.spec.ts, app/components/layout/AppLayout.tsx, app/components/layout/sidebar/SidebarNavItem.tsx, app/components/layout/sidebar/SidebarBrand.tsx, app/components/layout/sidebar/SidebarActions.tsx, app/components/layout/sidebar/SidebarCollapseToggle.tsx, app/components/layout/sidebar/SidebarUserCard.tsx, app/components/ui/tooltip.tsx, app/components/ui/modal.tsx]
 ---
 
@@ -348,7 +348,7 @@ collapsed rail). Switching modes is instant: nothing in the sidebar may use
   (`[scrollbar-width:none]`), because a Windows scrollbar would take about 11px of
   the 80px rail. The list still scrolls by wheel, touch and focus. Expanded keeps
   its scrollbar.
-- **Action tiles** (`SidebarActions`): Join and Play are stacked squares, 48px
+- **Action tiles** (`SidebarActions`, desktop only): Join and Play are stacked squares, 48px
   (44px under `max-height: 800px`), the icon (`size-5`) over a `text-[10px]`
   caption, each keeping its expanded colouring and disabled look:
   ```
