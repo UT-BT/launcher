@@ -428,3 +428,26 @@ test('polls, including 304s and a warning arriving mid-session, never remount, f
     expect(after.stage).toEqual(before.stage)
     expect(after.busy).toBe(0)
 })
+
+test('the Sound switch is reached by Tab from the sound button and toggles once per Space or row click', async ({ page, isMobile }) => {
+    test.skip(isMobile)
+    const at = INTRO_END + 1_000
+    await serve(page, fakeServer(at, () => readAt(started(), at)))
+    await page.goto(PAGE_PATH)
+
+    const trigger = page.getByRole('button', { name: /^Sound (On|Off)/ })
+    await trigger.click()
+    await trigger.focus()
+    await page.keyboard.press('Tab')
+    const toggle = page.getByRole('switch', { name: 'Sound' })
+    await expect(toggle).toBeFocused()
+    await expect(toggle).not.toBeChecked()
+
+    await page.keyboard.press('Space')
+    await expect(toggle).toBeChecked()
+    await page.keyboard.press('Enter')
+    await expect(toggle).not.toBeChecked()
+
+    await page.getByRole('group', { name: 'Sound Settings' }).getByText('Sound', { exact: true }).click()
+    await expect(toggle).toBeChecked()
+})

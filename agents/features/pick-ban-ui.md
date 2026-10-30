@@ -487,8 +487,9 @@ stay in" makes no sound.
   sound from its URL instead ([web-target.md](../web-target.md)).
 - **Control.** `PickBanSoundControl` is the page header's "Sound On/Off" button opening a
   small disclosure panel (`aria-expanded`, a labelled group, deliberately not a Radix menu
-  so the slider keeps its own keys) with the Sound switch and a 0–100% Volume slider. It
-  holds no sound state. Turning sound on calls `unlock()` from that click. The slider keeps a
+  so the slider keeps its own keys) with the Sound switch (one button named "Sound", the whole
+  row its target, reached by Tab and toggled by Space or Enter) and a 0–100% Volume slider.
+  It holds no sound state. Turning sound on calls `unlock()` from that click. The slider keeps a
   local draft and commits (save, then a `pick` preview while enabled) only on release:
   pointer up or cancel, key up, or blur. Escape (focus back on the button), an outside
   pointer or focus leaving closes the panel.
