@@ -44,12 +44,11 @@ async function toggleLayout(page: Page) {
         if (!found) throw new Error('element has no bounding box')
         return found
     }
-    const actionLocators = await rail.getByRole('link', { name: /Join Server/ }).all()
     return {
         rail: await box(rail),
         toggle: await box(sidebarToggle(page)),
         logo: await box(rail.getByRole('img', { name: 'UTBT Logo' })),
-        actions: await Promise.all(actionLocators.map(box)),
+        firstTile: await box(railTiles(page).first()),
     }
 }
 
@@ -209,8 +208,7 @@ test.describe('the collapsible rail', () => {
                 expect(layout.toggle.y - layout.rail.y).toBeGreaterThanOrEqual(0)
                 expect(layout.toggle.y - layout.rail.y).toBeLessThanOrEqual(24)
                 expect(boxesOverlap(layout.toggle, layout.logo)).toBe(false)
-                expect(layout.actions.length).toBeGreaterThan(0)
-                for (const action of layout.actions) expect(boxesOverlap(layout.toggle, action)).toBe(false)
+                expect(boxesOverlap(layout.toggle, layout.firstTile)).toBe(false)
             }
             expect(collapsed.toggle.y + collapsed.toggle.height).toBeLessThanOrEqual(collapsed.logo.y)
         })

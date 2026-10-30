@@ -10,7 +10,7 @@ not_here:
   - "IPC channel contract → lib/conveyor/README.md"
   - "build commands reference → agents/build.md"
 sections: [overview, platform-layer, capability-gates, web-auth, pre-shell-routes, anonymous-browsing, shareable-urls, responsive-layout, performance, build, seo-and-link-previews, hosting-note]
-last_verified: 2026-10-29
+last_verified: 2026-10-30
 verify_against:
   - app/public/route-contract.json
   - app/components/navigation/NavLink.tsx
@@ -50,6 +50,7 @@ verify_against:
   - app/components/layout/AppLayout.tsx
   - app/components/layout/sidebarPreference.ts
   - app/components/layout/sidebar/SidebarCollapseToggle.tsx
+  - app/components/layout/sidebar/SidebarActions.tsx
   - app/components/ui/modal.tsx
 ---
 
@@ -90,7 +91,7 @@ desktop-only UI and swaps a handful of bridge calls for browser equivalents.
 
 | Feature | Web behavior | Gate |
 |---|---|---|
-| Launch/join/spectate, isGameRunning | hidden | `capabilities.game` in `AppLayout`, `Home`, `ServerBrowserPage`, `FavoriteServersCard` |
+| Launch/join/spectate, isGameRunning, the sidebar's Join Server + Launch Game buttons | hidden | `capabilities.game` in `AppLayout`, `SidebarActions`, `Home`, `ServerBrowserPage`, `FavoriteServersCard` |
 | Ping column / server pings | hidden/skipped | `capabilities.ping` (ServerBrowserPage `displayColumnOrder`, FavoriteServersCard) |
 | Settings modal | web-specific Appearance + Privacy panels; game/ini panels are never fetched | `capabilities.settingsModal` + target-specific lazy modal in `AppLayout` |
 | Install banner / patches | off — `validateInstallation` early-returns | `capabilities.install` in `Main.tsx` |

@@ -11,7 +11,7 @@ not_here:
   - "the PlayerInfo / CapTimeLink components that trigger nav → shared-components.md"
   - "the Schedule tab's own visibility rule and its audiences → data-sources.md"
 sections: [the-model, navigate-is-the-only-entry-point, leave-guards, url-sync-web-build, link-semantics, page-views-vs-detail-pages, the-sidebar-registry, sidebar-parts-and-the-collapsed-rail, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state, shareable-match-links, event-team-page, teams-tab-roster-or-stats, manage-matches-caps-need-linking, match-pickban-page]
-last_verified: 2026-10-29
+last_verified: 2026-10-30
 verify_against:
   - app/components/main/Main.tsx
   - app/components/navigation/NavLink.tsx
@@ -484,7 +484,7 @@ parts only render:
 | Part | Renders |
 |---|---|
 | `SidebarBrand` | the logo and its seasonal-burst click |
-| `SidebarActions` | Join Server, and Launch Game behind `capabilities.game` with its disabled state |
+| `SidebarActions` | Join Server and Launch Game (with its disabled state); desktop only, renders nothing without `capabilities.game` |
 | `SidebarNavItem` | one nav row or rail tile: icon, badges, label or caption, Live chip or dot, tooltip |
 | `SidebarCollapseToggle` | the icon-only collapse toggle, placed in `SidebarBrand`'s top-left corner |
 | `SidebarUserCard` | the signed-in profile dropdown, or the signed-out Discord login and its error |
@@ -520,7 +520,7 @@ to `SidebarBrand` as `toggle`, which pins it to the sidebar's top-left corner: c
 on the collapsed rail's centre line (40px from the left edge) at the same height in
 both modes. Expanded, it sits in the logo header's corner, clear of the centred logo,
 and nothing else moves; collapsed, the header grows at the top so the small logo sits
-directly below it. It is the sidebar's first focusable control, before Join. Below
+directly below it. It is the sidebar's first focusable control, before Join on desktop and before the first nav item on web. Below
 `lg` `AppLayout` doesn't render it at all, so it never enters the drawer's focus trap.
 
 **The shortcut.** `Ctrl+B` or `⌘B` toggles the rail. The listener is on `window`
@@ -550,8 +550,8 @@ once.
   caption stays plain text, in the same place whether the item is live or not (see
   `agents/styling.md`, collapsed rail, icon marks).
 - **Logo and actions.** The logo is a 40px mark and still fires the seasonal burst.
-  Join and Play are stacked square tiles captioned "Join" and "Play", with the full
-  names ("Join Server", "Launch Game") as `sr-only` text. Join is the same `NavLink`
+  On desktop, Join and Play are stacked square tiles captioned "Join" and "Play", with the full
+  names ("Join Server", "Launch Game") as `sr-only` text; the web build shows neither. Join is the same `NavLink`
   to `servers`. A disabled Play tile keeps its "No valid UT99 installation found"
   tooltip, on the right when collapsed.
 - **User card, signed in.** The trigger is the avatar alone, a real `button` named
