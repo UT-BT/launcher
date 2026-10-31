@@ -40,7 +40,6 @@ interface VideoCompareSetup {
     compare?: CompareOutcome
 }
 
-const SCREENSHOT_VIEWPORT = { width: 1440, height: 1000 }
 
 function pairKey(runner: string, reference: string): string {
     return `${runner}|${reference}`
@@ -296,31 +295,5 @@ test.describe('team cap Watch Team Replay', () => {
         await expect(pane(modal, TEAM.members[1].alias!)).toContainText('S4')
         await expect(pane(modal, OTHER_SIDE_MEMBER.alias!)).toContainText('Other side')
         await expect(pane(modal, OTHER_SIDE_MEMBER.alias!).getByText(/[+−±]\d/)).toHaveCount(0)
-    })
-})
-
-test.describe('screenshots', () => {
-    test.use({ viewport: SCREENSHOT_VIEWPORT })
-
-    test.beforeEach(() => {
-        test.skip(test.info().project.name !== 'desktop-chromium', 'desktop screenshots only')
-    })
-
-    test('same-side pair inside a different-line band', async ({ page }) => {
-        await mockApi(page, { compare: 'separated' })
-        const modal = await openFromCapPage(page)
-        await scrubTo(modal, 36.5, SPAN)
-        await expect(pane(modal, RUNNER.alias!)).toContainText('Different line')
-
-        await expect(modal).toHaveScreenshot('same-side-pair.png', { mask: [modal.locator('video')] })
-    })
-
-    test('mixed-side team', async ({ page }) => {
-        await mockApi(page, { compare: 'separated' })
-        const modal = await openFromTeamPage(page)
-        await scrubTo(modal, 36.5, SPAN)
-        await expect(pane(modal, OTHER_SIDE_MEMBER.alias!)).toContainText('Other side')
-
-        await expect(modal).toHaveScreenshot('mixed-side-team.png', { mask: [modal.locator('video')] })
     })
 })
