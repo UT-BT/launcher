@@ -110,7 +110,7 @@ async function mockCapPage(page: Page, setup: CapPageSetup) {
         [VIDEO_OPPONENT.id, setup.videoCompare],
     ])
     const leaderboard = [
-        leaderboardEntry(RUNNER_ID, RUNNER_DETAIL.cap.user, RUNNER_DETAIL.cap.alias, RUNNER_DETAIL.cap.cap_time_seconds),
+        leaderboardEntry(RUNNER_ID, String(RUNNER_DETAIL.cap.user), RUNNER_DETAIL.cap.alias ?? null, RUNNER_DETAIL.cap.cap_time_seconds),
         ...CANDIDATES.map(candidate => leaderboardEntry(candidate.id, candidate.user, candidate.alias, candidate.cap_time_seconds)),
     ]
 
