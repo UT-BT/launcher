@@ -16,6 +16,7 @@ import {
     type DeltaTone,
     type SignedGap,
 } from './deltaCurve'
+import { runSpeed, type RunSpeed } from './runSpeed'
 
 export interface ChartSector {
     index: number
@@ -73,6 +74,7 @@ export interface ReplayCard {
     chart: RunDeltaChart
     bars: SectorBars
     rows: SectorRow[]
+    speed: RunSpeed
     finalGap: SignedGap
     flagged: boolean
 }
@@ -187,6 +189,7 @@ export function buildRunDeltaCard(input: RunDeltaCardInput): RunDeltaCardModel {
         chart: replayChart(comparison),
         bars: sectorBars(comparison.sectors),
         rows,
+        speed: runSpeed(comparison),
         finalGap: signedGap(comparison.final_delta_ms),
         flagged: rows.some(r => r.flagged),
     }

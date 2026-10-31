@@ -247,7 +247,7 @@ test.describe('cap page Compare Run', () => {
 
         await scrubTo(modal, 36.5, SPAN)
         await expect(pane(modal, RUNNER.alias!)).toContainText('Different line')
-        await expect(pane(modal, RUNNER.alias!)).toContainText('(−14.806)')
+        await expect(pane(modal, RUNNER.alias!)).toContainText('(−14.726)')
         await expect(pane(modal, REFERENCE.alias!)).toContainText('S4')
         await expect(pane(modal, REFERENCE.alias!)).toContainText('(±0.000)')
     })
@@ -292,7 +292,7 @@ test.describe('team cap Watch Team Replay', () => {
 
         await scrubTo(modal, 36.5, SPAN)
         await expect(pane(modal, TEAM.members[0].alias!)).toContainText('Different line')
-        await expect(pane(modal, TEAM.members[0].alias!)).toContainText('(−14.806)')
+        await expect(pane(modal, TEAM.members[0].alias!)).toContainText('(−14.726)')
         await expect(pane(modal, TEAM.members[1].alias!)).toContainText('S4')
         await expect(pane(modal, OTHER_SIDE_MEMBER.alias!)).toContainText('Other side')
         await expect(pane(modal, OTHER_SIDE_MEMBER.alias!).getByText(/[+−±]\d/)).toHaveCount(0)

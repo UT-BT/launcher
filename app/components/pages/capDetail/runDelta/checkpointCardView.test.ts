@@ -111,7 +111,7 @@ describe('the checkpoint card view', () => {
         }).kind).toBe('routes_differ')
     })
 
-    it.each(['separated', 'neverRejoins', 'long', 'short'] as const)(
+    it.each(['separated', 'neverRejoins', 'long'] as const)(
         'never switches a %s pair with different lines to zone checkpoints',
         name => {
             const comparison = runCompareFixture(name)

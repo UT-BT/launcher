@@ -1,10 +1,11 @@
 import { cn } from '@/lib/utils'
 
-export type ChartView = 'cumulative' | 'sectors'
+export type ChartView = 'cumulative' | 'sectors' | 'speed'
 
 const OPTIONS: { view: ChartView; label: string }[] = [
     { view: 'cumulative', label: 'Cumulative' },
     { view: 'sectors', label: 'Per sector' },
+    { view: 'speed', label: 'Speed' },
 ]
 
 interface ChartViewToggleProps {

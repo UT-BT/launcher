@@ -2635,6 +2635,19 @@ export interface CapComparisonSector {
     delta_split_ms: number
     delta_total_ms: number
     separated: boolean
+    runner_distance_uu: number
+    reference_distance_uu: number
+    delta_speed_ms: number
+    delta_line_ms: number
+    runner_speed_uu_s: number
+    reference_speed_uu_s: number
+}
+
+export type CapComparisonSpeedPoint = [t_ms: number, uu_per_s: number]
+
+export interface CapComparisonSpeed {
+    runner: CapComparisonSpeedPoint[][]
+    reference: CapComparisonSpeedPoint[][]
 }
 
 export interface CapComparison {
@@ -2648,6 +2661,28 @@ export interface CapComparison {
     segments: CapComparisonPoint[][]
     separations: CapComparisonSeparation[]
     sectors: CapComparisonSector[]
+    speed: CapComparisonSpeed
+}
+
+export const COMPARISON_READ_VERSION = '2'
+
+const SECTOR_NUMBERS = [
+    'runner_distance_uu',
+    'reference_distance_uu',
+    'delta_speed_ms',
+    'delta_line_ms',
+    'runner_speed_uu_s',
+    'reference_speed_uu_s',
+] as const satisfies readonly (keyof CapComparisonSector)[]
+
+function comparisonQuery(runnerCapId: string, referenceCapId: string): string {
+    return new URLSearchParams({ runner: runnerCapId, reference: referenceCapId, v: COMPARISON_READ_VERSION }).toString()
+}
+
+function isComparisonSector(raw: unknown): boolean {
+    if (!raw || typeof raw !== 'object') return false
+    const sector = raw as { [key: string]: unknown }
+    return SECTOR_NUMBERS.every(key => typeof sector[key] === 'number' && Number.isFinite(sector[key]))
 }
 
 function isCapComparison(raw: unknown): raw is CapComparison {
@@ -2662,6 +2697,10 @@ function isCapComparison(raw: unknown): raw is CapComparison {
         && Array.isArray(body.segments)
         && Array.isArray(body.separations)
         && Array.isArray(body.sectors)
+        && body.sectors.every(isComparisonSector)
+        && !!body.speed && typeof body.speed === 'object'
+        && Array.isArray(body.speed.runner)
+        && Array.isArray(body.speed.reference)
     )
 }
 
@@ -2670,12 +2709,65 @@ export async function fetchCapComparison(
     referenceCapId: string,
     signal?: AbortSignal,
 ): Promise<CapComparison | null> {
-    const query = new URLSearchParams({ runner: runnerCapId, reference: referenceCapId })
     try {
-        const res = await apiRequest(`/ghosts/compare?${query.toString()}`, { signal })
+        const res = await apiRequest(`/ghosts/compare?${comparisonQuery(runnerCapId, referenceCapId)}`, { signal })
         if (res.status !== 200) return null
         const json = await res.json()
         if (!json || json.success !== true || !isCapComparison(json.data)) return null
+        return json.data
+    } catch {
+        return null
+    }
+}
+
+export const MOVE_AIR = 1
+
+export type CapMotionSample = [t_ms: number, uu_per_s: number, state: number]
+
+export type CapMotionEventKind = 'dodge' | 'jump' | 'kick'
+
+export type CapMotionDirection = 'L' | 'R' | 'F' | 'B'
+
+export interface CapMotionEvent {
+    t_ms: number
+    kind: CapMotionEventKind
+    direction: CapMotionDirection | null
+}
+
+export interface CapMotionRun {
+    segments: CapMotionSample[][]
+    events: CapMotionEvent[]
+}
+
+export interface CapComparisonMotion {
+    algo_version: number
+    duration_ms: number
+    runner: CapMotionRun
+    reference: CapMotionRun
+}
+
+function isMotionRun(raw: unknown): raw is CapMotionRun {
+    if (!raw || typeof raw !== 'object') return false
+    const run = raw as Partial<CapMotionRun>
+    return Array.isArray(run.segments) && Array.isArray(run.events)
+}
+
+function isCapComparisonMotion(raw: unknown): raw is CapComparisonMotion {
+    if (!raw || typeof raw !== 'object') return false
+    const body = raw as Partial<CapComparisonMotion>
+    return typeof body.duration_ms === 'number' && isMotionRun(body.runner) && isMotionRun(body.reference)
+}
+
+export async function fetchCapComparisonMotion(
+    runnerCapId: string,
+    referenceCapId: string,
+    signal?: AbortSignal,
+): Promise<CapComparisonMotion | null> {
+    try {
+        const res = await apiRequest(`/ghosts/compare/motion?${comparisonQuery(runnerCapId, referenceCapId)}`, { signal })
+        if (res.status !== 200) return null
+        const json = await res.json()
+        if (!json || json.success !== true || !isCapComparisonMotion(json.data)) return null
         return json.data
     } catch {
         return null

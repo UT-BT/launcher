@@ -4,6 +4,22 @@ import { HAIRLINE } from './deltaStyles'
 
 export const TICK_LENGTH = 4
 
+const LABEL_CHAR_PX = 6
+const LABEL_GAP_PX = 6
+
+export function readableTimeLabels(ticks: AxisTick[], x: (ms: number) => number): AxisTick[] {
+    const kept: AxisTick[] = []
+    let leftEdge = Infinity
+    for (const tick of [...ticks].reverse()) {
+        const half = (tick.label.length * LABEL_CHAR_PX) / 2
+        const center = x(tick.ms)
+        if (center + half + LABEL_GAP_PX > leftEdge) continue
+        kept.push(tick)
+        leftEdge = center - half
+    }
+    return kept
+}
+
 export interface PlotBox {
     left: number
     right: number

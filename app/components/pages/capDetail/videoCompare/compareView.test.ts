@@ -76,7 +76,7 @@ describe('scrubber ticks', () => {
         expect(view.tracks[0]).toMatchObject({
             role: 'replay',
             capTime: 72.876,
-            ticks: [8.994, 15.977, 22.976, 27.691, 35.792, 44.986, 53.162, 58.975, 64.637],
+            ticks: [9.181, 15.979, 23.125, 27.724, 35.878, 45.072, 53.183, 59.101, 64.615],
         })
         expect(view.tracks[1]).toMatchObject({
             role: 'reference',
@@ -144,14 +144,14 @@ describe('pane readouts', () => {
 
     it('reads the sector and the live gap of a compared run', () => {
         expect(paneReadout(replay.tracks[0], 0)).toEqual({
-            label: 'S1', greyed: false, gap: { ms: -18, label: '−0.018', tone: 'ahead' },
+            label: 'S1', greyed: false, gap: { ms: 0, label: '±0.000', tone: 'even' },
         })
         expect(paneReadout(replay.tracks[0], 20)).toMatchObject({ label: 'S3', greyed: false, gap: { tone: 'ahead' } })
     })
 
     it('reads "Different line" inside a band, greyed, with the gap along the connector', () => {
         expect(paneReadout(replay.tracks[0], 36.5)).toEqual({
-            label: 'Different line', greyed: true, gap: { ms: -14806, label: '−14.806', tone: 'ahead' },
+            label: 'Different line', greyed: true, gap: { ms: -14726, label: '−14.726', tone: 'ahead' },
         })
     })
 

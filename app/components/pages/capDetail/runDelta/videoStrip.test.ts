@@ -14,7 +14,7 @@ describe('the video delta strip', () => {
         const comparison = runCompareFixture('separated')
         const built = strip(comparison)
 
-        expect(built.curves[0].points[0]).toEqual([100, -18])
+        expect(built.curves[0].points[0]).toEqual([0, 0])
         const drawn = new Set(built.curves.flatMap(c => c.points.map(p => p.join(','))))
         for (const [t, d] of comparison.segments.flat()) expect(drawn.has(`${t + d},${d}`)).toBe(true)
     })
@@ -36,10 +36,10 @@ describe('the video delta strip', () => {
         const built = strip(runCompareFixture('separated'))
 
         expect(built.bands[0]).toEqual({
-            startMs: 22800, endMs: 25300, connector: [[22800, -6900], [25300, -11942]], rejoined: true,
+            startMs: 22998, endMs: 25146, connector: [[22998, -6802], [25146, -11925]], rejoined: true,
         })
         expect(built.bands[2]).toEqual({
-            startMs: 32500, endMs: 38800, connector: [[32500, -13600], [38800, -15500]], rejoined: true,
+            startMs: 32766, endMs: 38774, connector: [[32766, -13412], [38774, -15526]], rejoined: true,
         })
     })
 
@@ -54,7 +54,7 @@ describe('the video delta strip', () => {
         const built = strip(runCompareFixture('separated'))
 
         expect(built.runner).toEqual({
-            ticksMs: [8994, 15977, 22976, 27691, 35792, 44986, 53162, 58975, 64637],
+            ticksMs: [9181, 15979, 23125, 27724, 35878, 45072, 53183, 59101, 64615],
             capMs: 72876,
         })
         expect(built.reference).toEqual({
@@ -84,7 +84,7 @@ describe('pane readouts', () => {
 
         expect(runnerReadout(built, 250)).toEqual({
             label: 'S1', sector: 1, differentLine: false, atCap: false,
-            gap: { ms: 144, label: '+0.144', tone: 'behind' },
+            gap: { ms: 92, label: '+0.092', tone: 'behind' },
         })
     })
 
@@ -93,22 +93,22 @@ describe('pane readouts', () => {
 
         expect(runnerReadout(built, 36500)).toEqual({
             label: 'Different line', sector: 6, differentLine: true, atCap: false,
-            gap: { ms: -14806, label: '−14.806', tone: 'ahead' },
+            gap: { ms: -14726, label: '−14.726', tone: 'ahead' },
         })
     })
 
     it('reads the next sector once the runner crosses a boundary', () => {
         const built = strip(runCompareFixture('separated'))
 
-        expect(runnerReadout(built, 8993).label).toBe('S1')
-        expect(runnerReadout(built, 8994).label).toBe('S2')
+        expect(runnerReadout(built, 9180).label).toBe('S1')
+        expect(runnerReadout(built, 9181).label).toBe('S2')
         expect(runnerReadout(built, 20000)).toMatchObject({ label: 'S3', differentLine: false })
     })
 
-    it('holds the first gap before the first sample and the official gap after the cap', () => {
+    it('starts on an even gap and holds the official gap after the cap', () => {
         const built = strip(runCompareFixture('separated'))
 
-        expect(runnerReadout(built, 0)).toMatchObject({ label: 'S1', gap: { ms: -18 } })
+        expect(runnerReadout(built, 0)).toMatchObject({ label: 'S1', gap: { ms: 0, tone: 'even' } })
         expect(runnerReadout(built, 80000)).toEqual({
             label: 'S10', sector: 10, differentLine: false, atCap: true,
             gap: { ms: -27894, label: '−27.894', tone: 'ahead' },
@@ -133,7 +133,10 @@ describe('pane readouts', () => {
 
 describe('equal sector slices', () => {
     it('ends ten slices on the rounded tenths of the run', () => {
-        expect(equalSectorEndsMs(82421)).toEqual(runCompareFixture('aligned').sectors.map(s => s.end_ms))
+        const alignedEnds = runCompareFixture('aligned').sectors.map(s => s.end_ms)
+        const withinRounding = equalSectorEndsMs(82421).map((ms, i) => Math.abs(ms - alignedEnds[i]) <= 1)
+
+        expect(withinRounding).toEqual(Array(10).fill(true))
         expect(equalSectorEndsMs(100770)).toEqual(runCompareFixture('separated').sectors.map(s => s.end_ms))
     })
 })

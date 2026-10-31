@@ -87,7 +87,7 @@ describe('the replay curve', () => {
         const card = replayCard(runCompareFixture('aligned'))
 
         expect(card.chart.curves[0].tone).toBe('behind')
-        expect(card.chart.curves[0].points[0]).toEqual([0, 100])
+        expect(card.chart.curves[0].points.slice(0, 2)).toEqual([[0, 0], [213, 125]])
         expect(card.chart.curves.at(-1)?.tone).toBe('ahead')
         expect(card.chart.curves.at(-1)?.points.at(-1)).toEqual([82421, -1077])
     })
@@ -98,10 +98,10 @@ describe('different-line bands', () => {
         const card = replayCard(runCompareFixture('separated'))
 
         expect(card.chart.bands).toEqual([
-            { startMs: 29700, endMs: 37242, connector: [[29700, -6900], [37242, -11942]], rejoined: true },
-            { startMs: 41100, endMs: 44068, connector: [[41100, -12700], [44068, -13368]], rejoined: true },
-            { startMs: 46100, endMs: 54300, connector: [[46100, -13600], [54300, -15500]], rejoined: true },
-            { startMs: 75395, endMs: 84012, connector: [[75395, -17995], [84012, -24012]], rejoined: true },
+            { startMs: 29800, endMs: 37071, connector: [[29800, -6802], [37071, -11925]], rejoined: true },
+            { startMs: 41100, endMs: 44023, connector: [[41100, -12750], [44023, -13371]], rejoined: true },
+            { startMs: 46178, endMs: 54300, connector: [[46178, -13412], [54300, -15526]], rejoined: true },
+            { startMs: 75726, endMs: 84012, connector: [[75726, -17948], [84012, -23993]], rejoined: true },
         ])
         expect(card.chart.capPoint).toBeNull()
     })
@@ -119,7 +119,7 @@ describe('different-line bands', () => {
         const card = replayCard(runCompareFixture('neverRejoins'))
 
         expect(card.chart.bands.at(-1)).toEqual({
-            startMs: 33600, endMs: 39792, connector: [[33600, -8800], [39792, -14470]], rejoined: false,
+            startMs: 33600, endMs: 39792, connector: [[33600, -9110], [39792, -14470]], rejoined: false,
         })
         expect(card.chart.capPoint).toEqual({ tMs: 39792, deltaMs: -14470, tone: 'ahead' })
         expect(card.chart.curves.flatMap(c => c.points).some(([t]) => t > 33600)).toBe(false)
@@ -137,25 +137,25 @@ describe('sectors on the chart', () => {
         expect(card.chart.sectors.map(s => s.label)).toEqual(['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10'])
         expect(card.chart.sectors[0]).toEqual({ index: 1, label: 'S1', startMs: 0, endMs: 8242 })
         expect(card.chart.sectors[9]).toEqual({ index: 10, label: 'S10', startMs: 74179, endMs: 82421 })
-        expect(card.chart.boundariesMs).toEqual([8242, 16484, 24726, 32968, 41211, 49453, 57695, 65937, 74179])
+        expect(card.chart.boundariesMs).toEqual([8242, 16484, 24726, 32968, 41210, 49453, 57695, 65937, 74179])
     })
 
     it('puts a dot at each sector end on the running gap, coloured by the sector split', () => {
         const card = replayCard(runCompareFixture('aligned'))
 
-        expect(card.chart.dots[0]).toEqual({ index: 1, tMs: 8242, deltaMs: -300, tone: 'ahead', hollow: false })
-        expect(card.chart.dots[4]).toEqual({ index: 5, tMs: 41211, deltaMs: -1348, tone: 'behind', hollow: false })
+        expect(card.chart.dots[0]).toEqual({ index: 1, tMs: 8242, deltaMs: -289, tone: 'ahead', hollow: false })
+        expect(card.chart.dots[4]).toEqual({ index: 5, tMs: 41210, deltaMs: -1342, tone: 'behind', hollow: false })
         expect(card.chart.dots.map(d => d.tone)).toEqual([
-            'ahead', 'ahead', 'ahead', 'ahead', 'behind', 'behind', 'ahead', 'ahead', 'ahead', 'behind',
+            'ahead', 'ahead', 'ahead', 'ahead', 'behind', 'behind', 'ahead', 'ahead', 'behind', 'behind',
         ])
     })
 
     it('hollows the dots of exactly the sectors that left the line', () => {
         const separated = replayCard(runCompareFixture('separated'))
-        const short = replayCard(runCompareFixture('short'))
+        const neverRejoins = replayCard(runCompareFixture('neverRejoins'))
 
         expect(separated.chart.dots.filter(d => d.hollow).map(d => d.index)).toEqual([3, 4, 5, 6, 8, 9])
-        expect(short.chart.dots.filter(d => d.hollow).map(d => d.index)).toEqual([6, 7, 9, 10])
+        expect(neverRejoins.chart.dots.filter(d => d.hollow).map(d => d.index)).toEqual([4, 5, 9, 10])
     })
 })
 
@@ -166,12 +166,12 @@ describe('sector rows', () => {
         expect(card.rows[0]).toEqual({
             index: 1,
             label: 'S1',
-            split: { ms: 7942, label: '7.942' },
-            deltaSplit: { ms: -300, label: '−0.300', tone: 'ahead' },
-            deltaTotal: { ms: -300, label: '−0.300', tone: 'ahead' },
+            split: { ms: 7953, label: '7.953' },
+            deltaSplit: { ms: -289, label: '−0.289', tone: 'ahead' },
+            deltaTotal: { ms: -289, label: '−0.289', tone: 'ahead' },
             flagged: false,
         })
-        expect(card.rows[4].deltaSplit).toEqual({ ms: 61, label: '+0.061', tone: 'behind' })
+        expect(card.rows[4].deltaSplit).toEqual({ ms: 84, label: '+0.084', tone: 'behind' })
         expect(card.rows.map(r => r.label)).toEqual(['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10'])
     })
 
@@ -194,8 +194,8 @@ describe('sector rows', () => {
     it('writes minute-long splits as clock times', () => {
         const card = replayCard(runCompareFixture('long'))
 
-        expect(card.rows[0].split).toEqual({ ms: 62959, label: '01:02.959' })
-        expect(card.rows[5].split).toEqual({ ms: 56597, label: '56.597' })
+        expect(card.rows[0].split).toEqual({ ms: 62958, label: '01:02.958' })
+        expect(card.rows[5].split).toEqual({ ms: 56732, label: '56.732' })
         expect(card.rows[9].deltaTotal.label).toBe('+22.587')
     })
 
@@ -213,8 +213,8 @@ describe('per-sector bars', () => {
     it('draws one bar per sector by its split gap', () => {
         const card = replayCard(runCompareFixture('aligned'))
 
-        expect(card.bars.bars.map(b => b.deltaMs)).toEqual([-300, -168, -637, -304, 61, 450, -38, -296, -56, 211])
-        expect(card.bars.bars[5]).toEqual({ index: 6, label: 'S6', deltaMs: 450, tone: 'behind', flagged: false })
+        expect(card.bars.bars.map(b => b.deltaMs)).toEqual([-289, -170, -645, -322, 84, 469, -84, -351, 79, 152])
+        expect(card.bars.bars[5]).toEqual({ index: 6, label: 'S6', deltaMs: 469, tone: 'behind', flagged: false })
         expect(card.bars.y.ticks.map(t => t.label)).toEqual(['−0.5s', '0.0s', '+0.5s'])
     })
 

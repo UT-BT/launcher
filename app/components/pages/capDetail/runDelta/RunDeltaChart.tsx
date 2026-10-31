@@ -1,42 +1,53 @@
-import { useRef } from 'react'
-import { Split } from 'lucide-react'
+import { useMemo, useRef } from 'react'
+import { Split, ZoomOut } from 'lucide-react'
 import { DELTA_COLORS } from '@/app/components/pages/capDetail/capStats'
-import type { CapComparisonPoint } from '@/app/utils/api'
-import type { AxisTick } from './chartRules'
-import { DeltaAxisMarks, DeltaGrid, TICK_LENGTH, deltaScale, useElementSize, type PlotBox } from './chartFrame'
+import type { CapComparisonMotion, CapComparisonPoint, CapMotionEvent } from '@/app/utils/api'
+import {
+    DeltaAxisMarks,
+    DeltaGrid,
+    TICK_LENGTH,
+    deltaScale,
+    readableTimeLabels,
+    useElementSize,
+    type PlotBox,
+} from './chartFrame'
 import { ChartViewToggle, type ChartView } from './ChartViewToggle'
 import { HAIRLINE, TONE_AREA, TONE_STROKE } from './deltaStyles'
 import type { ReplayCard, RunDeltaChart as RunDeltaChartModel } from './runDeltaCard'
 import { SectorBarsPlot } from './SectorBarsPlot'
+import { REFERENCE_SPEED_STROKE, RUNNER_SPEED_STROKE, RUN_CAP_UU_S, STRAFE_DODGE_UU_S, SpeedPlot, markerPath } from './SpeedPlot'
+import { rangeZoom, sectorZoom, zoomedSpeed, type SpeedZoom, type ZoomedSpeed } from './speedZoom'
+import { SPEED_SPLIT_NOTE } from './runDeltaCopy'
 
 const MARGIN = { left: 52, right: 16, top: 18, bottom: 22 }
-const LABEL_CHAR_PX = 6
-const LABEL_GAP_PX = 6
 const MIN_BAND_PX = 3
+const VIEW_TITLES: Record<ChartView, string> = { cumulative: 'Cumulative', sectors: 'Per sector', speed: 'Speed' }
+
+export interface SpeedDetail {
+    pair: string
+    zoom: SpeedZoom | null
+    motion: CapComparisonMotion | null
+    loading: boolean
+    onZoom: (zoom: SpeedZoom | null) => void
+}
 
 interface RunDeltaChartProps {
     card: ReplayCard
     view: ChartView
     onViewChange: (view: ChartView) => void
     referenceLabel: string
+    speedDetail: SpeedDetail
 }
+
+const MARKER_LEGEND: { label: string; event: CapMotionEvent }[] = [
+    { label: 'dodge, pointing its way', event: { t_ms: 0, kind: 'dodge', direction: 'F' } },
+    { label: 'jump', event: { t_ms: 0, kind: 'jump', direction: null } },
+    { label: 'kicker', event: { t_ms: 0, kind: 'kick', direction: null } },
+]
 
 function pathOf(points: CapComparisonPoint[], x: (ms: number) => number, y: (ms: number) => number, close = false): string {
     const d = points.map(([t, delta], i) => `${i === 0 ? 'M' : 'L'}${x(t).toFixed(1)} ${y(delta).toFixed(1)}`).join(' ')
     return close ? `${d} Z` : d
-}
-
-function readableTimeLabels(ticks: AxisTick[], x: (ms: number) => number): AxisTick[] {
-    const kept: AxisTick[] = []
-    let leftEdge = Infinity
-    for (const tick of [...ticks].reverse()) {
-        const half = (tick.label.length * LABEL_CHAR_PX) / 2
-        const center = x(tick.ms)
-        if (center + half + LABEL_GAP_PX > leftEdge) continue
-        kept.push(tick)
-        leftEdge = center - half
-    }
-    return kept
 }
 
 function cumulativeDescription(card: ReplayCard, referenceLabel: string): string {
@@ -174,6 +185,85 @@ function CumulativeLegend({ referenceLabel }: { referenceLabel: string }) {
     )
 }
 
+function MarkerSwatch({ event }: { event: CapMotionEvent }) {
+    return (
+        <svg width={10} height={10} viewBox="0 0 10 10" aria-hidden="true">
+            <path d={markerPath(event, 5, 5)} fill="currentColor" />
+        </svg>
+    )
+}
+
+function DetailLegend({ zoomed, loading }: { zoomed: ZoomedSpeed | null; loading: boolean }) {
+    if (!zoomed) {
+        return <span>click a sector or drag across the chart to zoom into every sample</span>
+    }
+    if (!zoomed.detailed) {
+        return <span>{loading ? 'loading every sample…' : 'sample detail unavailable, showing the smoothed speed'}</span>
+    }
+    return (
+        <>
+            <span>double-click the chart or press Esc to zoom out</span>
+            {MARKER_LEGEND.map(item => (
+                <LegendItem key={item.label} swatch={<MarkerSwatch event={item.event} />}>{item.label}</LegendItem>
+            ))}
+            <LegendItem swatch={<span className="w-2.5 h-1 rounded-sm bg-hairline/40" />}>in the air</LegendItem>
+            <LegendItem swatch={<span className="w-2.5 border-t border-dashed border-hairline/50" />}>
+                {RUN_CAP_UU_S} run cap · {STRAFE_DODGE_UU_S} strafe-dodge peak
+            </LegendItem>
+        </>
+    )
+}
+
+function SpeedLegend({ card, referenceLabel, zoomed, loading }: {
+    card: ReplayCard
+    referenceLabel: string
+    zoomed: ZoomedSpeed | null
+    loading: boolean
+}) {
+    const { totals } = card.speed
+    return (
+        <>
+            <LegendItem swatch={<span className="w-2.5 h-[3px] rounded-sm" style={{ background: RUNNER_SPEED_STROKE }} />}>
+                this run · {totals.runnerSpeed} avg
+            </LegendItem>
+            <LegendItem swatch={<span className="w-2.5 h-[3px] rounded-sm" style={{ background: REFERENCE_SPEED_STROKE }} />}>
+                {referenceLabel} · {totals.referenceSpeed} avg
+            </LegendItem>
+            {card.flagged && (
+                <LegendItem swatch={<span className="size-2.5 rounded-sm bg-hairline/[0.07] border border-dashed border-hairline/30" />}>
+                    different line
+                </LegendItem>
+            )}
+            <span>horizontal speed in UU/s · x = {referenceLabel}&apos;s run time</span>
+            <DetailLegend zoomed={zoomed} loading={loading} />
+            {!zoomed && <span className="hidden xl:inline">{SPEED_SPLIT_NOTE}</span>}
+        </>
+    )
+}
+
+function speedDescription(card: ReplayCard, referenceLabel: string): string {
+    const { totals } = card.speed
+    return `Horizontal speed over the run against ${referenceLabel}: this run averages ${totals.runnerSpeed} UU/s, ${referenceLabel} ${totals.referenceSpeed} UU/s`
+}
+
+function Legend({ card, view, referenceLabel, zoomed, loading }: {
+    card: ReplayCard
+    view: ChartView
+    referenceLabel: string
+    zoomed: ZoomedSpeed | null
+    loading: boolean
+}) {
+    if (view === 'cumulative') return <CumulativeLegend referenceLabel={referenceLabel} />
+    if (view === 'speed') return <SpeedLegend card={card} referenceLabel={referenceLabel} zoomed={zoomed} loading={loading} />
+    return <SectorLegend flagged={card.flagged} />
+}
+
+function zoomTitle(zoom: SpeedZoom, zoomed: ZoomedSpeed): string {
+    if (zoom.sector !== null) return `S${zoom.sector}`
+    const ticks = zoomed.x.ticks
+    return ticks.length > 1 ? `${ticks[0].label}–${ticks[ticks.length - 1].label}` : 'zoomed'
+}
+
 function SectorLegend({ flagged }: { flagged: boolean }) {
     return (
         <>
@@ -186,18 +276,36 @@ function SectorLegend({ flagged }: { flagged: boolean }) {
     )
 }
 
-export default function RunDeltaChart({ card, view, onViewChange, referenceLabel }: RunDeltaChartProps) {
+export default function RunDeltaChart({ card, view, onViewChange, referenceLabel, speedDetail }: RunDeltaChartProps) {
     const plotRef = useRef<HTMLDivElement>(null)
     const { width, height } = useElementSize(plotRef)
     const ready = width > 0 && height > 0
+    const { pair, zoom, motion, loading, onZoom } = speedDetail
+    const duration = card.chart.x.domainMs[1]
+    const zoomed = useMemo(
+        () => (view === 'speed' && zoom ? zoomedSpeed(card.speed.chart, motion, zoom, duration) : null),
+        [view, zoom, card.speed.chart, motion, duration],
+    )
 
     return (
         <div className="bg-hairline/[0.02] border border-hairline/5 rounded-lg p-2 h-full flex flex-col min-h-0">
             <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 px-1 pb-1.5 shrink-0">
                 <span className="min-w-0 truncate text-[10px] uppercase tracking-wider text-muted-foreground">
-                    {view === 'cumulative' ? 'Cumulative' : 'Per sector'} · vs {referenceLabel}
+                    {VIEW_TITLES[view]}{zoom && zoomed ? ` · ${zoomTitle(zoom, zoomed)}` : ''} · vs {referenceLabel}
                 </span>
-                <ChartViewToggle view={view} onChange={onViewChange} />
+                <div className="flex items-center gap-1 shrink-0">
+                    {zoomed && (
+                        <button
+                            type="button"
+                            onClick={() => onZoom(null)}
+                            className="inline-flex items-center gap-1 h-8 lg:h-6 px-2.5 lg:px-2 rounded border text-[11px] lg:text-[10px] font-medium transition-colors cursor-pointer bg-accent-500/15 border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:border-accent-500/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/60"
+                        >
+                            <ZoomOut className="size-3" strokeWidth={2} aria-hidden="true" />
+                            Reset zoom
+                        </button>
+                    )}
+                    <ChartViewToggle view={view} onChange={onViewChange} />
+                </div>
             </div>
             <div ref={plotRef} className="flex-1 min-h-[180px] relative">
                 {ready && view === 'cumulative' && (
@@ -216,11 +324,22 @@ export default function RunDeltaChart({ card, view, onViewChange, referenceLabel
                         description={`Time gained or lost per sector against ${referenceLabel}`}
                     />
                 )}
+                {ready && view === 'speed' && (
+                    <SpeedPlot
+                        chart={card.speed.chart}
+                        zoomed={zoomed}
+                        frame={card.chart}
+                        width={width}
+                        height={height}
+                        description={speedDescription(card, referenceLabel)}
+                        onZoomRange={(from, to) => onZoom(rangeZoom(pair, from, to, duration))}
+                        onZoomSector={index => onZoom(sectorZoom(pair, card.chart.sectors, index))}
+                        onZoomOut={() => onZoom(null)}
+                    />
+                )}
             </div>
             <div className="flex flex-wrap items-center justify-center gap-x-3.5 gap-y-1 pt-1 text-[10px] text-muted-foreground shrink-0">
-                {view === 'cumulative'
-                    ? <CumulativeLegend referenceLabel={referenceLabel} />
-                    : <SectorLegend flagged={card.flagged} />}
+                <Legend card={card} view={view} referenceLabel={referenceLabel} zoomed={zoomed} loading={loading} />
             </div>
         </div>
     )

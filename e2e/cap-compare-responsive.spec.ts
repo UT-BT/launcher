@@ -134,6 +134,8 @@ async function mockCapPage(page: Page, setup: CapPageSetup) {
 
         const ok = (data: unknown) => route.fulfill({ json: { success: true, data } })
 
+        if (path === '/ghosts/compare/motion') return route.fulfill({ json: RUN_COMPARE_FIXTURES.motion.body })
+
         if (path === '/ghosts/compare') {
             const reference = url.searchParams.get('reference') ?? ''
             const outcome = outcomeByReference.get(reference)
@@ -256,6 +258,58 @@ for (const viewport of VIEWPORTS) {
             await expect(card.getByRole('button', { name: 'Per sector' })).toHaveAttribute('aria-pressed', 'true')
             await expect(card.getByText('gained', { exact: true })).toBeVisible()
             await expectNoPageScroll(page)
+        })
+
+        test('the speed view swaps in both runs\' speed and splits each sector into speed and line', async ({ page }) => {
+            const card = await openCapPage(page, { cardCompare: 'separated' })
+
+            await card.getByRole('button', { name: 'Speed', exact: true }).click()
+            await expect(card.getByRole('button', { name: 'Speed', exact: true })).toHaveAttribute('aria-pressed', 'true')
+            await expect(card.getByRole('columnheader')).toHaveCount(viewport.replayColumns)
+            await expect(card.getByRole('columnheader', { name: 'Δ Speed' })).toBeVisible()
+            await expect(card.getByRole('columnheader', { name: 'Δ Line' })).toBeVisible()
+            await expect(card.getByRole('columnheader', { name: 'Δ Split' })).toHaveCount(0)
+            await expect(card.getByRole('row')).toHaveCount(11)
+            await expect(forkFlags(card)).toHaveCount(SEPARATED_SECTORS)
+            await expect(card.getByRole('img', { name: /^Horizontal speed over the run/ })).toBeVisible()
+            await expect(card.getByText(/^this run · \d+ avg$/)).toBeVisible()
+            await expect(card.getByText('Whole run', { exact: true })).toBeVisible()
+            await expectNoPageScroll(page)
+        })
+
+        test("a sector zooms the speed chart into every sample with each run's dodges and air time", async ({ page }) => {
+            const card = await openCapPage(page, { cardCompare: 'separated' })
+            await card.getByRole('button', { name: 'Speed', exact: true }).click()
+            await expect(card.getByText(/click a sector or drag across the chart to zoom/)).toBeVisible()
+
+            await card.getByRole('button', { name: 'Zoom the speed chart to S4' }).click()
+
+            await expect(card.getByRole('button', { name: 'Zoom the speed chart to S4' })).toHaveAttribute('aria-pressed', 'true')
+            await expect(card.getByRole('button', { name: 'Reset zoom', exact: true })).toBeVisible()
+            await expect(card.getByText(/^Speed · S4 · vs /)).toBeVisible()
+            await expect(card.getByText('dodge, pointing its way', { exact: true })).toBeVisible()
+            await expect(card.locator('g[data-run="runner"] path').first()).toBeAttached()
+            await expect(card.locator('g[data-run="reference"] path').first()).toBeAttached()
+            await expectNoPageScroll(page)
+
+            await card.getByRole('button', { name: 'Reset zoom', exact: true }).click()
+            await expect(card.getByRole('button', { name: 'Reset zoom', exact: true })).toHaveCount(0)
+            await expect(card.getByRole('button', { name: 'Zoom the speed chart to S4' })).toHaveAttribute('aria-pressed', 'false')
+
+            await card.getByRole('button', { name: 'Zoom the speed chart to S2' }).click()
+            await expect(card.getByRole('button', { name: 'Reset zoom', exact: true })).toBeVisible()
+            await card.getByRole('button', { name: 'Zoom the speed chart to S2' }).click()
+            await expect(card.getByRole('button', { name: 'Reset zoom', exact: true })).toHaveCount(0)
+
+            await card.getByRole('button', { name: 'Zoom the speed chart to S5' }).click()
+            await page.keyboard.press('Escape')
+            await expect(card.getByRole('button', { name: 'Reset zoom', exact: true })).toHaveCount(0)
+
+            if (viewport.width >= 1024) {
+                await card.getByRole('button', { name: 'Zoom the speed chart to S5' }).click()
+                await card.getByRole('img', { name: /^Horizontal speed over the run/ }).locator('rect.cursor-crosshair').dblclick()
+                await expect(card.getByRole('button', { name: 'Reset zoom', exact: true })).toHaveCount(0)
+            }
         })
 
         test('routes that differ show the coverage and the final gap without a table', async ({ page }) => {

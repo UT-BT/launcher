@@ -16,9 +16,12 @@ import type { ReplayCard } from './runDelta/runDeltaCard'
 import { RunDeltaChip } from './runDelta/RunDeltaChip'
 import { ComparePicker } from './runDelta/ComparePicker'
 import { SectorTable } from './runDelta/SectorTable'
+import { SpeedTable } from './runDelta/SpeedTable'
 import { RoutesDifferView } from './runDelta/RoutesDifferView'
 import type { ChartView } from './runDelta/ChartViewToggle'
 import { differentLineNote } from './runDelta/runDeltaCopy'
+import { sectorZoom, zoomPair, type SpeedZoom } from './runDelta/speedZoom'
+import { useRunMotion } from './runDelta/useRunMotion'
 import { useNavState } from '@/app/components/navigation/useNavState'
 
 const CheckpointDeltaChart = lazy(() => import('./CheckpointDeltaChart'))
@@ -86,15 +89,42 @@ function ZonesNote({ note }: { note: string }) {
     )
 }
 
-function ReplayView({ card, runnerLabel, referenceLabel }: { card: ReplayCard; runnerLabel: string; referenceLabel: string }) {
+interface ReplayViewProps {
+    card: ReplayCard
+    runnerLabel: string
+    referenceLabel: string
+    runnerCapId: string
+    referenceCapId: string
+}
+
+function ReplayView({ card, runnerLabel, referenceLabel, runnerCapId, referenceCapId }: ReplayViewProps) {
     const [chartView, setChartView] = useNavState<ChartView>('checkpointDeltas.chartView', 'cumulative')
+    const [storedZoom, setZoom] = useNavState<SpeedZoom | null>('checkpointDeltas.speedZoom', null)
+    const pair = zoomPair(runnerCapId, referenceCapId)
+    const zoom = storedZoom?.pair === pair ? storedZoom : null
+    const { motion, loading } = useRunMotion(runnerCapId, referenceCapId, chartView === 'speed')
+    const selectSector = (index: number) => setZoom(zoom?.sector === index ? null : sectorZoom(pair, card.chart.sectors, index))
     return (
-        <div className="flex flex-col xl:flex-row xl:h-[460px]">
+        <div
+            className="flex flex-col xl:flex-row xl:h-[460px]"
+            onKeyDown={event => {
+                if (event.key === 'Escape' && zoom && chartView === 'speed') setZoom(null)
+            }}
+        >
             <div className="xl:w-1/2 xl:h-full xl:border-r border-hairline/5 min-h-0 flex flex-col">
-                <SectorTable
-                    rows={card.rows}
-                    differentLineNote={card.flagged ? differentLineNote(runnerLabel, referenceLabel) : null}
-                />
+                {chartView === 'speed' ? (
+                    <SpeedTable
+                        speed={card.speed}
+                        differentLineNote={card.flagged ? differentLineNote(runnerLabel, referenceLabel) : null}
+                        selectedSector={zoom?.sector ?? null}
+                        onSelectSector={selectSector}
+                    />
+                ) : (
+                    <SectorTable
+                        rows={card.rows}
+                        differentLineNote={card.flagged ? differentLineNote(runnerLabel, referenceLabel) : null}
+                    />
+                )}
             </div>
             <div className="xl:w-1/2 h-[320px] lg:h-[360px] xl:h-full p-3 min-h-0">
                 <Suspense fallback={<div className="h-full bg-hairline/[0.02] border border-hairline/5 rounded-lg animate-pulse" />}>
@@ -103,6 +133,7 @@ function ReplayView({ card, runnerLabel, referenceLabel }: { card: ReplayCard; r
                         view={chartView}
                         onViewChange={setChartView}
                         referenceLabel={referenceLabel}
+                        speedDetail={{ pair, zoom, motion, loading, onZoom: setZoom }}
                     />
                 </Suspense>
             </div>
@@ -159,7 +190,13 @@ export function CheckpointSplitsCard({
             </div>
 
             {view.kind === 'replay' ? (
-                <ReplayView card={view} runnerLabel={runnerLabel} referenceLabel={referenceLabel} />
+                <ReplayView
+                    card={view}
+                    runnerLabel={runnerLabel}
+                    referenceLabel={referenceLabel}
+                    runnerCapId={comparison?.runnerId ?? capId}
+                    referenceCapId={comparison?.referenceId ?? selectedCompareId ?? ''}
+                />
             ) : view.kind === 'routes_differ' ? (
                 <RoutesDifferView card={view} referenceLabel={referenceLabel} />
             ) : view.kind === 'loading' ? (

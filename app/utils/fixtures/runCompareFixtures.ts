@@ -4,12 +4,13 @@ import chartRules from './runCompare/chart_rules.json'
 import compareAligned from './runCompare/compare_aligned.json'
 import compareErrors from './runCompare/compare_errors.json'
 import compareLong from './runCompare/compare_long.json'
+import compareMotion from './runCompare/compare_motion.json'
 import compareNeverRejoins from './runCompare/compare_never_rejoins.json'
 import compareRoutesDiffer from './runCompare/compare_routes_differ.json'
 import compareSeparated from './runCompare/compare_separated.json'
 import compareShort from './runCompare/compare_short.json'
 import teamCapDetailMembers from './runCompare/team_cap_detail_members.json'
-import type { CapComparison, CapComparisonErrorCode, CapDetail, TeamCapDetail } from '@/app/utils/api'
+import type { CapComparison, CapComparisonErrorCode, CapComparisonMotion, CapDetail, TeamCapDetail } from '@/app/utils/api'
 
 export interface RunCompareSuccessFixtures {
     aligned: CapComparison
@@ -18,6 +19,7 @@ export interface RunCompareSuccessFixtures {
     long: CapComparison
     short: CapComparison
     routesDiffer: CapComparison
+    motion: CapComparisonMotion
     capDetailCandidates: CapDetail
     capDetailGhostOnly: CapDetail
     teamCapDetailMembers: TeamCapDetail
@@ -81,6 +83,7 @@ interface FixtureEntry {
 }
 
 const COMPARE_ROUTE = 'GET /ghosts/compare?runner=:capId&reference=:capId'
+const MOTION_ROUTE = 'GET /ghosts/compare/motion?runner=:capId&reference=:capId'
 const CAP_DETAIL_ROUTE = 'GET /caps/:capId/detail'
 
 export const RUN_COMPARE_FIXTURES: Record<RunCompareFixtureName, FixtureEntry> = {
@@ -90,6 +93,7 @@ export const RUN_COMPARE_FIXTURES: Record<RunCompareFixtureName, FixtureEntry> =
     long: { file: 'compare_long.json', route: COMPARE_ROUTE, body: compareLong },
     short: { file: 'compare_short.json', route: COMPARE_ROUTE, body: compareShort },
     routesDiffer: { file: 'compare_routes_differ.json', route: COMPARE_ROUTE, body: compareRoutesDiffer },
+    motion: { file: 'compare_motion.json', route: MOTION_ROUTE, body: compareMotion },
     capDetailCandidates: { file: 'cap_detail_candidates.json', route: CAP_DETAIL_ROUTE, body: capDetailCandidates },
     capDetailGhostOnly: { file: 'cap_detail_ghost_only.json', route: CAP_DETAIL_ROUTE, body: capDetailGhostOnly },
     teamCapDetailMembers: {
