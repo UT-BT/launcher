@@ -59,16 +59,6 @@ export interface ConfirmModalProps extends ModalProps {
   variant?: 'default' | 'danger'
 }
 
-export interface InstallationEvents {
-  onProgress: (data: { stage: string; progress: number }) => void
-  onStatus: (data: { status: string; message?: string }) => void
-  onConfirm: (data: { id: string; title: string; message: string; detail?: string }) => void
-}
-
-export interface PatchEvents {
-  onStatus: (data: { status: string; message?: string; tag?: string }) => void
-}
-
 export interface GatewayConfig {
   baseUrl: string
   apiKey?: string

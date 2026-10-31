@@ -1,46 +1,42 @@
----
-doc: build
-read_when:
-  - "running, building, linting, or typechecking the app"
-  - "before committing a change"
-keywords: [npm, dev, lint, tsc, build, node, pre-commit, typecheck]
-provides: "the dev/build/lint/typecheck commands + the pre-commit gate"
-not_here: ["release / versioning process → CONTRIBUTING.md"]
-sections: [commands, requirements, pre-commit-checklist]
-last_verified: 2026-10-30
-verify_against: [package.json, tsconfig.web.json, vite.config.web.ts]
----
+# Build, test, commit
 
-# Build / dev / test
+The commands you need and the gate every commit passes. `package.json` `scripts` has the full list.
 
 ## Commands
 
-| Command | Purpose |
+| Command | Use |
 |---|---|
-| `npm run dev` | Start dev server (Electron + Vite HMR). |
-| `npm run dev:web` | Start the WEB dev server (plain browser, port 5174). See `agents/web-target.md`. |
-| `npm run lint` | ESLint over `app/`, `lib/`. Auto-fix via `--fix` (already wired in). |
-| `npx tsc --noEmit -p tsconfig.web.json` | Typecheck renderer code only. Fast. Run before commits. |
-| `npm run build:win` | Production Windows build: a one-click per-user installer in `dist/`. |
-| `npm run build:web` | Static web build into `dist-web/` (gitignored, excluded from the installer). |
-| `npm run preview:web` | Serve the production web build locally. |
+| `npm run dev` | Electron app with HMR |
+| `npm run dev:web` | the website in a plain browser on port 5174 ([web-target.md](web-target.md)) |
+| `npm run typecheck:web` | typecheck `app/` and `lib/`; fast |
+| `npm run typecheck:e2e` | typecheck `e2e/`, `playwright.config.ts` and `vitest.config.ts` (`tsconfig.e2e.json`); re-checks `app/` and `lib/` with them, so it takes about a minute |
+| `npm run lint` | ESLint over the repo: `app/`, `lib/`, `e2e/`, `scripts/` and the configs (`lint:fix` to auto-fix) |
+| `npm test` | Vitest unit tests |
+| `npm run test:e2e` | Playwright |
+| `npm run build:web` then `npm run check:bundle` | static web build into `dist-web/`, then the bundle budget |
+| `npm run build:win` | per-user Windows installer into `dist/` |
+| `npm run docs:check` | doc manifest, links, and the docs this branch made stale |
 
 ## Requirements
 
-- **Node 20+**. Vite 7 calls `crypto.hash` which only exists in Node 20+. Older Node = obscure error at dev-server start.
-- Windows-first project. PowerShell is the default shell; Bash via WSL also works.
-- **Where a new package goes.** `dependencies` is only for what the main process or
-  preload load at runtime; they ship inside the installer as-is. Renderer libraries
-  (React UI kits, icons, charts) go in `devDependencies`, because Vite bundles them
-  into `out/renderer` anyway. Putting one in `dependencies` ships it a second time
-  and grows every update (see `lib/main/README.md`, Auto-updates).
+- **Node 20+.** Vite 7 calls `crypto.hash`; older Node fails with an obscure error at dev-server start.
+- **Where a new package goes.** `dependencies` holds only what the main process or preload load at
+  runtime; those ship inside the installer as-is. Renderer libraries (UI kits, icons, charts) go in
+  `devDependencies`, because Vite bundles them into `out/renderer`; listing one in `dependencies`
+  ships it twice and grows every update (`lib/main/README.md`, Auto-updates).
 
-## Pre-commit checklist
+- **Format the files you changed** (`npx prettier --write <files>`). `.prettierignore` keeps Prettier
+  off the pinned golden fixtures ([testing.md](testing.md)) and generated output, so no format run
+  breaks a pin. Much of the repo is not Prettier-formatted, so `npm run format` gives a repo-wide diff.
 
-1. `npx tsc --noEmit -p tsconfig.web.json` — must pass with 0 errors.
-2. `npm run lint` — there are ~23 pre-existing warnings; don't add new ones in changed files.
-3. Manual smoke test in `npm run dev` for any UI change. Type-check confirms code correctness, not feature correctness.
-4. **Docs freshness.** If this change touched a file listed in any doc's
-   `verify_against` frontmatter (see `agents/_map.md`), update that doc and bump
-   its `last_verified` in the same commit. Quick check: `git diff --name-only`,
-   then grep the changed paths against `agents/_map.md`.
+## Pre-commit gate
+
+1. `npm run typecheck:web` and `npm run typecheck:e2e`: 0 errors.
+2. `npm run lint`: no new warnings in the files you changed.
+3. `npm test`: green. Writing tests or fixing a red suite: [testing.md](testing.md).
+4. `npm run docs:check`: fix every failure; update each doc listed under "Review" in the same
+   commit, or confirm it still matches the code.
+5. UI change: smoke it in `npm run dev`, and in `npm run dev:web` at 390 px and 1920 px. The
+   typecheck proves types, not behaviour.
+6. Change that can move the bundle (new page import, new dependency, new lazy boundary):
+   `npm run build:web` then `npm run check:bundle`.

@@ -15,7 +15,6 @@ function reasonText(reason: string): string {
     if (reason === 'timeout') return 'Download took longer than 30 seconds. The server may still be packaging the map — try again in a moment.'
     if (reason === 'empty-zip') return 'The downloaded archive was empty. Try again, or the map may not be available.'
     if (reason === 'extract-error') return 'Failed to extract the map archive. The download may be corrupt.'
-    if (reason === 'write-error') return 'Failed to write map files to disk. Check that the launcher has write access to the install folder.'
     if (reason.startsWith('http-')) return `The map server responded with ${reason.replace('http-', 'status ')}. The map may not exist on the service.`
     if (reason === 'fetch-error') return 'Network error while downloading. Check your connection and try again.'
     return `Map install failed (${reason}).`

@@ -5,30 +5,18 @@ import {
     isTransparentStreamScene,
     parseStreamScenePath,
     streamScenePath,
+    streamSceneObsName,
     streamSceneUrl,
     type StreamSceneId,
 } from './streamScenes'
 
-const SCENE_IDS: StreamSceneId[] = [
-    'starting-soon',
-    'preview',
-    'pick-ban',
-    'betting',
-    'overlay',
-    'intermission',
-    'next-map',
-    'post-match',
-    'standings',
-    'predictor-standings',
-    'brb',
-    'ending',
-    'caster',
-]
+const SCENE_IDS: StreamSceneId[] = STREAM_SCENES.map(scene => scene.id)
 
 describe('STREAM_SCENES', () => {
-    it('lists the thirteen scene ids in order, each with a display label', () => {
-        expect(STREAM_SCENES.map(scene => scene.id)).toEqual(SCENE_IDS)
+    it('gives every scene a distinct url-safe id and a display label', () => {
+        expect(new Set(SCENE_IDS).size).toBe(SCENE_IDS.length)
         for (const scene of STREAM_SCENES) {
+            expect(scene.id).toMatch(/^[a-z]+(-[a-z]+)*$/)
             expect(scene.label.trim().length).toBeGreaterThan(0)
         }
     })
@@ -36,6 +24,19 @@ describe('STREAM_SCENES', () => {
     it('gives every scene a distinct label', () => {
         const labels = STREAM_SCENES.map(scene => scene.label)
         expect(new Set(labels).size).toBe(labels.length)
+    })
+
+    it('opens with Starting Soon and keeps the contract ids of the existing scenes', () => {
+        expect(SCENE_IDS[0]).toBe('starting-soon')
+        expect(SCENE_IDS).toEqual(expect.arrayContaining(['preview', 'pick-ban', 'betting', 'overlay', 'post-match', 'brb', 'ending', 'caster']))
+    })
+})
+
+describe('streamSceneObsName', () => {
+    it('is the label unless the imported collection names the scene differently', () => {
+        const byId = (id: StreamSceneId) => STREAM_SCENES.find(scene => scene.id === id)!
+        expect(streamSceneObsName(byId('overlay'))).toBe('Match')
+        expect(streamSceneObsName(byId('brb'))).toBe('BRB')
     })
 })
 

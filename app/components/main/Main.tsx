@@ -543,7 +543,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     return entry.id
   }, [markViewed])
 
-  const urlNav = useUrlSync({ stackRef, setCursor, pushExternal })
+  const urlNav = useUrlSync({ stackRef, setCursor, pushExternal, leaveWarning, onBlocked: setPendingLeave })
 
   const localBack = useCallback(() => setCursor(c => Math.max(0, c - 1)), [])
   const localForward = useCallback(() => setCursor(c => Math.min(stackRef.current.entries.length - 1, c + 1)), [])
@@ -727,6 +727,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
         return <Home
           userProfile={userProfile as any}
           installationStatus={installationStatus}
+          newsSeenIso={badgeSeen['news'] ?? null}
           favoriteMapNames={favoriteMapNames}
           favoriteServerIds={favoriteServerIds}
           favoriteServersLoadFailed={favoriteServersLoadFailed}
@@ -905,6 +906,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
       default:
         return <Home
           userProfile={userProfile as any}
+          installationStatus={installationStatus}
           newsSeenIso={badgeSeen['news'] ?? null}
           favoriteMapNames={favoriteMapNames}
           favoriteServerIds={favoriteServerIds}

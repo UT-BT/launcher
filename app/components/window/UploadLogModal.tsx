@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { UploadLogEntry } from '@/lib/main/demo-watcher-service'
-import { FaTimes, FaCheckCircle, FaExclamationCircle, FaSpinner, FaCloudUploadAlt } from 'react-icons/fa'
-import { Button } from '@/app/components/ui/button'
+import { FaCheckCircle, FaExclamationCircle, FaSpinner, FaCloudUploadAlt } from 'react-icons/fa'
+import { Modal } from '@/app/components/ui/modal'
 import { uploadDemo } from '@/app/utils/api'
 import { cn } from '@/lib/utils'
 
@@ -107,30 +107,23 @@ export const UploadLogModal = ({ isOpen, onClose }: UploadLogModalProps) => {
         fetchLogs()
     }
 
-    if (!isOpen) return null
-
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+            className="contents"
             onDragEnter={handleDragEnter}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
         >
-            <div className="w-full max-w-5xl bg-card border border-border rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[80vh]">
-                <div className="p-4 border-b border-border flex items-center justify-between bg-card/50">
-                    <h3 className="text-xl font-bold flex items-center gap-2">
-                        Demo Uploads
-                    </h3>
-                    <button
-                        onClick={onClose}
-                        className="p-2 hover:bg-hairline/5 rounded-lg transition-colors"
-                    >
-                        <FaTimes />
-                    </button>
-                </div>
-
-                <div className="p-4 border-b border-border">
+            <Modal
+                isOpen={isOpen}
+                onClose={onClose}
+                title="Demo Uploads"
+                maxWidth="64rem"
+                maxHeight="80vh"
+                offsetSidebar
+            >
+                <div className="space-y-4">
                     <input
                         type="file"
                         multiple
@@ -157,48 +150,42 @@ export const UploadLogModal = ({ isOpen, onClose }: UploadLogModalProps) => {
                         <div className="text-sm font-medium">Click to select or drag and drop</div>
                         <div className="text-xs text-muted-foreground"><b>Accepted file types:</b> <span className="italic">.dem</span></div>
                     </div>
-                </div>
 
-                <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                    {logs.length === 0 ? (
-                        <div className="text-center py-10 text-muted-foreground">
-                            No recent uploads.
-                        </div>
-                    ) : (
-                        logs.map((log, index) => (
-                            <div key={index} className="flex items-center gap-4 p-3 rounded-lg bg-hairline/5 border border-hairline/5">
-                                <div className="flex-none">
-                                    {log.status === 'success' && <FaCheckCircle className="text-green-500 size-5" />}
-                                    {log.status === 'failed' && <FaExclamationCircle className="text-red-500 size-5" />}
-                                    {log.status === 'uploading' && <FaSpinner className="text-accent-500 size-5 animate-spin" />}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="text-sm font-medium truncate">{log.filename}</div>
-                                    <div className="text-xs text-muted-foreground">
-                                        {new Date(log.timestamp).toLocaleString()}
-                                        {log.error && <span className="text-red-400 ml-2">— {log.error}</span>}
-                                        {log.status === 'uploading' && log.attempt && log.attempt > 1 && (
-                                            <span className="ml-2 px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-500 text-[10px] font-semibold border border-yellow-500/20">
-                                                Retry {log.attempt}/{log.maxAttempts}
-                                            </span>
-                                        )}
+                    <div className="space-y-2">
+                        {logs.length === 0 ? (
+                            <div className="text-center py-10 text-muted-foreground">
+                                No recent uploads.
+                            </div>
+                        ) : (
+                            logs.map((log, index) => (
+                                <div key={index} className="flex items-center gap-4 p-3 rounded-lg bg-hairline/5 border border-hairline/5">
+                                    <div className="flex-none">
+                                        {log.status === 'success' && <FaCheckCircle className="text-green-500 size-5" />}
+                                        {log.status === 'failed' && <FaExclamationCircle className="text-red-500 size-5" />}
+                                        {log.status === 'uploading' && <FaSpinner className="text-accent-500 size-5 animate-spin" />}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="text-sm font-medium truncate">{log.filename}</div>
+                                        <div className="text-xs text-muted-foreground">
+                                            {new Date(log.timestamp).toLocaleString()}
+                                            {log.error && <span className="text-red-400 ml-2">— {log.error}</span>}
+                                            {log.status === 'uploading' && log.attempt && log.attempt > 1 && (
+                                                <span className="ml-2 px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-500 text-[10px] font-semibold border border-yellow-500/20">
+                                                    Retry {log.attempt}/{log.maxAttempts}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex-none text-xs font-mono uppercase tracking-wider opacity-60">
+                                        {log.status}
                                     </div>
                                 </div>
-
-                                <div className="flex-none text-xs font-mono uppercase tracking-wider opacity-60">
-                                    {log.status}
-                                </div>
-                            </div>
-                        ))
-                    )}
+                            ))
+                        )}
+                    </div>
                 </div>
-
-                <div className="p-4 border-t border-border flex justify-end">
-                    <Button variant="outline" onClick={onClose}>
-                        Close
-                    </Button>
-                </div>
-            </div>
+            </Modal>
         </div>
     )
 }

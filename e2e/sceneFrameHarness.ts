@@ -15,12 +15,19 @@ const body = createElement('div', {
     style: { position: 'absolute', inset: 0, border: '2px dashed rgba(255, 255, 255, 0.35)', borderRadius: 24 },
 })
 
-const frame = createElement(
-    SceneFrame,
-    { scene: 'starting-soon', title: 'Starting Soon', kicker: search.get('kicker'), backdrop: search.get('backdrop') !== '0' },
-    body,
-)
+const frame = createElement(SceneFrame, {
+    scene: 'starting-soon',
+    title: 'Starting Soon',
+    kicker: search.get('kicker'),
+    backdrop: search.get('backdrop') !== '0',
+    children: body,
+})
 
 createRoot(document.getElementById('app') as HTMLElement).render(
-    createElement(StreamDataProvider, { eventSlug: STREAM_EVENT.slug, streamerId: STREAM_STREAMER_ID, options: streamSceneOptionsOf(window.location.search) }, frame),
+    createElement(StreamDataProvider, {
+        eventSlug: STREAM_EVENT.slug,
+        streamerId: STREAM_STREAMER_ID,
+        options: streamSceneOptionsOf(window.location.search),
+        children: frame,
+    }),
 )

@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { History, Search } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { fetchUserWorldRecords, fetchWorldRecordProgression, type Record, type WorldRecordProgressionEntry } from '@/app/utils/api'
 import { usePaginatedQuery } from '@/app/hooks/useAsync'
 import { useNavState } from '@/app/components/navigation/useNavState'
@@ -34,7 +35,16 @@ type ColumnId = 'map' | 'time' | 'added' | 'history'
 const COLUMNS: ColumnId[] = ['map', 'time', 'added', 'history']
 const COLUMN_WIDTH: { [k in ColumnId]?: string } = { time: '8rem', added: '8rem', history: '4rem' }
 const COLUMN_PRIORITY: { [k in ColumnId]?: number } = { time: 80, added: 40, history: 20 }
-const REQUIRED_COLUMNS = new Set<ColumnId>(['map'])
+const REQUIRED_COLUMNS = new Set<ColumnId>(['map', 'time'])
+
+function recordTeamMembers(r: Record) {
+    if (r.members == null || r.members.length === 0) return null
+    return r.members.map(member => ({
+        userId: member.user,
+        alias: member.alias,
+        activeTitle: member.active_title,
+    }))
+}
 
 export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect, tabsSlot }: WorldRecordsCardProps) {
     const [query, setQuery] = useNavState('wrs.query', '')
@@ -116,6 +126,60 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
         }
     }
 
+    const emptyMessage = query ? 'No world records match that search.' : 'No world records held.'
+
+    const historyButton = (mapName: string, className?: string) => (
+        <Tooltip content="View WR progression" side="top">
+            <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); openProgression(mapName) }}
+                className={cn('p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-pointer', className)}
+                aria-label="View WR progression"
+            >
+                <History className="size-3.5" />
+            </button>
+        </Tooltip>
+    )
+
+    const compactRows = loading ? (
+        Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} role="listitem" className="p-3 border-b border-hairline/5 last:border-0 animate-pulse">
+                <div className="h-10 rounded bg-hairline/5" />
+            </div>
+        ))
+    ) : items.length === 0 ? (
+        <div role="listitem" className="px-4 py-12 text-center text-sm text-muted-foreground">
+            {emptyMessage}
+        </div>
+    ) : items.map(r => {
+        const teamMembers = recordTeamMembers(r)
+        return (
+            <div
+                key={`${r.map}-${r.cap_id}`}
+                role="listitem"
+                className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 p-3 border-b border-hairline/5 last:border-0 cursor-pointer"
+                onClick={() => onMapSelect?.(r.map)}
+            >
+                <div className="flex items-center gap-2 min-w-0">
+                    <MapNavLink mapName={r.map} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate min-w-0">{displayMapName(r.map)}</MapNavLink>
+                    {teamMembers && <TeamRosterBadge members={teamMembers} currentUserId={String(userId)} />}
+                </div>
+                <div className="flex flex-col items-end gap-0.5">
+                    <CapTimeLink
+                        capId={teamMembers ? undefined : r.cap_id}
+                        teamCapId={teamMembers ? r.cap_id : undefined}
+                        seconds={r.cap_time_seconds}
+                        className="text-sm font-mono tabular-nums font-bold text-blue-200"
+                    />
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                        {r.added ? formatAddedDate(r.added) : '—'}
+                    </span>
+                </div>
+                {historyButton(r.map, 'inline-flex items-center justify-center size-9 p-0')}
+            </div>
+        )
+    })
+
     return (
         <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between gap-3 gap-y-2 px-4 py-3 border-b border-hairline/5 flex-wrap">
@@ -144,7 +208,13 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
 
             <DataTableShell
                 className="!flex-none !min-h-0 !overflow-visible !rounded-none !border-0"
-                responsive={{ columns: responsiveColumns, onResolve: handleResolve }}
+                responsive={{
+                    columns: responsiveColumns,
+                    nameFloorRem: 14,
+                    onResolve: handleResolve,
+                    compactContent: compactRows,
+                    compactAriaLabel: 'World records',
+                }}
             >
                 <DataTableHeaderRow>
                     {isVisible('map') && <DataTableHeaderCell sortable sortDirection={dir('map')} onSort={() => handleSort('map')}>Map</DataTableHeaderCell>}
@@ -158,14 +228,14 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
                             <DataTableSkeletonRow key={i} columnCount={visibleColumnCount} />
                         ))
                     ) : items.length === 0 ? (
-                        <DataTableEmpty colSpan={visibleColumnCount} message={query ? 'No world records match that search.' : 'No world records held.'} />
+                        <DataTableEmpty colSpan={visibleColumnCount} message={emptyMessage} />
                     ) : (
                         items.map(r => {
                             const exact = r.added ? (() => {
                                 const d = new Date(r.added)
                                 return isNaN(d.getTime()) ? r.added : d.toLocaleString()
                             })() : '—'
-                            const isTeamRow = r.members != null && r.members.length > 0
+                            const teamMembers = recordTeamMembers(r)
                             return (
                                 <DataTableRow
                                     key={`${r.map}-${r.cap_id}`}
@@ -179,15 +249,8 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
                                                 <div className="flex flex-col gap-1 min-w-0">
                                                     <div className="flex items-center gap-2 min-w-0">
                                                         <MapNavLink mapName={r.map} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate">{displayMapName(r.map)}</MapNavLink>
-                                                        {isTeamRow && (
-                                                            <TeamRosterBadge
-                                                                members={r.members!.map(member => ({
-                                                                    userId: member.user,
-                                                                    alias: member.alias,
-                                                                    activeTitle: member.active_title,
-                                                                }))}
-                                                                currentUserId={String(userId)}
-                                                            />
+                                                        {teamMembers && (
+                                                            <TeamRosterBadge members={teamMembers} currentUserId={String(userId)} />
                                                         )}
                                                     </div>
                                                 </div>
@@ -197,8 +260,8 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
                                     {isVisible('time') && (
                                         <DataTableCell align="right">
                                             <CapTimeLink
-                                                capId={isTeamRow ? undefined : r.cap_id}
-                                                teamCapId={isTeamRow ? r.cap_id : undefined}
+                                                capId={teamMembers ? undefined : r.cap_id}
+                                                teamCapId={teamMembers ? r.cap_id : undefined}
                                                 seconds={r.cap_time_seconds}
                                                 className="text-sm font-mono tabular-nums font-bold text-blue-200"
                                             />
@@ -215,16 +278,7 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
                                     )}
                                     {isVisible('history') && (
                                         <DataTableCell align="center">
-                                            <Tooltip content="View WR progression" side="top">
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => { e.stopPropagation(); openProgression(r.map) }}
-                                                    className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-pointer"
-                                                    aria-label="View WR progression"
-                                                >
-                                                    <History className="size-3.5" />
-                                                </button>
-                                            </Tooltip>
+                                            {historyButton(r.map)}
                                         </DataTableCell>
                                     )}
                                 </DataTableRow>

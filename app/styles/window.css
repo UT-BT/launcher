@@ -252,83 +252,6 @@
   min-width: 14px;
 }
 
-.window-titlebar-menu {
-  display: flex;
-  flex-direction: row;
-  gap: 2px;
-  position: absolute;
-  top: 9px;
-  left: var(--window-title-margin);
-  -webkit-app-region: no-drag;
-  font-size: var(--window-titlebar-font-size);
-}
-
-.window-titlebar-menu.locked {
-  opacity: 0.6;
-  pointer-events: none;
-}
-
-.titlebar-menuItem .menuItem-label {
-  padding: 2px 8px;
-  cursor: pointer;
-  border-radius: 4px;
-  font-weight: var(--window-titlebar-font-weight, normal);
-}
-
-.titlebar-menuItem:hover .menuItem-label,
-.titlebar-menuItem.active .menuItem-label {
-  background-color: var(--window-c-hover);
-}
-
-.titlebar-menuItem .menuItem-popup {
-  position: fixed;
-  background-color: var(--window-c-popup-background);
-  top: 32px;
-  min-width: 100px;
-  border: 1px solid var(--window-c-popup-border);
-  padding: 0.25rem 0;
-  box-shadow: 2px 1px 4px var(--window-c-popup-shadow);
-  z-index: 10000;
-  border-radius: 4px;
-}
-
-.titlebar-menuItem .menuItem-popupItem {
-  display: flex;
-  flex-direction: row;
-  padding: 5px 18px;
-  text-shadow: 1px 1px var(--window-c-text-shadow);
-  justify-content: space-between;
-  font-weight: var(--window-c-popup-font-weight);
-}
-
-.titlebar-menuItem .menuItem-content {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.titlebar-menuItem .menuItem-icon {
-  display: flex;
-  align-items: center;
-  font-size: 1.2em;
-}
-
-.titlebar-menuItem .menuItem-shortcut {
-  opacity: 0.5;
-  margin-left: 3rem;
-}
-
-.titlebar-menuItem .menuItem-popupItem:hover {
-  background-color: var(--window-c-hover);
-}
-
-.titlebar-menuItem .menuItem-popupItem.menuItem-separator {
-  border-top: 1px solid var(--window-c-separator);
-  margin-top: 6px;
-  padding: 3px 0;
-  pointer-events: none;
-}
-
 .titlebar-controlButton {
   display: flex;
   align-items: center;
@@ -350,8 +273,4 @@
 
 .platform-darwin .window-titlebar-title {
   margin-left: var(--window-mac-titlebar-controls-margin);
-}
-
-.platform-darwin .window-titlebar-menu {
-  left: var(--window-mac-titlebar-controls-margin);
 }

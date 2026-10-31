@@ -29,6 +29,8 @@ import {
 } from '@/app/components/shared/DataTable'
 import { PaginationBar } from '@/app/components/ui/pagination'
 import type { LeaderboardEntry, TeamLeaderboardEntry, MapMetadata } from '@/app/utils/api'
+import { isCertifiedCap } from '@/app/utils/capTypes'
+import { teamRunStateLabel } from '@/app/utils/teamRunState'
 
 type Tab = 'verified' | 'certified' | 'all'
 type SortField = 'rank' | 'player' | 'time' | 'date'
@@ -120,7 +122,7 @@ function SoloLeaderboardTable({
 
     const filtered = useMemo(() => {
         if (tab === 'verified') return leaderboard.filter(e => e.verified)
-        if (tab === 'certified') return leaderboard.filter(e => e.cap_type === 2)
+        if (tab === 'certified') return leaderboard.filter(isCertifiedCap)
         return leaderboard
     }, [leaderboard, tab])
 
@@ -609,7 +611,7 @@ export function TeamLeaderboardTable({
                             : 'bg-hairline/5 border-hairline/10 text-muted-foreground',
                     )}>
                         {entry.verified ? <ShieldCheck className="size-3" /> : <ShieldAlert className="size-3" />}
-                        {entry.state === 'incomplete' ? 'Incomplete' : entry.verified ? 'Verified' : 'Certified'}
+                        {teamRunStateLabel(entry.state)}
                     </span>
                 </div>
             </div>
@@ -755,7 +757,7 @@ export function TeamLeaderboardTable({
                                                 {entry.verified
                                                     ? <ShieldCheck className="size-3" />
                                                     : <ShieldAlert className="size-3" />}
-                                                {entry.state === 'incomplete' ? 'Incomplete' : entry.verified ? 'Verified' : 'Certified'}
+                                                {teamRunStateLabel(entry.state)}
                                             </span>
                                         </DataTableCell>
                                         <DataTableCell align="right">

@@ -109,7 +109,7 @@ export function TagPreview({ value, alias, userProfile, memberNumber }: {
             </div>
             {numbered && memberNumber == null && (
                 <span className="text-[11px] text-muted-foreground">
-                    Using {SAMPLE_NUMBER} as an example. Assign each member their own number from Manage Members.
+                    Using {SAMPLE_NUMBER} as an example. Assign each member their own number from Member Numbers in the Members panel.
                 </span>
             )}
         </div>

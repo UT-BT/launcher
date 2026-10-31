@@ -135,6 +135,28 @@ export class AuthService {
         return toRendererProfile(config)
     }
 
+    async refreshNow(): Promise<string | null> {
+        const config = getAuthConfig()
+        if (!config) {
+            return null
+        }
+
+        if (!this.refreshPromise) {
+            loggingService.info('Refreshing access token on request...', 'AuthService')
+            this.refreshPromise = this.performRefresh(config).finally(() => {
+                this.refreshPromise = null
+            })
+        }
+
+        try {
+            const refreshed = await this.refreshPromise
+            return refreshed.accessToken
+        } catch (error) {
+            loggingService.error('Failed to refresh access token', 'AuthService', error)
+            return null
+        }
+    }
+
     private async performRefresh(config: AuthConfig): Promise<AuthConfig> {
         const tokens = await this.refreshAccessToken(config.refreshToken)
         const newConfig: AuthConfig = {

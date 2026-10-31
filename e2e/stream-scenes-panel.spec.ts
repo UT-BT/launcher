@@ -1,25 +1,10 @@
 import { expect, test, type Page } from '@playwright/test'
 import { horizontalOverflow } from './layout'
 import { openStreamPanel } from './streamPanels'
+import { STREAM_SCENES } from '../app/components/stream/streamSceneRegistry'
 
 const SLUG = 'stream-cup'
 const STREAMER_ID = '555555555555'
-
-const SCENES = [
-    ['starting-soon', 'Starting Soon'],
-    ['preview', 'Match Preview'],
-    ['pick-ban', 'Pick & Ban'],
-    ['betting', 'Betting'],
-    ['overlay', 'Match Overlay'],
-    ['intermission', 'Intermission'],
-    ['next-map', 'Next Map'],
-    ['post-match', 'Post-match'],
-    ['standings', 'Standings'],
-    ['predictor-standings', 'Predictor Standings'],
-    ['brb', 'BRB'],
-    ['ending', 'Ending'],
-    ['caster', 'Caster Cam'],
-] as const
 
 const EVENT = {
     id: 'event-1',
@@ -97,12 +82,12 @@ test('every scene shows its URL with the streamer id and a copy button', async (
     const panel = page.getByRole('region', { name: 'Scenes' })
     await expect(panel.getByText(/Visual changes reach OBS automatically/)).toBeVisible()
 
-    for (const [id, label] of SCENES) {
+    for (const { id, label } of STREAM_SCENES) {
         const input = panel.getByRole('textbox', { name: `${label} URL`, exact: true })
         await expect(input).toHaveValue(new RegExp(`/stream/${SLUG}/${STREAMER_ID}/${id}$`))
         await expect(panel.getByRole('button', { name: `Copy ${label} URL`, exact: true })).toBeVisible()
     }
-    await expect(panel.getByRole('textbox')).toHaveCount(13)
+    await expect(panel.getByRole('textbox')).toHaveCount(STREAM_SCENES.length)
 
     const brb = panel.getByRole('button', { name: 'Copy BRB URL' })
     await brb.click()

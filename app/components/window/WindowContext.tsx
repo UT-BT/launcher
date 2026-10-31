@@ -19,7 +19,6 @@ export const WindowContextProvider = ({
     title: 'UTBT.net',
     icon: 'appIcon.png',
     titleCentered: true,
-    menuItems: [],
   },
 }: {
   children: React.ReactNode

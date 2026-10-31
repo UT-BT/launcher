@@ -1,6 +1,6 @@
 {
   "name": "utbt-launcher",
-  "version": "1.28.0",
+  "version": "1.29.0",
   "description": "UTBT.net Launcher",
   "main": "./out/main/main.js",
   "license": "MIT",
@@ -24,10 +24,12 @@
     "build:web": "vite build --config vite.config.web.ts",
     "preview:web": "vite preview --config vite.config.web.ts",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
+    "typecheck:e2e": "tsc --noEmit -p tsconfig.e2e.json",
     "test:e2e": "playwright test",
     "test:e2e:live": "cross-env UTBT_LIVE_API=1 playwright test --grep @live",
     "check:bundle": "node scripts/check-web-bundle.mjs",
-    "quality:web": "npm-run-all typecheck:web lint test build:web check:bundle"
+    "docs:check": "node scripts/check-docs.mjs",
+    "quality:web": "npm-run-all typecheck:web typecheck:e2e lint test build:web check:bundle"
   },
   "repository": {
     "type": "git",

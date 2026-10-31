@@ -31,7 +31,7 @@ type ColumnId = 'map' | 'hours' | 'sessions' | 'last_played'
 const COLUMNS: ColumnId[] = ['map', 'hours', 'sessions', 'last_played']
 const COLUMN_WIDTH: Partial<Record<ColumnId, string>> = { hours: '7rem', sessions: '6rem', last_played: '8rem' }
 const COLUMN_PRIORITY: Partial<Record<ColumnId, number>> = { hours: 80, sessions: 40, last_played: 30 }
-const REQUIRED_COLUMNS = new Set<ColumnId>(['map'])
+const REQUIRED_COLUMNS = new Set<ColumnId>(['map', 'hours'])
 
 function formatHours(seconds: number): string {
     const hours = seconds / 3600
@@ -102,6 +102,44 @@ export function PlaytimeBreakdownCard({ accessToken, userId, onMapSelect, tabsSl
     const isVisible = (id: ColumnId): boolean => !resolved || resolved.has(id)
     const visibleColumnCount = COLUMNS.reduce((n, id) => n + (isVisible(id) ? 1 : 0), 0)
 
+    const emptyMessage = query ? 'No playtime matches that search.' : 'No playtime recorded.'
+
+    const compactRows = loading ? (
+        Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} role="listitem" className="p-3 border-b border-hairline/5 last:border-0 animate-pulse">
+                <div className="h-10 rounded bg-hairline/5" />
+            </div>
+        ))
+    ) : items.length === 0 ? (
+        <div role="listitem" className="px-4 py-12 text-center text-sm text-muted-foreground">
+            {emptyMessage}
+        </div>
+    ) : items.map(row => (
+        <div
+            key={row.map}
+            role="listitem"
+            className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-3 border-b border-hairline/5 last:border-0 cursor-pointer"
+            onClick={() => onMapSelect?.(row.map)}
+        >
+            <div className="min-w-0 space-y-1">
+                <div className="flex items-center min-w-0">
+                    <MapNavLink mapName={row.map} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate min-w-0">{displayMapName(row.map)}</MapNavLink>
+                </div>
+                <div className="text-xs text-muted-foreground tabular-nums">
+                    {(row.sessions ?? 0).toLocaleString()} {row.sessions === 1 ? 'session' : 'sessions'}
+                </div>
+            </div>
+            <div className="flex flex-col items-end gap-0.5">
+                <span className="text-sm font-mono tabular-nums font-bold text-amber-200">
+                    {formatHours(row.total_seconds)}
+                </span>
+                <span className="text-xs text-muted-foreground tabular-nums">
+                    {row.last_played ? formatAddedDate(row.last_played) : '—'}
+                </span>
+            </div>
+        </div>
+    ))
+
     return (
         <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between gap-3 gap-y-2 px-4 py-3 border-b border-hairline/5 flex-wrap">
@@ -145,7 +183,13 @@ export function PlaytimeBreakdownCard({ accessToken, userId, onMapSelect, tabsSl
 
             <DataTableShell
                 className="!flex-none !min-h-0 !overflow-visible !rounded-none !border-0"
-                responsive={{ columns: responsiveColumns, onResolve: handleResolve }}
+                responsive={{
+                    columns: responsiveColumns,
+                    nameFloorRem: 14,
+                    onResolve: handleResolve,
+                    compactContent: compactRows,
+                    compactAriaLabel: 'Playtime by map',
+                }}
             >
                 <DataTableHeaderRow>
                     {isVisible('map') && <DataTableHeaderCell sortable sortDirection={dir('map')} onSort={() => handleSort('map')}>Map</DataTableHeaderCell>}
@@ -159,7 +203,7 @@ export function PlaytimeBreakdownCard({ accessToken, userId, onMapSelect, tabsSl
                             <DataTableSkeletonRow key={i} columnCount={visibleColumnCount} />
                         ))
                     ) : items.length === 0 ? (
-                        <DataTableEmpty colSpan={visibleColumnCount} message={query ? 'No playtime matches that search.' : 'No playtime recorded.'} />
+                        <DataTableEmpty colSpan={visibleColumnCount} message={emptyMessage} />
                     ) : (
                         items.map(row => (
                             <DataTableRow

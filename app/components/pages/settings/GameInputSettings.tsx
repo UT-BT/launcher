@@ -35,7 +35,7 @@ export function GameInputSettings() {
 
     const loadSettings = async () => {
         try {
-            const inputSection = await window.conveyor.ini.readIniSection('User.ini', 'Engine.Input') as Record<string, string | string[]> | undefined
+            const inputSection = await window.conveyor.ini.readIniSection('User.ini', 'Engine.Input')
             if (inputSection) {
                 const newBinds: Record<string, string[]> = {}
                 Object.entries(inputSection).forEach(([key, commandValue]) => {
@@ -61,7 +61,7 @@ export function GameInputSettings() {
     }
 
     const ensureAliasExists = useCallback(async (aliasName: string, command: string) => {
-        const inputSection = await window.conveyor.ini.readIniSection('User.ini', 'Engine.Input') as Record<string, string | string[]> | undefined
+        const inputSection = await window.conveyor.ini.readIniSection('User.ini', 'Engine.Input')
         if (!inputSection) return
 
         const aliasMatchRegex = /\(.*?Alias="?(.*?)"?.*?\)/i
@@ -116,7 +116,7 @@ export function GameInputSettings() {
                 await ensureAliasExists(normalizedCommand, ALIAS_DEFINITIONS[normalizedCommand])
             }
 
-            const inputSection = await window.conveyor.ini.readIniSection('User.ini', 'Engine.Input') as Record<string, string | string[]> | undefined
+            const inputSection = await window.conveyor.ini.readIniSection('User.ini', 'Engine.Input')
             if (inputSection) {
                 const keysToRemove: string[] = []
                 Object.keys(inputSection).forEach(existingKey => {
@@ -313,7 +313,7 @@ export function GameInputSettings() {
     const confirmImport = async () => {
         if (!pendingImportData) return
         try {
-            const inputSection = await window.conveyor.ini.readIniSection('User.ini', 'Engine.Input') as Record<string, string | string[]> | undefined
+            const inputSection = await window.conveyor.ini.readIniSection('User.ini', 'Engine.Input')
             if (inputSection) {
                 for (const key of Object.keys(inputSection)) {
                     if (key.match(/Aliases\[(\d+)\]/i)) continue

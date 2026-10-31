@@ -17,7 +17,7 @@ import {
 import { MapReviewsModal } from '@/app/components/modals/MapReviewsModal'
 import { ReplayPickerModal } from '@/app/components/modals/ReplayPickerModal'
 import { ReplayVideoFooter, ReplayVideoPlayer } from '@/app/components/shared/ReplayVideoModal'
-import { openCap, openTeamCap } from '@/app/components/shared/CapTimeLink'
+import { CapTimeLink, openCap, openTeamCap } from '@/app/components/shared/CapTimeLink'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
@@ -31,7 +31,9 @@ import { MultiFilterDropdown } from '@/app/components/ui/multi-filter-dropdown'
 import { FilterPanelRow } from '@/app/components/ui/filter-panel-row'
 import { FilterPresetsMenu } from '@/app/components/shared/FilterPresetsMenu'
 import { persistPresets, newPresetId, presetFiltersMatch, useSyncedPresets } from '@/app/utils/filterPresets'
-import { DIFFICULTY_TIER_RANGES as DIFFICULTY_RANGES } from '@/app/utils/difficulty'
+import { DIFFICULTY_TIER_LABEL, DIFFICULTY_TIER_OPTIONS, DIFFICULTY_TIER_RANGES as DIFFICULTY_RANGES } from '@/app/utils/difficulty'
+import { CAP_TYPE_UTBT_CERTIFIED } from '@/app/utils/capTypes'
+import { mapAuthorName } from '@/app/utils/mapAuthor'
 import { ColumnsMenu } from '@/app/components/shared/ColumnsMenu'
 import { ActiveFilterChip } from '@/app/components/shared/ActiveFilterChip'
 import {
@@ -123,6 +125,7 @@ const DEFAULT_COLUMN_ORDER: ColumnId[] = [
 
 const NON_TABLE_COLUMNS: ReadonlySet<ColumnId> = new Set()
 const REQUIRED_COLUMNS: ReadonlySet<ColumnId> = new Set(['name'])
+const CORE_COLUMNS: ReadonlySet<ColumnId> = new Set(['difficulty', 'world_record', 'pb'])
 
 const COLUMN_WIDTH: Partial<Record<ColumnId, string>> = {
     thumbnail: '3.5rem',
@@ -387,7 +390,7 @@ function getTutorialMockRow(mapName: string): {
         },
         bestCap: {
             map: mapName, cap_id: 'tutorial-mock-pb',
-            cap_time_seconds: 48.234, cap_type: 2, verified: true,
+            cap_time_seconds: 48.234, cap_type: CAP_TYPE_UTBT_CERTIFIED, verified: true,
         },
         wrHolder: {
             user_id: '0', alias: 'TopPlayer', cap_id: 'tutorial-mock-wr',
@@ -524,14 +527,6 @@ function computePageSize(): number {
 
 const SKELETON_ROW_COUNT = 10
 const SEARCH_DEBOUNCE_MS = 200
-
-function getAuthorString(m: Partial<Pick<Map, 'author' | 'author_str'>>): string {
-    const author = m.author
-    if (typeof author === 'string' && author.trim()) return author.trim()
-    if (typeof author === 'number') return String(author)
-    if (m.author_str && m.author_str.trim()) return m.author_str.trim()
-    return ''
-}
 
 function mapHasMatchingTag(m: Map | MapMetadata, term: string): boolean {
     const tags = (m.tags ?? '').toLowerCase().split(',').map(t => t.trim()).filter(Boolean)
@@ -704,7 +699,7 @@ export function MapsPage({
                 id,
                 width: COLUMN_WIDTH[id],
                 priority: COLUMN_PRIORITY[id],
-                required: REQUIRED_COLUMNS.has(id),
+                required: REQUIRED_COLUMNS.has(id) || CORE_COLUMNS.has(id),
             })),
         // eslint-disable-next-line react-hooks/exhaustive-deps
         [columnOrder, columnVisibility, accessToken],
@@ -713,6 +708,8 @@ export function MapsPage({
     const handleResolve = useCallback((ids: Set<string>) => {
         setResolved(ids as Set<ColumnId>)
     }, [])
+    const [compactMode, setCompactMode] = useState(false)
+    const handleCompactChange = useCallback((compact: boolean) => setCompactMode(compact), [])
     const isEffectivelyVisible = (id: ColumnId): boolean =>
         !NON_TABLE_COLUMNS.has(id) && isColumnVisible(id) && (!resolved || resolved.has(id))
     const visibleColumnCount = columnOrder.reduce(
@@ -982,7 +979,7 @@ export function MapsPage({
         opts?: { skipNew?: boolean; skipFavorites?: boolean },
     ): boolean => {
         if (state.authorFilters.length > 0) {
-            const a = getAuthorString(m as Map).toLowerCase()
+            const a = mapAuthorName(m).toLowerCase()
             if (!state.authorFilters.some(f => f.toLowerCase() === a)) return false
         }
         if (state.tagFilters.length > 0) {
@@ -1154,8 +1151,8 @@ export function MapsPage({
             let cmp = 0
             if (state.sortBy === 'name') cmp = a.name.localeCompare(b.name)
             else if (state.sortBy === 'author') {
-                const aA = getAuthorString(a as Map).toLowerCase()
-                const bA = getAuthorString(b as Map).toLowerCase()
+                const aA = mapAuthorName(a).toLowerCase()
+                const bA = mapAuthorName(b).toLowerCase()
                 if (!aA && bA) cmp = 1
                 else if (aA && !bA) cmp = -1
                 else cmp = aA.localeCompare(bA)
@@ -1537,7 +1534,8 @@ export function MapsPage({
         wrHolder: WRHolder | undefined
         medalTier: MedalTier
         isFirstRow: boolean
-        hotRef?: (el: HTMLTableCellElement | null) => void
+        hot: boolean
+        hotRef?: (el: HTMLElement | null) => void
     }
 
     const renderColumnCell = (id: ColumnId, ctx: RowCtx): React.ReactNode => {
@@ -1564,7 +1562,7 @@ export function MapsPage({
                                     />
                                 </span>
 
-                                <Tooltip content="Open map details" side="top">
+                                <Tooltip content="Open map details" side="top" className="min-w-0">
                                     <MapNavLink
                                         mapName={map.name}
                                         onMapSelect={onMapSelect}
@@ -1841,6 +1839,131 @@ export function MapsPage({
         }
     }
 
+    const rows: RowCtx[] = pageItems.map((map, index) => {
+        const author = mapAuthorName(map) || '—'
+        const tags = map.tags
+            ? map.tags.split(',').map(t => t.trim()).filter(Boolean).sort((a, b) => a.localeCompare(b))
+            : []
+        let ratings = caches.avgRatings[map.name]
+        let myReview = caches.myReviews[map.name]
+        let wr = (map as Map).world_record
+        let bestCap = caches.bestCaps[map.name]
+        let wrHolder = caches.wrHolders[map.name]
+        if (tutorialActive && index === 0) {
+            const mock = getTutorialMockRow(map.name)
+            ratings = mock.ratings
+            myReview = mock.review
+            wr = mock.wr
+            bestCap = mock.bestCap
+            wrHolder = mock.wrHolder
+        }
+        return {
+            map, author, tags, ratings, myReview,
+            mapNew: isNew(map.added),
+            wr, bestCap, wrHolder,
+            medalTier: computeMedalTier(bestCap, map as MapMetadata),
+            isFirstRow: index === 0,
+            hot: highlight.isNew(map.added),
+            hotRef: index === firstHotIdx ? highlight.registerFirstNew : undefined,
+        }
+    })
+
+    const renderMapCard = (ctx: RowCtx): React.ReactNode => {
+        const { map, author, mapNew, wr, bestCap, wrHolder, medalTier, isFirstRow } = ctx
+        const isTeamMap = (map.required_players ?? 0) > 1
+        const wrCapId = wrHolder?.cap_id
+        const pbSeconds = bestCap && bestCap.cap_time_seconds > 0 ? bestCap.cap_time_seconds : null
+        const pbCapId = bestCap?.cap_id ?? undefined
+        const isWR = pbSeconds != null && wr != null && wr > 0 && pbSeconds - wr <= 0.0005
+        const timeLabel = 'font-sans text-[9px] uppercase tracking-widest text-muted-foreground font-bold'
+        return (
+            <div
+                key={map.name}
+                ref={ctx.hotRef}
+                role="listitem"
+                className={cn(
+                    'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-3 border-b border-hairline/5 last:border-0',
+                    ctx.hot && 'bg-accent-500/[0.07]',
+                )}
+            >
+                <div className="min-w-0 space-y-1.5">
+                    <div className="flex items-center gap-1 min-w-0">
+                        <span ref={isFirstRow ? firstRowFavRef : undefined} className="inline-flex shrink-0">
+                            <FavoriteStar
+                                name={map.name}
+                                isFavorited={favoriteMapNames.has(map.name)}
+                                onToggle={onToggleFavorite}
+                                size="sm"
+                            />
+                        </span>
+                        <MapNavLink
+                            mapName={map.name}
+                            onMapSelect={onMapSelect}
+                            elementRef={isFirstRow ? firstRowNameRef : undefined}
+                            className="font-bold text-foreground hover:text-accent-300 transition-colors cursor-pointer text-left truncate"
+                        >
+                            {displayMapName(map.name)}
+                        </MapNavLink>
+                        {mapNew && (
+                            <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded bg-accent-500/20 text-accent-300 border border-accent-500/30 uppercase tracking-wider">
+                                New
+                            </span>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-2 min-w-0 text-xs text-muted-foreground">
+                        <span className={cn('font-mono tabular-nums font-bold shrink-0', difficultyTextColor(map.difficulty))}>
+                            {map.difficulty}
+                        </span>
+                        <PlayerInfo userId={map.author_ref} presentation="name" alias={author} size="sm" className="min-w-0" />
+                    </div>
+                </div>
+                <div className="flex flex-col items-end gap-1 font-mono text-sm tabular-nums">
+                    <div className="flex items-center gap-1.5">
+                        <span className={timeLabel}>WR</span>
+                        {wr != null && wr > 0 ? (
+                            <span ref={isFirstRow ? (firstRowWrRef as React.RefObject<HTMLSpanElement | null>) : undefined}>
+                                <CapTimeLink
+                                    capId={isTeamMap ? undefined : wrCapId}
+                                    teamCapId={isTeamMap ? wrCapId : undefined}
+                                    seconds={wr}
+                                    className="text-amber-300"
+                                />
+                            </span>
+                        ) : (
+                            <span className="opacity-30">—</span>
+                        )}
+                    </div>
+                    {accessToken && (
+                        <div className="flex items-center gap-1.5">
+                            <MedalIndicator tier={medalTier} bestCap={bestCap} />
+                            <span className={timeLabel}>PB</span>
+                            {pbSeconds != null ? (
+                                <span ref={isFirstRow ? (firstRowPbRef as React.RefObject<HTMLSpanElement | null>) : undefined}>
+                                    <CapTimeLink
+                                        capId={isTeamMap ? undefined : pbCapId}
+                                        teamCapId={isTeamMap ? pbCapId : undefined}
+                                        seconds={pbSeconds}
+                                        className={pbTextColor(medalTier, isWR)}
+                                    />
+                                </span>
+                            ) : (
+                                <span className="opacity-30">—</span>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+        )
+    }
+
+    const compactContent = showSkeleton ? (
+        Array.from({ length: SKELETON_ROW_COUNT }).map((_, i) => (
+            <div key={i} data-utbt-map-card-skeleton className="h-16 mx-3 my-2 rounded-lg bg-hairline/5 animate-pulse" />
+        ))
+    ) : rows.length === 0 ? (
+        <div className="px-4 py-16 text-center text-muted-foreground">No maps match your filters.</div>
+    ) : rows.map(renderMapCard)
+
     return (
         <div className="space-y-4 h-full flex flex-col overflow-hidden">
             <div className="flex items-end justify-between shrink-0">
@@ -1908,30 +2031,32 @@ export function MapsPage({
                     )}
                 </button>
 
-                <ColumnsMenu<ColumnId>
-                    columnOrder={columnOrder}
-                    columnVisibility={columnVisibility}
-                    columnLabels={COLUMN_LABELS}
-                    onToggle={toggleColumn}
-                    onReorder={reorderColumn}
-                    requiredColumns={REQUIRED_COLUMNS}
-                    excludeFromList={NON_TABLE_COLUMNS}
-                    triggerRef={columnsButtonRef}
-                    menuOpen={columnsMenuOpen}
-                    onMenuOpenChange={setColumnsMenuOpen}
-                    renderExtra={id => id === 'name' ? (
-                        <label className="flex items-center gap-1 text-[10px] text-muted-foreground cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={isColumnVisible('tags')}
-                                onChange={() => toggleColumn('tags')}
-                                aria-label="Toggle tag chips"
-                                className="accent-[var(--accent-500)] cursor-pointer"
-                            />
-                            Show Tags
-                        </label>
-                    ) : null}
-                />
+                {!compactMode && (
+                    <ColumnsMenu<ColumnId>
+                        columnOrder={columnOrder}
+                        columnVisibility={columnVisibility}
+                        columnLabels={COLUMN_LABELS}
+                        onToggle={toggleColumn}
+                        onReorder={reorderColumn}
+                        requiredColumns={REQUIRED_COLUMNS}
+                        excludeFromList={NON_TABLE_COLUMNS}
+                        triggerRef={columnsButtonRef}
+                        menuOpen={columnsMenuOpen}
+                        onMenuOpenChange={setColumnsMenuOpen}
+                        renderExtra={id => id === 'name' ? (
+                            <label className="flex items-center gap-1 text-[10px] text-muted-foreground cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={isColumnVisible('tags')}
+                                    onChange={() => toggleColumn('tags')}
+                                    aria-label="Toggle tag chips"
+                                    className="accent-[var(--accent-500)] cursor-pointer"
+                                />
+                                Show Tags
+                            </label>
+                        ) : null}
+                    />
+                )}
 
             </div>
 
@@ -1972,7 +2097,7 @@ export function MapsPage({
                         <ActiveFilterChip
                             key={`diff-${d}`}
                             label="Difficulty"
-                            value={difficultyOptions.find(([v]) => v === d)?.[1] ?? d}
+                            value={DIFFICULTY_TIER_LABEL[d] ?? d}
                             onClear={() => updateFilter('difficultyFilters', state.difficultyFilters.filter(x => x !== d) as DifficultyValue[])}
                         />
                     ))}
@@ -2056,12 +2181,7 @@ export function MapsPage({
                             label="Difficulty"
                             values={state.difficultyFilters}
                             onChange={v => updateFilter('difficultyFilters', v as DifficultyValue[])}
-                            options={[
-                                ['beginner', 'Beginner (1–3)'],
-                                ['intermediate', 'Intermediate (4–6)'],
-                                ['advanced', 'Advanced (7–8)'],
-                                ['expert', 'Expert (9–10)'],
-                            ]}
+                            options={DIFFICULTY_TIER_OPTIONS}
                         />
                         <MultiFilterDropdown
                             label="Author"
@@ -2195,7 +2315,13 @@ export function MapsPage({
             <DataTableShell
                 scrollRef={scrollContainerRef}
                 onScroll={onScrollContainerScroll}
-                responsive={{ columns: responsiveColumns, onResolve: handleResolve }}
+                responsive={{
+                    columns: responsiveColumns,
+                    onResolve: handleResolve,
+                    compactContent,
+                    compactAriaLabel: 'Maps',
+                    onCompactChange: handleCompactChange,
+                }}
             >
                 <DataTableHeaderRow theadDataAttr="data-utbt-maps-thead">
                     {columnOrder.map(id => renderColumnHeader(id))}
@@ -2206,44 +2332,14 @@ export function MapsPage({
                     ) : pageItems.length === 0 ? (
                         <DataTableEmpty colSpan={visibleColumnCount} message="No maps match your filters." />
                     ) : (
-                            pageItems.map((map, index) => {
-                                const author = getAuthorString(map as Map) || '—'
-                                const tags = map.tags
-                                    ? map.tags.split(',').map(t => t.trim()).filter(Boolean).sort((a, b) => a.localeCompare(b))
-                                    : []
-                                let ratings = caches.avgRatings[map.name]
-                                let myReview = caches.myReviews[map.name]
-                                const mapNew = isNew(map.added)
-                                let wr = (map as Map).world_record
-                                let bestCap = caches.bestCaps[map.name]
-                                let wrHolder = caches.wrHolders[map.name]
-                                if (tutorialActive && index === 0) {
-                                    const mock = getTutorialMockRow(map.name)
-                                    ratings = mock.ratings
-                                    myReview = mock.review
-                                    wr = mock.wr
-                                    bestCap = mock.bestCap
-                                    wrHolder = mock.wrHolder
-                                }
-                                const medalTier = computeMedalTier(bestCap, map as MapMetadata)
-                                const hot = highlight.isNew(map.added)
-                                const isFirstHot = index === firstHotIdx
-                                const ctx: RowCtx = {
-                                    map, author, tags, ratings, myReview, mapNew,
-                                    wr, bestCap, wrHolder, medalTier,
-                                    isFirstRow: index === 0,
-                                    hotRef: isFirstHot ? highlight.registerFirstNew : undefined,
-                                }
-
-                                return (
-                                    <DataTableRow
-                                        key={map.name}
-                                        className={hot ? 'bg-accent-500/[0.07] ring-1 ring-inset ring-accent-500/40' : undefined}
-                                    >
-                                        {columnOrder.map(id => renderColumnCell(id, ctx))}
-                                    </DataTableRow>
-                                )
-                            })
+                            rows.map(ctx => (
+                                <DataTableRow
+                                    key={ctx.map.name}
+                                    className={ctx.hot ? 'bg-accent-500/[0.07] ring-1 ring-inset ring-accent-500/40' : undefined}
+                                >
+                                    {columnOrder.map(id => renderColumnCell(id, ctx))}
+                                </DataTableRow>
+                            ))
                     )}
                 </tbody>
             </DataTableShell>
@@ -2405,13 +2501,6 @@ export function MapsPage({
         </div>
     )
 }
-
-const difficultyOptions: [string, string][] = [
-    ['beginner', 'Beginner (1–3)'],
-    ['intermediate', 'Intermediate (4–6)'],
-    ['advanced', 'Advanced (7–8)'],
-    ['expert', 'Expert (9–10)'],
-]
 
 const ratingTierOptions: [string, string][] = [
     ['excellent', 'Excellent (8.0+)'],

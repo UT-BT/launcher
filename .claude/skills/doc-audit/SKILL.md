@@ -1,49 +1,50 @@
 ---
 name: doc-audit
 description: >-
-  Maintenance check that the agent docs still match the code and leak no
-  closed-source internals. Use when asked to audit/verify the docs, before a
-  release, or after a large refactor — NOT during normal feature work. Diffs each
-  doc's verify_against source files against the documented contract and runs the
-  confidentiality leak gate.
+  Audit the agent docs against the code and run the confidentiality leak gate.
+  Use when asked to audit or verify the docs, before a release, or after a large
+  refactor. Everyday changes use `npm run docs:check` instead.
 ---
 
 # Doc audit
 
-A periodic drift + confidentiality check. Report findings; don't silently
-rewrite — fix with the change author's sign-off and bump `last_verified`.
+Find every place the docs and the code disagree, and anything that leaks backend internals
+into this public repo. Report first; apply fixes once the user agrees.
 
-## 1. Leak gate (must pass)
+## 1. Mechanical check
 
-This repo is public. Grep all markdown for closed-source internals:
+Run `npm run docs:check` and fix its failures (missing paths, broken links, unlisted docs)
+before reading any doc.
 
-```
-DataService|Nebula|Paul-Discord|UTBT_FrontEnd|Flask|SQLAlchemy|RabbitMQ|Python|
-model\.py|data_service|@handle_response|C:\\Development|MapReview\.json
-```
+## 2. Leak gate
 
-Any hit is a leak — generalize it to the client-side contract (endpoint URL +
-response shape only) or remove it. `verify_against` paths must all be inside this
-repo.
+The list of private names to grep for lives outside this repo, in the private workspace
+around it (its `CLAUDE.md` says where and how to run it). Run it over the whole repo: code
+comments and UI strings leak as easily as docs. If you cannot find the list, ask the user for it; the names themselves
+never go into this repo. Rewrite each hit as the client-side contract (endpoint path and
+response shape) or remove it.
 
-## 2. Drift check (per doc)
+## 3. Drift check
 
-Read `agents/_map.md` for the doc list. For each doc, read its frontmatter
-`verify_against` files and confirm the documented contract still holds. High-value
-checks:
+For each doc in `agents/verify.json`, least recently changed first (`git log -1 -- <doc>`),
+read the doc and then its listed sources, and check every statement that names a symbol,
+path, route, storage key, constant or behaviour. Highest-value checks:
 
-- **styling** — the locked class strings vs `app/components/shared/DataTable.tsx`
-  + `app/styles/globals.css`.
-- **conveyor-ipc** — the channel inventory vs `lib/conveyor/api/index.ts` +
-  `schemas/index.ts`; every namespace/method present and named correctly.
-- **navigation** + **state-patterns** — the views, `*_STORAGE_KEY`s, and
-  `*_PREF_KEYS` vs `app/components/main/Main.tsx`; the renderView cases and
-  `navSections` vs `AppLayout.tsx`.
-- **data-sources** — the helper list vs `app/utils/api.ts`.
-- **settings** — `SettingsSectionId` + `BIND_CATEGORIES` vs the settings files.
+- `agents/styling.md`: the locked class strings vs `app/components/shared/DataTable.tsx` and
+  `app/styles/globals.css`.
+- `lib/conveyor/README.md`: namespaces and channel naming vs `lib/conveyor/api/index.ts` and
+  `lib/conveyor/schemas/index.ts`.
+- `agents/navigation.md` and `agents/state-patterns.md`: views, `*_STORAGE_KEY`s and
+  `*_PREF_KEYS` vs `app/components/main/Main.tsx`; sidebar entries vs
+  `app/components/navigation/nav-items.ts`.
+- `agents/api.md` and `agents/features/*`: fetcher names, routes and payload rules vs
+  `app/utils/api.ts` and the feature folders.
+- `app/components/pages/settings/README.md`: `SettingsSectionId` and `BIND_CATEGORIES` vs the
+  settings files.
 
-## 3. Report
+Also flag code a doc describes that its `agents/verify.json` entry does not list.
 
-List each stale/leaking doc with the specific mismatch (documented vs actual) and
-the fix. After fixes are applied, bump each touched doc's `last_verified` and
-update `agents/_map.md` if a doc was added/removed/renamed.
+## 4. Report
+
+Per doc: each mismatch as documented vs actual (`file:line`) and the proposed fix. The audit is
+done when every doc in `agents/verify.json` has a verdict: clean, or its mismatches listed.

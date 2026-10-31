@@ -145,7 +145,7 @@ const panel = search.get('panel') === 'web'
 createRoot(document.getElementById('app') as HTMLElement).render(
     createElement(ThemeProvider, null,
         createElement(HarnessNavigation, null,
-            createElement(StreamTabProvider, { identity }, panel),
+            createElement(StreamTabProvider, { identity, children: panel }),
         ),
     ),
 )

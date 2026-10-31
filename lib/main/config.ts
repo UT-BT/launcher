@@ -2,19 +2,22 @@ import { app, safeStorage } from 'electron'
 import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync } from 'fs'
 import { join } from 'path'
 import { camFpsOf, camVolumeOf, type CamFps } from '@/lib/stream-kit/cam-plan'
+import { loggingService } from './logging-service'
 
 const ENC_PREFIX = 'enc:'
 
 function encryptSecret(value: string): string {
-  if (value && safeStorage.isEncryptionAvailable()) {
-    return ENC_PREFIX + safeStorage.encryptString(value).toString('base64')
-  }
-  return value
+  return value ? ENC_PREFIX + safeStorage.encryptString(value).toString('base64') : value
+}
+
+function holdsPlaintextToken(auth: AuthConfig | undefined): boolean {
+  return [auth?.accessToken, auth?.refreshToken].some(
+    (token) => typeof token === 'string' && token !== '' && !token.startsWith(ENC_PREFIX)
+  )
 }
 
 function decryptSecret(value: string): string {
   if (value.startsWith(ENC_PREFIX)) {
-    if (!safeStorage.isEncryptionAvailable()) return ''
     try {
       return safeStorage.decryptString(Buffer.from(value.slice(ENC_PREFIX.length), 'base64'))
     } catch {
@@ -70,16 +73,23 @@ export function readConfig(): LauncherConfig {
     }
     const raw = readFileSync(file, 'utf-8')
     const stored = JSON.parse(raw) as LauncherConfig & { updater?: unknown }
-    if ('updater' in stored) {
-      const { updater: _updater, ...config } = stored
-      try {
-        writeConfig(config)
-      } catch {
-        // Keep the rest of the config usable if legacy-key cleanup cannot be persisted yet.
-      }
-      return config
+    const plaintextAuth = holdsPlaintextToken(stored.auth)
+    if (!('updater' in stored) && !plaintextAuth) {
+      return stored
     }
-    return stored
+    const { updater: _updater, ...config } = stored
+    if (plaintextAuth) {
+      delete config.auth
+    }
+    try {
+      writeConfig(config)
+      if (plaintextAuth) {
+        loggingService.warn('Removed a sign-in an earlier version saved without encryption; sign in again', 'Config')
+      }
+    } catch {
+      // Keep the rest of the config usable if legacy-key cleanup cannot be persisted yet.
+    }
+    return config
   } catch {
     return {}
   }
@@ -175,7 +185,23 @@ export type AuthConfig = {
   expiresAt: number
 }
 
+let sessionAuth: AuthConfig | undefined
+let sessionOnlyLogged = false
+
+function canStoreTokens(): boolean {
+  if (safeStorage.isEncryptionAvailable()) return true
+  if (!sessionOnlyLogged) {
+    sessionOnlyLogged = true
+    loggingService.warn(
+      'Encryption is unavailable on this machine; sign-ins are kept in memory for this session only',
+      'Config'
+    )
+  }
+  return false
+}
+
 export function getAuthConfig(): AuthConfig | undefined {
+  if (!canStoreTokens()) return sessionAuth
   const auth = readConfig().auth
   if (!auth) return undefined
   return {
@@ -186,6 +212,11 @@ export function getAuthConfig(): AuthConfig | undefined {
 }
 
 export function setAuthConfig(auth: AuthConfig): void {
+  if (!canStoreTokens()) {
+    sessionAuth = auth
+    removeStoredAuth()
+    return
+  }
   const current = readConfig()
   const stored: AuthConfig = {
     ...auth,
@@ -196,9 +227,13 @@ export function setAuthConfig(auth: AuthConfig): void {
 }
 
 export function clearAuthConfig(): void {
-  const current = readConfig()
-  const { auth: _auth, ...rest } = current
-  writeConfig(rest)
+  sessionAuth = undefined
+  removeStoredAuth()
+}
+
+function removeStoredAuth(): void {
+  const { auth, ...rest } = readConfig()
+  if (auth) writeConfig(rest)
 } export type DemoWatcherConfig = {
   autoUpload: 'Never' | 'Personal Bests Only' | 'World Records Only'
   postUploadAction: 'Do Nothing' | 'Move to Folder' | 'Delete'

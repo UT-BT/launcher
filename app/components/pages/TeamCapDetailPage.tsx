@@ -37,6 +37,7 @@ import {
     type LeaderboardEntry,
     type UserProfile,
 } from '@/app/utils/api'
+import { teamRunStateLabel } from '@/app/utils/teamRunState'
 
 interface TeamCapDetailPageProps {
     teamCapId: string
@@ -440,11 +441,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                                     : 'bg-hairline/5 border-hairline/10 text-muted-foreground',
                                         )}>
                                             <ShieldCheck className="size-3.5" />
-                                            {detail.state === 'verified'
-                                                ? 'Verified'
-                                                : detail.state === 'pending'
-                                                    ? 'Pending'
-                                                    : 'Incomplete'}
+                                            {teamRunStateLabel(detail.state)}
                                         </span>
                                     )}
                                     {(detail.completed_at || detail.added) && (

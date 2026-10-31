@@ -1,6 +1,6 @@
-import { join } from 'path'
+import { join, resolve } from 'path'
 import { exec, spawn } from 'child_process'
-import { existsSync, createReadStream, createWriteStream, mkdirSync, copyFileSync, readdirSync, rmSync, renameSync, statSync, readFileSync } from 'fs'
+import { existsSync, createReadStream, createWriteStream, mkdirSync, copyFileSync, readdirSync, rmSync, renameSync, statSync, readFileSync, writeFileSync } from 'fs'
 import { app, BrowserWindow, dialog, net } from 'electron'
 import { createHash } from 'crypto'
 import { demoWatcherService } from '@/lib/main/demo-watcher-service'
@@ -11,6 +11,19 @@ import { parseIni } from '../conveyor/handlers/ini-handler'
 import { resolveWithin } from '@/lib/main/path-safety'
 import { camService } from '@/lib/main/cam-service'
 import { hasPlayerGameProcess, parseTasklistPids } from '@/lib/main/game-processes'
+
+const INSTALL_PROFILE_MARKER = 'install.json'
+
+type InstallProfileRole = 'original' | 'default'
+
+function isReservedProfileName(name: string): boolean {
+    return /^original( \(\d+\))?$/.test(name.replace(/[. ]+$/, '').toLowerCase())
+}
+
+function sameInstallPath(a: string, b: string): boolean {
+    const normalize = (p: string) => (process.platform === 'win32' ? resolve(p).toLowerCase() : resolve(p))
+    return normalize(a) === normalize(b)
+}
 
 export class GameService {
     async selectInstallDirectory(window: BrowserWindow): Promise<string | undefined> {
@@ -34,15 +47,81 @@ export class GameService {
         return dir
     }
 
-    private getProfileCount(baseName: string): number {
+    private nextFreeProfileName(baseName: string): string {
         const profilesDir = this.getProfilesDir()
-        return readdirSync(profilesDir, { withFileTypes: true })
+        let name = baseName
+        for (let n = 1; existsSync(resolveWithin(profilesDir, name)); n++) {
+            name = `${baseName} (${n})`
+        }
+        return name
+    }
+
+    private assertNotReserved(name: string): void {
+        if (isReservedProfileName(name)) {
+            throw new Error(`Profile name "${name}" is reserved`)
+        }
+    }
+
+    private findInstallProfiles(installPath: string): Partial<Record<InstallProfileRole, string>> {
+        const profilesDir = this.getProfilesDir()
+        const found: Partial<Record<InstallProfileRole, string>> = {}
+        const names = readdirSync(profilesDir, { withFileTypes: true })
             .filter(dirent => dirent.isDirectory())
-            .filter(dirent => dirent.name === baseName || dirent.name.startsWith(`${baseName} (`))
-            .length
+            .map(dirent => dirent.name)
+            .sort()
+
+        for (const name of names) {
+            const markerPath = join(profilesDir, name, INSTALL_PROFILE_MARKER)
+            if (!existsSync(markerPath)) continue
+            try {
+                const marker = JSON.parse(readFileSync(markerPath, 'utf-8')) as { installPath?: unknown; role?: unknown }
+                if (typeof marker.installPath !== 'string' || !sameInstallPath(marker.installPath, installPath)) continue
+                if ((marker.role === 'original' || marker.role === 'default') && !found[marker.role]) {
+                    found[marker.role] = name
+                }
+            } catch (error) {
+                loggingService.warn('Unreadable profile install marker', 'GameService', { name, error })
+            }
+        }
+        return found
+    }
+
+    private async createInstallProfile(role: InstallProfileRole, installPath: string): Promise<string> {
+        const name = this.nextFreeProfileName(role === 'original' ? 'Original' : 'Default')
+        const profilePath = await this.writeProfile(name, installPath)
+        writeFileSync(join(profilePath, INSTALL_PROFILE_MARKER), JSON.stringify({ installPath, role }))
+        return name
+    }
+
+    private async ensureInstallProfiles(installPath: string, previousInstallPath: string | undefined): Promise<void> {
+        const known = this.findInstallProfiles(installPath)
+        const originalName = known.original ?? await this.createInstallProfile('original', installPath)
+        const defaultName = known.default ?? await this.createInstallProfile('default', installPath)
+
+        const active = getActiveProfile()
+        const keepActive = previousInstallPath !== undefined
+            && sameInstallPath(previousInstallPath, installPath)
+            && active !== undefined
+            && existsSync(resolveWithin(this.getProfilesDir(), active))
+        if (!keepActive) {
+            setActiveProfile(defaultName)
+        }
+
+        loggingService.info('Install profiles ready', 'GameService', {
+            originalName,
+            defaultName,
+            reused: Object.keys(known),
+            activeProfile: getActiveProfile(),
+        })
     }
 
     async createProfile(name: string, installPath: string): Promise<void> {
+        this.assertNotReserved(name)
+        await this.writeProfile(name, installPath)
+        setActiveProfile(name)
+    }
+
+    private async writeProfile(name: string, installPath: string): Promise<string> {
         const profilesDir = this.getProfilesDir()
         const profilePath = resolveWithin(profilesDir, name)
 
@@ -59,7 +138,7 @@ export class GameService {
                 loggingService.info(`Backed up ${file} to profile ${name}`, 'GameService')
             }
         }
-        setActiveProfile(name)
+        return profilePath
     }
 
     async listProfiles(): Promise<{ name: string; modifiedAt: string }[]> {
@@ -117,6 +196,8 @@ export class GameService {
     }
 
     async renameProfile(oldName: string, newName: string): Promise<void> {
+        this.assertNotReserved(oldName)
+        this.assertNotReserved(newName)
         const profilesDir = this.getProfilesDir()
         const oldPath = resolveWithin(profilesDir, oldName)
         const newPath = resolveWithin(profilesDir, newName)
@@ -142,6 +223,7 @@ export class GameService {
     }
 
     async deleteProfile(name: string): Promise<void> {
+        this.assertNotReserved(name)
         const profilesDir = this.getProfilesDir()
         const profilePath = resolveWithin(profilesDir, name)
 
@@ -375,6 +457,7 @@ export class GameService {
         }
 
         // 4. Save Settings
+        const previousInstallPath = getUt99InstallPath()
         setUt99InstallPath(path)
         setInstalledPatch({
             tag: version,
@@ -388,17 +471,9 @@ export class GameService {
 
         // 5. Create "Original" and "Default" profiles if needed
         try {
-            const originalCount = this.getProfileCount('Original')
-            const originalName = 'Original' + (originalCount > 0 ? ` (${originalCount})` : '')
-            await this.createProfile(originalName, path)
-
-            const defaultCount = this.getProfileCount('Default')
-            const defaultName = 'Default' + (defaultCount > 0 ? ` (${defaultCount})` : '')
-            await this.createProfile(defaultName, path)
-
-            loggingService.info('Created Original and Default profiles', 'GameService', { originalName, defaultName })
+            await this.ensureInstallProfiles(path, previousInstallPath)
         } catch (error) {
-            loggingService.error('Failed to create initial profiles', 'GameService', error)
+            loggingService.error('Failed to prepare install profiles', 'GameService', error)
         }
 
         // 6. Notify renderer of successful installation path update

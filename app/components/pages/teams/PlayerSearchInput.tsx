@@ -75,7 +75,7 @@ export function PlayerSearchInput({
                     <button
                         type="button"
                         onClick={() => { setQuery(''); setResults([]) }}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-white cursor-pointer"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                     >
                         <X className="size-3.5" />
                     </button>
@@ -83,7 +83,7 @@ export function PlayerSearchInput({
             </div>
 
             {open && query.trim().length >= 2 && (
-                <div className="absolute z-20 mt-1 w-full max-h-72 overflow-auto bg-popover border border-white/10 rounded-lg shadow-2xl p-1">
+                <div className="absolute z-20 mt-1 w-full max-h-72 overflow-auto bg-popover border border-hairline/10 rounded-lg shadow-2xl p-1">
                     {loading ? (
                         <div className="px-3 py-3 text-sm text-muted-foreground">Searching…</div>
                     ) : error ? (
@@ -96,7 +96,7 @@ export function PlayerSearchInput({
                                 key={player.id}
                                 type="button"
                                 onClick={() => pick(player)}
-                                className="w-full flex items-center px-2 py-1.5 rounded-md hover:bg-white/5 transition-colors cursor-pointer text-left"
+                                className="w-full flex items-center px-2 py-1.5 rounded-md hover:bg-hairline/5 transition-colors cursor-pointer text-left"
                             >
                                 <PlayerInfo
                                     userId={player.id}

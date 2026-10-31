@@ -9,6 +9,8 @@ import { cn } from '@/lib/utils'
 import { formatCapTime, displayMapName } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
 import type { LeaderboardEntry, TeamLeaderboardEntry, MapMetadata } from '@/app/utils/api'
+import { isCertifiedCap } from '@/app/utils/capTypes'
+import { medalThresholdsFromWorldRecord, teamWorldRecord } from '@/app/utils/medalThresholds'
 
 interface CapTimeDistributionModalProps {
     open: boolean
@@ -19,13 +21,6 @@ interface CapTimeDistributionModalProps {
     currentUserId?: string | number
     isTeam?: boolean
     teamLeaderboard?: TeamLeaderboardEntry[]
-}
-
-const TEAM_MEDAL_MULTIPLIERS = {
-    champion_medal: 1.025,
-    gold_medal: 1.125,
-    silver_medal: 1.30,
-    bronze_medal: 1.60,
 }
 
 interface Bucket {
@@ -98,24 +93,18 @@ export function CapTimeDistributionModal({
             }))
         }
         return leaderboard
-            .filter(e => e.cap_type === 2)
+            .filter(isCertifiedCap)
             .map(e => ({
                 time: e.cap_time_seconds,
                 isOwn: userIdStr != null && String(e.user) === userIdStr,
             }))
     }, [isTeam, teamLeaderboard, leaderboard, userIdStr])
 
-    const teamWorldRecord = useMemo(() => {
-        if (!isTeam) return null
-        const verified = teamLeaderboard.filter(e => e.verified).map(e => e.cap_time_seconds)
-        if (verified.length === 0) return null
-        return Math.min(...verified)
-    }, [isTeam, teamLeaderboard])
-
     const effectiveMap = useMemo<MapMetadata | null>(() => {
         if (!isTeam) return map
         if (!map) return null
-        if (teamWorldRecord == null) {
+        const worldRecord = teamWorldRecord(teamLeaderboard)
+        if (worldRecord == null) {
             return {
                 ...map,
                 world_record: undefined,
@@ -125,15 +114,8 @@ export function CapTimeDistributionModal({
                 bronze_medal: undefined,
             }
         }
-        return {
-            ...map,
-            world_record: teamWorldRecord,
-            champion_medal: teamWorldRecord * TEAM_MEDAL_MULTIPLIERS.champion_medal,
-            gold_medal: teamWorldRecord * TEAM_MEDAL_MULTIPLIERS.gold_medal,
-            silver_medal: teamWorldRecord * TEAM_MEDAL_MULTIPLIERS.silver_medal,
-            bronze_medal: teamWorldRecord * TEAM_MEDAL_MULTIPLIERS.bronze_medal,
-        }
-    }, [isTeam, map, teamWorldRecord])
+        return { ...map, ...medalThresholdsFromWorldRecord(worldRecord) }
+    }, [isTeam, map, teamLeaderboard])
 
     const sortedTimes = useMemo(
         () => rows.map(r => r.time).sort((a, b) => a - b),

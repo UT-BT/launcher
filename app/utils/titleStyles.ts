@@ -1,13 +1,14 @@
 import { CSSProperties } from 'react'
 import { ActiveTitle } from '@/app/utils/api'
+import { isLightTheme } from '@/app/theme/themes'
 
 export function hasTitle(title?: ActiveTitle | null): title is ActiveTitle {
     return !!title && !!title.name
 }
 
-function isLightTheme(): boolean {
+function isDocumentLight(): boolean {
     return typeof document !== 'undefined'
-        && document.documentElement.getAttribute('data-theme') === 'light'
+        && isLightTheme(document.documentElement.getAttribute('data-theme'))
 }
 
 function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
@@ -62,7 +63,7 @@ function titleColorForLight(r: number, g: number, b: number): string {
     return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`
 }
 
-export function getReadableTitleColor(r: number, g: number, b: number, light: boolean = isLightTheme()): string {
+export function getReadableTitleColor(r: number, g: number, b: number, light: boolean = isDocumentLight()): string {
     if (light) {
         return titleColorForLight(r, g, b)
     }
@@ -76,7 +77,7 @@ export function getReadableTitleColor(r: number, g: number, b: number, light: bo
     return `rgb(${r}, ${g}, ${b})`
 }
 
-export function getAvatarBorderStyle(title?: ActiveTitle | null, light: boolean = isLightTheme()): CSSProperties {
+export function getAvatarBorderStyle(title?: ActiveTitle | null, light: boolean = isDocumentLight()): CSSProperties {
     const baseStyle: CSSProperties = {
         border: `1px solid ${light ? 'rgba(15,23,42,0.12)' : 'rgba(255,255,255,0.15)'}`,
     }
@@ -107,7 +108,7 @@ export function getAvatarBorderStyle(title?: ActiveTitle | null, light: boolean 
     }
 }
 
-export function getTitleTextStyle(title?: ActiveTitle | null, light: boolean = isLightTheme()): CSSProperties {
+export function getTitleTextStyle(title?: ActiveTitle | null, light: boolean = isDocumentLight()): CSSProperties {
     if (!title || !title.rarity) {
         return { color: light ? '#64748b' : '#6c757d' }
     }

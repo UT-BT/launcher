@@ -1,278 +1,209 @@
----
-doc: navigation
-read_when:
-  - "adding a new view/page to the nav stack or sidebar"
-  - "opening a detail page or wiring a click that navigates"
-  - "anything touching Back/Forward, history, or per-entry state keying"
-keywords: [navigate, Main.tsx, AppLayout, NavEntry, useNavigation, open-player, open-cap, renderView, HISTORY_CAP, back, forward, NavLink, href, new tab, EventTab, scheduleView, ScheduleView, tab=schedule, schedulePlayedOpen, tab=stream, streamTabVisible, parseStreamScenePath, eventLink, eventSlugOfView, isEventLinkLive, resolveNavBadge, attentionNavBadge, shortLabel, navItemCaption, collapsed rail, SidebarCollapseToggle, Ctrl+B, sidebarCollapsed, --sidebar-width]
-provides: "the whole navigation model: stack, navigate() funnel, renderView, sidebar registry, event-driven detail pages"
-not_here:
-  - "where page state / persistence lives → state-patterns.md"
-  - "the PlayerInfo / CapTimeLink components that trigger nav → shared-components.md"
-  - "the Schedule tab's own visibility rule and its audiences → data-sources.md"
-sections: [the-model, navigate-is-the-only-entry-point, leave-guards, url-sync-web-build, link-semantics, page-views-vs-detail-pages, the-sidebar-registry, sidebar-parts-and-the-collapsed-rail, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state, shareable-match-links, event-team-page, teams-tab-roster-or-stats, manage-matches-caps-need-linking, match-pickban-page]
-last_verified: 2026-10-30
-verify_against:
-  - app/components/main/Main.tsx
-  - app/components/navigation/NavLink.tsx
-  - app/components/layout/AppLayout.tsx
-  - app/components/navigation/nav-items.ts
-  - app/components/navigation/NavigationContext.tsx
-  - app/components/navigation/useNavState.ts
-  - app/components/navigation/useUnsavedChanges.ts
-  - app/components/navigation/routes.ts
-  - app/components/navigation/useUrlSync.ts
-  - app/components/navigation/useDocumentMeta.ts
-  - app/components/navigation/titles.ts
-  - app/components/navigation/matchLinks.ts
-  - app/public/route-contract.json
-  - app/components/pages/EventDetailPage.tsx
-  - app/components/pages/EventTeamPage.tsx
-  - app/components/pages/events/stats/StatsOverview.tsx
-  - app/components/pages/events/stats/statsView.ts
-  - app/components/pages/events/stats/statsTab.ts
-  - app/components/pages/events/stats/team/MatchTimeline.tsx
-  - app/components/pages/events/stats/team/TeamRunsTable.tsx
-  - app/components/pages/events/manage/matches/CapsNeedLinking.tsx
-  - app/components/pages/events/manage/matches/MatchesPanel.tsx
-  - app/utils/signupWindow.ts
-  - app/components/pages/MatchPickBanPage.tsx
-  - app/components/pages/events/pickban/components/PickBanSoundControl.tsx
-  - app/components/pages/events/schedule/ScheduleTabContainer.tsx
-  - app/components/pages/events/schedule/PublicSchedulePanel.tsx
-  - app/components/pages/events/stream/streamTabAccess.ts
-  - app/components/pages/events/stream/streamPanels.ts
-  - app/components/pages/admin/registry.tsx
-  - app/components/pages/admin/types.ts
-  - app/components/pages/admin/sections/mapUploads/useMapUploadsNav.ts
-  - app/components/pages/admin/sections/MapsManagementSection.tsx
-  - app/components/stream/streamScenes.ts
-  - app/components/navigation/routes.contract.test.ts
-  - app/components/layout/sidebar/SidebarNavItem.tsx
-  - app/components/layout/sidebar/SidebarBrand.tsx
-  - app/components/layout/sidebar/SidebarActions.tsx
-  - app/components/layout/sidebar/SidebarCollapseToggle.tsx
-  - app/components/layout/sidebar/SidebarUserCard.tsx
-  - app/components/layout/sidebarPreference.ts
----
-
 # Navigation
 
-There is **no URL router**. `Main.tsx` owns an in-memory history stack and a
-`switch` that renders the active view. Everything else funnels through one
-`navigate()`. On the **web build only**, the browser URL mirrors the stack —
-see [URL sync (web build)](#url-sync-web-build); desktop stays URL-less.
+How the app moves between views: the in-memory history stack in `Main.tsx`, the one
+`navigate()` funnel, `renderView`, routes and web URL sync, links, the sidebar registry
+and rail, badges, and the refresh button. Read it before adding a view, a link, a sidebar
+item or anything that touches Back/Forward. What state lives where is in
+[state-patterns.md](state-patterns.md).
 
-## The model
+There is no URL router. `Main.tsx` owns a history stack and a `switch` that renders the
+active entry. On the web build the browser URL mirrors that stack; desktop has no URL.
 
-`Main.tsx` holds two pieces of state:
+## The stack
 
-```ts
-const [entries, setEntries] = useState<NavEntry[]>(() => [{ id: 0, view: 'home', params: {}, state: {} }])
-const [cursor, setCursor] = useState(0)
-```
+`Main.tsx` holds `entries: NavEntry[]` and `cursor`. `NavEntry` and `NavParams` live in
+`app/components/navigation/NavigationContext.tsx`:
 
-- **`NavEntry`** (`app/components/navigation/NavigationContext.tsx`) =
-  `{ id, view, params: NavParams, state: Record<string, unknown> }`. `id` is a
-  monotonic counter; `state` is the per-entry bag (see below).
-- **`NavParams`** = `{ mapName?, playerId?, capId?, teamCapId?, newsId?, teamId?, eventSlug?,
-  eventTab?, matchId?, eventTeamId?, mapsNewOnly? }` — the params a view can carry. Add a field
-  here if a new detail page needs a different identifier, or if a page must open
-  in a specific state. A view is not limited to one param — `match-pickban` reads
-  both `eventSlug` and `matchId`, and `event-team` reads `eventSlug` and `eventTeamId` — but `paramsEqual` (below) must compare every
-  field the view uses, or a param-only change silently no-ops as "already here".
-  `mapsNewOnly` seeds the Maps page's new-only filter when opened from the Home
-  "new maps" tile; `MapsPage` reads it via its `initialNewOnly` prop on mount.
-  (Seed page state through params like this — never by mutating another page's
-  per-entry state before `navigate()`.)
-  `eventTab` seeds which tab `EventDetailPage` opens on; the tab identity (its
-  `EventTab` union, the `BASE_TABS` list, which tabs are visible/hidden) is owned
-  entirely by that page, not by this doc or by `routes.ts` — `viewToPath` /
-  `pathToNav` just round-trip whatever string is there through `?tab=`. Adding a
-  new tab (e.g. the public Maps tab listing each stage's pick/ban pool) is therefore a change local
-  to `EventDetailPage.tsx` with no routing/`route-contract.json`/title change
-  needed, the same way Schedule and Predictions needed none.
-  `EventTab` is `'info' | 'teams' | 'bracket' | 'maps' | 'predictions' | 'achievements'
-  | 'schedule' | 'players' | 'signup' | 'stream' | 'manage'`; a tab not in the currently visible set (its
-  gate — bracket presence, a Maps pool, `predictions_enabled`, `achievements_enabled`, the Schedule tab's
-  own visibility rule in `agents/data-sources.md`, the Stream tab's `streamTabVisible`
-  rule below — failing, or `manage` without
-  `canManageBracket`) silently falls back to `info` rather than erroring.
-  `players` (Looking for Partner) and `signup` are hidden once
-  `signupsClosed(event, now)` (`app/utils/signupWindow.ts`) is true — signups no
-  longer open and the status is `signups_closed`/`active`/`completed`/`archived`,
-  or an `announced` event's `signup_closes_at` has passed; a stored or `?tab=`
-  value for either then falls back to `info`. Manage → Signups stays for managers.
-  **`?tab=schedule` now serves both audiences from the one link.** Before the
-  bracket read lands, `EventDetailPage` doesn't yet know whether Schedule is
-  visible, so the tab reads as `info`; once `fetchEventBracket` resolves,
-  `scheduleTabVisible` re-evaluates and the view switches to Schedule if it
-  applies — a captain lands on their actions (My Matches, defaulted by
-  `autoScheduleView`) and an anonymous viewer or spectator lands on the public
-  timeline (All Matches), from the exact same `/events/<slug>?tab=schedule` URL.
-  This fallback is derived on every render, the same as the other tab gates
-  above, and never rewrites the URL — a Discord booking link built before this
-  feature still opens the right view with no change on either end.
-  **`?tab=stream` works the same way.** The Stream tab (`StreamTab`, lazy) is in
-  `BASE_TABS`, so `?tab=stream` is a valid initial tab, but it is visible only when
-  `streamTabVisible` (`events/stream/streamTabAccess.ts`) passes: signed in AND
-  (the viewer is on the streamer roster, which is global, OR can manage the bracket). Both
-  facts come from the viewer's event status read, so until it lands the tab reads
-  as `info` and switches to Stream once it resolves; a viewer who fails the rule
-  (signed out, or neither on the roster nor a manager) stays on `info`. Derived per
-  render, never rewrites the URL. The Stream tab's content is in
-  `agents/data-sources.md` (stream kit). The tab's panels, in order: **Match · Cams · Score · Studio │ Setup · Guide**
-  (`streamPanels.ts`; a `role="separator"` divider sits between the live group and the setup
-  group). The default-panel rule: a remembered panel wins; with none, Setup opens when the
-  streamer has no kit downloaded and Match otherwise (also when the kit read fails), and nothing
-  is pressed ("Loading your stream desk…") while the kit state loads. Old ids (`show`, `channel`,
-  `kit`, `scenes`) fall through to that rule, and only a click is remembered. A `#guide-<id>` hash
-  is read only by an already-open Guide panel, not by a fresh load. Details and the state keys are
-  in `agents/state-patterns.md`. `e2e/stream-tab.spec.ts` checks the order and divider and that each
-  panel opens without horizontal overflow at 390 and 1920 px.
-- The stack is **in-memory only** — it boots to a single `home` entry on every
-  launch and is never persisted. (Preferences persist; history doesn't — see
-  `state-patterns.md`.)
+- `NavEntry` is `{ id, view, params, state }`. `id` is a monotonic counter; `state` is the
+  entry's own bag (see [Per-entry state bag](#per-entry-state-bag)).
+- `NavParams` is every identifier a view can carry. A view may read several (`match-pickban`
+  reads `eventSlug` + `matchId`, `event-team` reads `eventSlug` + `eventTeamId`). When you
+  add a field, add it to `paramsEqual` too: a field it doesn't compare makes a param-only
+  change a silent "already here" no-op.
+- Seed another page's initial state through a param, never by writing into its entry
+  state before `navigate()`. Example: `mapsNewOnly` (Home's "new maps" tile) reaches
+  `MapsPage` as its `initialNewOnly` prop.
+- The stack lives in memory only. It boots from `seedEntriesFromUrl()`: one `home` entry
+  on desktop, the URL's target on web. History is never persisted; preferences are.
 
-The active entry (`entries[cursor]`) is exposed through `NavigationContext`;
-components read it via `useNavigation()`.
+Components read the active entry and the nav functions through `useNavigation()`
+(`entry`, `currentView`, `navigate`, `back`, `forward`, `canBack`, `canForward`,
+`getEntryState`, `setEntryState`, `registerLeaveGuard`).
 
 ## `navigate()` is the only entry point
 
-```ts
-navigate(view: string, params?: NavParams)
-```
+`navigate(view, params?)`:
 
-- No-op if the active entry already matches (`view` + `paramsEqual(params)`).
-- Otherwise it **truncates forward history** (`entries.slice(0, cursor + 1)`),
-  pushes a new entry with a fresh empty `state` bag, and points the cursor at it.
-- Capped at `HISTORY_CAP` (50) — overflow drops from the front and the cursor
-  shifts with it.
+- checks the [leave guards](#leave-guards), then `commitNavigate` runs `markViewed(view)`
+  (see [badges](#sidebar-badges-and-the-new-item-highlight)) before anything else;
+- is a no-op when the active entry already has that `view` and `paramsEqual` params;
+- otherwise drops forward history, pushes a new entry with an empty `state` bag and moves
+  the cursor to it;
+- caps the stack at `HISTORY_CAP` (50), dropping from the front.
 
-`back()` / `forward()` just move the cursor (clamped); `canBack` / `canForward`
-gate the UI. Back/forward also fire on **mouse buttons 3/4** and
-on **Alt+←/→** (suppressed while typing in an input/textarea/select/contentEditable);
-both custom handlers are skipped on the web build, where the browser natively maps
-those inputs to history navigation. `NavHistoryBar` (rendered in `AppLayout`) is
-the back/forward + refresh button bar **on desktop only** — on web the whole
-bar never renders (`IS_WEB`; browser chrome owns history and reload).
+`back()` / `forward()` move the cursor (clamped). On desktop they also fire on mouse
+buttons 3/4 and on Alt+←/→ (ignored while typing in an input, textarea, select or
+contentEditable). `NavHistoryBar` (Back, Forward and the shared Refresh button) renders on
+desktop only; on web the browser owns history and reload.
 
-**Rule: never add a second navigation mechanism.** No raw `setCurrentView`, no
-parallel back stack. Sidebar clicks, `openMap`, and the `open-*` events all call
-`navigate()`. This is hard rule 6. (URL sync below is not a second mechanism —
-it mirrors this stack, it never drives it except on external entry.)
+Sidebar clicks, `openMap`, the `open-*` window events and every `NavLink` all end in
+`navigate()`. Add no second mechanism: no raw `setCurrentView`, no parallel back stack
+(hard rule 6). URL sync mirrors the stack and drives it only on external entry.
 
-## Leave guards (unsaved work)
+## Per-entry state bag
 
-A view whose edits live only in component state registers a guard, and `navigate`,
-`back` and `forward` all consult it before moving:
+Each entry's `state` is read and written through `getEntryState(key, default)` /
+`setEntryState(key, value)` on the active entry. Two hooks sit on it:
+
+- `usePageState` (in `Main.tsx`) stores a primary page's query state under
+  `page:<storageKey>`.
+- `useNavState(key, default)` stores a detail page's transient UI under `key`.
+
+A fresh `navigate()` starts with an empty bag, so the page opens from defaults;
+Back/Forward return to the entry and restore its bag. On web, a `popstate` whose entry is
+gone (external entry, or trimmed by `HISTORY_CAP`) pushes a fresh entry with an empty bag.
+How to use the hooks, and which tier a value belongs in:
+[state-patterns.md](state-patterns.md).
+
+## Leave guards
+
+A view whose edits live only in component state registers a guard; `navigate`, `back` and
+`forward` consult every guard before moving:
 
 ```ts
 useUnsavedChanges(dirty, 'The tournament format has edits you have not saved yet.')
 ```
 
-`useUnsavedChanges` (`app/components/navigation/useUnsavedChanges.ts`) does two
-things: it registers the guard through `registerLeaveGuard` on the navigation
-context, and it arms `beforeunload`. Both are needed — the guard catches in-app
-moves, `beforeunload` catches a reload, a closed tab, and the real anchor links the
-web build uses for nav targets.
+`useUnsavedChanges` (`app/components/navigation/useUnsavedChanges.ts`) registers the guard
+through `registerLeaveGuard` and arms `beforeunload` while `dirty`. The guard covers in-app
+moves and, on web, the browser's own Back/Forward, which arrive as `popstate` and pass the
+same check ([URL sync](#routes-and-url-sync-web-build)); `beforeunload` covers a reload, a
+closed tab and a hard navigation.
 
-When a guard returns a message, `Main` parks the move in `pendingLeave` and opens a
-confirm modal; confirming calls `commitNavigate` (or the parked `back`/`forward`),
-which goes around the guard rather than through it. Navigating to the view you are
-already on skips the check, so clicking the current sidebar item never prompts.
+When a guard returns a message, `Main` parks the move in `pendingLeave` and shows a
+"Leave without saving?" confirm; confirming calls `commitNavigate` (or the parked
+`back`/`forward` or browser history move), which bypasses the guards. Navigating to the
+entry you are on skips the check. `e2e/history-leave-guards.spec.ts` covers browser Back,
+Forward and a multi-entry jump with and without unsaved work.
 
-Two things to keep right:
+- `registerLeaveGuard` returns the unregister function; return it from the effect. A guard
+  that outlives its view blocks the whole app.
+- The guard closure is registered once, so read the dirty flag through a ref (the hook
+  does).
+- Unmounting is not navigation, and a guard dies with its component. Put the guard and the
+  unsaved state it reads above everything that unmounts. Mirroring a child's dirty flag up
+  through effects races the child's unmount and sticks. `EventDetailPage` therefore owns
+  the drafts outright: `formatDraft` (dirty = `!== null`) and `pickBanDrafts` (one draft
+  per stage key, dirty while any key exists), with the Manage panels controlled by them.
+  Switching tabs keeps the edit.
 
-- **Always return the unregister function.** `registerLeaveGuard` returns it and the
-  hook returns it straight from `useEffect`. A guard that outlives its view blocks
-  the whole app.
-- **Read the flag through a ref.** The guard closure is registered once; reading
-  `dirty` directly would freeze it at its first value.
+## renderView: page-views and detail pages
 
-Unmounting a view is NOT navigation, so a guard cannot catch it, and a guard
-belonging to a component that unmounts stops existing with it. **Put the guard —
-and the unsaved state it reads — above everything that unmounts.**
+`renderView()` switches on `currentView` and returns exactly one element, inside a
+per-view `ErrorBoundary` (`variant="view"`, keyed on `entry.id`) around `Suspense`. A page
+crash shows an inline error card with the shell intact, and any navigation resets the
+boundary. Unknown views render `Home`.
 
-Mirroring a child's dirty flag up through effects does not work: the child
-unmounts on a tab change, its reset races the parent's own update, and the flag
-sticks. `EventDetailPage` instead owns the format builder's draft outright and
-`FormatPanel` is controlled by it. The draft IS the unsaved state, so `dirty` is
-just `draft !== null` — there is no second value to keep in step, and switching
-tabs preserves the edit rather than destroying it. Manage → Pick/Ban follows the same
-pattern with `pickBanDrafts`, one draft per stage key, dirty whenever any key exists.
+| Kind | Views | Keyed | Why |
+|---|---|---|---|
+| Page-views | `home`, `servers`, `maps`, `players`, `teams`, `events`, `cap-it-all`, `world-records`, `achievements`, `news`, `admin` | no | One instance per view, reused across entries of that view. A view change still unmounts it. Its state and data survive because they are hoisted to `Main` (per-entry state via `usePageState`, data via a `caches` singleton); anything in the page's own `useState` refetches on every visit. |
+| Detail pages | `maps-detail`, `player-detail`, `cap-detail`, `team-cap-detail`, `news-detail`, `team-detail`, `event-detail`, `match-pickban`, `event-team` | `key={entry.id}` | Each visit remounts, so it fetches for its new param and `useNavState` reads the right bag. Without the key the page keeps the previous visit's data and UI state. |
 
-## URL sync (web build)
+Detail cases read their identifier from `entry.params` (`mapName!`, `playerId!`, …).
 
-Files: `app/components/navigation/routes.ts` (`viewToPath` / `pathToNav`) +
-`app/components/navigation/useUrlSync.ts`. Desktop is untouched — `useUrlSync`
-returns `null` unless `IS_WEB`, and `pushUrlForEntry` no-ops.
+Lazy loading: page-views other than `Home` are `lazy(PAGE_LOADERS.<view>)`
+(`app/components/main/pageLoaders.ts`), the same loaders `prefetchPage` warms on sidebar
+hover/focus. Detail pages are plain `lazy()` imports in `Main.tsx` with no loader entry.
+`Main.tsx` imports only types from a lazy page module; state/cache types and defaults
+live in `<Page>.types.ts`. `pageLoaders.test.ts` enforces both and pins the loader list.
 
-Model: **the in-memory stack stays master; browser history mirrors it.**
+To make a page-view refetch after a mutation made elsewhere, clear its cache slice before
+navigating to it, as `exitTeamsToGallery` does for `teams`.
 
-- `Main.tsx` seeds `entries` from the URL (`seedEntriesFromUrl`) and the boot
-  effect `replaceState`s the canonical path (unknown paths normalize to `/`).
-- `navigate()` also calls `pushUrlForEntry(entry)` → `history.pushState({navId},
-  '', viewToPath(...))`.
-- In-app Back/Forward delegate to `history.back()/forward()` on web; the
-  `popstate` handler looks up `event.state.navId` in the stack and moves the
-  cursor. A `navId` that is missing (external entry, `HISTORY_CAP` trim) falls
-  back to `pathToNav` and pushes a fresh entry — its per-entry state starts
-  empty, which is accepted.
-- `/auth/callback` is consumed before React mounts (see `agents/web-target.md`)
-  and never becomes a view.
-- The **stream scene pages** (`/stream/:eventSlug/:streamerId/:scene`, the OBS
-  browser sources) are pre-shell routes too, not app routes: no `routes.ts` case,
-  no `route-contract.json` entry, no title. `parseStreamScenePath`
-  (`app/components/stream/streamScenes.ts`) reads a five-segment `/stream/...`
-  path back to `{ eventSlug, streamerId, scene }`, and `renderer-web.tsx` mounts
-  the scene root instead of `Main` (see `agents/web-target.md` → `pre-shell-routes`).
-  The scene ids are the thirteen in `STREAM_SCENES`; the Next Map page is `.../next-map`,
-  seventh after Intermission (see `agents/web-target.md`).
-  `streamScenePath` / `streamSceneUrl` build them (the URL form uses
-  `VITE_SITE_ORIGIN`, like the match links). `routes.contract.test.ts` pins that
-  the contract has no `/stream` route, that every scene path (and an unknown
-  scene id) is claimed by `parseStreamScenePath`, that `pathToNav` sends them
-  (with or without `?preview=1`) only to the unknown-path fallback, and that
-  `parseStreamScenePath` never claims a real app route.
+## Routes and URL sync (web build)
 
-Path scheme: `/` home, `/servers`, `/maps` (+`?new=1`), `/maps/:mapName`,
-`/players`, `/players/:playerId`, `/teams`, `/teams/:teamId`, `/events`,
-`/events/:eventSlug` (+`?tab=`), `/events/:eventSlug/matches/:matchId`,
-`/world-records`, `/cap-it-all`, `/caps/:capId`, `/team-caps/:teamCapId`,
-`/achievements`, `/news`, `/news/:newsId`, `/admin`; unknown → `/`. Adding a view
-= add both directions in `routes.ts`, same commit.
+`app/components/navigation/routes.ts` maps both ways: `viewToPath(view, params)` and
+`pathToNav(pathname, search)`. Unknown paths resolve to `home`. `pathToNav` reads as many
+segments as a route needs and checks exact segment counts, so
+`/events/:slug/matches/:id` and `/events/:slug/teams/:id` resolve only with exactly four
+segments and anything else under `/events/:slug` stays on `event-detail`.
 
-A route can carry more than one path param — `pathToNav` reads as many
-segments as it needs (`const [head, second, third, fourth] = segments`), not
-just the first two. `/events/:eventSlug/matches/:matchId` is the current
-example: the `events` case checks for a `matches/:matchId` tail under a given
-slug before falling back to the single-param `event-detail` case.
+On web (`useUrlSync.ts`; on desktop `useUrlSync` returns `null` and `pushUrlForEntry`
+no-ops) the in-memory stack is master and browser history mirrors it. Each history entry's
+state is `{ navId, position }`: the stack entry's `id` and the entry's place in the tab's
+history, one more than the entry it was pushed from.
 
-**Adding a route is now a three-file change.** `app/public/route-contract.json`
-ships the same table for per-URL link previews (see `agents/web-target.md` → SEO
-and link previews), and `titles.ts` supplies the tab title. Each contract entry
-takes a `params` array (in path order) instead of a single `param` — omit it for
-a route with no path params, list every param for one with several.
-`routes.contract.test.ts` fails if any of the three drift — it asserts the
-contract's view list equals the `case` labels in `viewToPath`, round-trips every
-path (substituting a sample value per param), and requires a non-default title
-per view.
+- The boot effect reads `position` from `history.state` (0 when there is none, so a reload
+  keeps it) and `replaceState`s the canonical path of the seeded entry.
+- `commitNavigate` calls `pushUrlForEntry(entry)` (`pushState({ navId, position }, …)` with
+  the next position). A push also drops a confirmed position that never got its `popstate`
+  (a `go` past either end of history), so it can't wave through a later move.
+- In-app Back/Forward (already past `Main`'s guard check) mark the neighbouring position as
+  confirmed and call `history.go(-1)` / `go(1)`.
+- The `popstate` handler ignores a `position` equal to the current one, then runs the
+  [leave guards](#leave-guards) unless the move was confirmed. When a guard blocks, it calls
+  `history.go(current - target)`, so the URL returns to the current entry with forward
+  history intact and the cursor never moves, and hands the move to `Main` through
+  `onBlocked({ message, move })`. `Main` shows the same confirm; Leave runs `move`, which
+  marks the target confirmed and replays `history.go(target - current)`. A jump of several
+  entries (the Back button's history menu) is put back and replayed whole.
+- A move that passes finds `state.navId` in the stack and moves the cursor; a missing
+  `navId` falls back to `pathToNav` and `pushExternal`, which pushes a fresh entry (and runs
+  `markViewed`).
+- An entry with no `position` can't be put back reliably, so the move onto it skips the
+  guard check and takes the next position; only the `pushExternal` path stamps that into
+  the entry's state. That fits a fragment link, which arrives with a `null` state and is
+  always pushed forward. An entry left by a build from before positions carries only a
+  `navId` and may sit behind the current one, so in a tab open across that update a later
+  block can put the URL back to the wrong entry.
 
-**Document metadata.** `Main.tsx` calls `useDocumentMeta(currentView,
-entry.params)` right after resolving the active entry; it sets `document.title`
-and the canonical link on every navigation. Detail pages additionally call
-`useDocumentTitle(name)` once loaded — React flushes child effects before the
-parent's, so the generic title lands first and the specific one replaces it when
-data arrives. Do **not** hook this into `useUrlSync`'s effect: its deps are
-`[stackRef, setCursor, pushExternal]` and `stackRef` is a ref, so it does not
-re-run on navigation.
+**Adding a route touches three files in one commit:** both directions in `routes.ts`, an
+entry in `app/public/route-contract.json` (path, view, unique `kind`, and a `params` array
+in path order when the path has params; it drives per-URL link previews, see
+[web-target.md](web-target.md)), and a title in `titles.ts`.
+`routes.contract.test.ts` fails on drift: the contract's views must equal the `case`
+labels in `viewToPath`, every route must round-trip, every view needs a non-default
+title, and every non-admin route must stay crawlable under `app/public/robots.txt`.
+
+**Pre-shell routes are not app routes.** `/auth/callback`, the match stream view
+`/events/:slug/matches/:id/stream` and the stream scene pages `/stream/:eventSlug/:streamerId/:scene`
+are claimed in `app/renderer-web.tsx` before the app shell mounts. They have no
+`routes.ts` case, no contract entry and no title; `pathToNav` sends them to the unknown-path
+fallback, and `routes.contract.test.ts` pins that. Mechanism:
+[web-target.md](web-target.md); scenes: [stream-kit.md](features/stream-kit.md).
+
+**Document metadata (web only).** `Main.tsx` calls `useDocumentMeta(currentView,
+entry.params)`, which sets `document.title` from `titleForRoute` and the canonical link on
+every navigation. A detail page refines the title with `useDocumentTitle(name)` once its
+data is in; React runs child effects before the parent's, so the generic title lands first
+and the specific one replaces it. Don't move this into `useUrlSync`'s effect: its deps are
+refs and setters, so it doesn't re-run on navigation.
+
+## Event detail tabs
+
+`eventTab` seeds which tab `EventDetailPage` opens on; `routes.ts` round-trips it as
+`?tab=` without knowing the values. The tab set (`EventTab`, `BASE_TABS`, the Manage tab)
+and every visibility gate belong to `EventDetailPage.tsx`, so adding a tab needs no route,
+contract or title change.
+
+- The open tab is nav state `event.tab`, seeded from `initialTab` (an unknown value seeds
+  `info`). Clicking a tab changes nav state only, never the URL, so Back/Forward restore it.
+- Each render derives the visible tabs and the active tab from gates: Bracket needs bracket
+  stages; Maps needs a stage with a pick/ban pool; Predictions and Achievements need the
+  event's `predictions_enabled` / `achievements_enabled`; Schedule follows
+  `scheduleTabVisible` ([event-scheduling.md](features/event-scheduling.md)); Stream follows
+  `streamTabVisible` ([stream-kit.md](features/stream-kit.md)); Looking for Partner
+  (`players`) and Signup hide once `signupsClosed(event, now)` (`app/utils/signupWindow.ts`);
+  Manage needs `canManageBracket`.
+- A stored or `?tab=` tab whose gate fails renders `info`, silently. The URL is never
+  rewritten. Gates fed by a later read (the bracket, the viewer's event status) read as
+  closed until it lands, so `?tab=schedule` shows Info first and switches once the data
+  allows it.
 
 ## Link semantics (`NavLink`)
 
-Anything the user clicks to navigate must render through **`NavLink`**
-(`app/components/navigation/NavLink.tsx`) — never a bare `<button onClick={...}>`
-or a `div role="button"`.
+Render anything the user clicks to navigate through `NavLink`
+(`app/components/navigation/NavLink.tsx`):
 
 ```tsx
 <NavLink view="player-detail" params={{ playerId: userId }} onActivate={() => openPlayer(userId)}>
@@ -280,623 +211,237 @@ or a `div role="button"`.
 </NavLink>
 ```
 
-- **Web build:** renders `<a href={viewToPath(view, params)}>`. Right-click "Open
-  link in new tab", middle-click, ctrl/cmd-click and "Copy link address" all work,
-  and the browser shows the target in the status bar. A modified click
-  (ctrl/meta/shift/alt, or any non-primary button) is left to the browser; a plain
-  click is `preventDefault`ed and handed to `onActivate`, so in-app navigation
-  still goes through the one `navigate()` funnel. This is **not** a second
-  navigation mechanism — the href mirrors `routes.ts`, exactly like URL sync.
-- **Desktop build:** renders a `<button type="button">` (or `as="div"` +
-  `role="button"` + Enter/Space handling when a button element would be invalid or
-  restyle the surface). No hrefs — the shell has no address bar.
+- **Web:** an `<a href={viewToPath(view, params)}>`, so new tab, middle-click, copy link and
+  the status-bar preview work. A modified or non-primary click is left to the browser; a
+  plain click is `preventDefault`ed and calls `onActivate`, which goes through `navigate()`.
+- **Desktop:** a `<button type="button">`, or with `as="div"` a `role="button"` element with
+  Enter/Space handling, for places where a button is invalid or restyles the surface.
+- `disabled` renders an inert `<span>` (or the `as` element), so a click falls through to an
+  enclosing clickable row. `stopPropagation` defaults to `true` so a link inside a
+  clickable row doesn't fire the row too.
+- The web branch is an `<a>`, where Tailwind's `enabled:` variant never matches; express
+  disabled and hover styling with `cn(..., !disabled && '…')`.
 
-Other props: `disabled` (renders a plain inert `<span>` — for "not navigable
-here" states; clicks fall through to an enclosing clickable row instead of being
-swallowed by a disabled button), `stopPropagation` (default `true`, so a link inside a
-clickable row doesn't double-fire), `elementRef` (the underlying element, e.g. for
-tutorial anchors), `ariaLabel`, `title`, `onPointerEnter`/`onFocus` (chunk
-prefetch).
+Markup rules:
 
-Because the web branch is an `<a>`, Tailwind's `enabled:` variant does not apply
-(`:enabled` only matches form elements) — express disabled/hover styling with
-`cn(..., !disabled && '...')` instead.
+1. Never nest a `NavLink` in another: nested anchors are invalid and the browser closes
+   the outer one. When a card holds its own links, link the card's title and its call to
+   action instead of the whole card.
+2. Table rows (`<tr>`) stay plain click handlers; the row's name and time cells are the
+   links.
+3. An interactive element inside a link (e.g. `PatreonBadge` inside `PlayerInfo`) calls
+   `preventDefault()` as well as `stopPropagation()`; otherwise the browser still follows
+   the enclosing href.
 
-Two rules keep the markup valid:
+`PlayerInfo`, `CapTimeLink`, `MapNavLink` and `MapNameCell` already wrap `NavLink`
+([shared-components.md](shared-components.md)).
 
-1. **Never nest a `NavLink` inside another `NavLink`** — nested anchors are invalid
-   HTML and the browser silently closes the outer one. When a card contains its own
-   links (an external article link, an interactive `PlayerInfo`), link the card's
-   *title* and its call-to-action instead of the whole card.
-2. `<tr>` rows stay plain click handlers. The row's name cell and time cell are
-   already links, which is what "open in a new tab" needs.
-3. An interactive descendant of a link (e.g. `PatreonBadge` inside `PlayerInfo`)
-   must call `preventDefault()` as well as `stopPropagation()`. Stopping
-   propagation only silences the React handler — the browser still follows the
-   enclosing anchor's href and hard-navigates the page.
+## Window-event navigation
 
-Shared components that already wrap `NavLink` for you: `PlayerInfo`,
-`CapTimeLink`, `MapNameCell`, `MapNavLink` (see `shared-components.md`), plus the
-sidebar items and Home section "See All" buttons.
+Identity and time components don't import `navigate`; they dispatch a `window`
+`CustomEvent` that `Main.tsx` (or `AppLayout`) handles. Render the component or call its
+helper rather than dispatching by hand.
 
-## Page-views vs detail-pages
-
-`renderView()` switches on `currentView`. The whole thing is wrapped in a
-per-view `ErrorBoundary` (`variant="view"`, keyed on `entry.id`) around the
-lazy-loading `Suspense`, so a page crash shows an inline error card with the
-shell and nav stack intact, and any navigation automatically resets the
-boundary. The root boundaries in the renderer entries stay as last resort.
-Two kinds of case:
-
-| Kind | Views | Keyed? | Why |
+| Event | Detail | Dispatched by | Handled as |
 |---|---|---|---|
-| **Page-views** | `home`, `servers`, `maps`, `players`, `teams`, `cap-it-all`, `world-records`, `achievements`, `news`, `admin` | **No** — one reused instance per view | Not-keyed means no remount between *entries of the same view*. It does **not** mean the component survives a view change: `renderView()` returns exactly one element, so `home` -> `maps` unmounts `Home`. State and data survive because they are hoisted to `Main` — per-entry via `usePageState`, data via a `caches` singleton — and read back on remount, **not** because the component stays mounted. A page-view that keeps data in its own `useState` refetches it on every visit. |
-| **Detail-pages** | `maps-detail`, `player-detail`, `cap-detail`, `news-detail`, `team-detail`, `event-detail`, `match-pickban`, `event-team` | **Yes — `key={entry.id}`** | A new visit must remount so it refetches for the new param and `useNavState` re-reads the right entry's bag. |
+| `open-player` | `{ userId }` | `PlayerInfo`, the profile menu | `navigate('player-detail', { playerId })` |
+| `open-cap` | `{ capId }` | `CapTimeLink` / `openCap()` | `navigate('cap-detail', { capId })` |
+| `open-team-cap` | `{ teamCapId }` | `CapTimeLink` / `openTeamCap()` | `navigate('team-cap-detail', { teamCapId })` |
+| `open-news` | `{ newsId }` | `ArticleCard` via `openNews()` (`navigation/openNews.ts`) | `navigate('news-detail', { newsId })` |
+| `open-settings` | `{ section? }` | installation banner, Cam tool, titlebar Settings button | `AppLayout` opens the Settings modal at that section |
+| `open-change-title` | none | Home's profile doorway | `AppLayout` opens the Change Title modal |
 
-Detail cases pull their identifier from `entry.params` (`mapName!` / `playerId!` /
-`capId!` / `newsId!` / `teamId!`). Forgetting `key={entry.id}` on a detail case is a bug: the page keeps
-the previous visit's data and UI state. `team-detail` (`TeamDetailsPage`) is role-aware:
-it fetches `/teams/<id>` + `/me/team`, derives `viewerRole` (owner/admin/member/none) +
-`isOwnTeam`, and renders management / member / public branches accordingly; leave/disband/
-join/accept/decline route back to the `teams` gallery and force it to refresh.
+`openMap(name)` is a direct helper (`navigate('maps-detail', { mapName })`) passed to pages
+as `onMapSelect`. Settings is a modal, never a view; the profile menu's Settings item opens
+it through local state.
 
 ## The sidebar registry
 
-The left rail is data, not markup. The section registry, its item types, the
-destination, event-of-view, active-state and Live-tag rules live in
-`app/components/navigation/nav-items.ts` — a small pure module with no React, so
-it's tested without mounting anything. `AppLayout.tsx`
-imports from it and renders each item through `SidebarNavItem` (see
-[Sidebar parts and the collapsed rail](#sidebar-parts-and-the-collapsed-rail)):
+The rail is data. `app/components/navigation/nav-items.ts` is a pure module (no React,
+tested without mounting) holding the sections, the item type and every rule about items:
 
-```ts
-export const BASE_NAV_SECTIONS: NavSection[] = [
-  { title: 'Main', items: [{ id: 'home', label: 'Home', icon: Home }, /* … */] },
-  { title: 'UTBT.net', items: [{ id: 'maps', /* … */ }] },
-  // …
-]
+- `BASE_NAV_SECTIONS` lists the sections; `buildNavSections(userProfile)` appends the Staff
+  section (Admin) when `isStaff(userProfile)`. `AppLayout` renders each item through
+  `SidebarNavItem`.
+- A `NavItem` is `{ id, label, icon, shortLabel?, eventLink? }`. A plain item opens the
+  page-view named by its `id`. An item with `eventLink: { slug, fullName, liveUntil }` opens
+  that event's `event-detail` instead; there are no free-form view/params fields.
+- `navItemDestination(item)` resolves `{ view, params }`. Every sidebar entry renders as a
+  `NavLink` to its destination, prefetches that view on hover/focus, and on activation
+  calls `changeView` (close the mobile drawer, then `onViewChange`, which is `navigate`).
+- `eventSlugOfView(view, params)` says which event a view belongs to: `event-detail`,
+  `match-pickban` and `event-team` belong to `params.eventSlug`, anything else to none. Use
+  it for any "is this view part of event X?" rule instead of listing the event views.
+- `isNavItemActive(item, view, params)`: a plain item is active on its own view; an event
+  link is active whenever `eventSlugOfView` gives its slug (the event page with any tab, its
+  match pages, its team pages). The plain `events` item is never active on an event page.
+- `isEventLinkLive(eventLink, now)` decides the Live tag: through the whole `liveUntil` day
+  in the viewer's local time zone, compared against the local start of the next day (the
+  day is never parsed as a UTC instant). `AppLayout` passes `new Date()` each render. Only
+  the tag expires; remove the item by hand after the event.
+- `navItemCaption(item)` is `shortLabel ?? label`, the only source of rail captions. Set
+  `shortLabel` only when the label doesn't fit a rail tile; `nav-items.test.ts` pins the
+  captions of the live registry, so update it with any `shortLabel`.
 
-export function buildNavSections(userProfile?: UserProfile): NavSection[] {
-  if (!isStaff(userProfile)) return BASE_NAV_SECTIONS
-  return [...BASE_NAV_SECTIONS, { title: 'Staff', items: [{ id: 'admin', label: 'Admin', icon: ShieldAlert }] }]
-}
-// in AppLayout: const navSections = useMemo(() => buildNavSections(userProfile), [userProfile])
-```
+Each `id` is unique. To add a page-view to the sidebar, add its `renderView` case and a
+plain item (skill: add-data-page). To link an event, add an item with `eventLink` and no
+`renderView` case.
 
-A `NavItem` is either a **plain item** (`id`, `label`, `icon`, an optional
-`shortLabel`, nothing else) or carries one optional **event link**:
+**Accessible name.** It starts with the visible text: the label (or, collapsed, the
+caption, then the full label as `sr-only` when it differs), then the event's `fullName`
+(`sr-only`), then the badge details (`sr-only`), then "Live" (the visible chip expanded,
+`sr-only` collapsed).
 
-```ts
-interface EventLink {
-  slug: string
-  fullName: string
-  liveUntil: CalendarDay
-}
-
-interface NavItem {
-  id: string
-  label: string
-  shortLabel?: string
-  icon: ElementType
-  eventLink?: EventLink
-}
-```
-
-**Rail captions.** The collapsed rail shows a short caption under each icon.
-`navItemCaption(item)` (exported next to `navItemDestination`) returns
-`item.shortLabel ?? item.label`, and it is the only source of captions: the rail
-never shortens or invents a name itself. Set `shortLabel` only when the label
-doesn't fit the rail tile (see `agents/styling.md`, collapsed rail). Today two
-items have one: World Records reads "Records" and Achievements reads "Awards".
-Every other caption is the label. `nav-items.test.ts` pins this against the live
-registry, so adding a `shortLabel` means updating that test too.
-
-`slug` is the event's slug, `fullName` its real name (read to screen readers), and
-`liveUntil` the last day the Live tag shows, written `'YYYY-MM-DD'`
-(`CalendarDay`). There are no free-form `view` / `params` / `tag` fields: a
-sidebar item either opens its own page-view or links an event.
-`navItemDestination(item)` resolves
-`{ view, params }` (`NavDestination`): a plain item goes to its `id` with empty
-params; an event link goes to `event-detail` with `{ eventSlug: slug }`. The
-`cup-2v2-2026` item (`Main`, right after `achievements`, icon `Globe`) is the only
-event link today:
-
-```ts
-{ id: 'cup-2v2-2026', label: '2v2 Cup', icon: Globe,
-  eventLink: { slug: '2v2-cup-2026', fullName: '2v2 World Cup 2026', liveUntil: '2026-11-22' } }
-```
-
-Removing the link after the cup is deleting that one entry.
-
-**Live tag.** An event link shows the red `Live` status chip, the only thing in the
-row's right-aligned trailing slot (badges sit on the icon, see below), so the label
-area stays text only (see `agents/styling.md`, sidebar status tag and sidebar
-badges). `isEventLinkLive(eventLink, now)` decides whether it shows: through the
-whole `liveUntil` day **in the viewer's local time zone**, and hidden from local
-midnight at the start of the next day (it compares `now` against the local start
-of the day after `liveUntil`, so it never parses the day as a UTC instant).
-`AppLayout` passes `new Date()` on each render, so the tag drops on the next render
-after that midnight. Only the tag expires; the link itself stays until it is removed
-by hand. Labels never wrap: the label truncates, so keep it short enough to fit
-beside the tag in the 16rem rail (about 110px of label), and give the item a
-caption that fits the collapsed rail too. In the collapsed rail the chip becomes a
-red dot on the icon's top-left corner (see the collapsed rail below).
-
-**Accessible name.** An event link's name starts with the visible label and then
-adds the full name, so voice control can use the visible text and screen readers
-hear which event it opens (WCAG 2.5.3, label in name). `SidebarNavItem` renders, in
-order: the visible `label`, a `sr-only` span with `fullName`, the `sr-only` badge
-details (see sidebar badges below), then the `Live` chip. The cup link reads
-"2v2 Cup 2v2 World Cup 2026 … Live". In the collapsed rail the visible text is the
-caption, so the order becomes: the caption, the full `label` as `sr-only` (only
-when it differs from the caption), `fullName`, the badge details, then a `sr-only`
-"Live" where the chip was. The name still starts with the visible text.
-
-Every sidebar entry renders through `NavLink` with its resolved destination
-`view`/`params` (an anchor with the right href on web, a button on desktop; see
-Link semantics below). Activation calls `onViewChange(view, params)`, which
-`Main.tsx` wires straight to `navigate` — `AppLayout`'s `onViewChange` prop is
-`(view: string, params?: NavParams) => void`. Hover/focus prefetch
-(`prefetchPage`) also uses the destination view; `event-detail` is lazy-loaded by
-`renderView` itself and intentionally has no `PAGE_LOADERS` entry (the pinned
-loader-key list in `pageLoaders.test.ts` stays as the page-view set).
-
-**Which event a view belongs to** is one pure function, `eventSlugOfView(view,
-params): string | null`: `event-detail`, `match-pickban` and `event-team` belong to
-`params.eventSlug`; any other view, or an event view without a slug, belongs to
-none (`null`). Use it wherever a rule asks "is this view part of event X?" rather
-than re-listing the event views.
-
-**Active state** is one pure function, `isNavItemActive(item, currentView,
-currentParams)`:
-- a plain item is active when `currentView` equals its `id`;
-- an event link is active when `eventSlugOfView(currentView, currentParams)` is
-  its `slug` — so on the event page, on that event's match picks & bans pages and on its team pages.
-  `eventTab` is ignored, so switching tabs never flickers the highlight.
-
-`AppLayout` reads the current entry's params from `useNavigation()` (it already
-renders inside `NavigationContext.Provider`) and passes them to
-`isNavItemActive` for every item. `events` is a plain item, so it keeps today's
-behaviour: never highlighted on `event-detail`, consistent with Maps/Players/etc.
-
-Each `item.id` must be unique and, for a page-view item, match a `renderView`
-case; clicking calls `changeView(view, params)` — a thin wrapper that closes the
-mobile drawer and then calls `onViewChange`. Below the `lg` breakpoint the same
-sidebar `<aside>` renders as an off-canvas drawer behind a hamburger top bar (see
-`agents/web-target.md`, responsive-layout). To add a sidebar page with its own
-view: add the `renderView` case **and** a plain `nav-items.ts` item. To link an
-event instead, give the item an `eventLink` and skip the `renderView` case; the
-event page is the existing `event-detail` view. (Settings is **not** a view —
-it's a modal opened from the user dropdown / the `open-settings` window event.)
-
-The closed mobile drawer is marked `inert` so its hidden controls cannot receive
-focus or clicks. `AppLayout` listens to the same `1023px` media-query boundary as
-the `lg` shell styles and removes `inert` when the sidebar becomes desktop-visible;
-keep those states synchronized when changing the responsive navigation.
+**Gated pages.** Hide the item and guard the case: Admin is appended only for staff
+(`app/utils/roles.ts`), and the `admin` case passes `forceDenied={!isStaff(userProfile)}`
+so a forced visit renders a denied card. The admin page is a hub of sections
+(`app/components/pages/admin/registry.tsx`, each with its `roles`); a section is the
+`activeSection` field of the admin page state, so switching sections (from the section
+nav or a section's `onNavigate`) never adds a history entry. Admin sections:
+[admin.md](features/admin.md), [map-uploads.md](features/map-uploads.md).
 
 ## Sidebar parts and the collapsed rail
 
-The sidebar's parts live in `app/components/layout/sidebar/`. `AppLayout.tsx`
-keeps every piece of state (the drawer, `inert`, the login error, the logout
-confirm, Settings, Change Title, the collapsed choice) and passes it down; the
-parts only render:
+The parts live in `app/components/layout/sidebar/` and only render; `AppLayout.tsx` keeps
+every piece of state (drawer, `inert`, login error, logout confirm, Settings, Change
+Title, the collapsed choice) and passes it down:
 
 | Part | Renders |
 |---|---|
-| `SidebarBrand` | the logo and its seasonal-burst click |
-| `SidebarActions` | Join Server and Launch Game (with its disabled state); desktop only, renders nothing without `capabilities.game` |
-| `SidebarNavItem` | one nav row or rail tile: icon, badges, label or caption, Live chip or dot, tooltip |
-| `SidebarCollapseToggle` | the icon-only collapse toggle, placed in `SidebarBrand`'s top-left corner |
-| `SidebarUserCard` | the signed-in profile dropdown, or the signed-out Discord login and its error |
+| `SidebarBrand` | logo (with its seasonal-burst click) and, at `lg`+, the collapse toggle in its top-left corner |
+| `SidebarActions` | Join Server and Launch Game; returns nothing without `capabilities.game` |
+| `SidebarNavItem` | one nav row or rail tile: icon, badge marks, label or caption, Live chip or dot, tooltip |
+| `SidebarCollapseToggle` | the icon-only collapse toggle |
+| `SidebarUserCard` | the signed-in profile menu, or the Discord login and its error |
 
-`SidebarActions` and `SidebarUserCard` read capabilities through `usePlatform()`
-themselves rather than taking them as props, so the web build can still drop
-desktop-only markup from its entry chunk.
+`SidebarActions` and `SidebarUserCard` read capabilities through `usePlatform()` themselves
+so the web entry chunk can drop desktop-only markup.
 
-**Two modes at `lg` and up.** The rail is either expanded (16rem, the full
-sidebar) or collapsed (5rem, icons over short captions). The effective mode is
-`collapsed = collapsePreference && !isMobileViewport`: the preference applies only
-at `lg` and up. Below `lg` the drawer is always the full expanded sidebar, the
-toggle is hidden and the shortcut isn't attached; the stored choice is kept
-and comes back when the window is wide again. `AppLayout` publishes the rail's
-width as `--sidebar-width` on `document.documentElement` (`16rem`, `5rem`, or `0px`
-below `lg`) in a layout effect, so overlays that sit beside the rail follow it
-(see `agents/styling.md`, sidebar width). Switching modes is instant, with no width
-transition.
+**Modes.** At `lg` and up the rail is expanded (16rem) or collapsed (5rem). The effective
+mode is `collapsePreference && !isMobileViewport`. Below `lg` the sidebar is always the
+full drawer, the toggle isn't rendered and the shortcut isn't attached; the stored choice
+returns when the window is wide again. `AppLayout` publishes the width as
+`--sidebar-width` on `document.documentElement` (`16rem`, `5rem`, `0px` below `lg`) in a
+layout effect; overlays beside the rail read it ([styling.md](styling.md)). Switching is
+instant.
 
-**The preference.** `utbt:sidebarCollapsed:v1`, a device-local JSON boolean in
-`app/components/layout/sidebarPreference.ts` (see `agents/state-patterns.md`, key
-table). It is read once as the `useState` initialiser, so a collapsed rail is
-painted collapsed on the first frame, with no flash. `toggleCollapsed` writes it
-and then sets state; nothing else writes it.
+**Preference.** `utbt:sidebarCollapsed:v1` in `app/components/layout/sidebarPreference.ts`,
+device-local. `readSidebarCollapsed()` is the `useState` initialiser, so a collapsed rail
+paints collapsed on the first frame; only a stored `true` counts. Only `toggleCollapsed`
+writes it.
 
-**The toggle.** `SidebarCollapseToggle` is a small icon-only `button`,
-`max-lg:hidden`, named "Collapse sidebar" or "Expand sidebar", with
-`aria-expanded={!collapsed}` and `aria-controls="app-navigation"` (the `aside`'s
-id). It shows `PanelLeftClose` when expanded and `PanelLeftOpen` when collapsed, with
-no visible text in either mode. Its tooltip reads "Collapse sidebar (Ctrl+B)" or
-"Expand sidebar (Ctrl+B)" and opens on the right in both modes. `AppLayout` passes it
-to `SidebarBrand` as `toggle`, which pins it to the sidebar's top-left corner: centred
-on the collapsed rail's centre line (40px from the left edge) at the same height in
-both modes. Expanded, it sits in the logo header's corner, clear of the centred logo,
-and nothing else moves; collapsed, the header grows at the top so the small logo sits
-directly below it. It is the sidebar's first focusable control, before Join on desktop and before the first nav item on web. Below
-`lg` `AppLayout` doesn't render it at all, so it never enters the drawer's focus trap.
+**Toggle.** A `button` named "Collapse sidebar" / "Expand sidebar" with
+`aria-expanded={!collapsed}` and `aria-controls="app-navigation"` (the `aside`'s id), and
+the tooltip "… (Ctrl+B)". It is the sidebar's first focusable control. Below `lg` it is not
+rendered, so it never enters the drawer's focus trap.
 
-**The shortcut.** `Ctrl+B` or `⌘B` toggles the rail. The listener is on `window`
-and is attached only at `lg` and up. It acts when the key is `b` (any case) with
-exactly one of Ctrl or Meta and neither Alt nor Shift, so Ctrl+Shift+B,
-Ctrl+Alt+B and Ctrl+Meta+B are ignored. It also ignores an event that is already
-`defaultPrevented`, and one whose target is an input, textarea, select or
-contentEditable (the same typing test `Main.tsx` uses for Alt+←/→). When it acts it
-calls `preventDefault`; a held key (`event.repeat`) is prevented but toggles only
-once.
+**Shortcut.** Ctrl+B or ⌘B on `window`, attached at `lg` and up. It acts on `b` (any case)
+with exactly one of Ctrl/Meta and neither Alt nor Shift, and ignores an event already
+`defaultPrevented` or one targeting an input, textarea, select or contentEditable. It
+prevents the default; a held key (`repeat`) toggles once.
 
-**What the collapsed rail shows.**
-- **Nav items** are tiles: the icon over the `navItemCaption` caption. Section
-  titles become `sr-only` headings, each followed by a divider line, so the list
-  keeps its structure for screen readers. The destination, `href`, prefetch and
-  `onActivate` are the same as expanded.
-- **One tooltip per tile.** Each tile is wrapped in the shared `Tooltip` on the
-  `right`, which opens on hover and on keyboard focus. It lists the full label
-  (bold), the event's full name, "Live", then the badge details. Collapsed, the
-  icon's badge marks have no tooltip of their own, so an item never shows two.
-  Expanded keeps the top-side badge tooltip on the icon and no tooltip on the
-  label.
-- **Live** is decided by the same `isEventLinkLive`. Instead of the chip, a red dot
-  sits on the icon's top-left corner (`aria-hidden`), and "Live" stays in the
-  accessible name as `sr-only` text. Each signal on a rail icon has its own corner:
-  Live top-left, the count bubble top-right, the green lobby dot bottom-right. The
-  caption stays plain text, in the same place whether the item is live or not (see
-  `agents/styling.md`, collapsed rail, icon marks).
-- **Logo and actions.** The logo is a 40px mark and still fires the seasonal burst.
-  On desktop, Join and Play are stacked square tiles captioned "Join" and "Play", with the full
-  names ("Join Server", "Launch Game") as `sr-only` text; the web build shows neither. Join is the same `NavLink`
-  to `servers`. A disabled Play tile keeps its "No valid UT99 installation found"
-  tooltip, on the right when collapsed.
-- **User card, signed in.** The trigger is the avatar alone, a real `button` named
-  "<name>, profile menu", with the title's rarity shown as a ring (and a glow, for
-  the top rarity) around the avatar. The menu opens to the right, bottom-aligned.
-  Both modes share one menu header with the name, the Patreon badge and the active
-  title. In the header the badge is inert (shown, and announced as "Tier N Patreon
-  Supporter"), because a focusable button inside a menu breaks the menu's roles.
-  Expanded, the trigger is still the whole card and the menu still opens on top.
-- **User card, signed out.** A square Discord button named "Login with Discord". A
-  login error shows in a popover beside it, outside the rail (`role="alert"`, linked
-  by `aria-describedby`, rendered through a portal to `document.body`). It clears on
-  the next login click, like the expanded inline error.
+**Collapsed rail behaviour** (visuals in [styling.md](styling.md)):
 
-**Gated pages** (e.g. `admin`): hide the nav item (`buildNavSections` only appends
-the Staff group when `isStaff(userProfile)`, helpers in `app/utils/roles.ts`) **and**
-guard the `renderView` case — `admin` passes `forceDenied={!isStaff(userProfile)}` so
-a forced view renders a denied card instead of the page. The `admin` page is itself a
-section hub; see `app/components/pages/admin/registry.tsx`. **Admin → Streamers** is the section
-with id `streamers` ("Streamers", `Radio` icon, Events group, right after Tournament Formats),
-visible to Moderators and Admins only (`ADMIN_DASHBOARD_ROLES`; a Cup Admin does not see it). It
-manages the streamer roster (`agents/data-sources.md`, Admin API). Like every section it opens
-through the saved `utbt:adminState:v1` `activeSection`.
-**Admin → Map Uploads** is the section with id `map-uploads` ("Map Uploads", `FileUp` icon, Game
-Content group, right after Maps Management), also visible to Moderators and Admins only. It is the
-only way to add a map: the **Add Map** button in Maps Management calls `openDraft(null)` from
-`useMapUploadsNav` (back to the Drafts list) and then `onNavigate('map-uploads')`, so it switches
-section in place like the sidebar does, with no new history entry. Inside the section, the open tab
-(Drafts, Publishing / Recent, Drift), the open draft, the selected publish and the drafts a map pack
-just created are per-entry state (`useNavState` keys `admin.mapUploads.tab`, `.draftId`,
-`.publishId`, `.uploadedIds`), so Back and Forward keep them. See `agents/admin-map-uploads.md`.
+- Items are tiles (icon over caption) with the same destination, href, prefetch and
+  activation as expanded. Section titles become `sr-only` headings followed by a divider.
+- Each tile has one right-side `Tooltip` (hover and focus): full label, event full name,
+  "Live", then the badge details. The icon marks lose their own tooltip collapsed;
+  expanded keeps the badge tooltip on the icon and none on the label.
+- Live shows as a dot on the icon with "Live" kept as `sr-only` text.
+- On desktop Join and Play become tiles captioned "Join" / "Play" with the full names
+  `sr-only`; a disabled Play keeps its "No valid UT99 installation found" tooltip.
+- Signed in, the user card trigger is the avatar alone, a `button` named
+  "<name>, profile menu"; the menu opens to the right. Both modes share one menu header in
+  which the Patreon badge is inert (a focusable button breaks the menu's roles).
+- Signed out, a square "Login with Discord" button; a login error shows in a popover
+  portalled to `document.body` (`role="alert"`, linked by `aria-describedby`) and clears on
+  the next login click.
 
-## Event-driven navigation
+**Mobile drawer.** Below `lg` (`AppLayout` matches `(max-width: 1023px)`, the same boundary
+as the `lg` classes) the same `aside` is an off-canvas drawer behind a top bar. Closed, it
+is `inert`; open, it traps focus, closes on Escape and returns focus to the menu button.
+Keep `inert` and the breakpoint in step when changing the shell
+([web-target.md](web-target.md)).
 
-Identity/time UI doesn't import `navigate` — it dispatches a `window` CustomEvent
-that `Main.tsx` listens for:
+## Sidebar badges and the new-item highlight
 
-| Event | Detail | Dispatched by | `Main.tsx` does |
-|---|---|---|---|
-| `open-player` | `{ userId }` | `PlayerInfo` (click) | `navigate('player-detail', { playerId: userId })` |
-| `open-cap` | `{ capId }` | `CapTimeLink` / `openCap()` | `navigate('cap-detail', { capId })` |
-| `open-news` | `{ newsId }` | news `ArticleCard` / `openNews()` | `navigate('news-detail', { newsId })` |
-| `open-settings` | `{ section? }` | the installation banner | `AppLayout` opens the Settings modal (the user-dropdown Settings item opens it directly via local state, not this event) |
+**Rendering contract.** `AppLayout` calls `getNavBadge(view, params)` with each item's
+resolved destination, not its id, so event links are told apart by `params.eventSlug`.
+`Main.tsx` implements it as one call to
+`resolveNavBadge(destination, eventAttention, allEventsAttention, badgeCounts)`
+(`nav-items.ts`). A `NavBadge` is `{ count: number | null, live: boolean, details: string[] }`:
+`count` draws a bubble on the icon, `live` a pulsing dot, and `details` are the tooltip
+lines (one per line, no native `title`), repeated as `sr-only` text.
 
-`openMap(name)` is a direct helper (`navigate('maps-detail', { mapName })`) threaded
-to pages as `onMapSelect`. Render `PlayerInfo` and `CapTimeLink` (see
-`shared-components.md`) — don't dispatch these events by hand. `openNews(id)`
-(`app/components/navigation/openNews.ts`) is the news equivalent, dispatched by the
-news `ArticleCard`.
+`resolveNavBadge` picks the badge by destination:
 
-## Sidebar "new" badges + new-item highlight (not navigation)
+- A destination that belongs to an event (`eventSlugOfView`) gets
+  `attentionNavBadge(eventAttention[slug])`: that event's own to-dos and open-lobby dot,
+  never the cross-event total.
+- `events` gets `attentionNavBadge(allEventsAttention, newSinceVisitBadge(count))`: any
+  to-dos replace the "new events" count; with none, the new count stays and the lobby dot
+  can sit beside it.
+- `maps`, `world-records` and `news` get `newSinceVisitBadge(count)`: the count with one
+  line "N new since your last visit", or `null`.
 
-The sidebar count pills (Maps / World Records / Events / News) show "new items
-since this account last visited that page". They decorate the UI around
-navigation but are **not** navigation events:
+To-dos and the lobby dot have no seen marker and clear on their own once the condition
+ends. What the attention counts mean and how `Main.tsx` derives them (its 60 s attention
+poll plus window focus): [event-scheduling.md](features/event-scheduling.md).
 
-- **Badge source** — `Main.tsx` fetches per-account badge counts + seen markers
-  from the API at boot, on sign-in, and on window focus (so a visit on another
-  device clears the pill here too). Counts are **server-computed against the
-  account's seen markers**; a `null` count means "never visited" and renders no
-  pill. Signed-out users get no badges at all. Badge resolution is one pure
-  function in `nav-items.ts`, `resolveNavBadge(destination, eventAttention,
-  allEventsAttention, newSinceVisitCounts)`; `Main.tsx`'s `getNavBadge` prop
-  threaded into `AppLayout` (AppLayout is display-only here) is a single call
-  to it. The contract stays keyed by **destination**, not item id:
-  `getNavBadge(view, params) => NavBadge | null`, where `NavBadge`
-  (`nav-items.ts`) is `{ count: number | null, live: boolean, details:
-  string[] }`. `AppLayout` calls it with each item's resolved `{ view, params }`
-  from `navItemDestination`, so two items that share a destination (an
-  event-detail link and the Events item) can still be told apart by
-  `params.eventSlug`. Badges sit on the item's icon rather than in the row:
-  `count` is a static accent bubble at the icon's top-right, and `live` is a
-  pulsing emerald dot at its bottom-right. The icon is wrapped in the shared
-  `Tooltip`, which lists `details` one per line (no native `title`); in the
-  collapsed rail those lines move into the tile's one right-side tooltip. The same
-  lines go into a `sr-only` span after the label for screen readers (see
-  `agents/styling.md`, sidebar badges). A plain "new" pill comes from
-  `newSinceVisitBadge(count)`: `null` for no count, otherwise the count with
-  the single line "N new since your last visit".
-- **`markViewed(view, { highlight })`** — fired at the top of `navigate()`
-  (before its same-view early-return, so re-clicking the active sidebar item
-  still clears the pill) and from `pushExternal()` (web back/forward + deep
-  links). It optimistically zeroes the badge, advances the seen marker on the
-  server to the badge fetch's server-side `as_of` snapshot (not wall-clock now
-  — items added after the fetch stay "new" on the next fetch), and fires the
-  highlight below whenever the badge it cleared had a non-zero count. The
-  focus-driven `refreshBadges()` also re-marks whatever view is already on
-  screen, but passes `{ highlight: false }` — the user did not navigate, so
-  nothing may reorder, refilter or scroll the page they are reading. Marks
-  attempted before the badge fetch resolves are queued and replayed when it
-  lands (those DO highlight); the entry view of a deep link is marked as soon
-  as badges load.
-- **`highlight-new`** — dispatched by `markViewed()`, consumed by
-  `useNewItemHighlight` on all four badged pages (Maps, World Records, Events,
-  News) to briefly ring the rows/cards added since the previous seen marker.
-  The `sessionStorage` hand-off (`writePendingHighlight`) is written **only
-  when the target view is not the one already on screen** — a mounted page is
-  served by the event alone, and an unconsumed key would replay a stale
-  highlight on the next visit. Each page passes an `onActivate` that makes the
-  new items reachable: Maps sorts by `added` desc, World Records switches to
-  records sorted by date desc, News clears the category filter, Events skips
-  its scroll restore for that mount (it must not rewrite the entry's persisted
-  `scrollTop`, which Back would then apply). The hook scrolls the first new
-  item into view and drops the ring 7s after the page's data is in — pages pass
-  an `itemsReady` flag so a slow fetch cannot burn the whole window on a
-  spinner. Timestamps compared per page: `map.added`, `record.added`,
-  `article.publishedAt`, and `event.published_at ?? event.created_at` (the same
-  coalesce the events badge counts on) — Events also skips `draft` rows, which
-  only staff see and which the badge count excludes. The hook parses all of
-  them as UTC: API timestamps come back both as offset-aware ISO and as naive
-  `YYYY-MM-DD HH:MM:SS`, and a raw `Date.parse` reads the second form as local
-  time.
+**"New since last visit" counts.** Only for the four badged views (`maps`,
+`world-records`, `events`, `news`). `Main.tsx` fetches per-account counts and seen
+markers at boot, on sign-in and on window focus, so a visit on another device clears the
+pill here. Counts are computed server-side against the account's seen markers; a `null`
+count (never visited) shows nothing. Signed out, there are no badges.
 
-**Not every `getNavBadge` count is a "new since last visit" pill.** The
-`events` item can also show a "the cup needs you to act" to-do count across
-all events: times the opponent offered that your team must answer, matches
-your team can schedule that have no offer yet, and pending team invitations.
-Your own team's open picks & bans lobby is not counted. It shows as the green
-live dot instead, since it means "your match is starting" rather than a chore.
-Neither has a seen marker or is cleared by `markViewed`; each disappears on
-its own once it stops being true. `resolveNavBadge` builds this badge
-through `attentionNavBadge` (moved into `nav-items.ts` from the
-event-attention module, see `agents/data-sources.md`).
-Any to-dos win over the ordinary new-events count on the `events`
-destination. With none, the new-events count stays and the live dot can sit
-beside it.
+**`markViewed(view, { highlight })`** runs in `commitNavigate` before the same-view
+early return (so re-clicking the active item still clears it) and in `pushExternal` (web
+Back/Forward to a lost entry, deep links). Visiting a page from the sidebar or a Home tile
+therefore behaves identically. It:
 
-Any view that belongs to an event, through the same `eventSlugOfView` the
-active rule uses (`event-detail` and `match-pickban`), gets the same kind of
-badge, scoped to that one event: `resolveNavBadge` looks up the slug in the
-per-event attention map and returns that event's own count and dot (or
-`null` when it has neither), never the cross-event total. The `cup-2v2-2026`
-item is the only sidebar entry with an event link today, so it's the only
-badge of this kind a player sees; the `match-pickban` case matters only in
-that `resolveNavBadge` treats it the same as the active-highlight rule does.
-While the cup is the only live event, its badge and the Events pill show the
-same thing, but each is counted independently: a second live event would
-only add to the Events total, not to the cup's own badge. The tooltip lines
-spell out each part ("Propose a time for 1 match", "Join your open Picks &
-Bans lobby"), and the event page repeats the same to-dos as the "Needs your
-attention" panel above its tabs, each with its own button, so touch users (no
-hover) see what the number means too. Full derivation (`fetchMySchedule` +
-`fetchMyTournaments`, `eventTodos`, `openLobbySlugs`,
-`computeEventAttention`) is in `agents/data-sources.md` ("Event scheduling").
-This doc only owns the pill/dot/tooltip rendering contract and where
-`resolveNavBadge` lives.
+- ignores non-badged views and a zero count;
+- zeroes the count optimistically and advances the server marker to the badge fetch's
+  `as_of` snapshot, not the wall clock, so items added after the fetch stay new;
+- queues marks made before the badge fetch resolves and replays them when it lands (with
+  highlight); the view on screen is then marked without highlight;
+- on the focus refresh re-marks the view on screen with `{ highlight: false }`: the user
+  didn't navigate, so nothing may reorder, refilter or scroll.
 
-Because `markViewed()` lives inside `navigate()`, opening a badged page from
-**either** the sidebar **or** the Home tiles clears the "new" badge and fires the
-highlight identically. Legacy per-device seen-stamps
-(`utbt:newMapsSeen:v1` / `utbt:newRecordsSeen:v1` / `utbt:newEventsSeen:v1` /
-`utbt:newsSeen:v1`) seed the account marker once after sign-in; each key is
-removed only after its seeding call succeeded, so a transient failure retries
-on the next badge fetch instead of losing the stamp.
+Legacy per-device markers (`utbt:newMapsSeen:v1`, `utbt:newRecordsSeen:v1`,
+`utbt:newEventsSeen:v1`, `utbt:newsSeen:v1`) are migration inputs only: on a badge fetch
+an unset server marker is seeded from the local value, and the key is removed once that
+call succeeds (a failure retries next fetch). No code writes them.
 
-## Page refresh registry (not navigation)
+**Highlight.** When the cleared count was above zero, `markViewed` dispatches
+`highlight-new` `{ view, since }`, and if the target view is not the one on screen it also
+writes the sessionStorage hand-off `utbt:highlightSince:<view>` (`writePendingHighlight`)
+for the page that is about to mount. A mounted page is served by the event alone; an
+unconsumed key would replay a stale highlight on the next visit.
 
-`PageRefreshContext` (`app/components/navigation/PageRefreshContext.tsx`) is a
-cross-cutting **refresh-button registry**, not a history primitive. A page calls
-`useRegisterPageRefresh({ onRefresh, refreshing, disabled, tooltip })`;
-`NavHistoryBar` renders one shared refresh button beside Back/Forward and invokes
-the registered handler. Pages no longer hand-roll their own refresh button.
-**Desktop-only surface** — on web `NavHistoryBar` never renders, so the
-registered handler is unreachable there. Freshness on web comes from the
-mount contract below, plus the browser's own reload.
+`useNewItemHighlight(view, onActivate?, itemsReady?)` (`app/hooks/useNewItemHighlight.ts`)
+consumes either, rings the items newer than `since` and scrolls the first into view; the
+ring drops 7 s after `itemsReady` turns true (Events and News pass it so a slow fetch
+doesn't burn the window on a spinner). `onActivate` makes the new items reachable: Maps
+sorts by `added` desc, World Records switches to records by date desc, News clears its
+category filter and skips scroll restore, Events skips scroll restore (it must not rewrite
+the entry's `scrollTop`, which Back would apply). Compared timestamps: `map.added`,
+`record.added`, `article.publishedAt`, `event.published_at ?? event.created_at` (Events
+skips `draft` rows, which the count excludes). The hook parses naive
+`YYYY-MM-DD HH:MM:SS` timestamps as UTC; a raw `Date.parse` would read them as local time.
 
-**Freshness contract (both targets):** the `caches` singleton exists so a
-revisit paints instantly — it is a render cache, not a data authority. Every
-page-view must **revalidate on mount**: render the cached data, then kick the
-fetch anyway and swap results in silently (no skeleton when cache exists).
-The paginated pages get this for free (their page cache is a per-mount ref);
-`Home`, `TeamsPage`, `AchievementsPage`, `ServerBrowserPage` do it explicitly
-with a `background`/`silent` flag. A mount effect that early-returns because
-"the cache is warm" is a staleness bug. The registered `onRefresh` must clear
-every cache layer it owns (page cache refs AND the `caches` singleton slices)
-before refetching.
+## Page refresh registry and freshness
 
-## Per-entry state
+`PageRefreshContext` (`app/components/navigation/PageRefreshContext.tsx`) is a registry for
+the one shared Refresh button. A page calls
+`useRegisterPageRefresh({ onRefresh, refreshing, disabled, tooltip })` and
+`NavHistoryBar` renders the button beside Back/Forward. That bar is desktop-only, so on web
+freshness comes from the mount rule below plus the browser's reload.
 
-The active entry's `state` bag backs two hooks (both keyed to the current entry,
-so Back/Forward restore them):
-
-- **`usePageState`** (in `Main.tsx`) — primary-page query state.
-- **`useNavState(key, default)`** (`app/components/navigation/useNavState.ts`) —
-  detail-page transient UI (tab/search/sort/pagination/scroll). **Value setter
-  only** — no functional updater. Scroll restoration: `useNavScrollRestore`.
-  `event.scheduleView` (`ScheduleTabContainer.tsx`, default `null`) is a
-  concrete example: it holds a participant's explicit All Matches / My Matches
-  choice as a `ScheduleView` (`'all' | 'mine'`), so Back/Forward restore which
-  one they were looking at. While it's `null` the container falls back to the
-  automatic default (`autoScheduleView`, see `agents/data-sources.md`) rather
-  than defaulting the stored value itself, so an explicit choice and "no choice
-  made yet" stay distinguishable. `event.schedulePlayedOpen`
-  (`PublicSchedulePanel.tsx`, default `false`) is another: whether All
-  Matches' "Show played matches" section is open, so a viewer who opens it,
-  follows a link away and comes back with Back finds it as they left it,
-  while a fresh visit to the event page starts with it closed.
-
-The tier rules, persistence, and `usePageState` wiring live in
-`state-patterns.md` — this doc owns the stack + routing; that one owns what's
-stored.
-
-## Shareable match links
-
-`app/components/navigation/matchLinks.ts` (`buildMatchLinks(eventSlug, matchId)`)
-returns absolute, public-origin URLs for a match — a **player link** (this
-page, `match-pickban`) and a **stream link** (the chromeless stream view). Both
-always use `VITE_SITE_ORIGIN` (default `https://utbt.net`, same env var as the
-static-HTML head — see `agents/web-target.md`), never `window.location.origin`:
-the desktop build has no usable site origin at runtime, so a link built from it
-would open nowhere for anyone else. This makes "Copy link" identical on both
-targets.
-
-**Path shapes:**
-
-- Player link — the in-app pick/ban page: `/events/:eventSlug/matches/:matchId`
-  (`match-pickban` view, in `routes.ts` / the route contract like any other
-  route).
-- Stream link — the chromeless OBS view: `/events/:eventSlug/matches/:matchId/stream`.
-  It is **not** a nav view — like `/auth/callback`, it must be handled before the
-  app shell, the boot auth check and the analytics consent banner mount, so it
-  never requires a login. It has no entry in `routes.ts` or the route contract.
-  `matchStreamPath(eventSlug, matchId)` builds just this path if a caller needs
-  it without an origin; `parseStreamPath(pathname)` (same file) reads it back to
-  `{ eventSlug, matchId }` and is the check `app/renderer-web.tsx` runs before
-  deciding whether to mount the app shell at all — see `agents/web-target.md` →
-  `pre-shell-routes` for the mount itself and why the path stays out of the
-  route contract on purpose.
-
-## Event team page
-
-`EventTeamPage` (`event-team`, `app/components/pages/EventTeamPage.tsx`) is a detail page: lazy
-(`lazy()` in `Main.tsx`), keyed by `entry.id`, reading `eventSlug` and `eventTeamId` from the entry's
-params. It needs no login, and the web build opens it straight from a deep link.
-
-- **Route.** `/events/:eventSlug/teams/:eventTeamId`, view and kind `event-team`, params
-  `["eventSlug", "eventTeamId"]`. `viewToPath` URI-encodes both parts; `pathToNav` resolves only exactly
-  four segments, so `/events/x/teams` and `/events/x/teams/id/extra` stay on `event-detail`. The same
-  entry is in `app/public/route-contract.json` (version unchanged), whose contract test
-  (`routes.contract.test.ts`) round-trips it. The title is `Team — UTBT.net`, and the page then sets the
-  team's name through `useDocumentTitle`. `paramsEqual` compares `eventTeamId`, so two team pages are
-  different entries.
-- **Event-scoped.** `eventSlugOfView` covers it, so the cup's sidebar item stays active on a team page.
-- **Back.** The back `NavLink` goes to `event-detail` with `eventTab: 'teams'` (the Teams tab), via
-  `onBackToTeams` from `Main.tsx`.
-- **Into the page.** Every team card on the Teams tab overview, the team names in the Cup at a glance
-  strip and the map table, and the opponent names on a team page are `NavLink`s to `event-team`, so on
-  web each is a real `<a href="/events/<slug>/teams/<id>">`. Each match on the page links to
-  `match-pickban`.
-- **Per-entry state** (`useNavState`, restored by Back/Forward): `teamPage.stage` (the selected stage,
-  default `null` = All), `teamMatches.toggles` (which match cards the viewer opened or closed; with no
-  toggle the latest match with a result is open), `teamRuns.sort` (`{ key, dir }`, default date ascending, i.e. play order)
-  and `teamRuns.showAll` (phone only: the full runs list instead of the first 12). The stage is
-  not shared with the overview's: the overview keeps its own `event.statsStage` and
-  `event.statsSort` (below).
-- **States.** A spinner, an error with "Try again", and "This team has no published matches in this
-  event." when the team read answers not found (`readTeamOrNotFound` turns a 404 into `null`). What the
-  page reads is in `agents/data-sources.md` (Event stats reads).
-- **View-model.** Render-ready data comes from the pure `events/stats/statsView.ts` (and
-  `team/teamPageView.ts`, `team/teamTablesView.ts`); components stay thin over them.
-
-## Teams tab: roster or stats
-
-The `teams` tab id and `?tab=teams` deep links are unchanged. `EventDetailPage`'s Teams branch
-renders a small `TeamsTab`: "Loading teams…" until the bracket read has settled, then **either** the
-existing roster list **or** the lazy stats overview (`events/stats/StatsOverview.tsx`). The choice is
-`statsMode(bracket)` from the stats view-model: `stats` once the bracket payload's `published` is true,
-`roster` otherwise (also while the payload is null). A manager who can see an unpublished bracket still
-gets the roster, because the rule reads `published`, not visibility. The overview refetches whenever the
-page reloads the bracket (the page's Refresh button, bracket edits from Manage). Its per-entry state is
-`event.statsStage` (the selected stage, default `null` = All) and `event.statsSort` (default
-`standing`).
-
-The tab's label follows the same switch (`events/stats/statsTab.ts`, `statsTabView`): **Teams** while it
-is the roster (and until the bracket read settles), **Stats** once it is the stats overview. In stats mode
-it carries a "New" pill (`aria-hidden`, so the button's name stays "Stats") until the viewer opens the
-tab once; that is remembered in `localStorage` (`utbt:eventStatsSeen:v1`, per browser, blocked storage
-reads as not seen), and the pill stops for everyone at `STATS_TAB_NEW_UNTIL` (2027-01-01 UTC).
-
-## Manage → Matches: Caps need linking
-
-`MatchesPanel` (the Manage tab's Matches section) mounts `manage/matches/CapsNeedLinking.tsx` between
-its header and the filters, so it sits above the match list. It is the amber "Caps need linking (n)"
-list of played maps whose linked runs don't cover the recorded score. It renders nothing when empty
-(or when its read fails), and ignores the Matches stage filter. Each row is a button that opens a modal
-(`ui/modal`, `offsetSidebar`) with the cap link picker, prefilled with the row's map and search
-window, inside the Manage tab rather than a route of its own; no navigation happens. Linking from
-the list keeps the recorded score, even when fewer runs are linked (the editor's picker still fills
-the counts in), so a partly linked map stays in the list. Linking closes the modal, reloads the list
-and refreshes the bracket. What the list reads and how the picker is
-prefilled: `agents/data-sources.md` (Caps need linking).
-
-## Match pick/ban page
-
-`MatchPickBanPage` (`match-pickban`) is a detail page: lazy, keyed by `entry.id`, and
-reading `eventSlug` and `matchId` from the entry's params. It needs no login, and the
-web build opens it straight from a deep link.
-
-- **Title.** Once the payload is in, `useDocumentTitle` sets `<A> vs <B> — Picks & Bans`.
-- **Back to Event.** A `NavLink` to `event-detail` that calls the `onBackToEvent` prop
-  `Main.tsx` passes in.
-- **Back to Bracket.** Once the session is complete, the summary carries a
-  `NavLink` to `event-detail` with `eventTab: 'bracket'`. It navigates through
-  `useNavigation().navigate`, so it is a real `/events/<slug>?tab=bracket` anchor on web
-  and one `navigate()` call on both targets.
-- **Copy Link** copies `buildMatchLinks(eventSlug, matchId).playerLink` (above) through
-  `useCopyFeedback`, so the copied URL is the public site's on desktop too. The page
-  passes the same links to a manager's dock, whose header adds **Copy Player Link** and
-  **Copy Stream Link** icon buttons, so a stream link is copied from the page itself as
-  well as from the Manage queue.
-- **Sound control** (`events/pickban/components/PickBanSoundControl.tsx`). The first
-  header button shows the state (`Volume2`/`VolumeX`, "Sound On"/"Sound Off", a chevron)
-  and opens a small panel under it (`aria-expanded`/`aria-controls`, a labelled group, not
-  a Radix menu, so its switch and slider keep their own keys and Tab order). In it: a
-  **Sound** switch (off until the viewer turns it on; turning it on flips
-  `usePickBanSound`'s `muted` flag and calls its `unlock`, so that click unlocks the Web
-  Audio context) and a **Volume** range 0–100% (40% until changed) with the number beside
-  its label. Flipping the switch, or releasing the slider (pointer up, key up or blur; the
-  page's volume only changes then), saves `{ enabled, volume }`
-  (`pickBanSoundPreference.ts`, account-synced, see `agents/state-patterns.md`), so both
-  carry over to the next visit, every event, and the app or the website for a signed-in
-  viewer. Releasing the slider also previews the pick cue (`preview('pick')`), only while
-  sound is on; while it is off a line says to turn sound on to hear a preview. When sound
-  was left on, the page plays from the viewer's first gesture on it. The panel closes on
-  Escape (focus back on the button), an outside pointer or focus leaving it. Every row is a
-  44px target below `sm`. See `agents/data-sources.md` → `event-pickban-sessions` for the
-  cue and player contract.
-- **Animations toggle.** A header button that switches the page's animations
-  (`pickBanMotionPreference.ts`, on by default, account-synced like the sound
-  preference).
-- The page subscribes to both preference keys, so a value that arrives from the account
-  after it opened (the sign-in sync) updates the switch, the slider, the player and the
-  animations at once.
-- The header buttons (sound, Animations, Copy Link) and the summary's **Back to
-  Bracket** share one class (`HEADER_BUTTON` in the page, 44px tall below `sm` and 32px from
-  it), so they stay alike.
-- **Sides strip.** Under the match banner, a player in the match sees "You’re Red" or
-  "You’re Blue" once the side is confirmed, with "Join Red in UT for every map of this
-  match." In the lobby, and through the intro when the side was set before Start, everyone
-  else sees the sides line instead ("Sides TBC: T04 choose Red or Blue when Picks & Bans
-  start." or "Sides set by admin: T04 are Red, T01 are Blue."). The "Sides changed by
-  admin" notice shows here too. It sits outside the stage, so the stage keeps one height.
-- **Into the page.** The Manage → Pick/Ban queue's **Open Page** is a `NavLink` to
-  `match-pickban` (a `Button asChild` around it), so on web it is a real anchor that opens
-  in a new tab like any other link.
-
-What the page renders, and how it keeps polling invisible, is in `agents/data-sources.md`
-(the watch page, under pick/ban sessions).
+**Every page-view revalidates on mount**, on both targets. The `caches` singleton is a
+render cache for instant revisits, not an authority: render the cached data, fetch anyway,
+swap results in silently (no skeleton while a cache exists). The paginated pages get this
+from their per-mount page-cache refs; `TeamsPage`, `EventsPage`, `AchievementsPage` use
+`load(background)`, `ServerBrowserPage` uses `fetchServers({ silent })`, and `Home` always
+refetches behind its cache. A mount effect that returns early because "the cache is warm"
+is a staleness bug. `onRefresh` clears every cache layer it owns (page-cache refs and its
+`caches` slices) before refetching.

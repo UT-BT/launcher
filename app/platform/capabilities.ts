@@ -4,8 +4,6 @@ export interface PlatformCapabilities {
     ini: boolean
     install: boolean
     updater: boolean
-    desktopFiles: boolean
-    windowChrome: boolean
     settingsModal: boolean
     anonymousBrowse: boolean
     camTool: boolean
@@ -17,8 +15,6 @@ export const DESKTOP_CAPABILITIES: PlatformCapabilities = {
     ini: true,
     install: true,
     updater: true,
-    desktopFiles: true,
-    windowChrome: true,
     settingsModal: true,
     anonymousBrowse: false,
     camTool: true,
@@ -30,8 +26,6 @@ export const WEB_CAPABILITIES: PlatformCapabilities = {
     ini: false,
     install: false,
     updater: false,
-    desktopFiles: false,
-    windowChrome: false,
     settingsModal: true,
     anonymousBrowse: true,
     camTool: false,

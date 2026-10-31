@@ -24,6 +24,7 @@ import {
     type SortDirection, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { PaginationBar } from '@/app/components/ui/pagination'
+import { CAP_TYPE_I4GAMES, CAP_TYPE_UTBT_CERTIFIED } from '@/app/utils/capTypes'
 
 interface RecentCapsCardProps {
     accessToken: string | undefined
@@ -60,10 +61,6 @@ const COLUMN_PRIORITY: Partial<Record<CapColumnId, number>> = {
 }
 
 const REQUIRED_COLUMNS = new Set<CapColumnId>(['map', 'time'])
-
-// CapType enum values (mirror data_service/endpoints/cap/model.py)
-const CAP_TYPE_UTBT_CERTIFIED = 2
-const CAP_TYPE_I4GAMES = 3
 
 function renderCapStatus(cap: UserCapRow) {
     if (cap.disallowed) {

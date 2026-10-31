@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { Users, Map as MapIcon, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NavLink } from '@/app/components/navigation/NavLink'
@@ -80,19 +80,27 @@ export function CommunityStatsRow({
     className, refreshKey,
     onViewPlayers, onViewServers, onViewMaps, onViewNewMaps,
 }: CommunityStatsRowProps) {
-    const hasCounts = typeof totalMaps === 'number' && typeof totalPlayers === 'number'
+    const shownCountsRef = useRef({ mapsCount: totalMaps, playersCount: totalPlayers })
 
     useEffect(() => {
-        if (hasCounts) return
+        shownCountsRef.current = { mapsCount: totalMaps, playersCount: totalPlayers }
+    }, [totalMaps, totalPlayers])
+
+    useEffect(() => {
         let cancelled = false
         Promise.all([
             fetchMapsCount(accessToken ?? '', {}).catch(() => null),
             fetchPlayersCount(accessToken ?? '').catch(() => null),
         ]).then(([mapsCount, playersCount]) => {
-            if (!cancelled) onCountsLoaded({ mapsCount, playersCount })
+            if (cancelled) return
+            const shown = shownCountsRef.current
+            onCountsLoaded({
+                mapsCount: mapsCount ?? shown.mapsCount,
+                playersCount: playersCount ?? shown.playersCount,
+            })
         })
         return () => { cancelled = true }
-    }, [accessToken, hasCounts, refreshKey, onCountsLoaded])
+    }, [accessToken, refreshKey, onCountsLoaded])
 
     return (
         <div className={cn('flex gap-4', className)}>
