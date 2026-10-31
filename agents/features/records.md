@@ -19,7 +19,8 @@ Hunt, latest records) in [home.md](home.md).
 | `app/components/pages/PlayerDetailPage.tsx` | profile entry: the summary read, the active tab's card, the lazy activity chart |
 | `app/components/pages/playerDetail/` | one card per profile tab plus the hero and sidebar cards, each fetching for itself; `activityChart.ts` is the pure chart default and hour labels (`activityChart.test.ts`); `playerDetailTabs.ts` is the tab list, which tabs hide and the stored tab's fallback (`playerDetailTabs.test.ts`) |
 | `app/components/pages/MapDetailPage.tsx` + `mapDetail/` | map detail: one load of every read, then cards that derive stats, ranks and team medal thresholds from the fetched rows |
-| `app/components/pages/CapDetailPage.tsx` | one cap: hero, checkpoint splits, both compare flows |
+| `app/components/pages/CapDetailPage.tsx` | one cap: hero, the checkpoint card, both compare flows |
+| `app/components/pages/capDetail/runDelta/` | the checkpoint card's replay comparison: candidate tags and default, the card view, the delta curve, bands and sectors, chart rules, the speed view and its zoom, the video delta strip (pure view models, each with a `.test.ts`) |
 | `app/components/pages/TeamCapDetailPage.tsx` | one team run: roster, per-member analytics, the team replay |
 | `app/components/pages/capDetail/` | cap-detail cards; `capStats.ts` holds the pure medal-int helpers, signed deltas and checkpoint alignment (no tests) |
 | `app/components/pages/capDetail/videoCompare/` | the synced multi-video comparison player |
@@ -214,12 +215,32 @@ those rows; none fetches for itself except the version bar.
 rank, Δ WR and gap to next. The cap is the WR when `wr_cap_id` matches or `rank_on_map` is 1;
 Δ WR and gap then read "—". Gap to next is the distance to `neighbors.above[0]`.
 
-**Checkpoint splits.** The compare dropdown lists `compare_candidates` and defaults to the one
-nearest in time ([api.md](../api.md)). `buildSyncAnchors` (`capStats.ts`) matches checkpoints by
-`zone`, drops a zone whose relative position (cumulative ÷ cap time) differs by more than 6 % and
-by more than 4× its neighbours' mismatch (a skipped or misread checkpoint), and renumbers the
-kept ones `CP1…` between `SPAWN` and `CAP`. The splits table, the delta chart and the video
-scrubber all use it.
+**Checkpoint card** (`CheckpointSplitsCard.tsx`, `capDetail/runDelta/`). The compare picker
+lists `compare_candidates` ([api.md](../api.md#cap-detail)), tagged by `candidateTag`: **Replay**
+when this cap and the candidate both have `has_ghost`, else **Zones**. `defaultCompareCandidate`
+picks the nearest faster Replay candidate, then the nearest faster candidate, then the same-time
+or nearest slower one. Only a Replay target reads the [run comparison](../api.md#run-comparison);
+`checkpointCardView` then shows the replay view, routes differ, the zone checkpoint view (a Zones
+target or a `null` read) or loading.
+
+- **Replay view.** A sector table (S1–S10: split, Δ split, Δ total; a fork icon on sectors that
+  left the line) beside a chart with three views (`ChartViewToggle`, nav state
+  `checkpointDeltas.chartView`): **Cumulative** (the green/red delta curve with bands, connectors
+  and sector dots), **Per sector** (bars) and **Speed**.
+- **Speed** (`runSpeed.ts`, `SpeedPlot`, `SpeedTable`). Both runs' horizontal speed on the same
+  run-time axis, sectors and bands as the curve; the table swaps to Avg speed (with the gap to the
+  other run), Δ Speed and Δ Line per sector, the whole-run speed, split and distance under it.
+- **Zoom** (`speedZoom.ts`, `useRunMotion`). A sector button in the table (again to zoom out), a
+  sector label on the chart, or a mouse drag across it zooms into that window (at least 1 s), kept
+  in the nav state `checkpointDeltas.speedZoom` per pair. Zoomed, the chart draws every sample from
+  the [run motion](../api.md#run-motion), each run's dodges (a triangle pointing its way), jumps and
+  kicks above the plot, the air time as a strip under it, and dashed guides at 400 (run cap) and
+  721 (strafe-dodge peak); until the samples arrive, or if the read fails, the smoothed speed.
+  Reset zoom, a double-click on the chart or Esc zooms out. Drag needs a mouse; touch zooms by sector.
+- **Zone checkpoint view.** `buildSyncAnchors` (`capStats.ts`) matches checkpoints by `zone`,
+  drops a zone whose relative position (cumulative ÷ cap time) differs by more than 6 % and by
+  more than 4× its neighbours' mismatch (a skipped or misread checkpoint), and renumbers the kept
+  ones `CP1…` between `SPAWN` and `CAP` for the splits table, the delta chart and the scrubber.
 
 **Compare Run** (side-by-side video):
 
@@ -244,7 +265,7 @@ around this one (found by `team_cap_id`, else by `member_key`, the same member c
   team time (the slowest).
 - **Watch Team Replay** takes the members with `has_demo`, resolves their videos three at a time,
   and opens `VideoCompareModal` with every run that has one. Fewer than two shows "Not enough
-  replay videos are available yet".
+  replay videos are available yet". Members' sides come from `members[].cap.team`.
 - **Download all demos** runs the members with `has_demo` one after another.
 - **Medal strip**: the API's `deltas.world_record` feeds the strip's `wr` key.
 
@@ -257,8 +278,13 @@ roster from Team Cap Detail; lane colours cycle after eight).
   clamped to ± the larger of 60 s and the longest video.
 - Arrow keys step one frame at the lowest `fps` among the runs (30 when unknown); J and L skip
   5 s; keys typed into an input are ignored. Videos start muted; rates run 0.25×–2×.
-- Each run's checkpoint ticks are aligned against the slowest run. The delta bar shows only for
-  exactly two runs with at least one matched checkpoint.
+- The slowest run is the reference. For every other run **on the reference's side**
+  (`useRunComparisons`, `compareView.ts`) it reads the [run comparison](../api.md#run-comparison)
+  with that run as runner: the scrubber gets the run's sector crossings in its own time and the
+  reference's equal tenths, and the delta strip (`videoStrip.ts`) follows the runner's video
+  (x = `t + delta`). A run on the other side or with an unknown side gets no ticks and no delta;
+  a `null` read keeps that run's checkpoint ticks, aligned against the slowest run, and the
+  checkpoint delta bar (exactly two runs with a matched checkpoint).
 - Play starts only once every video reports a finite duration and none has errored.
 - Credit the sources with `ReplaySourceCredit`; source rules are in [api.md](../api.md).
 

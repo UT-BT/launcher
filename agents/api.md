@@ -169,12 +169,76 @@ same `MyPickBanSession | null` as on the event `me` payload). It is the cross-ev
 full `cap` record, parsed `checkpoints` and `wr_checkpoints` (`{ zone, cumulative,
 segment }`), `rank_on_map` / `total_on_map`, `neighbors` (`above` / `below`), `deltas`
 and `medals` (WR and each medal threshold; a negative delta is faster than the
-threshold), `server` `{ name, region }`, and `compare_candidates`. The Cap Detail page
-defaults the comparison to the candidate nearest in time and loads the compared run with
-`fetchCapCheckpoints` (a cap-detail read of the other cap).
+threshold), `server` `{ name, region }`, and `compare_candidates`. The compared run's zone
+checkpoints come from `fetchCapCheckpoints` (a cap-detail read of the other cap).
+
+- `cap.has_ghost` says whether the run has a replay recording.
+- **`compare_candidates`** (`CapCompareCandidate`: `id`, `user`, `alias`, `cap_time_seconds`,
+  `has_ghost`) is already filtered to runs that can be compared with this one: other players,
+  same map, same side, and either both runs have a replay or both have zone checkpoints. It is
+  empty when the cap has no side or neither data. The picker does **not** read the map
+  leaderboard.
 
 Team caps have their own read: `GET /caps/team_caps/<id>/detail` → `TeamCapDetail`
-(`fetchTeamCapDetail`, used by `TeamCapDetailPage`).
+(`fetchTeamCapDetail`, used by `TeamCapDetailPage`). Each `members[]` entry carries
+`cap?: CapRecord` with `id`, `team` (the member's side), `has_ghost` and `zone_checkpoints`
+(the raw `;`-separated string or `null`); it is optional in the type, so a payload without it
+still renders.
+
+### Run comparison
+
+`fetchCapComparison(runnerCapId, referenceCapId, signal?)` reads
+`GET /ghosts/compare?runner=<cap id>&reference=<cap id>` (public) and returns
+`CapComparison | null`.
+
+- **`null` on anything but a clean 200**: a non-200, a network error, an abort, `success !==
+  true`, or a body failing the shape check (`state`, `duration_ms`, `final_delta_ms`, `runner`,
+  `reference`, the three arrays, every sector's speed and line numbers, and `speed` with its two
+  arrays). It never throws. A refusal carries a `code` (`CAP_COMPARISON_ERROR_CODES`:
+  `bad_request`, `cap_not_found`, `different_map`, `different_side`, `no_ghost`,
+  `unreadable_ghost`); the client does not branch on it.
+- **The fallback rule.** Every caller treats `null` as "use the zone checkpoint view"; nothing
+  that works without a replay may go blank because the comparison failed.
+- **Same map and same side only.** No surface asks for, or draws, a delta across sides.
+- **The body** (`CapComparison`):
+  - `algo_version`, `state` (`aligned` | `routes_differ`), `runner` and `reference`
+    (`cap_id`, `user`, `alias`, `team`, `cap_time_ms`), `duration_ms` (the reference's time),
+    `final_delta_ms` (runner minus reference, positive = behind), `coverage` (0 to 1).
+  - `segments`: lists of `[t_ms, delta_ms]` on the **reference's** clock (the runner's own time
+    there is `t_ms + delta_ms`), at most 300 points. The curve arrives smoothed (a dodge a few
+    frames early or late is not a spike); draw it as it comes.
+  - `separations`: `{start_ms, end_ms, start_delta_ms, end_delta_ms, rejoined}`, where the runner
+    left the reference's line. Segments end and start at their edges; only the last may have
+    `rejoined: false`, and then the last segment is a lone point at the cap. A separation may
+    have zero width.
+  - `sectors`: ten of `{index, end_ms, split_ms, delta_split_ms, delta_total_ms, separated,
+    runner_distance_uu, reference_distance_uu, delta_speed_ms, delta_line_ms, runner_speed_uu_s,
+    reference_speed_uu_s}`. `delta_speed_ms + delta_line_ms` always equals `delta_split_ms`: the
+    time from moving faster or slower, and from a shorter or longer path. The distances are each
+    run's horizontal path in UU; the speeds are distance over time on the same UU/s scale as the
+    speed traces (400 running, 600-721 dodging), so their gap has the opposite sign of
+    `delta_speed_ms`.
+  - `speed`: `{runner, reference}`, segments of `[t_ms, uu_per_s]` (horizontal, smoothed) on the
+    reference's clock, at most 300 points a side; the runner's has a gap at every separation.
+  - `routes_differ` carries empty `segments`, `separations`, `sectors` and `speed` arrays; only
+    `final_delta_ms` and `coverage` count.
+
+### Run motion
+
+`fetchCapComparisonMotion(runnerCapId, referenceCapId, signal?)` reads
+`GET /ghosts/compare/motion?runner=<cap id>&reference=<cap id>` (public, same refusals, `null` on
+any failure) → `CapComparisonMotion`: `duration_ms` and `runner` / `reference` as
+`{segments, events}`. `segments` are lists of `[t_ms, uu_per_s, state]`, every recorded sample,
+unsmoothed, on the reference's clock (`MOVE_AIR` = 1 is in the air); the runner's has gaps at the
+separations and repeats a time where it stalled. `events` are `{t_ms, kind, direction}`: `dodge`
+(direction `L`, `R`, `F`, `B` or `null`), `jump` or `kick` (kickers and bouncers). Only the Speed
+view's zoom reads it.
+
+Both reads send `v=COMPARISON_READ_VERSION`. They are cached for a day, so bump the constant in
+`app/utils/api.ts` whenever either body changes and a browser never replays an old shape.
+`app/utils/fixtures/runCompare/` holds example bodies and error bodies, with
+`runCompareFixtures.ts` as their typed entry point; unit tests and the e2e specs mock the API with
+them.
 
 ### A player's summary
 
