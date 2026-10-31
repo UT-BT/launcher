@@ -109,15 +109,20 @@ position against.
   already loaded (no extra request). A locked card shows a lock and a Patreon tag and
   opens patreon.com/utbt. Staff unlock is silent: the card never mentions roles. The
   gate is soft by design; the CSS ships to everyone.
+- `light: true` marks a light theme (`light`): it drops the `dark` class
+  ([Light](#light)). Read it through `isLightTheme(id)` or `LIGHT_THEME_IDS`
+  (`themes.ts`), never by comparing ids.
 - `slate-blue-squared` sets every `--radius-*` to 0. Keep radii on Tailwind's named
   scale so they follow it; `rounded-full` (avatars, pills) is off that scale and stays
   round.
 
 ### Light
 
-`light` is the one theme that removes the `dark` class (in `ThemeProvider` and the
-`app/index.html` pre-paint script); every other theme keeps `.dark`, and `theme.css`
-defines `dark:` as class-based. `:root[data-theme='light']` flips the surface vars and
+`light` is the one theme flagged `light: true`, so it is the one that removes the `dark`
+class (in `ThemeProvider` and the `app/index.html` pre-paint script); every other theme
+keeps `.dark`, and `theme.css` defines `dark:` as class-based. The light `select` /
+`option` rules in `themes.css` key off `:root:not(.dark)`, so they follow the flag.
+`:root[data-theme='light']` flips the surface vars and
 `--hairline-rgb`, uses an accent ramp whose text shades (`accent-200/300/400`) are
 dark, and overrides the brand and functional text shades (`--color-blue-300`,
 `--color-red-300`, …) to dark legible values. That flips every plain coloured text
@@ -125,7 +130,8 @@ utility. Opacity variants such as `text-blue-300/40` compile to a fixed colour a
 not flip; fix those per spot.
 
 Player title colours are per-title RGB, computed in JS (`app/utils/titleStyles.ts`):
-in Light they map to a darker, contrast-targeted tone without the text outline.
+in a light theme (`isLightTheme`) they map to a darker, contrast-targeted tone without the
+text outline.
 `PlayerInfo` reads `useTheme`, so they update live.
 
 ### Seasonal themes
@@ -137,7 +143,7 @@ Halloween, Christmas and Easter decorate the launcher each year; the code is in
   7, Christmas Dec 18 – Jan 15, Easter Sunday ± 7 days (Western, computed). Adding a
   season: [Adding a theme](#adding-a-theme).
 - **Precedence**: a preview beats the toggle, the toggle beats the date. The preview
-  is `?season=halloween|christmas|easter|none` on web or a dev-only select in
+  is `?season=<id>` or `?season=none` on web or a dev-only select in
   Settings → Appearance on desktop, for the session; the toggle is "Seasonal themes"
   in Settings → Appearance (`utbt:seasonalThemes:v1`). `SeasonProvider` (inside
   `ThemeProvider` in both app roots) sets `data-season` on `<html>` and re-checks on
@@ -151,10 +157,11 @@ Halloween, Christmas and Easter decorate the launcher each year; the code is in
   white on accent-500 reach AA, or at least Classic's own ratio where Classic is below.
 - **Logo**: `app/assets/seasonal/logo-<season>.webp`, rendered from
   `app/public/icon-512.png` by `node scripts/render-seasonal-logos.mjs [--preview <dir>]`;
-  replacing a file under the same name needs no code change. `useLogo()` /
-  `logoFor()` (`app/seasonal/logos.ts`) pick it for the sidebar, the mobile top bar,
-  the desktop splash and the web boot screen. The favicon, titlebar, installer icons,
-  stream scenes and stinger keep `logo.webp`. Only the active season's file downloads.
+  replacing or adding a file under that name needs no code change: `useLogo()` /
+  `logoFor()` (`app/seasonal/logos.ts`) glob `logo-*.webp` and pick it for the sidebar,
+  the mobile top bar, the desktop splash and the web boot screen. The favicon, titlebar,
+  installer icons, stream scenes and stinger keep `logo.webp`. Only the active season's
+  file downloads.
 - **Decorations** are one lazy chunk (`SeasonalDecor.tsx`), requested only while a
   season shows. Mount them through `lazyDecor.tsx` (`SeasonalAmbient`,
   `SeasonalSpinnerGlyph`, `fireSeasonalBurst`): Suspense plus a silent boundary, so a
@@ -183,13 +190,16 @@ the pre-paint script pick it up.
    `--nebula-1…4` for a gradient theme, and the surfaces (`--background`, `--card`,
    `--popover`, `--secondary`, `--muted`, `--accent`, `--border`, `--input`). Anything left
    out comes from Classic (`:root` in `themes.css`, then `globals.css`). Write
-   `--background` and `--card` as `hsl(…)`:
+   `--background` and `--card` as `hsl(…)`, `rgb(…)`, `#hex` or `oklch(…)`:
    `app/components/pages/events/stats/teamAccent.test.ts` reads them from every
-   theme block and fails when a team accent drops under 4.5:1 on them, and it skips a value
-   in any other notation. Optional: `--window-c-titlebar-background` (desktop titlebar),
-   `--radius-*` (Slate Blue Squared sets all to 0).
+   theme block and fails when a team accent drops under 4.5:1 on them. It also fails on a
+   value it can't read (`var(…)`, `color-mix(…)`, `lab(…)`), on a translucent one, and on a
+   registered theme with no block of that exact selector, so no theme goes unchecked.
+   Optional: `--window-c-titlebar-background` (desktop titlebar), `--radius-*` (Slate Blue
+   Squared sets all to 0).
 2. **Solid only:** add the theme's `.nebula-bg` selector to the `display: none` rule at the
-   end of `themes.css`.
+   end of `themes.css`. `app/styles/themes.test.ts` fails until every registered theme has
+   a palette block and that rule lists exactly the `solid` group.
 3. **Registry.** Append a `ThemeMeta` to `THEMES` (`app/theme/themes.ts`): `id` (the
    selector's value), `label`, `description`, `swatch` (the picker dot), `group`, and
    `exclusive: true` for a Patreon theme ([Registry flags](#registry-flags)). `isThemeId`
@@ -198,30 +208,37 @@ the pre-paint script pick it up.
    `group` and locks `exclusive` ones; the choice syncs with the account under
    `utbt:theme:v1`. Seasons tint Classic only, so the new theme never shows one.
 5. **No pre-paint edit for a dark theme.** The `app/index.html` script sets `data-theme`
-   from `utbt:theme:v1` before React mounts, so the first frame is already themed. Only
-   `light` drops the `dark` class: a second light theme generalises the `=== 'light'`
-   checks in that script, `applyThemeId` (`ThemeProvider.tsx`) and
-   `app/utils/titleStyles.ts`, the `select` / `option` rules in `themes.css`, and the light
-   team-accent blocks ([events.md](features/events.md)). It also sets what the `light` block
-   sets ([Light](#light)): `--hairline-rgb`, the foregrounds, an accent ramp with dark
-   200–400 shades, the functional text shades and `--chart-*`.
+   from `utbt:theme:v1` before React mounts, so the first frame is already themed. **A
+   light theme** also gets `light: true` in the registry and its id in the script's
+   `lightThemes` list (the script can't import the registry; `app/prePaint.test.ts` fails
+   until the two match). `ThemeProvider`, `PlayerInfo`, `titleStyles.ts` and the `select` /
+   `option` rules follow the flag. Its palette sets what the `light` block sets
+   ([Light](#light)): `--hairline-rgb`, the foregrounds, an accent ramp with dark 200–400
+   shades, the functional text shades and `--chart-*`, plus light team-accent blocks
+   ([events.md](features/events.md)).
 6. **Verify.** `npm test` passes, `teamAccent.test.ts` now covering the new block. In
    `npm run dev:web`, pick the theme in Settings → Appearance and reload: no Classic flash;
    accent text, a table, a modal, a `<select>` and an event's Stats tab stay legible. Light
    still looks as before. A Playwright spec can preset the theme the way
    `e2e/pickban-watch.spec.ts` does (`addInitScript` writing `utbt:theme:v1`).
 
-**A season** (copy Easter, #296) is one tint for Classic plus decorations. It touches
-`SeasonId`, `SEASON_IDS` and `SEASONS` (the window) in `app/seasonal/seasons.ts`, with a
-window case in `app/seasonal/seasons.test.ts`; a `:root[data-season='<id>']:not([data-theme])`
-block in `app/styles/seasons.css` and the id pattern in `app/styles/seasons.test.ts`; the
-`valid` list in the `app/index.html` pre-paint script; a palette in
-`scripts/render-seasonal-logos.mjs`, its `app/assets/seasonal/logo-<id>.webp` and
-`SEASONAL_LOGOS` (`app/seasonal/logos.ts`); its branches in `app/seasonal/decor/`
-(`ambient.tsx`, `ambient.css`, `burst.ts`, `glyphs.tsx`); the preview option in
-`LauncherAppearanceSettings.tsx`; and the lists in `e2e/seasonal.spec.ts`. Verify: `npm test`
-and `npx playwright test e2e/seasonal.spec.ts` pass, and `/?season=<id>` shows the tint, logo
-and decorations.
+**A season** (copy Easter, #296) is one registry entry plus its tint, logo and decorations.
+`SeasonId`, `SEASON_IDS`, the Settings preview options and toggle text, the logo lookup,
+the CSS and e2e checks all derive from `SEASONS` (`app/seasonal/seasons.ts`).
+
+1. **Register.** Append `{ id, label, window }` to `SEASONS`, with a window case in
+   `app/seasonal/seasons.test.ts`.
+2. **Pre-paint.** Add the id to the `seasons` list in the `app/index.html` script;
+   `app/prePaint.test.ts` fails until it matches the registry.
+3. **Tint.** A `:root[data-season='<id>']:not([data-theme])` block in
+   `app/styles/seasons.css`; `app/styles/seasons.test.ts` fails until it exists and checks
+   its contrast.
+4. **Logo.** A palette in `scripts/render-seasonal-logos.mjs`, rendered to
+   `app/assets/seasonal/logo-<id>.webp` (`app/seasonal/logos.test.ts` checks the file).
+5. **Decorations.** Its branches in `app/seasonal/decor/` (`ambient.tsx`, `ambient.css`,
+   `burst.ts`, `glyphs.tsx`).
+6. **Verify.** `npm test` and `npx playwright test e2e/seasonal.spec.ts` pass (the spec
+   loops over the registry), and `/?season=<id>` shows the tint, logo and decorations.
 
 ## Surfaces and radii
 
@@ -581,8 +598,10 @@ scale animate.
 ## Motion
 
 - `animate-in`, `fade-in`, `slide-in-*` and `zoom-in-*` emit no CSS: `tw-animate-css` is
-  a dependency but never imported, so those classes (still present on some modals and
-  the tutorial) do nothing. Animate with framer-motion.
+  a dependency but never imported, so those classes do nothing. Older overlays still carry
+  them; drop them when you touch one. Animate with framer-motion. `ui/modal.tsx` opens
+  without animation because it ships in the web entry; the tutorial dropped its no-op
+  classes too.
 - Skeletons: `animate-pulse` with `bg-hairline/5`. Legendary titles and avatars:
   `legendaryAvatarPulse` / `legendaryTitlePulse` in `globals.css`.
 - framer-motion stays out of the web entry: import it only from lazily loaded

@@ -176,6 +176,16 @@ defaults the comparison to the candidate nearest in time and loads the compared 
 Team caps have their own read: `GET /caps/team_caps/<id>/detail` → `TeamCapDetail`
 (`fetchTeamCapDetail`, used by `TeamCapDetailPage`).
 
+### A player's summary
+
+`GET /v2/summary/user/<id>` → `UserSummary` (`fetchUserSummary`): `profile`, `medals`,
+`counts`, `capItAll`, `recentCaps` and `recentWrs`, with `medals` and `counts` zero-filled
+when absent. `capItAll` is `{ rank, team_caps }`: the rank the Cap It All leaderboard shows
+for the player (tied players share it, `null` when unranked) and the team maps capped. It is
+`null` when the response carries no such object, or when `rank` is neither `null` nor a
+positive integer or `team_caps` is not a non-negative integer. Read a player's Cap It All rank
+from here, never by searching the leaderboard. Home's tiles: [home.md](features/home.md).
+
 ### A player's caps
 
 `fetchCapsForUser` (`/v2/summary/user/<id>/caps`) takes `capFilter`

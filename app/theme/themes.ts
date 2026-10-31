@@ -5,6 +5,7 @@ export interface ThemeMeta {
   swatch: string
   group: 'gradients' | 'solid'
   exclusive?: boolean
+  light?: boolean
 }
 
 export const THEMES: ThemeMeta[] = [
@@ -60,6 +61,7 @@ export const THEMES: ThemeMeta[] = [
     description: "It'll burn your retinas out",
     swatch: '#f1f5f9',
     group: 'solid',
+    light: true,
   },
   {
     id: 'black',
@@ -81,6 +83,12 @@ export const DEFAULT_THEME_ID = 'classic'
 
 const THEME_IDS = new Set(THEMES.map((t) => t.id))
 
+export const LIGHT_THEME_IDS: readonly string[] = THEMES.filter((t) => t.light).map((t) => t.id)
+
 export function isThemeId(id: string | null | undefined): id is string {
   return typeof id === 'string' && THEME_IDS.has(id)
+}
+
+export function isLightTheme(id: string | null | undefined): boolean {
+  return typeof id === 'string' && LIGHT_THEME_IDS.includes(id)
 }

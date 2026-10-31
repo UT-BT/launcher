@@ -5,6 +5,7 @@ import { Button } from '@/app/components/ui/button'
 import { NavLink } from '@/app/components/navigation/NavLink'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { usePlatform } from '@/app/platform'
+import { launchStandaloneGame } from '@/app/hooks/useServerJoin'
 
 interface SidebarActionsProps {
     installValid: boolean
@@ -69,7 +70,7 @@ export function SidebarActions({ installValid, collapsed, onJoinServer }: Sideba
                         'bg-card/50 border border-hairline/10 text-muted-foreground hover:text-foreground hover:bg-card/80 hover:border-hairline/20 transition-colors rounded-lg font-medium',
                         collapsed ? TILE_SHAPE : 'w-full h-9',
                     )}
-                    onClick={() => window.conveyor.game.launchGameStandalone()}
+                    onClick={() => void launchStandaloneGame()}
                 >
                     {playContent}
                 </Button>

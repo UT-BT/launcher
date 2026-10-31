@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils'
 import { ActiveTitle, avatarSizeFor, getAvatarUrl } from '@/app/utils/api'
 import { getAvatarBorderStyle, getTitleTextStyle } from '@/app/utils/titleStyles'
 import { useTheme } from '@/app/theme/ThemeProvider'
+import { isLightTheme } from '@/app/theme/themes'
 import { usePatreonTier } from '@/app/utils/patreon'
 import { PatreonBadge } from '@/app/components/shared/PatreonBadge'
 import { NavLink } from '@/app/components/navigation/NavLink'
@@ -74,7 +75,7 @@ export function PlayerInfo({
     highlight, showYouBadge, className, interactive = true, presentation = 'full',
 }: PlayerInfoProps) {
     const { themeId } = useTheme()
-    const isLight = themeId === 'light'
+    const isLight = isLightTheme(themeId)
     const displayName = (alias && alias.trim()) || (userId != null ? String(userId) : 'Unknown')
     const titleStyle = useMemo(() => getTitleTextStyle(title, isLight), [title, isLight])
     const isAvatarable = isAvatarableUserId(userId)

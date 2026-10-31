@@ -2,6 +2,7 @@ import { Trophy, ShieldCheck, Users, Clock, Activity } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCapTime } from '@/app/utils/format'
 import type { LeaderboardEntry, TeamLeaderboardEntry, Playtime } from '@/app/utils/api'
+import { isCertifiedCap } from '@/app/utils/capTypes'
 
 interface StatsRowProps {
     leaderboard: LeaderboardEntry[]
@@ -52,7 +53,7 @@ export function StatsRow({ leaderboard, playtime, loading, isTeam = false, teamL
     }
 
     const certifiedTimes = leaderboard
-        .filter(e => e.cap_type === 2)
+        .filter(isCertifiedCap)
         .map(e => e.cap_time_seconds)
     const medianCertified = median(certifiedTimes)
 

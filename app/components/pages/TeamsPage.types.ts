@@ -12,6 +12,8 @@ export interface TeamsPageState {
 export interface TeamsPageCaches {
     myTeam: TeamDetail | null
     invitations: TeamCore[]
+    directory: TeamCore[]
+    directorySig: string | null
     loaded: boolean
     lastRefreshIso: string | null
 }
@@ -27,6 +29,8 @@ export const DEFAULT_TEAMS_STATE: TeamsPageState = {
 export const DEFAULT_TEAMS_CACHES: TeamsPageCaches = {
     myTeam: null,
     invitations: [],
+    directory: [],
+    directorySig: null,
     loaded: false,
     lastRefreshIso: null,
 }

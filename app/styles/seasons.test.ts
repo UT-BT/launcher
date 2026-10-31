@@ -81,8 +81,9 @@ const classicPairs = pairs(classic)
 
 describe('seasonal palettes', () => {
     it('only ever target the Classic theme', () => {
+        const classicOnly = SEASON_IDS.map(id => `:root[data-season='${id}']:not([data-theme])`)
         for (const block of blocks(seasonsCss)) {
-            expect(block.selector).toMatch(/^:root\[data-season='(halloween|christmas|easter)'\]:not\(\[data-theme\]\)$/)
+            expect(classicOnly).toContain(block.selector)
         }
     })
 

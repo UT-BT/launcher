@@ -14,10 +14,10 @@ the seasonal ambient layer (Home only) in [styling.md](../styling.md).
 
 | Path | Holds |
 |---|---|
-| `app/components/pages/Home.tsx` | the page: `HomePageCaches`, the main parallel load, Refresh, the layout, the modals, the join/spectate handler |
+| `app/components/pages/Home.tsx` | the page: `HomePageCaches`, the main parallel load, Refresh, the layout, the modals, Join/Spec through `useServerJoin` |
 | `home/SpotlightSection.tsx` | the section frame: title, tick colour (from `ACCENTS` in `Home.tsx`), optional "See All" `NavLink` |
 | `home/YouDoorway.tsx`, `CommunityStatsRow.tsx` | top row: profile card with Change title; Players and Maps totals with online / new links |
-| `home/PersonalProgressSnapshot.tsx`, `capItAllProgress.ts` | Your Progress tiles; the Cap It All rank lookup and its cache type |
+| `home/PersonalProgressSnapshot.tsx`, `capItAllProgress.ts` | Your Progress tiles; `capItAllTiles`, the Cap It All tiles' values from the user summary |
 | `home/AchievementProgressPreview.tsx` | the six achievements closest to their next tier |
 | `home/MedalHuntCard.tsx` | Medal Hunt: client-side filters, sort and paging, hidden maps, replay picker |
 | `app/utils/medalHunt.ts` | pure row normalisation; `medalHunt.fixture.json` + `medalHunt.test.ts` pin the server contract |
@@ -26,6 +26,7 @@ the seasonal ambient layer (Home only) in [styling.md](../styling.md).
 | `home/LatestRecordsCard.tsx`, `RecentCapsCard.tsx` | `DataTable` widgets with compact card rows |
 | `home/news/` | `NewsCard`, `ArticleCard`, `CategoryChip`; also used by the News pages and Admin → News |
 | `home/ClosingSoonBanner.tsx` | the "Predictions closing" strip |
+| `e2e/home-freshness.spec.ts` | Playwright: the News New pill, a reviewed map leaving Maps to Review, the step back from an emptied page, the silent revisit of cached reviews and counts |
 
 ## What renders for whom
 
@@ -57,24 +58,22 @@ Personal widgets live only in the signed-in branch and take `userProfile.accessT
   Try Again). Every other feed has a `.catch` to an empty value, so it degrades its own widget.
 - **Cached data renders at once and the main load runs anyway** (stale-while-revalidate).
 - **Self-fetching widgets keep their data in `caches`**: Medal Hunt rows (`medalHunt`), the
-  community counts (`mapsCount`, `playersCount`), the first Maps to Review page
-  (`pendingReviews`) and the Cap It All progress (`capItAllProgress`). Medal Hunt refetches
-  in the background on every mount. The counts and the first review page are served from
-  cache without a refetch until Refresh clears them.
+  community counts (`mapsCount`, `playersCount`) and the first Maps to Review page
+  (`pendingReviews`). Medal Hunt, the counts and Maps to Review render what is cached at once
+  and refetch in the background on every mount and every `refreshKey` bump, without a
+  skeleton or spinner over the shown data. A failed count refetch keeps the cached count.
 - **Not cached**: the closing-soon strip (refetched each mount), Maps to Review pages after
   the first, and Medal Hunt's filters, sort and page (component state, reset on every visit).
 - **Achievement Progress reads `achievementsCaches`** from `Main.tsx`, shared with the
   Achievements page through the single-flight `ensureAchievements`: fetched once per sign-in,
   forced by Refresh.
-- **Refresh** is throttled by `useRefreshCooldown` (3 s). It nulls `medalHunt`,
-  `mapsCount`, `playersCount`, `pendingReviews` and `capItAllProgress`, reruns `loadData`,
-  forces achievements, and bumps `refreshKey` / `reviewsRefreshKey`, which children watch.
-- **Per-user cached data names its owner.** `capItAllProgress` stores `userId` and `alias`;
-  Home ignores it when they differ from the signed-in profile, and it expires after
-  `CAP_IT_ALL_CACHE_MS` (5 min).
+- **Refresh** is throttled by `useRefreshCooldown` (3 s). It nulls `medalHunt`, `mapsCount`,
+  `playersCount` and `pendingReviews`, reruns `loadData`, forces achievements, and bumps
+  `refreshKey` / `reviewsRefreshKey`, which children watch.
 - A submitted review (`ReviewModal.onSuccess`) reruns `loadData` and bumps
-  `reviewsRefreshKey`, but `MapsToReviewCard` serves a cached first page without fetching,
-  so the reviewed map stays listed until Refresh.
+  `reviewsRefreshKey`; `MapsToReviewCard` refetches its current page, so the reviewed map
+  leaves the list without Refresh. A page left empty by the refetch steps back to the last
+  page.
 
 ## Feed contract
 
@@ -89,23 +88,24 @@ Personal widgets live only in the signed-in branch and take `userProfile.accessT
   `spectateSeconds`; the grid shows the first six.
 - `GET /v2/summary/pending_reviews?limit&offset` (`fetchPendingReviews`) →
   `{ total, items }`, paged by the server, five per page on Home.
-- `GET /v2/summary/user/<id>` (`fetchUserSummary`) → `medals` and `counts` for Your Progress
-  and the doorway's WR pill.
-- Medal Hunt: [api.md](../api.md). Upcoming prediction markets: [events.md](events.md).
+- `GET /v2/summary/user/<id>` (`fetchUserSummary`) → `medals`, `counts` and `capItAll` for
+  Your Progress, and the doorway's WR pill.
+- `capItAll` and Medal Hunt: [api.md](../api.md). Upcoming prediction markets:
+  [events.md](events.md).
 
 ## Widget rules
 
 ### Your Progress
 
-Nine tiles from `fetchUserSummary` plus Cap It All rank and team maps capped. A rank of `0`
-reads "Unranked".
+Nine tiles, all from `fetchUserSummary`, so they load and refresh with the main load. A
+medal rank of `0` reads "Unranked".
 
-The API has no per-user Cap It All lookup, so `fetchCapItAllProgress` searches
-`/v2/leaderboards/cap_it_all` by the summary profile's alias (at most three pages of 50) and
-matches the row by user id. It starts only after the main load settles and aborts after 10 s.
-Not found, ambiguous or failed gives `null`, shown as `—` with "Currently unavailable", never
-a made-up zero or rank. This lookup stands in for a missing API field: ask for the field
-instead of adding another lookup like it (hard rule 8).
+The Cap It All rank and Team Maps Capped tiles read the summary's `capItAll` through
+`capItAllTiles` (`capItAllProgress.ts`): a `rank` of `null` reads "Unranked", and a summary
+whose `capItAll` is missing or malformed (`null` after `fetchUserSummary`) shows both as `—`
+with "Currently unavailable", never a made-up zero or rank. `capItAllProgress.test.ts` feeds
+the ranked, unranked, rankless and missing responses in `capItAllProgress.fixture.json`
+through `fetchUserSummary`.
 
 ### Achievement Progress
 
@@ -130,17 +130,17 @@ achievements carry a Team chip.
 - Ping runs once per unique IP over IPC when `capabilities.ping`. Join and Spec render only
   with `capabilities.game` and enable on `installationStatus === 'valid'` (Join also needs a
   free slot).
-- `handleJoinServer` in `Home.tsx` copies `ServerBrowserPage`'s: it sets or clears the
-  `User.ini` spectator `OverrideClass`, then launches the game. Change both together; the game
-  side is in [game.md](game.md).
-- `installationStatus` reaches Home only through `case 'home'` in `Main.tsx`, not the
-  `default` case.
+- Join and Spec call `useServerJoin`, the same hook the server browser uses; Home shows its
+  notice (launch error or game already running) in a modal. The behaviour is in
+  [game.md](game.md).
+- `Main.tsx` renders Home from both `case 'home'` and the `default` case; both pass
+  `installationStatus` and `newsSeenIso`, so keep their props in step.
 
 ### News
 
 `NewsCard` shows the five newest, sized to show two and scroll. An article gets the New pill
-when `publishedAt > newSince`. `Main.tsx` passes that marker (`newsSeenIso`) only from its
-`default` case, so the `home` view renders no New pill.
+when `publishedAt > newSince`. `newSince` is `newsSeenIso`, the viewer's server-side news
+seen marker (`badgeSeen['news']` in `Main.tsx`); signed out there is no marker and no pill.
 
 ### Closing-soon strip
 
@@ -152,8 +152,8 @@ Market and locking rules: [events.md](events.md).
 ### Community stats
 
 Players total (`fetchPlayersCount`) with "online" summed from the gateway servers'
-`player_count`; Maps total (`fetchMapsCount`) with the new-maps count. A failed count stays a
-skeleton.
+`player_count`; Maps total (`fetchMapsCount`) with the new-maps count. A failed count with
+nothing cached stays a skeleton.
 
 ## Layout rules
 

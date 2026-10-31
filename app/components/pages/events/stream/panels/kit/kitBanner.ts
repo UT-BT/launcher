@@ -1,3 +1,5 @@
+import { NEWEST_STREAM_SCENE_ID, streamSceneLabel } from '@/app/components/stream/streamSceneRegistry'
+
 export interface KitInfo {
     currentVersion: number
     downloadedVersion: number | null
@@ -14,5 +16,5 @@ export function kitBannerState(info: Pick<KitInfo, 'currentVersion' | 'downloade
 export function kitBannerHeadline(state: Exclude<KitBannerState, 'current'>): string {
     return state === 'never-downloaded'
         ? "You haven't downloaded your kit yet."
-        : 'Kit updated — re-import to get Predictor Standings'
+        : `Kit updated — re-import to get ${streamSceneLabel(NEWEST_STREAM_SCENE_ID)}`
 }

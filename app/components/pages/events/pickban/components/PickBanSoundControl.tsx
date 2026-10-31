@@ -1,8 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { ChevronDown, Volume2, VolumeX } from 'lucide-react'
+import { Check, ChevronDown, Volume2, VolumeX, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Slider } from '@/app/components/ui/slider'
-import { Switch } from '@/app/components/ui/switch'
 import type { PickBanSoundPreference } from '../pickBanSoundPreference'
 
 interface PickBanSoundControlProps {
@@ -69,13 +68,31 @@ export function PickBanSoundControl({ preference, onToggle, onChange, onPreview,
                 hidden={!open}
                 className="absolute left-0 top-full z-40 mt-2 w-72 max-w-[calc(100vw-2rem)] space-y-3 rounded-xl border border-hairline/10 bg-card/95 p-3 shadow-xl shadow-black/30 backdrop-blur-xl"
             >
-                <label className="flex min-h-11 cursor-pointer items-center justify-between gap-3 sm:min-h-9">
+                <button
+                    type="button"
+                    role="switch"
+                    aria-checked={on}
+                    onClick={() => onToggle(!on)}
+                    className="flex min-h-11 w-full cursor-pointer items-center justify-between gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:min-h-9"
+                >
                     <span className="flex items-center gap-2 text-sm font-bold text-foreground">
                         <Icon className="size-4 text-muted-foreground" />
                         Sound
                     </span>
-                    <Switch checked={on} onCheckedChange={onToggle} tabIndex={-1} aria-hidden />
-                </label>
+                    <span
+                        aria-hidden
+                        className={cn('relative inline-flex h-6 w-12 shrink-0 items-center rounded-full border-2 border-transparent transition-colors', on ? 'bg-primary' : 'bg-muted')}
+                    >
+                        <span
+                            className={cn(
+                                'pointer-events-none flex h-5 w-5 items-center justify-center rounded-full bg-background shadow-lg transition-transform',
+                                on ? 'translate-x-6' : 'translate-x-0'
+                            )}
+                        >
+                            {on ? <Check className="size-3 text-primary" strokeWidth={3} /> : <X className="size-3 text-muted-foreground" strokeWidth={3} />}
+                        </span>
+                    </span>
+                </button>
                 <VolumeField
                     volume={preference.volume}
                     onCommit={(volume) => {

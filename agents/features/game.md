@@ -14,14 +14,16 @@ launcher packaging, not the game: lib/main/README.md.
 
 | Path | Holds |
 |---|---|
-| `lib/main/game-service.ts` | install validation, standalone launch, `isGameRunning`, game profiles; no tests |
-| `lib/main/installation-service.ts`, `lib/main/patch-service.ts` | UT99 ISO download and setup, patch download, verify and extract |
-| `lib/main/demo-watcher-service.ts` | the demo watcher: detection, cap checks, upload, durable retry, upload log; no tests |
+| `lib/main/game-service.ts` | install validation, standalone launch, `isGameRunning`, game profiles; Vitest covers Browse profiles and reserved names |
+| `lib/main/installation-service.ts`, `lib/main/patch-service.ts` | UT99 ISO download (cancel tested in Vitest) and setup, patch download, verify and extract |
+| `app/utils/ut99Install.ts` | the download-then-install flow behind a `Ut99InstallPort`, the cancel error and `isUt99DownloadCancelled`; Vitest |
+| `lib/main/demo-watcher-service.ts` | the demo watcher: detection, cap checks, upload, durable retry, upload log; Vitest covers the upload's sign-in refresh and outcome |
 | `lib/main/game-processes.ts` | pure `tasklist` parsing that keeps cam PIDs out of `isGameRunning`; Vitest |
 | `lib/conveyor/handlers/` | `game-handler.ts` (join, ping), `app-handler.ts` (install, patches, profiles, demo log), `maps-handler.ts` and `demos-handler.ts` (writes into the install), `window-handler.ts` |
 | `app/components/main/Main.tsx` | `installationStatus`, `validateInstallation`, the install banner |
 | `app/components/pages/GameInstallationSettings.tsx` | Settings → Installation: ISO installer, folder picker, patch list |
-| `app/components/pages/ServerBrowserPage.tsx`, `app/components/pages/Home.tsx` | the two Join/Spec handlers (`handleJoin`, `handleJoinServer`) |
+| `app/utils/serverJoin.ts` | pure Join/Spec/Play decisions (running check, `User.ini` class writes) behind a `GameLaunchPort`; Vitest |
+| `app/hooks/useServerJoin.ts` | `useServerJoin` (Join/Spec for the server browser and Home, with the notice it shows) and `launchStandaloneGame` (sidebar Play) |
 | `app/components/layout/sidebar/SidebarActions.tsx` | sidebar Join Server and Play |
 | `app/platform/` | capability flags, `saveMapZip` / `saveDemoFile` with their web fallbacks, the gateway server list (normaliser tested in `gateway.test.ts`) |
 | `app/hooks/useMapDownload.ts`, `app/hooks/useDemoDownload.ts`, `app/components/shared/` | download state, and the `*DownloadStatusModal` reason → message tables |
@@ -42,11 +44,20 @@ launcher packaging, not the game: lib/main/README.md.
   `gatewayService`). No match is the tag `'Unsupported'`. `installedPatch.sha256` holds
   that MD5 despite its name.
 - **Browse** (`selectInstallDirectory`, then `validateAndSetInstallPath(path)`) checks the
-  layout, stores path and patch, restarts the demo watcher, snapshots the ini files into
-  two new profiles `Original (n)` and `Default (n)` (Default becomes active), sends
+  layout, stores path and patch, restarts the demo watcher, makes sure the folder has its
+  `Original` / `Default` profile pair (below), sends
   `installation-path-updated`, then downloads the custom announcer to
   `Sounds/Announcer.uax` from the gateway's `/assets/ut/Announcer.uax` with progress
   events. An announcer failure only logs.
+- **The folder's profile pair.** Browse snapshots the ini files into an `Original` and a
+  `Default` profile, named with the first free `Original`, `Original (1)`, … (the same for
+  `Default`), and stamps each with `install.json` (`{ installPath, role }`) in its profile
+  folder. Browse on a folder that already has a stamped pair (the path compared resolved,
+  and case-insensitively on Windows) reuses it and recreates only a missing half. The
+  folder's `Default` becomes active, without copying it over the install, unless the
+  browsed folder is the current one and the active profile still exists; then the active
+  profile stays. Profiles made before the stamp existed match no folder, so the first
+  Browse after updating adds one stamped pair.
 - **`validateCurrentInstallation()`** re-checks the stored path: `{ valid: false }` when
   the path, the patch or a required file is missing; `{ valid: true, version:
   'Unsupported' }` (and stored) when the hash matches no active patch; the stored tag when
@@ -78,7 +89,14 @@ is `'Unsupported'`.
   (a cached ISO that matches skips the download; progress on `iso-download-progress`).
   `mountAndRunUt99Iso` mounts it with PowerShell `Mount-DiskImage`, runs `Setup.exe`,
   waits, and always unmounts. The installer never sets the path: the user browses to the
-  folder afterwards. `cancelUt99Download` aborts only the download.
+  folder afterwards.
+- **Cancel.** `cancelUt99Download` aborts only the download (the request, or the check of
+  a cached ISO) and removes the partial ISO; `downloadUt99Iso` then rejects with an
+  `AbortError` whose message is `UT99 download cancelled`. Across IPC only the message
+  survives, so the renderer tests it with `isUt99DownloadCancelled`. Settings →
+  Installation runs the flow through `runUt99Install`, which ends idle with "Cancelled",
+  the error, or the browse hint, and never mounts after a cancel. Cancel shows only while
+  downloading; the installer step can't be cancelled.
 - **Patches.** `fetchPatches` lists the active gateway patches. `installPatch` reuses
   `{userData}/patch-cache/<asset_name>` when its SHA-256 matches, else downloads and
   verifies it, extracts over the install root (an entry escaping the root fails the
@@ -88,22 +106,28 @@ is `'Unsupported'`.
 
 ## Launching and joining
 
-- **Play** (sidebar): `game.launchGameStandalone()` spawns `System/UnrealTournament.exe`
-  detached, with `System` as the working directory.
+- Every entry point goes through `app/utils/serverJoin.ts`: the server browser and Home
+  (with its favorite servers card) call `useServerJoin().join`, the sidebar Play calls
+  `launchStandaloneGame`. Both return early without `capabilities.game`, and the buttons
+  render only with it, so web shows no Join, Spec or Play. Add a new launch entry point
+  through them, never with direct `window.conveyor` calls.
+- **Play** (sidebar) first resets `User.ini` `[DefaultPlayer]` to a player (below), then
+  `game.launchGameStandalone()` spawns `System/UnrealTournament.exe` detached, with
+  `System` as the working directory. A launch failure only logs.
 - **Join / Spec** (server browser rows and compact cards, Home's favorite servers card)
-  first write `User.ini` `[DefaultPlayer]`, then call `game.launchGame(ip, hostport)`:
+  check that the game is not running (below), write `User.ini` `[DefaultPlayer]`, then call
+  `game.launchGame(ip, hostport)`:
   - Spec sets `OverrideClass=Botpack.CHSpectator`.
-  - Join clears `OverrideClass`, and clears `Class` when it is `Botpack.CHSpectator`.
-  - The value persists in `User.ini`. Play does not reset it, so a standalone launch keeps
-    the class the last Join or Spec chose.
-  - The handler exists twice, `ServerBrowserPage.handleJoin` and `Home.handleJoinServer`.
-    Keep them identical; extract a shared helper rather than adding a third copy.
+  - Join and Play clear `OverrideClass`, and clear `Class` when it is `Botpack.CHSpectator`,
+    so a Spec never carries over into a later Join or Play.
 - **`launchGame`** (main) checks the stored path and exe, requires `ip` to match
   `^[a-zA-Z0-9.-]+$`, and spawns the exe with `unreal://<ip>:<port>` as its only argument.
   The schema requires a positive integer port, so a server whose `hostport` normalised to
   `0` fails before main runs. Join passes no password or URL options; the stream cams are
   the only launch that sends a server password (lib/main/README.md).
-- Launch errors open the server browser's error modal or set Home's `launchError`.
+- `useServerJoin` holds one `notice` (`{ title, message }`): a launch error ("Launch Error")
+  or the already-running notice ("Game Already Running"). The server browser shows it in its
+  `ErrorModal`, Home in a `Modal`.
 - **Ping.** `pingServer` accepts IPv4 only (schema) and runs one `ping` with a 1 s
   timeout; `999` means failed. The server browser pings unique IPs six at a time after
   each fetch, behind `capabilities.ping`.
@@ -116,8 +140,11 @@ is `'Unsupported'`.
 - `startBackgroundGamePoller` (`favorites-handler.ts`, every 5 s from main) sends
   `favorites:game-closed` on a running → stopped edge; map favorites re-read the ini then
   ([api.md](../api.md)).
-- Nothing checks it before Join, Play, a Spec ini write, a profile switch or a settings
-  write. A second Join starts a second client.
+- Join and Spec check it first. While the game runs, or while another Join or Spec is still
+  starting it, they write nothing and launch nothing, and show "UT99 is already running.
+  Close it to join another server." instead.
+- Nothing checks it before Play, a profile switch or a settings write, so a second Play
+  still starts a second client.
 
 ## Files written into the install
 
@@ -170,7 +197,7 @@ through `app.setDemoWatcherConfig`, and the game's own recording switch `AutoDem
    yet → retry.
 3. Look the cap up on the gateway: `GET /caps?btpog_ids=<id>&columns=cap_type,team_run_id`.
    No row → retry (the server may not have registered the cap yet). No row with
-   `cap_type === 2` (certified) → `rejected`, file left alone. A failed lookup retries.
+   a certified `cap_type` (`isCertifiedCap`) → `rejected`, file left alone. A failed lookup retries.
 4. Team run (`team_run_id` set) → upload whatever the PB/WR setting: every certified
    member demo is evidence for the team run.
 5. Solo: `Personal Bests Only` compares with the signed-in user's best verified time
@@ -183,13 +210,19 @@ through `app.setDemoWatcherConfig`, and the game's own recording switch `AutoDem
 ### Upload
 
 - `uploadDemo` is imported from `app/utils/api.ts` into main, so keep it free of DOM and
-  renderer-only APIs. The watcher sends the stored desktop token (`getAuthConfig`) as is,
-  without refreshing it; no token → retry.
+  renderer-only APIs.
+- The token comes from `authService.getProfile()`, which refreshes it within 5 minutes of
+  expiry. No sign-in → retry. A token still expired after that (the refresh failed) →
+  retry, without sending it.
+- `401` → one forced refresh (`authService.refreshNow()`) and one immediate retry with the
+  new token, at most once per upload. A failed refresh or a second `401` sends the demo to
+  the durable retry; it is never marked `rejected` for its sign-in.
 - In place it tries up to 5 times, `attempt × 2 s` apart, but repeats only file locks
   (`EBUSY`, `EPERM`, `EACCES`, `EIO`), cloud-file errors, "no matching cap found" and
   "network error". After the fifth attempt, or at once for any other failure, the demo
   goes to the durable retry.
-- An error message containing "already verified" or "already exists" counts as success.
+- A demo the server already has is answered with success like a new one, so it counts as
+  uploaded. Error messages are never read as success.
 - `422` → `rejected`, never retried (contract in [api.md](../api.md)).
 - Success → `uploaded`, then `postUploadAction` (`System/Uploaded`, delete, or leave).
 
@@ -226,9 +259,14 @@ through `app.setDemoWatcherConfig`, and the game's own recording switch `AutoDem
   `WinDrv.WindowsClient`, `Engine.Player`, `Engine.GameInfo` and every `*RenderDevice` /
   `*AudioSubsystem` section, ignoring `RunCount` and `LocalTime`. The modal asks before
   switching away from a dirty profile.
-- `Original` and `Original (n)` cannot be overwritten, renamed or deleted from the modal;
-  main does not enforce it. Every successful Browse adds a new `Original (n)` /
-  `Default (n)` pair, even for the same folder.
+- `Original` and `Original (n)` are reserved: main refuses to create, overwrite, rename to
+  or from, or delete them (case-insensitive, trailing dots and spaces ignored, as Windows
+  folder names are), and the modal disables those row buttons. Only Browse writes them
+  ([the folder's profile pair](#choosing-and-validating)).
+- A refused or failed create, overwrite, rename, delete or switch shows main's message under
+  the create field (`runProfileAction` in `app/components/window/profileAction.ts` strips
+  Electron's IPC wrapper). A failed rename keeps its field open. Escape closes an open
+  confirm first, then an open rename, then the modal.
 
 ## Window chrome (desktop only)
 
@@ -261,15 +299,13 @@ through `app.setDemoWatcherConfig`, and the game's own recording switch `AutoDem
 - Buttons that open UI living under `App` dispatch a `window` event instead: Settings sends
   `open-settings` ([navigation.md](../navigation.md)), Impersonate sends
   `DEV_IMPERSONATE_EVENT` for `DevImpersonateModal`. Game Profiles and Demo Uploads render
-  their own modals. Links and the About page open URLs through `web-open-url`.
+  their own `ui/modal.tsx` modals in place (`offsetSidebar`, no portal, so their
+  `ConfirmModal`s stay on top). Links and the About page open URLs through `web-open-url`.
 - `--window-titlebar-height` (26 px in `app/styles/window.css`, 0 px on web) is the top
   offset of full-window overlays (`top-[var(--window-titlebar-height)]` in
   `app/components/ui/modal.tsx`, `ErrorModal`, the settings fallback), which keeps the
   titlebar usable.
   Titlebar colours and the scope of `window.css`: [styling.md](../styling.md).
-- Not in use: `TitlebarMenu.tsx` and `menus.ts` (a File / View / Links / About menu bar,
-  still exported from `index.ts`) are never rendered, and nothing sends
-  `set-titlebar-lock` or calls `webSetLocked`. Build on the action buttons.
 
 ## Platform notes
 

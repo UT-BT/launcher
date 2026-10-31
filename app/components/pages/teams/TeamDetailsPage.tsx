@@ -15,7 +15,7 @@ import { MembersPanel } from './MembersPanel'
 import { TeamStatsRow } from './TeamStatsRow'
 import { TeamActivityPanel } from './TeamActivityPanel'
 import { TeamWorldRecordsPanel } from './TeamWorldRecordsPanel'
-import { ErrorBanner, teamErrorMessage } from './teamsShared'
+import { ErrorBanner, refreshUserProfile, teamErrorMessage } from './teamsShared'
 
 type ViewerRole = TeamRole | 'none'
 
@@ -86,6 +86,7 @@ export function TeamDetailsPage({ teamId, userProfile, onExitToGallery }: TeamDe
         setError(null)
         try {
             await joinTeam(accessToken, team.id)
+            refreshUserProfile()
             onExitToGallery()
         } catch (e) {
             setError(teamErrorMessage(e))
@@ -99,6 +100,7 @@ export function TeamDetailsPage({ teamId, userProfile, onExitToGallery }: TeamDe
         setError(null)
         try {
             await acceptTeamInvite(accessToken, team.id)
+            refreshUserProfile()
             onExitToGallery()
         } catch (e) {
             setError(teamErrorMessage(e))

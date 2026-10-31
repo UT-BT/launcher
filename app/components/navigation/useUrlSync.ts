@@ -3,10 +3,39 @@ import { IS_WEB } from '@/app/platform'
 import { pathToNav, viewToPath } from './routes'
 import type { NavEntry, NavParams } from './NavigationContext'
 
+interface HistoryEntryState {
+    navId?: number
+    position?: number
+}
+
+interface BlockedHistoryMove {
+    message: string
+    move: () => void
+}
+
 interface UrlSyncArgs {
     stackRef: RefObject<{ entries: NavEntry[]; cursor: number }>
     setCursor: (index: number) => void
     pushExternal: (view: string, params: NavParams) => number
+    leaveWarning: () => string | null
+    onBlocked: (blocked: BlockedHistoryMove) => void
+}
+
+let position = 0
+let confirmedPosition: number | null = null
+
+function readEntryState(state: unknown): HistoryEntryState {
+    if (!state || typeof state !== 'object') return {}
+    const entry = state as HistoryEntryState
+    return {
+        navId: typeof entry.navId === 'number' ? entry.navId : undefined,
+        position: typeof entry.position === 'number' ? entry.position : undefined,
+    }
+}
+
+function goConfirmed(to: number) {
+    confirmedPosition = to
+    window.history.go(to - position)
 }
 
 export function seedEntriesFromUrl(): NavEntry[] {
@@ -18,10 +47,12 @@ export function seedEntriesFromUrl(): NavEntry[] {
 
 export function pushUrlForEntry(entry: NavEntry): void {
     if (!IS_WEB) return
-    window.history.pushState({ navId: entry.id }, '', viewToPath(entry.view, entry.params))
+    position += 1
+    confirmedPosition = null
+    window.history.pushState({ navId: entry.id, position }, '', viewToPath(entry.view, entry.params))
 }
 
-export function useUrlSync({ stackRef, setCursor, pushExternal }: UrlSyncArgs): { back: () => void; forward: () => void } | null {
+export function useUrlSync({ stackRef, setCursor, pushExternal, leaveWarning, onBlocked }: UrlSyncArgs): { back: () => void; forward: () => void } | null {
     useEffect(() => {
         if (!IS_WEB) return
 
@@ -30,29 +61,46 @@ export function useUrlSync({ stackRef, setCursor, pushExternal }: UrlSyncArgs): 
         const activeId = active?.id ?? 0
         const canonical = active ? viewToPath(active.view, active.params) : '/'
         const current = window.location.pathname + window.location.search
-        window.history.replaceState({ navId: activeId }, '', current === canonical ? current : canonical)
+        position = readEntryState(window.history.state).position ?? 0
+        confirmedPosition = null
+        window.history.replaceState({ navId: activeId, position }, '', current === canonical ? current : canonical)
 
         const onPopState = (event: PopStateEvent) => {
-            const navId = (event.state as { navId?: number } | null)?.navId
+            const target = readEntryState(event.state)
+            const to = target.position
+            if (to === position) return
+
+            const confirmed = to === confirmedPosition
+            confirmedPosition = null
+            if (to !== undefined && !confirmed) {
+                const message = leaveWarning()
+                if (message) {
+                    window.history.go(position - to)
+                    onBlocked({ message, move: () => goConfirmed(to) })
+                    return
+                }
+            }
+
+            position = to ?? position + 1
             const current = stackRef.current
-            if (navId !== undefined && current) {
-                const index = current.entries.findIndex(e => e.id === navId)
+            if (target.navId !== undefined && current) {
+                const index = current.entries.findIndex(e => e.id === target.navId)
                 if (index >= 0) {
                     setCursor(index)
                     return
                 }
             }
-            const target = pathToNav(window.location.pathname, window.location.search)
-            const id = pushExternal(target.view, target.params)
-            window.history.replaceState({ navId: id }, '', window.location.pathname + window.location.search)
+            const external = pathToNav(window.location.pathname, window.location.search)
+            const id = pushExternal(external.view, external.params)
+            window.history.replaceState({ navId: id, position }, '', window.location.pathname + window.location.search)
         }
 
         window.addEventListener('popstate', onPopState)
         return () => window.removeEventListener('popstate', onPopState)
-    }, [stackRef, setCursor, pushExternal])
+    }, [stackRef, setCursor, pushExternal, leaveWarning, onBlocked])
 
-    const back = useCallback(() => window.history.back(), [])
-    const forward = useCallback(() => window.history.forward(), [])
+    const back = useCallback(() => goConfirmed(position - 1), [])
+    const forward = useCallback(() => goConfirmed(position + 1), [])
 
     if (!IS_WEB) return null
     return { back, forward }

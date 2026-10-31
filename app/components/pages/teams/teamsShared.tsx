@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import type { ActiveTitle, TeamMemberStatus } from '@/app/utils/api'
 
 export const teamInputClass =
-    'px-3 py-2 bg-card/50 border border-white/10 rounded-lg text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50'
+    'px-3 py-2 bg-card/50 border border-hairline/10 rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50'
 
 export function memberTitle(raw: ActiveTitle | null | undefined): ActiveTitle | null {
     if (!raw || !raw.name) return null

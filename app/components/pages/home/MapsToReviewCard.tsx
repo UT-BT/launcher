@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { ClipboardCheck, ChevronLeft, ChevronRight, AlertTriangle, RefreshCw } from 'lucide-react'
 import { Spinner } from '@/app/components/ui/spinner'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
@@ -10,6 +10,10 @@ import { displayMapName } from '@/app/utils/format'
 import { fetchPendingReviews, type PendingReview, type PendingReviewsPage } from '@/app/utils/api'
 
 const PAGE_SIZE = 5
+
+function pageCount(total: number) {
+    return Math.max(1, Math.ceil(total / PAGE_SIZE))
+}
 
 interface MapsToReviewCardProps {
     accessToken?: string
@@ -32,41 +36,48 @@ export function MapsToReviewCard({
     const [loading, setLoading] = useState(firstPage === null)
     const [error, setError] = useState<string | null>(null)
 
-    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+    const shownPageRef = useRef<number | null>(firstPage === null ? null : 1)
 
-    const load = useCallback(async (targetPage: number, isActive: () => boolean = () => true) => {
+    const totalPages = pageCount(total)
+
+    const load = useCallback(async (
+        targetPage: number,
+        isActive: () => boolean = () => true,
+        silent = false,
+    ) => {
         if (!accessToken) {
             setLoading(false)
             return
         }
-        setLoading(true)
+        if (!silent) setLoading(true)
         setError(null)
         try {
             const data = await fetchPendingReviews(accessToken, PAGE_SIZE, (targetPage - 1) * PAGE_SIZE)
             if (!isActive()) return
+            const lastPage = pageCount(data.total)
+            if (targetPage > lastPage) {
+                setLoading(true)
+                setPage(lastPage)
+                return
+            }
             setItems(data.items)
             setTotal(data.total)
+            shownPageRef.current = targetPage
             if (targetPage === 1) onFirstPageLoaded(data)
+            setLoading(false)
         } catch (err) {
             if (!isActive()) return
             console.error('Failed to load pending reviews', err)
             setError('Failed to load pending reviews.')
-        } finally {
-            if (isActive()) setLoading(false)
+            setLoading(false)
         }
     }, [accessToken, onFirstPageLoaded])
 
     useEffect(() => {
-        if (page === 1 && firstPage !== null) {
-            setItems(firstPage.items)
-            setTotal(firstPage.total)
-            setLoading(false)
-            return
-        }
         let cancelled = false
-        load(page, () => !cancelled)
+        load(page, () => !cancelled, shownPageRef.current === page)
         return () => { cancelled = true }
-    }, [load, page, refreshKey, firstPage])
+    }, [load, page, refreshKey])
 
     if (!loading && !error && items.length === 0) {
         return (
@@ -138,6 +149,7 @@ export function MapsToReviewCard({
                             <button
                                 type="button"
                                 onClick={() => onReview(r.mapName)}
+                                aria-label={`Review ${displayMapName(r.mapName)}`}
                                 className="shrink-0 inline-flex items-center h-7 px-2.5 rounded-md bg-orange-500/10 border border-orange-500/30 text-orange-300 hover:bg-orange-500/25 hover:text-foreground hover:border-orange-500/60 transition-colors text-xs font-semibold cursor-pointer"
                             >
                                 Review

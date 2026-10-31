@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { T0, asSpectator, iso, pickBanState } from '../app/components/pages/events/pickban/pickBanFixtures'
+import { STREAM_SCENES } from '../app/components/stream/streamSceneRegistry'
 
 const SLUG = '2v2-cup-2026'
 const STREAMER = '228152236587483136'
@@ -11,22 +12,6 @@ const CORS = {
     'access-control-allow-headers': '*',
     'access-control-expose-headers': 'ETag, X-Server-Now',
 }
-
-const SCENES = [
-    { id: 'starting-soon', label: 'Starting Soon' },
-    { id: 'preview', label: 'Match Preview' },
-    { id: 'pick-ban', label: 'Pick & Ban' },
-    { id: 'betting', label: 'Betting' },
-    { id: 'overlay', label: 'Match Overlay' },
-    { id: 'intermission', label: 'Intermission' },
-    { id: 'next-map', label: 'Next Map' },
-    { id: 'post-match', label: 'Post-match' },
-    { id: 'standings', label: 'Standings' },
-    { id: 'predictor-standings', label: 'Predictor Standings' },
-    { id: 'brb', label: 'BRB' },
-    { id: 'ending', label: 'Ending' },
-    { id: 'caster', label: 'Caster Cam' },
-]
 
 interface Box {
     x: number
@@ -117,8 +102,8 @@ test.beforeEach(async ({ page }) => {
 
 test('every scene URL renders its own scene with no app shell and noindex', async ({ page, isMobile }) => {
     test.skip(isMobile)
-    test.setTimeout(SCENES.length * PER_SCENE_TIMEOUT_MS)
-    for (const scene of SCENES) {
+    test.setTimeout(STREAM_SCENES.length * PER_SCENE_TIMEOUT_MS)
+    for (const scene of STREAM_SCENES) {
         await page.goto(scenePage(scene.id))
         await expect(page.locator(`[data-stream-scene="${scene.id}"]`).first(), scene.id).toBeVisible()
         await expectNoAppShell(page)

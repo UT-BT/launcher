@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { STREAM_SCENES, streamSceneObsName } from '@/app/components/stream/streamScenes'
+import { countWord } from '@/app/utils/wording'
 import { GUIDE_STEPS, guideStepIds } from './guideSteps'
 
 describe('guide steps', () => {
@@ -33,11 +35,20 @@ describe('guide steps', () => {
         for (const preset of ['−15 dB', '0 dB', '−6 dB', 'ducks', 'Limiters', 'Leave the filters alone', 'turn the cams down', 'turn Discord up', 'mic fader']) expect(audio).toContain(preset)
     })
 
-    it('names the thirteen scenes and the current tabs', () => {
+    it('names every registered scene by its OBS name, in registry order, with their count', () => {
+        const names = STREAM_SCENES.map(streamSceneObsName)
         const all = JSON.stringify(GUIDE_STEPS)
-        expect(all).toContain('thirteen scenes')
-        expect(all).toContain('Next Map')
-        expect(all).toContain('Predictor Standings')
+        expect(all).toContain(`scenes: ${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}.`)
+        expect(all).toContain(`The collection has ${countWord(STREAM_SCENES.length)} scenes: `)
+        expect(all).toContain(`each of your ${countWord(STREAM_SCENES.length)} scenes`)
+    })
+
+    it('calls the overlay scene Match, as the imported collection does', () => {
+        expect(JSON.stringify(GUIDE_STEPS)).toContain('Betting, Match, Intermission')
+    })
+
+    it('names the current tabs', () => {
+        const all = JSON.stringify(GUIDE_STEPS)
         expect(all).not.toMatch(/eleven|Show panel|Channel panel|Kit panel|Scenes panel|Cams panel|Match panel/)
         expect(all).toContain('120 fps')
     })

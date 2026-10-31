@@ -121,7 +121,7 @@ export function Tutorial({ steps, step, setStep, onClose, ariaLabel }: TutorialP
         <>
             <div
                 aria-hidden
-                className="fixed inset-0 bg-black/65 backdrop-blur-[2px] z-[5] pointer-events-none animate-in fade-in duration-200"
+                className="fixed inset-0 bg-black/65 backdrop-blur-[2px] z-[5] pointer-events-none"
             />
             {rects.map((r, i) => (
                 <div
@@ -143,7 +143,6 @@ export function Tutorial({ steps, step, setStep, onClose, ariaLabel }: TutorialP
                 className={cn(
                     'fixed bottom-6 right-6 z-[80] w-80 max-w-[calc(100vw-3rem)]',
                     'bg-card border border-accent-500/40 rounded-xl shadow-2xl',
-                    'animate-in fade-in slide-in-from-bottom-4 duration-200',
                 )}
             >
                 <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-hairline/10">

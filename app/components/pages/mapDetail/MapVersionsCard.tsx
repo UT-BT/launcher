@@ -2,6 +2,7 @@ import { useEffect, useReducer } from 'react'
 import { ChevronRight, GitBranch } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Tooltip } from '@/app/components/ui/tooltip'
+import { MapNavLink } from '@/app/components/shared/MapNavLink'
 import { formatAddedDate } from '@/app/utils/format'
 import { fetchMap, fetchMapCapsCount, type MapMetadata } from '@/app/utils/api'
 
@@ -132,13 +133,9 @@ export function MapVersionsBar({ map, accessToken, onSelect }: MapVersionsBarPro
                             : 'bg-hairline/[0.04] text-foreground/60 border border-hairline/10',
                 )
                 const pill = clickable ? (
-                    <button
-                        type="button"
-                        onClick={() => onSelect?.(entry.name)}
-                        className={pillClass}
-                    >
+                    <MapNavLink mapName={entry.name} onMapSelect={onSelect} className={pillClass}>
                         {label}
-                    </button>
+                    </MapNavLink>
                 ) : (
                     <span className={pillClass}>{label}</span>
                 )

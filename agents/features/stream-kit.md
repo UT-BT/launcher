@@ -18,7 +18,7 @@ Paths starting `events/stream/` are under `app/components/pages/`.
 | `events/stream/panels/match/`, `studio/`, `channel/` | the desk-writing sections (current match, countdown, lineup, score; casters, BRB, webcam; Twitch channel), built on pure view and action modules and a write hook (`useMatchWrite`, `useShowWrite`, `useChannelWriter`) |
 | `events/stream/panels/cams/` | the cam tool's view model (`camToolView.ts`), its hooks and the Red/Blue switch |
 | `events/stream/panels/kit/`, `guide/` | OBS kit fetch, folder and banner; the Guide's steps and deep links |
-| `app/components/stream/` | the scene pages: registry (`streamScenes.ts`), URL options, the pre-shell root (`mountStreamSceneRoot.tsx`), side tags, cues, text helpers |
+| `app/components/stream/` | the scene pages: registry (`streamSceneRegistry.ts`, re-exported with the route helpers by `streamScenes.ts`), URL options, the pre-shell root (`mountStreamSceneRoot.tsx`), side tags, cues, text helpers |
 | `app/components/stream/data/` | the per-page stores, cadence and hooks every scene reads through; `streamFixtures.ts` |
 | `app/components/stream/scenes/` | one `<Name>Scene.tsx` per scene; its parts, tested view model, read path and fixtures in `scenes/<scene>/` ([Adding a scene](#adding-a-scene)) |
 | `app/components/stream/frame/`, `ticker/`, `ending/`, `stinger/` | the scene frames, the ticker strip, the Ending views, the stinger page |
@@ -332,9 +332,15 @@ before `App` mounts. Scenes are web pages only; OBS loads them from the site. Th
 pre-shell mechanism, noindex (`markPageNoIndex` + `robots.txt`) and the bundle checks on
 the scene root and every `stream/scenes/*Scene.tsx` are in [web-target.md](../web-target.md).
 
-- `STREAM_SCENES` (`streamScenes.ts`) is the registry: id, label and `transparent`. An
-  unknown id (`/stream/cup/42/scoreboard`) is still claimed by the stream root and renders
-  `UnknownScene`, never the app. `streamScenePath` / `streamSceneUrl` build links.
+- `STREAM_SCENES` (`streamSceneRegistry.ts`) is the registry: id, label, `transparent`, and
+  `obsName` where the imported OBS collection names the scene differently (the overlay is
+  "Match" there). `NEWEST_STREAM_SCENE_ID` beside it is the scene the kit re-import banner
+  names. Every scene list and count derives from it: the Scenes card, the Guide's count and
+  scene names (`countWord` and `joinWithAnd` in `app/utils/wording.ts`), the kit banner, the
+  route contract and the scene specs. The file reads no `import.meta`, so Playwright specs
+  import it directly. An unknown id (`/stream/cup/42/scoreboard`) is still claimed by the
+  stream root and renders `UnknownScene`, never the app. `streamScenePath` /
+  `streamSceneUrl` (`streamScenes.ts`) build links.
 - `mountStreamSceneRoot` maps each id to a lazy `stream/scenes/<Name>Scene.tsx`, wraps it
   in `StreamDataProvider` and `PickBanMotion`, and for a transparent scene clears the
   document, body and root backgrounds.
@@ -401,12 +407,9 @@ pick/ban stream view instead of a frame.
 Copy Predictor Standings (#290), the newest scene: `PredictorStandingsScene.tsx` plus
 `scenes/standings/predictorStandings*.ts`.
 
-1. **Register.** Add the id, label and `transparent` flag to `STREAM_SCENES`. The list and
-   its count are also written out by hand: the id list and test name in
-   `streamScenes.test.ts`, `toHaveLength` and the test name in
-   `events/stream/panels/sceneLinks.test.ts`, and the Guide text
-   (`events/stream/panels/guide/guideSteps.ts`, "thirteen scenes: …", every scene named)
-   with `guideSteps.test.ts`. `routes.contract.test.ts` derives from the registry.
+1. **Register.** Add the id, label and `transparent` flag to `STREAM_SCENES`
+   (`stream/streamSceneRegistry.ts`), plus `obsName` if the kit's OBS scene is named
+   differently. The Scenes card, the Guide text, the scene specs and their counts follow.
 2. **Scene file.** `stream/scenes/<Name>Scene.tsx`: a default export taking
    `StreamSceneProps` (`eventSlug`, `streamerId`, `options`; `streamSceneOptions.ts`). The
    name must end in `Scene.tsx` for the bundle check. Add it to the `SCENES` map in
@@ -418,12 +421,11 @@ Copy Predictor Standings (#290), the newest scene: `PredictorStandingsScene.tsx`
    `useSceneRead(<scene>ReadPath(...))` inside a frame. The frame stamps
    `data-stream-scene`, which the specs wait on.
 5. **OBS kit.** The kit zip comes from the API: OBS gets a source for the scene only once
-   the served kit includes it and raises `current_version`. Then name the scene in
-   `kitBannerHeadline` (`events/stream/panels/kit/kitBanner.ts`), pinned by `kitBanner.test.ts` and
-   `e2e/stream-kit-panel.spec.ts`, so streamers know to re-import.
-6. **Specs.** Add the scene to the lists in `e2e/stream-scenes.spec.ts` (loads with no app
-   shell, noindex) and `e2e/stream-scenes-panel.spec.ts` (a URL row per scene, and its row
-   count), and write `e2e/<scene>-scene.broadcast.spec.ts` on `openScene` /
+   the served kit includes it and raises `current_version`. Then point
+   `NEWEST_STREAM_SCENE_ID` at the scene, so the re-import banner names it.
+6. **Specs.** `e2e/stream-scenes.spec.ts` (loads with no app shell, noindex) and
+   `e2e/stream-scenes-panel.spec.ts` (a URL row per scene) already loop over the registry;
+   write `e2e/<scene>-scene.broadcast.spec.ts` on `openScene` /
    `expectSceneScreenshot` with committed baselines ([Screenshot checks](#screenshot-checks)).
 7. **Verify.** `npm test`, `npx playwright test e2e/stream-scenes.spec.ts
    e2e/stream-scenes-panel.spec.ts` and `npx playwright test --project=broadcast

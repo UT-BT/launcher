@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { getMedalIcon } from '@/app/utils/medals'
 import type { UserSummaryMedals } from '@/app/utils/api'
+import { medalMultiplierLabel } from '@/app/utils/medalThresholds'
 
 interface MedalShowcaseCardProps {
     medals: UserSummaryMedals | null
@@ -17,10 +18,10 @@ const ROWS: {
     multiplierLabel: string
 }[] = [
     { key: 'world_records',   label: 'World Records', medal: 'world record',   accent: 'text-blue-300',   multiplierLabel: '' },
-    { key: 'champion_medals', label: 'Champion',      medal: 'champion medal', accent: 'text-red-300',    multiplierLabel: 'WR + 2.5%' },
-    { key: 'gold_medals',     label: 'Gold',          medal: 'gold medal',     accent: 'text-yellow-300', multiplierLabel: 'WR + 12.5%' },
-    { key: 'silver_medals',   label: 'Silver',        medal: 'silver medal',   accent: 'text-slate-200',  multiplierLabel: 'WR + 30%' },
-    { key: 'bronze_medals',   label: 'Bronze',        medal: 'bronze medal',   accent: 'text-amber-500',  multiplierLabel: 'WR + 60%' },
+    { key: 'champion_medals', label: 'Champion',      medal: 'champion medal', accent: 'text-red-300',    multiplierLabel: medalMultiplierLabel('champion_medal') },
+    { key: 'gold_medals',     label: 'Gold',          medal: 'gold medal',     accent: 'text-yellow-300', multiplierLabel: medalMultiplierLabel('gold_medal') },
+    { key: 'silver_medals',   label: 'Silver',        medal: 'silver medal',   accent: 'text-slate-200',  multiplierLabel: medalMultiplierLabel('silver_medal') },
+    { key: 'bronze_medals',   label: 'Bronze',        medal: 'bronze medal',   accent: 'text-amber-500',  multiplierLabel: medalMultiplierLabel('bronze_medal') },
 ]
 
 const EXPLAINER = (

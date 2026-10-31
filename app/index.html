@@ -8,14 +8,17 @@
     <title>UTBT.net</title>
     <script>
       try {
+        var defaultTheme = 'classic'
+        var lightThemes = ['light']
         var t = JSON.parse(localStorage.getItem('utbt:theme:v1') || '{}').id
-        if (t && t !== 'classic') document.documentElement.setAttribute('data-theme', t)
-        if (t === 'light') document.documentElement.classList.remove('dark')
+        if (t && t !== defaultTheme) document.documentElement.setAttribute('data-theme', t)
+        if (lightThemes.indexOf(t) >= 0) document.documentElement.classList.remove('dark')
       } catch {}
       try {
         var seg = location.pathname.split('/').filter(Boolean)
         var streamRoute = (seg[0] === 'stream' && seg.length === 4) || (seg[0] === 'events' && seg[2] === 'matches' && seg[4] === 'stream' && seg.length === 5)
-        var valid = function (v) { return v === 'none' || v === 'halloween' || v === 'christmas' || v === 'easter' }
+        var seasons = ['halloween', 'christmas', 'easter']
+        var valid = function (v) { return v === 'none' || seasons.indexOf(v) >= 0 }
         var param = new URLSearchParams(location.search).get('season')
         var preview = valid(param) ? param : sessionStorage.getItem('utbt:seasonOverride:v1')
         var season = null

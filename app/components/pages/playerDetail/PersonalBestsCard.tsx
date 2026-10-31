@@ -24,6 +24,7 @@ import {
     type SortDirection, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { PaginationBar } from '@/app/components/ui/pagination'
+import { CAP_TYPE_I4GAMES, CAP_TYPE_UTBT_CERTIFIED } from '@/app/utils/capTypes'
 
 interface PersonalBestsCardProps {
     accessToken: string | undefined
@@ -59,9 +60,6 @@ const COLUMN_PRIORITY: Partial<Record<PbColumnId, number>> = {
 }
 
 const REQUIRED_COLUMNS = new Set<PbColumnId>(['map', 'time'])
-
-const CAP_TYPE_UTBT_CERTIFIED = 2
-const CAP_TYPE_I4GAMES = 3
 
 function renderPbStatus(pb: UserPersonalBestRow) {
     if (pb.verified) {

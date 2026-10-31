@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { DEFAULT_THEME_ID, THEMES } from '../../../../theme/themes'
 import { ACCENT_SLOT_COUNT } from './statsView'
 import { teamAccentColor, teamAccentStyle } from './teamAccent'
 
@@ -26,8 +27,21 @@ function toLinear(channel: number): number {
     return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
 }
 
-function hslToLinear(value: string): Rgb {
-    const [h, s, l] = value.match(/hsl\(\s*([\d.]+)\s+([\d.]+)%\s+([\d.]+)%\s*\)/)!.slice(1).map(Number)
+const SEPARATOR = String.raw`\s*[\s,]\s*`
+const ALPHA = String.raw`(?:\s*[/,]\s*(?<alpha>[\d.]+)(?<alphaPercent>%?))?\s*`
+const HSL = new RegExp(
+    String.raw`^hsla?\(\s*(?<h>[\d.]+)(?:deg)?${SEPARATOR}(?<s>[\d.]+)%${SEPARATOR}(?<l>[\d.]+)%${ALPHA}\)$`
+)
+const RGB = new RegExp(String.raw`^rgba?\(\s*(?<r>[\d.]+)${SEPARATOR}(?<g>[\d.]+)${SEPARATOR}(?<b>[\d.]+)${ALPHA}\)$`)
+const HEX = /^#([\da-f]{3}|[\da-f]{6})$/i
+const OKLCH = new RegExp(
+    String.raw`^oklch\(\s*(?<l>[\d.]+)(?<lPercent>%?)\s+(?<c>[\d.]+)\s+(?<h>[\d.]+)(?:deg)?${ALPHA}\)$`
+)
+
+type Oklch = { l: number; c: number; h: number }
+type ColorGroups = Record<string, string | undefined>
+
+function hslToLinear(h: number, s: number, l: number): Rgb {
     const sat = s / 100
     const light = l / 100
     const k = (n: number) => (n + h / 30) % 12
@@ -37,15 +51,39 @@ function hslToLinear(value: string): Rgb {
 }
 
 function hexToLinear(value: string): Rgb {
-    return [1, 3, 5].map(index => toLinear(parseInt(value.slice(index, index + 2), 16) / 255)) as Rgb
+    const digits = value.slice(1)
+    const full = digits.length === 3 ? [...digits].map(digit => digit + digit).join('') : digits
+    return [0, 2, 4].map(index => toLinear(parseInt(full.slice(index, index + 2), 16) / 255)) as Rgb
 }
 
-function parseOklch(value: string): { l: number; c: number; h: number } {
-    const [l, c, h] = value.match(/oklch\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\)/)!.slice(1).map(Number)
-    return { l, c, h }
+function oklchOf(groups: ColorGroups): Oklch {
+    return { l: Number(groups.l) / (groups.lPercent ? 100 : 1), c: Number(groups.c), h: Number(groups.h) }
 }
 
-function oklchToLinear({ l, c, h }: { l: number; c: number; h: number }): Rgb {
+function parseOklch(value: string): Oklch {
+    return oklchOf(value.match(OKLCH)!.groups!)
+}
+
+function opaqueGroups(pattern: RegExp, value: string, where: string): ColorGroups | undefined {
+    const groups = value.match(pattern)?.groups
+    if (groups?.alpha !== undefined && Number(groups.alpha) / (groups.alphaPercent ? 100 : 1) < 1) {
+        throw new Error(`${where}: "${value}" is translucent; write the surface opaque so its contrast can be measured`)
+    }
+    return groups
+}
+
+function colorToLinear(value: string, where: string): Rgb {
+    const hsl = opaqueGroups(HSL, value, where)
+    if (hsl) return hslToLinear(Number(hsl.h), Number(hsl.s), Number(hsl.l))
+    const rgb = opaqueGroups(RGB, value, where)
+    if (rgb) return [rgb.r, rgb.g, rgb.b].map(channel => toLinear(Number(channel) / 255)) as Rgb
+    if (HEX.test(value)) return hexToLinear(value)
+    const oklch = opaqueGroups(OKLCH, value, where)
+    if (oklch) return oklchToLinear(oklchOf(oklch))
+    throw new Error(`${where}: cannot read the colour "${value}"; write it as hsl(), rgb(), #hex or oklch()`)
+}
+
+function oklchToLinear({ l, c, h }: Oklch): Rgb {
     const a = c * Math.cos((h * Math.PI) / 180)
     const b = c * Math.sin((h * Math.PI) / 180)
     const lms = [
@@ -88,20 +126,21 @@ const darkAccents = declarations(accentBlocks.find(block => block.selector === '
 const lightAccents = declarations(accentBlocks.find(block => block.selector === ":root[data-theme='light']")!.body)
 
 const themeBlocks = blocks(themesCss).filter(block => /^:root(\[data-theme='[\w-]+'\])?$/.test(block.selector))
-const surfacesOf = (selectors: string[]) =>
-    themeBlocks
+function surfacesOf(cssBlocks: { selector: string; body: string }[], selectors: string[]) {
+    return cssBlocks
         .filter(block => selectors.includes(block.selector))
         .flatMap(block => {
             const vars = declarations(block.body)
-            return ['--background', '--card'].filter(name => vars[name]?.startsWith('hsl(')).map(name => ({
+            return ['--background', '--card'].filter(name => name in vars).map(name => ({
                 theme: block.selector,
                 name,
-                rgb: hslToLinear(vars[name]),
+                rgb: colorToLinear(vars[name], `${block.selector} ${name}`),
             }))
         })
+}
 const lightSelector = ":root[data-theme='light']"
-const darkSurfaces = surfacesOf(themeBlocks.map(block => block.selector).filter(selector => selector !== lightSelector))
-const lightSurfaces = surfacesOf([lightSelector])
+const darkSurfaces = surfacesOf(themeBlocks, themeBlocks.map(block => block.selector).filter(selector => selector !== lightSelector))
+const lightSurfaces = surfacesOf(themeBlocks, [lightSelector])
 
 const pickBanTones = declarations(themeCss)
 const reservedHues = ['--color-pickban-a', '--color-pickban-b', '--color-pickban-gold'].map(name => ({
@@ -157,6 +196,52 @@ describe('team accent palette', () => {
             for (const [index, hue] of hues.entries()) {
                 for (const other of hues.slice(index + 1)) expect(hueDistance(hue, other)).toBeGreaterThanOrEqual(15)
             }
+        }
+    })
+})
+
+describe('theme surface parsing', () => {
+    const surfaceOf = (value: string) =>
+        surfacesOf(blocks(`:root[data-theme='probe'] { --background: ${value}; }`), [":root[data-theme='probe']"])
+
+    it.each([
+        'hsl(0 0% 100%)',
+        'hsl(0, 0%, 100%)',
+        'hsl(0deg 0% 100% / 1)',
+        'hsla(0, 0%, 100%, 100%)',
+        '#fff',
+        '#FFFFFF',
+        'rgb(255 255 255)',
+        'rgb(255, 255, 255)',
+        'rgba(255, 255, 255, 1)',
+        'oklch(1 0 0)',
+        'oklch(100% 0 0)',
+    ])('reads %s as white', value => {
+        expect(luminance(surfaceOf(value)[0].rgb)).toBeCloseTo(1, 4)
+    })
+
+    it.each(['#808080', 'rgb(128 128 128)', 'hsl(0 0% 50.196%)'])('reads %s as mid grey', value => {
+        expect(luminance(surfaceOf(value)[0].rgb)).toBeCloseTo(0.21586, 4)
+    })
+
+    it.each(['lab(50% 0 0)', 'var(--color-neutral-950)', 'color-mix(in srgb, red, blue)', '#12'])(
+        'fails on %s instead of skipping the theme',
+        value => {
+            expect(() => surfaceOf(value)).toThrow(/probe.*--background/)
+        }
+    )
+
+    it.each(['hsl(0 0% 100% / 0.9)', 'rgba(255, 255, 255, 0.5)', 'oklch(1 0 0 / 50%)'])(
+        'fails on the translucent %s instead of scoring it as opaque',
+        value => {
+            expect(() => surfaceOf(value)).toThrow(/probe.*--background.*translucent/)
+        }
+    )
+
+    it('has a surface block for every registered theme', () => {
+        const selectors = themeBlocks.map(block => block.selector)
+        for (const { id } of THEMES) {
+            expect(selectors).toContain(id === DEFAULT_THEME_ID ? ':root' : `:root[data-theme='${id}']`)
         }
     })
 })

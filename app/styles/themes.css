@@ -331,11 +331,11 @@
   --window-c-titlebar-background: hsl(218 28% 9%);
 }
 
-:root[data-theme='light'] select {
+:root:not(.dark) select {
   color-scheme: light !important;
 }
 
-:root[data-theme='light'] option {
+:root:not(.dark) option {
   background-color: #fff;
   color: hsl(222 47% 11%);
 }

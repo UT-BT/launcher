@@ -1,4 +1,5 @@
 import type { BestCap, MapMetadata } from '@/app/utils/api'
+import { isCertifiedCap } from '@/app/utils/capTypes'
 import championIcon from '@/app/assets/champion.webp'
 import goldIcon from '@/app/assets/gold.webp'
 import silverIcon from '@/app/assets/silver.webp'
@@ -51,7 +52,7 @@ export function computeMedalTier(
     map: (Pick<MapMetadata, 'bronze_medal' | 'silver_medal' | 'gold_medal' | 'champion_medal'> & { world_record?: number }) | undefined,
 ): MedalTier {
     if (!bestCap) return 'uncapped'
-    if (bestCap.cap_type !== 2) return 'casual'
+    if (!isCertifiedCap(bestCap)) return 'casual'
     if (!map) return 'verified'
     const t = bestCap.cap_time_seconds
     if (map.world_record != null && map.world_record > 0 && t - map.world_record <= WR_TIME_EPSILON_SECONDS) return 'world_record'

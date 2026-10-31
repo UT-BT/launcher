@@ -1,8 +1,8 @@
 import { expect, test, type Page } from '@playwright/test'
 import { horizontalOverflow } from './layout'
+import { SEASON_IDS } from '../app/seasonal/seasons'
 
-const SEASONS = ['halloween', 'christmas', 'easter'] as const
-const SEASONAL_LOGO = /logo-(halloween|christmas|easter)/
+const SEASONAL_LOGO = new RegExp(`logo-(${SEASON_IDS.join('|')})`)
 const COMPOSITOR_PROPERTIES = new Set(['offset', 'easing', 'composite', 'computedOffset', 'transform', 'opacity'])
 
 async function mockApi(page: Page) {
@@ -45,7 +45,7 @@ test.beforeEach(async ({ page }) => {
     await mockApi(page)
 })
 
-for (const season of SEASONS) {
+for (const season of SEASON_IDS) {
     test(`${season} decorates the launcher when previewed`, async ({ page, isMobile }) => {
         await page.goto(`/?season=${season}`)
         await expect(page.locator('html')).toHaveAttribute('data-season', season)

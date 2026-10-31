@@ -2,38 +2,24 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 import { AppInfo } from './AppInfo'
 
 interface TitlebarContextProps {
-  activeMenuIndex: number | null
-  menusVisible: boolean
   showAppInfo: boolean
-  locked: boolean
   areButtonsDisabled: boolean
   isGameProfilesDisabled: boolean
-  setActiveMenuIndex: (index: number | null) => void
-  setMenusVisible: (visible: boolean) => void
-  closeActiveMenu: () => void
   toggleAppInfo: () => void
 }
 
 const TitlebarContext = createContext<TitlebarContextProps | undefined>(undefined)
 
 export const TitlebarContextProvider = ({ children }: { children: React.ReactNode }) => {
-  const [activeMenuIndex, setActiveMenuIndex] = useState<number | null>(null)
-  const [menusVisible, setMenusVisible] = useState(true)
   const [showAppInfo, setShowAppInfo] = useState(false)
-  const [locked, setLocked] = useState(false)
   const [areButtonsDisabled, setAreButtonsDisabled] = useState(true)
   const [isGameProfilesDisabled, setIsGameProfilesDisabled] = useState(true)
-  const closeActiveMenu = () => setActiveMenuIndex(null)
   const toggleAppInfo = useCallback(() => setShowAppInfo(prev => !prev), [])
 
   useEffect(() => {
     const contextElement = document.getElementById('titlebar-context')
     if (contextElement) {
       const handleToggleAppInfo = () => toggleAppInfo()
-      const handleSetLock = (e: Event) => {
-        const custom = e as CustomEvent<{ locked: boolean }>
-        setLocked(Boolean(custom.detail?.locked))
-      }
       const handleSetGlobalDisabled = (e: Event) => {
         const custom = e as CustomEvent<{ disabled: boolean }>
         setAreButtonsDisabled(Boolean(custom.detail?.disabled))
@@ -44,13 +30,11 @@ export const TitlebarContextProvider = ({ children }: { children: React.ReactNod
       }
 
       contextElement.addEventListener('toggle-app-info', handleToggleAppInfo)
-      contextElement.addEventListener('set-titlebar-lock', handleSetLock as EventListener)
       contextElement.addEventListener('set-titlebar-global-disabled', handleSetGlobalDisabled as EventListener)
       contextElement.addEventListener('set-titlebar-game-profiles-disabled', handleSetGameProfilesDisabled as EventListener)
 
       return () => {
         contextElement.removeEventListener('toggle-app-info', handleToggleAppInfo)
-        contextElement.removeEventListener('set-titlebar-lock', handleSetLock as EventListener)
         contextElement.removeEventListener('set-titlebar-global-disabled', handleSetGlobalDisabled as EventListener)
         contextElement.removeEventListener('set-titlebar-game-profiles-disabled', handleSetGameProfilesDisabled as EventListener)
       }
@@ -61,15 +45,9 @@ export const TitlebarContextProvider = ({ children }: { children: React.ReactNod
   return (
     <TitlebarContext.Provider
       value={{
-        activeMenuIndex,
-        menusVisible,
         showAppInfo,
-        locked,
         areButtonsDisabled,
         isGameProfilesDisabled,
-        setActiveMenuIndex,
-        setMenusVisible,
-        closeActiveMenu,
         toggleAppInfo
       }}
     >

@@ -3109,10 +3109,16 @@ export interface UserSummaryRecentWr {
     added: string | null
 }
 
+export interface UserSummaryCapItAll {
+    rank: number | null
+    team_caps: number
+}
+
 export interface UserSummary {
     profile: UserSummaryProfile
     medals: UserSummaryMedals
     counts: UserSummaryCounts
+    capItAll: UserSummaryCapItAll | null
     recentCaps: SummaryCap[]
     recentWrs: UserSummaryRecentWr[]
 }
@@ -3161,6 +3167,15 @@ function normaliseUserSummaryCounts(raw: any): UserSummaryCounts {
     }
 }
 
+function normaliseUserSummaryCapItAll(raw: unknown): UserSummaryCapItAll | null {
+    const capItAll = asNonEmptyObj<UserSummaryCapItAll>(raw)
+    if (!capItAll) return null
+    const { rank, team_caps } = capItAll
+    const rankValid = rank === null || (Number.isSafeInteger(rank) && rank > 0)
+    const teamCapsValid = Number.isSafeInteger(team_caps) && team_caps >= 0
+    return rankValid && teamCapsValid ? { rank, team_caps } : null
+}
+
 export async function fetchUserSummary(accessToken: string, userId: string | number): Promise<UserSummary> {
     const response = await fetch(`${API_BASE_URL}/v2/summary/user/${encodeURIComponent(String(userId))}`, {
         headers: bearerHeaders(accessToken),
@@ -3189,6 +3204,7 @@ export async function fetchUserSummary(accessToken: string, userId: string | num
         profile: normalisedProfile,
         medals: normaliseUserSummaryMedals(data.medals, userId),
         counts: normaliseUserSummaryCounts(data.counts),
+        capItAll: normaliseUserSummaryCapItAll(data.capItAll),
         recentCaps: asArray(data.recentCaps),
         recentWrs: asArray(data.recentWrs),
     }
@@ -3852,18 +3868,8 @@ export interface TeamMember {
     title?: ActiveTitle | null
 }
 
-export interface Lineup {
-    id: string
-    team_id: string
-    label: string
-    member_key: string
-    members: string[]
-    added: string | null
-}
-
 export interface TeamDetail extends TeamCore {
     members: TeamMember[]
-    lineups: Lineup[]
 }
 
 export interface TeamDirectoryPage {
@@ -3957,7 +3963,6 @@ function normaliseTeamDetail(raw: TeamDetail): TeamDetail {
         ...raw,
         member_count: asNum((raw as any)?.member_count),
         members: asArray((raw as any)?.members),
-        lineups: asArray((raw as any)?.lineups),
     }
 }
 
@@ -4020,6 +4025,7 @@ export async function fetchTeamActivity(
 export type TeamAuditAction =
     | 'create' | 'update' | 'invite' | 'apply' | 'withdraw' | 'decline' | 'join'
     | 'approve' | 'deny' | 'block' | 'unblock' | 'kick' | 'promote' | 'demote' | 'transfer' | 'leave'
+    | 'number' | 'avatar'
 
 export interface TeamAuditEntry {
     id: string
@@ -4123,22 +4129,6 @@ export async function uploadTeamAvatar(accessToken: string, teamId: string, file
 
 export async function deleteTeamAvatar(accessToken: string, teamId: string): Promise<TeamDetail> {
     return apiGetTeamDetail(`/teams/${encodeURIComponent(teamId)}/avatar`, { token: accessToken, method: 'DELETE' })
-}
-
-export async function fetchLineups(accessToken: string, teamId: string): Promise<Lineup[]> {
-    return apiGetList<Lineup>(`/teams/${encodeURIComponent(teamId)}/lineups`, { token: accessToken })
-}
-
-export async function createLineup(accessToken: string, teamId: string, input: { label: string; members: string[] }): Promise<Lineup> {
-    return apiGet<Lineup>(`/teams/${encodeURIComponent(teamId)}/lineups`, { token: accessToken, method: 'POST', body: input })
-}
-
-export async function updateLineup(accessToken: string, teamId: string, lineupId: string, label: string): Promise<Lineup> {
-    return apiGet<Lineup>(`/teams/${encodeURIComponent(teamId)}/lineups/${encodeURIComponent(lineupId)}`, { token: accessToken, method: 'PATCH', body: { label } })
-}
-
-export async function deleteLineup(accessToken: string, teamId: string, lineupId: string): Promise<{ id: string; deleted: boolean }> {
-    return apiGet(`/teams/${encodeURIComponent(teamId)}/lineups/${encodeURIComponent(lineupId)}`, { token: accessToken, method: 'DELETE' })
 }
 
 export async function fetchMyTeam(accessToken: string): Promise<TeamDetail | null> {

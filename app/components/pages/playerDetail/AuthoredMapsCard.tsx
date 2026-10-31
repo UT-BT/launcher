@@ -34,6 +34,18 @@ const AUTHORED_MAP_COLUMNS = [
     'name', 'added', 'difficulty', 'required_players', 'has_screenshot', 'screenshot_updated',
 ]
 
+function difficultyChip(difficulty: number | null | undefined) {
+    if (difficulty == null) return <span className="text-xs text-muted-foreground">—</span>
+    return (
+        <span className={cn(
+            'inline-flex items-center justify-center size-5 rounded text-[10px] font-bold text-foreground',
+            difficultyBgColor(difficulty),
+        )}>
+            {difficulty}
+        </span>
+    )
+}
+
 export function AuthoredMapsCard({ accessToken, userId, isSelf, onMapSelect, tabsSlot }: AuthoredMapsCardProps) {
     const [query, setQuery] = useState('')
     const [needsScreenshot, setNeedsScreenshot] = useNavState('authored.needsScreenshot', false)
@@ -95,7 +107,7 @@ export function AuthoredMapsCard({ accessToken, userId, isSelf, onMapSelect, tab
             id,
             width: id === 'difficulty' ? '7rem' : id === 'added' ? '9rem' : id === 'actions' ? '9rem' : undefined,
             priority: id === 'added' ? 40 : id === 'difficulty' ? 60 : undefined,
-            required: id === 'name' || id === 'actions',
+            required: id === 'name' || id === 'difficulty' || id === 'actions',
         })),
         [columns],
     )
@@ -103,6 +115,57 @@ export function AuthoredMapsCard({ accessToken, userId, isSelf, onMapSelect, tab
     const handleResolve = useCallback((ids: Set<string>) => setResolved(ids as Set<ColumnId>), [])
     const isVisible = (id: ColumnId): boolean => columns.includes(id) && (!resolved || resolved.has(id))
     const visibleColumnCount = columns.reduce((n, id) => n + (isVisible(id) ? 1 : 0), 0)
+
+    const emptyMessage = error ?? (maps.length === 0
+        ? 'No maps in rotation are linked to this player.'
+        : 'No maps match those filters.')
+
+    const screenshotButton = (m: ApiMap, className?: string) => (
+        <button
+            type="button"
+            onClick={e => { e.stopPropagation(); setEditing(m) }}
+            className={cn(
+                'inline-flex items-center gap-1.5 px-2 py-1 rounded-md border text-[11px] font-semibold transition-colors cursor-pointer',
+                m.has_screenshot
+                    ? 'bg-card/50 border-hairline/10 text-muted-foreground hover:text-foreground hover:border-accent-500/40'
+                    : 'bg-accent-500/15 border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-foreground',
+                className,
+            )}
+        >
+            <ImagePlus className="size-3.5" />
+            {m.has_screenshot ? 'Change' : 'Add'}
+        </button>
+    )
+
+    const compactRows = loading ? (
+        Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} role="listitem" className="p-3 border-b border-hairline/5 last:border-0 animate-pulse">
+                <div className="h-10 rounded bg-hairline/5" />
+            </div>
+        ))
+    ) : error || visibleRows.length === 0 ? (
+        <div role="listitem" className="px-4 py-12 text-center text-sm text-muted-foreground">
+            {emptyMessage}
+        </div>
+    ) : visibleRows.map(m => (
+        <div
+            key={m.name}
+            role="listitem"
+            className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-3 border-b border-hairline/5 last:border-0 cursor-pointer"
+            onClick={() => onMapSelect?.(m.name)}
+        >
+            <div className="min-w-0 space-y-1">
+                <div className="flex items-center min-w-0">
+                    <MapNavLink mapName={m.name} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate min-w-0">{displayMapName(m.name)}</MapNavLink>
+                </div>
+                <div className="text-xs text-muted-foreground">{m.added ? formatAddedDate(m.added) : '—'}</div>
+            </div>
+            <div className="flex items-center gap-2">
+                {difficultyChip(m.difficulty)}
+                {isSelf && screenshotButton(m, 'h-9 px-3')}
+            </div>
+        </div>
+    ))
 
     return (
         <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col overflow-hidden">
@@ -142,7 +205,13 @@ export function AuthoredMapsCard({ accessToken, userId, isSelf, onMapSelect, tab
 
             <DataTableShell
                 className="!flex-none !min-h-0 !overflow-visible !rounded-none !border-0"
-                responsive={{ columns: responsiveColumns, onResolve: handleResolve }}
+                responsive={{
+                    columns: responsiveColumns,
+                    nameFloorRem: 14,
+                    onResolve: handleResolve,
+                    compactContent: compactRows,
+                    compactAriaLabel: 'Authored maps',
+                }}
             >
                 <DataTableHeaderRow>
                     {isVisible('name') && <DataTableHeaderCell sortable sortDirection={dir('name')} onSort={() => handleSort('name')}>Map</DataTableHeaderCell>}
@@ -155,15 +224,8 @@ export function AuthoredMapsCard({ accessToken, userId, isSelf, onMapSelect, tab
                         Array.from({ length: 5 }).map((_, i) => (
                             <DataTableSkeletonRow key={i} columnCount={visibleColumnCount} />
                         ))
-                    ) : error ? (
-                        <DataTableEmpty colSpan={visibleColumnCount} message={error} />
-                    ) : visibleRows.length === 0 ? (
-                        <DataTableEmpty
-                            colSpan={visibleColumnCount}
-                            message={maps.length === 0
-                                ? 'No maps in rotation are linked to this player.'
-                                : 'No maps match those filters.'}
-                        />
+                    ) : error || visibleRows.length === 0 ? (
+                        <DataTableEmpty colSpan={visibleColumnCount} message={emptyMessage} />
                     ) : (
                         visibleRows.map(m => (
                             <DataTableRow
@@ -181,16 +243,7 @@ export function AuthoredMapsCard({ accessToken, userId, isSelf, onMapSelect, tab
                                 )}
                                 {isVisible('difficulty') && (
                                     <DataTableCell align="center">
-                                        {m.difficulty != null ? (
-                                            <span className={cn(
-                                                'inline-flex items-center justify-center size-5 rounded text-[10px] font-bold text-foreground',
-                                                difficultyBgColor(m.difficulty),
-                                            )}>
-                                                {m.difficulty}
-                                            </span>
-                                        ) : (
-                                            <span className="text-xs text-muted-foreground">—</span>
-                                        )}
+                                        {difficultyChip(m.difficulty)}
                                     </DataTableCell>
                                 )}
                                 {isVisible('added') && (
@@ -202,19 +255,7 @@ export function AuthoredMapsCard({ accessToken, userId, isSelf, onMapSelect, tab
                                 )}
                                 {isVisible('actions') && (
                                     <DataTableCell align="right">
-                                        <button
-                                            type="button"
-                                            onClick={e => { e.stopPropagation(); setEditing(m) }}
-                                            className={cn(
-                                                'inline-flex items-center gap-1.5 px-2 py-1 rounded-md border text-[11px] font-semibold transition-colors cursor-pointer',
-                                                m.has_screenshot
-                                                    ? 'bg-card/50 border-hairline/10 text-muted-foreground hover:text-foreground hover:border-accent-500/40'
-                                                    : 'bg-accent-500/15 border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-foreground',
-                                            )}
-                                        >
-                                            <ImagePlus className="size-3.5" />
-                                            {m.has_screenshot ? 'Change' : 'Add'}
-                                        </button>
+                                        {screenshotButton(m)}
                                     </DataTableCell>
                                 )}
                             </DataTableRow>

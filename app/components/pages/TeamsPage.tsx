@@ -5,7 +5,7 @@ import { Modal } from '@/app/components/ui/modal'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import {
     fetchMyInvitations, fetchMyTeam,
-    type TeamDetail, type TeamSort, type UserProfile,
+    type TeamCore, type TeamDetail, type TeamSort, type UserProfile,
 } from '@/app/utils/api'
 import { capabilities } from '@/app/platform'
 import { CreateTeamForm } from './teams/CreateTeamForm'
@@ -32,6 +32,7 @@ export function TeamsPage({ userProfile, state, onStateChange, caches, onCachesC
     const [loading, setLoading] = useState(!caches.loaded && !!accessToken)
     const [error, setError] = useState<string | null>(null)
     const [createOpen, setCreateOpen] = useState(false)
+    const [directoryRefreshKey, setDirectoryRefreshKey] = useState(0)
     const scrollRef = useRef<HTMLDivElement | null>(null)
     const cachesRef = useRef(caches)
     cachesRef.current = caches
@@ -68,7 +69,11 @@ export function TeamsPage({ userProfile, state, onStateChange, caches, onCachesC
     }, [loading, state.scrollTop])
 
     useRegisterPageRefresh({
-        onRefresh: () => void load(),
+        onRefresh: () => {
+            onCachesChange(prev => ({ ...prev, directory: [], directorySig: null }))
+            setDirectoryRefreshKey(k => k + 1)
+            void load()
+        },
         refreshing: loading,
         tooltip: 'Refresh',
     })
@@ -100,6 +105,10 @@ export function TeamsPage({ userProfile, state, onStateChange, caches, onCachesC
     const setDirectorySortDir = useCallback((value: 'asc' | 'desc') => {
         onStateChange(prev => ({ ...prev, directorySortDir: value }))
     }, [onStateChange])
+
+    const onDirectoryLoaded = useCallback((sig: string, teams: TeamCore[]) => {
+        onCachesChange(prev => ({ ...prev, directory: teams, directorySig: sig }))
+    }, [onCachesChange])
 
     if (!accessToken && !capabilities.anonymousBrowse) {
         return (
@@ -155,6 +164,10 @@ export function TeamsPage({ userProfile, state, onStateChange, caches, onCachesC
                         <TeamGallery
                             accessToken={browseToken}
                             myTeam={caches.myTeam}
+                            cachedTeams={caches.directory}
+                            cachedSig={caches.directorySig}
+                            onTeamsLoaded={onDirectoryLoaded}
+                            refreshKey={directoryRefreshKey}
                             search={state.directorySearch}
                             access={state.directoryAccess}
                             sort={state.directorySort}

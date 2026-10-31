@@ -36,6 +36,7 @@ import { FilterPanelRow } from '@/app/components/ui/filter-panel-row'
 import { FilterPresetsMenu } from '@/app/components/shared/FilterPresetsMenu'
 import { ColumnsMenu } from '@/app/components/shared/ColumnsMenu'
 import { capabilities, fetchGatewayServers } from '@/app/platform'
+import { useServerJoin } from '@/app/hooks/useServerJoin'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { ActiveFilterChip } from '@/app/components/shared/ActiveFilterChip'
 import { avatarSizeFor, getAvatarUrl } from '@/app/utils/api'
@@ -324,8 +325,7 @@ export function ServerBrowserPage({
     const refreshCooldown = useRefreshCooldown()
     const [loading, setLoading] = useState(caches.servers.length === 0)
     const [error, setError] = useState<string | null>(null)
-    const [launchError, setLaunchError] = useState<string | null>(null)
-    const [isErrorModalOpen, setIsErrorModalOpen] = useState(false)
+    const { join: handleJoin, notice: launchNotice, clearNotice: clearLaunchNotice } = useServerJoin()
     const [activePresetId, setActivePresetId] = useState<string | null>(null)
 
     const scrollContainerRef = useRef<HTMLDivElement | null>(null)
@@ -459,28 +459,6 @@ export function ServerBrowserPage({
         disabled: !refreshCooldown.canRefresh,
         tooltip: refreshCooldown.canRefresh ? 'Refresh servers' : `Wait ${refreshCooldown.remainingSeconds}s`,
     })
-
-    const handleJoin = async (server: Server, asSpectator: boolean) => {
-        if (!capabilities.game) return
-        try {
-            if (window.conveyor?.ini) {
-                if (asSpectator) {
-                    await window.conveyor.ini.writeIniValue('User.ini', 'DefaultPlayer', 'OverrideClass', 'Botpack.CHSpectator')
-                } else {
-                    const currentClass = await window.conveyor.ini.readIniValue('User.ini', 'DefaultPlayer', 'Class')
-                    if (currentClass === 'Botpack.CHSpectator') {
-                        await window.conveyor.ini.writeIniValue('User.ini', 'DefaultPlayer', 'Class', '')
-                    }
-                    await window.conveyor.ini.writeIniValue('User.ini', 'DefaultPlayer', 'OverrideClass', '')
-                }
-            }
-            await window.conveyor.game.launchGame(server.ip, server.hostport)
-        } catch (err) {
-            logger.error('Failed to launch game', { error: err })
-            setLaunchError(err instanceof Error ? err.message : 'An unknown error occurred while trying to launch the game.')
-            setIsErrorModalOpen(true)
-        }
-    }
 
     const updateFilters = useCallback((next: FilterState) => {
         onStateChange(prev => ({ ...prev, filters: next }))
@@ -1166,10 +1144,10 @@ export function ServerBrowserPage({
             </DataTableShell>
 
             <ErrorModal
-                isOpen={isErrorModalOpen}
-                onClose={() => setIsErrorModalOpen(false)}
-                title="Launch Error"
-                message={launchError || 'Unknown error'}
+                isOpen={launchNotice !== null}
+                onClose={clearLaunchNotice}
+                title={launchNotice?.title}
+                message={launchNotice?.message ?? ''}
             />
 
             <Modal

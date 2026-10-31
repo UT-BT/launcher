@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
-import { DEFAULT_THEME_ID, isThemeId } from './themes'
+import { DEFAULT_THEME_ID, isLightTheme, isThemeId } from './themes'
 import { getSynced, setSynced, subscribeSynced } from '@/app/utils/userState'
 
 const STORAGE_KEY = 'utbt:theme:v1'
@@ -23,7 +23,7 @@ function applyThemeId(id: string) {
   } else {
     root.setAttribute('data-theme', id)
   }
-  root.classList.toggle('dark', id !== 'light')
+  root.classList.toggle('dark', !isLightTheme(id))
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {

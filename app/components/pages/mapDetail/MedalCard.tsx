@@ -5,6 +5,7 @@ import { Tooltip } from '@/app/components/ui/tooltip'
 import { formatCapTime } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
 import type { MapMetadata, TeamLeaderboardEntry } from '@/app/utils/api'
+import { medalMultiplierLabel, medalThresholdsFromWorldRecord, teamWorldRecord, type MedalThresholdKey } from '@/app/utils/medalThresholds'
 
 interface MedalCardProps {
     map: MapMetadata | null
@@ -14,18 +15,17 @@ interface MedalCardProps {
 }
 
 const ROWS: {
-    key: keyof MapMetadata
+    key: 'world_record' | MedalThresholdKey
     label: string
     medal: string
     accent: string
-    multiplier: number | null
     multiplierLabel: string
 }[] = [
-    { key: 'world_record', label: 'World Record', medal: 'world record', accent: 'text-blue-300', multiplier: null, multiplierLabel: '' },
-    { key: 'champion_medal', label: 'Champion', medal: 'champion medal', accent: 'text-red-300', multiplier: 1.025, multiplierLabel: 'WR + 2.5%' },
-    { key: 'gold_medal', label: 'Gold', medal: 'gold medal', accent: 'text-yellow-300', multiplier: 1.125, multiplierLabel: 'WR + 12.5%' },
-    { key: 'silver_medal', label: 'Silver', medal: 'silver medal', accent: 'text-slate-200', multiplier: 1.30, multiplierLabel: 'WR + 30%' },
-    { key: 'bronze_medal', label: 'Bronze', medal: 'bronze medal', accent: 'text-amber-500', multiplier: 1.60, multiplierLabel: 'WR + 60%' },
+    { key: 'world_record', label: 'World Record', medal: 'world record', accent: 'text-blue-300', multiplierLabel: '' },
+    { key: 'champion_medal', label: 'Champion', medal: 'champion medal', accent: 'text-red-300', multiplierLabel: medalMultiplierLabel('champion_medal') },
+    { key: 'gold_medal', label: 'Gold', medal: 'gold medal', accent: 'text-yellow-300', multiplierLabel: medalMultiplierLabel('gold_medal') },
+    { key: 'silver_medal', label: 'Silver', medal: 'silver medal', accent: 'text-slate-200', multiplierLabel: medalMultiplierLabel('silver_medal') },
+    { key: 'bronze_medal', label: 'Bronze', medal: 'bronze medal', accent: 'text-amber-500', multiplierLabel: medalMultiplierLabel('bronze_medal') },
 ]
 
 const EXPLAINER = (
@@ -56,11 +56,10 @@ const EXPLAINER = (
 export function MedalCard({ map, loading, requiredPlayers, teamLeaderboard }: MedalCardProps) {
     const isTeam = requiredPlayers != null && requiredPlayers > 1
 
-    const teamWorldRecord = useMemo(() => {
-        if (!isTeam || !teamLeaderboard?.length) return null
-        const verifiedTimes = teamLeaderboard.filter(e => e.verified).map(e => e.cap_time_seconds)
-        if (verifiedTimes.length === 0) return null
-        return Math.min(...verifiedTimes)
+    const teamThresholds = useMemo(() => {
+        if (!isTeam || !teamLeaderboard) return null
+        const worldRecord = teamWorldRecord(teamLeaderboard)
+        return worldRecord == null ? null : medalThresholdsFromWorldRecord(worldRecord)
     }, [isTeam, teamLeaderboard])
 
     return (
@@ -82,8 +81,8 @@ export function MedalCard({ map, loading, requiredPlayers, teamLeaderboard }: Me
             <div className="space-y-2">
                 {ROWS.map(row => {
                     const value = isTeam
-                        ? (teamWorldRecord != null ? teamWorldRecord * (row.multiplier ?? 1) : undefined)
-                        : (map ? (map[row.key] as number | undefined) : undefined)
+                        ? teamThresholds?.[row.key]
+                        : map?.[row.key]
                     const icon = getMedalIcon(row.medal)
                     return (
                         <div

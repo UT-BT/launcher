@@ -1,9 +1,11 @@
 import { useEffect, useState, useCallback } from 'react'
-import { FaTimes, FaSave, FaTrash, FaExchangeAlt, FaPlus, FaEdit, FaCheck } from 'react-icons/fa'
+import { FaSave, FaTrash, FaExchangeAlt, FaPlus, FaEdit, FaCheck } from 'react-icons/fa'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
+import { Modal } from '@/app/components/ui/modal'
 import { ConfirmModal } from '@/app/components/shared/ConfirmModal'
 import { cn } from '@/lib/utils'
+import { runProfileAction } from './profileAction'
 
 interface ProfileMetadata {
     name: string
@@ -30,6 +32,7 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
     const [isActiveDirty, setIsActiveDirty] = useState(false)
     const [pendingSwitchProfile, setPendingSwitchProfile] = useState<string | null>(null)
     const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
+    const [profileError, setProfileError] = useState<string | null>(null)
 
     const fetchProfiles = useCallback(async () => {
         try {
@@ -57,6 +60,7 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
 
     useEffect(() => {
         if (isOpen) {
+            setProfileError(null)
             fetchProfiles()
         }
     }, [isOpen, fetchProfiles])
@@ -64,18 +68,16 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
     const handleCreateProfile = async () => {
         if (!newProfileName.trim()) return
         setIsSaving(true)
-        try {
+        const error = await runProfileAction(async () => {
             const path = await window.conveyor.app.getUt99InstallPath()
             if (path) {
                 await window.conveyor.app.createProfile(newProfileName.trim(), path)
                 setNewProfileName('')
                 await fetchProfiles()
             }
-        } catch (error) {
-            console.error('Failed to create profile:', error)
-        } finally {
-            setIsSaving(false)
-        }
+        })
+        setProfileError(error)
+        setIsSaving(false)
     }
 
     const handleOverwriteProfile = (name: string) => {
@@ -86,19 +88,17 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
     const handleOverwriteConfirm = async () => {
         if (!profileToOverwrite) return
         setIsSaving(true)
-        try {
+        const error = await runProfileAction(async () => {
             const path = await window.conveyor.app.getUt99InstallPath()
             if (path) {
                 await window.conveyor.app.createProfile(profileToOverwrite, path)
-                setShowOverwriteConfirm(false)
-                setProfileToOverwrite(null)
                 await fetchProfiles()
             }
-        } catch (error) {
-            console.error('Failed to overwrite profile:', error)
-        } finally {
-            setIsSaving(false)
-        }
+        })
+        setShowOverwriteConfirm(false)
+        setProfileToOverwrite(null)
+        setProfileError(error)
+        setIsSaving(false)
     }
 
     const handleSwitchProfile = async (name: string) => {
@@ -111,26 +111,20 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
     }
 
     const performSwitch = async (name: string) => {
-        try {
-            await window.conveyor.app.switchProfile(name)
-            setShowDiscardConfirm(false)
-            setPendingSwitchProfile(null)
-            onClose()
-        } catch (error) {
-            console.error('Failed to switch profile:', error)
-        }
+        const error = await runProfileAction(() => window.conveyor.app.switchProfile(name))
+        setShowDiscardConfirm(false)
+        setPendingSwitchProfile(null)
+        setProfileError(error)
+        if (!error) onClose()
     }
 
     const handleDeleteProfile = async () => {
         if (!profileToDelete) return
-        try {
-            await window.conveyor.app.deleteProfile(profileToDelete)
-            setProfileToDelete(null)
-            setShowDeleteConfirm(false)
-            await fetchProfiles()
-        } catch (error) {
-            console.error('Failed to delete profile:', error)
-        }
+        const error = await runProfileAction(() => window.conveyor.app.deleteProfile(profileToDelete))
+        setProfileToDelete(null)
+        setShowDeleteConfirm(false)
+        setProfileError(error)
+        if (!error) await fetchProfiles()
     }
 
     const handleRenameProfile = async (oldName: string) => {
@@ -138,14 +132,12 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
             setRenamingProfile(null)
             return
         }
-        try {
-            await window.conveyor.app.renameProfile(oldName, renameName.trim())
-            setRenamingProfile(null)
-            setRenameName('')
-            await fetchProfiles()
-        } catch (error) {
-            console.error('Failed to rename profile:', error)
-        }
+        const error = await runProfileAction(() => window.conveyor.app.renameProfile(oldName, renameName.trim()))
+        setProfileError(error)
+        if (error) return
+        setRenamingProfile(null)
+        setRenameName('')
+        await fetchProfiles()
     }
 
     const startRenaming = (profile: string) => {
@@ -153,25 +145,34 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
         setRenameName(profile)
     }
 
+    const dismiss = () => {
+        if (showDeleteConfirm || showOverwriteConfirm || showDiscardConfirm) {
+            setShowDeleteConfirm(false)
+            setShowOverwriteConfirm(false)
+            setShowDiscardConfirm(false)
+            return
+        }
+        if (renamingProfile) {
+            setRenamingProfile(null)
+            return
+        }
+        onClose()
+    }
+
     if (!isOpen) return null
 
     return (
         <>
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                <div className="w-full max-w-2xl bg-card border border-border rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[80vh]">
-                    <div className="p-4 border-b border-border flex items-center justify-between bg-card/50">
-                        <h3 className="text-xl font-bold flex items-center gap-2">
-                            Game Profiles
-                        </h3>
-                        <button
-                            onClick={onClose}
-                            className="p-2 hover:bg-hairline/5 rounded-lg transition-colors"
-                        >
-                            <FaTimes />
-                        </button>
-                    </div>
-
-                    <div className="p-4 bg-muted/30 border-b border-border text-xs text-muted-foreground space-y-2">
+            <Modal
+                isOpen
+                onClose={dismiss}
+                title="Game Profiles"
+                maxWidth="42rem"
+                maxHeight="80vh"
+                offsetSidebar
+            >
+                <div className="space-y-4">
+                    <div className="rounded-lg bg-muted/30 border border-border p-3 text-xs text-muted-foreground space-y-2">
                         <p>
                             Profiles give you the ability save your current graphics settings and binds.
                             Here you can create, switch, overwrite and delete these profiles as you wish.
@@ -184,7 +185,7 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
                         </p>
                     </div>
 
-                    <div className="p-4 border-b border-border space-y-4">
+                    <div className="space-y-2">
                         <div className="flex gap-2">
                             <Input
                                 placeholder="Backup current settings as..."
@@ -197,9 +198,12 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
                                 <FaPlus className="mr-2" /> Save New
                             </Button>
                         </div>
+                        {profileError && (
+                            <p role="alert" className="text-xs text-red-300 break-words">{profileError}</p>
+                        )}
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                    <div className="space-y-2">
                         {profiles.length === 0 ? (
                             <div className="text-center py-10 text-muted-foreground">
                                 No profiles found.
@@ -221,10 +225,7 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
                                                     onChange={(e) => setRenameName(e.target.value)}
                                                     className="h-8"
                                                     autoFocus
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter') handleRenameProfile(profile.name)
-                                                        if (e.key === 'Escape') setRenamingProfile(null)
-                                                    }}
+                                                    onKeyDown={(e) => e.key === 'Enter' && handleRenameProfile(profile.name)}
                                                 />
                                                 <Button size="sm" onClick={() => handleRenameProfile(profile.name)}>
                                                     <FaCheck />
@@ -300,14 +301,8 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
                             ))
                         )}
                     </div>
-
-                    <div className="p-4 border-t border-border flex justify-end">
-                        <Button variant="outline" onClick={onClose}>
-                            Close
-                        </Button>
-                    </div>
                 </div>
-            </div>
+            </Modal>
 
             <ConfirmModal
                 isOpen={showDeleteConfirm}

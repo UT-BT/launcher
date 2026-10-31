@@ -14,6 +14,7 @@ import { HistoryModal } from '@/app/components/modals/HistoryModal'
 import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
 import { useReplayWatch } from '@/app/hooks/useReplayWatch'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
+import { useServerJoin } from '@/app/hooks/useServerJoin'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import type { Server } from '@/app/utils/server-utils'
 
@@ -27,7 +28,6 @@ import { RecentCapsCard } from './home/RecentCapsCard'
 import { MapsToReviewCard } from './home/MapsToReviewCard'
 import { NewsCard } from './home/news/NewsCard'
 import { PersonalProgressSnapshot } from './home/PersonalProgressSnapshot'
-import { CAP_IT_ALL_CACHE_MS, fetchCapItAllProgress, type CapItAllProgressCache } from './home/capItAllProgress'
 import { AchievementProgressPreview } from './home/AchievementProgressPreview'
 import { FavoriteServersCard } from './home/FavoriteServersCard'
 import { MedalHuntCard } from './home/MedalHuntCard'
@@ -54,7 +54,6 @@ export interface HomePageCaches {
     news: NewsArticle[]
     newsCategories: NewsCategoryDef[]
     userSummary: UserSummary | null
-    capItAllProgress: CapItAllProgressCache | null
     servers: Server[] | null
     medalHunt: MedalHuntOpportunity[] | null
     mapsCount: number | null
@@ -69,7 +68,6 @@ export const DEFAULT_HOME_CACHES: HomePageCaches = {
     news: [],
     newsCategories: [],
     userSummary: null,
-    capItAllProgress: null,
     servers: null,
     medalHunt: null,
     mapsCount: null,
@@ -121,49 +119,13 @@ export function Home({
     const [error, setError] = useState<string | null>(null)
     const [reviewOpen, setReviewOpen] = useState(false)
     const [historyOpen, setHistoryOpen] = useState(false)
-    const [launchError, setLaunchError] = useState<string | null>(null)
+    const { join: handleJoinServer, notice: launchNotice, clearNotice: clearLaunchNotice } = useServerJoin()
     const [activeReviewMap, setActiveReviewMap] = useState<string | null>(null)
     const [reviewsRefreshKey, setReviewsRefreshKey] = useState(0)
     const [refreshKey, setRefreshKey] = useState(0)
     const mountedRef = useRef(true)
 
     const replay = useReplayWatch()
-
-    const progressUserId = userProfile?.id == null ? null : String(userProfile.id)
-    const progressAlias = userSummary?.profile.id === progressUserId
-        ? userSummary.profile.alias?.trim() ?? '' : ''
-    const progressCache = caches.capItAllProgress?.userId === progressUserId
-        && caches.capItAllProgress.alias === progressAlias ? caches.capItAllProgress : null
-
-    useEffect(() => {
-        // Defer optional stats until the main Home request has settled.
-        if (loading || !userProfile?.accessToken || !progressUserId || !progressAlias) return
-        if (progressCache && Date.now() - progressCache.fetchedAt < CAP_IT_ALL_CACHE_MS) return
-
-        const controller = new AbortController()
-        const timeout = setTimeout(() => controller.abort(), 10_000)
-        let active = true
-        const load = async () => {
-            let data: CapItAllProgressCache['data'] = null
-            try {
-                data = await fetchCapItAllProgress(userProfile.accessToken, progressUserId, progressAlias, controller.signal)
-            } catch {
-                // Optional stats must not fail Home or turn request failures into zeroes.
-            } finally {
-                clearTimeout(timeout)
-            }
-            if (active) onCachesChange(prev => ({
-                ...prev,
-                capItAllProgress: { userId: progressUserId, alias: progressAlias, fetchedAt: Date.now(), data },
-            }))
-        }
-        void load()
-        return () => {
-            active = false
-            clearTimeout(timeout)
-            controller.abort()
-        }
-    }, [loading, userProfile?.accessToken, progressUserId, progressAlias, progressCache, onCachesChange])
 
     const loadData = useCallback(async (isActive: () => boolean = () => true) => {
         if (!userProfile?.accessToken && !capabilities.anonymousBrowse) return
@@ -242,7 +204,6 @@ export function Home({
                 mapsCount: null,
                 playersCount: null,
                 pendingReviews: null,
-                capItAllProgress: null,
             }))
             loadData(() => mountedRef.current)
             onEnsureAchievements(true)
@@ -275,27 +236,6 @@ export function Home({
             time: cap.time,
             alias: userProfile?.alias ?? undefined,
         })
-    }
-
-    const handleJoinServer = async (server: Server, asSpectator: boolean) => {
-        if (!capabilities.game) return
-        try {
-            if (window.conveyor?.ini) {
-                if (asSpectator) {
-                    await window.conveyor.ini.writeIniValue('User.ini', 'DefaultPlayer', 'OverrideClass', 'Botpack.CHSpectator')
-                } else {
-                    const currentClass = await window.conveyor.ini.readIniValue('User.ini', 'DefaultPlayer', 'Class')
-                    if (currentClass === 'Botpack.CHSpectator') {
-                        await window.conveyor.ini.writeIniValue('User.ini', 'DefaultPlayer', 'Class', '')
-                    }
-                    await window.conveyor.ini.writeIniValue('User.ini', 'DefaultPlayer', 'OverrideClass', '')
-                }
-            }
-            await window.conveyor.game.launchGame(server.ip, server.hostport)
-        } catch (err) {
-            console.error('Failed to launch game:', err)
-            setLaunchError(err instanceof Error ? err.message : 'Failed to launch the game.')
-        }
     }
 
     const newsFeed = useMemo(() => news.slice(0, 5), [news])
@@ -520,11 +460,7 @@ export function Home({
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
                     <SpotlightSection title="Your Progress" accent={ACCENTS.personal} className="lg:col-span-6">
-                        <PersonalProgressSnapshot
-                            summary={userSummary}
-                            capItAll={progressCache?.data ?? null}
-                            capItAllLoading={Boolean(progressAlias && !progressCache)}
-                        />
+                        <PersonalProgressSnapshot summary={userSummary} />
                     </SpotlightSection>
                     <SpotlightSection title="Achievement Progress" accent={ACCENTS.achievements} className="lg:col-span-6">
                         <AchievementProgressPreview
@@ -629,13 +565,13 @@ export function Home({
             </Modal>
 
             <Modal
-                isOpen={launchError !== null}
-                onClose={() => setLaunchError(null)}
-                title="Launch Error"
+                isOpen={launchNotice !== null}
+                onClose={clearLaunchNotice}
+                title={launchNotice?.title}
                 className="w-[95%] sm:w-[440px] max-w-md"
                 offsetSidebar
             >
-                <p className="text-sm text-muted-foreground">{launchError}</p>
+                <p className="text-sm text-muted-foreground">{launchNotice?.message}</p>
             </Modal>
         </div>
     )

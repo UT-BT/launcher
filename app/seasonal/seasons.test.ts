@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { activeSeason, easterSunday, isSeasonOverride, resolveSeason } from './seasons'
+import { SEASONS, SEASON_IDS, activeSeason, easterSunday, isSeasonOverride, resolveSeason } from './seasons'
 
 const WESTERN_EASTER: Array<[number, number, number]> = [
     [2019, 4, 21],
@@ -96,8 +96,27 @@ describe('resolveSeason', () => {
     })
 })
 
+describe('SEASONS', () => {
+    it('gives every season a distinct lowercase id and a display label', () => {
+        expect(new Set(SEASON_IDS).size).toBe(SEASON_IDS.length)
+        for (const season of SEASONS) {
+            expect(season.id).toMatch(/^[a-z]+$/)
+            expect(season.label.trim().length).toBeGreaterThan(0)
+        }
+        expect(SEASONS.find(season => season.id === 'halloween')?.label).toBe('Halloween')
+    })
+
+    it('is where SEASON_IDS comes from', () => {
+        expect(SEASON_IDS).toEqual(SEASONS.map(season => season.id))
+    })
+})
+
 describe('isSeasonOverride', () => {
-    it('accepts the three seasons and none only', () => {
+    it.each(SEASON_IDS)('accepts the registered season %s', id => {
+        expect(isSeasonOverride(id)).toBe(true)
+    })
+
+    it('accepts none and rejects anything else', () => {
         expect(isSeasonOverride('halloween')).toBe(true)
         expect(isSeasonOverride('none')).toBe(true)
         expect(isSeasonOverride('summer')).toBe(false)

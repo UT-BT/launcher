@@ -11,4 +11,4 @@ const probe = createElement('div', {
     style: { position: 'absolute', left: 120, top: 80, width: 240, height: 90, background: 'rgb(255, 255, 255)' },
 })
 
-createRoot(document.getElementById('app') as HTMLElement).render(createElement(BroadcastStage, { transparent }, probe))
+createRoot(document.getElementById('app') as HTMLElement).render(createElement(BroadcastStage, { transparent, children: probe }))

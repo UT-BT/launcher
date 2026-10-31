@@ -19,6 +19,7 @@ gate goes red. Commands and the pre-commit gate are in [build.md](build.md).
 | `e2e/sidebarRail.ts`, `e2e/layout.ts`, `e2e/streamPanels.ts` | shared spec helpers: the catch-all `mockApi`, `horizontalOverflow`, `openStreamPanel` |
 | `e2e/<name>Harness.html` + `.ts` | standalone pages that mount one component tree outside the app |
 | `playwright.config.ts`, `vitest.config.ts`, `.github/workflows/` | runner config and CI |
+| `tsconfig.e2e.json` | the TypeScript project for `e2e/` and the two runner configs: `typecheck:e2e` and ESLint read it |
 
 ## Vitest
 
@@ -50,8 +51,9 @@ can reach it.
 `lib/main/cam-launcher.test.ts` and `lib/main/kit-extractor.test.ts` wrap their file-writing
 suites in `describe.skipIf(process.platform !== 'win32')`. They assert Windows paths (drive
 letters, backslashes, CRLF ini files), and the kit folder must be a drive path
-(`lib/main/kit-folder.ts`). The Linux CI runner skips them, so run them locally after touching
-the cam launcher, `lib/stream-kit/cam-plan.ts` or the kit extractor.
+(`lib/main/kit-folder.ts`). The pull-request gate runs on Windows, so they run there; the `main`
+web build runs on Linux and skips them. Run them locally after touching the cam launcher,
+`lib/stream-kit/cam-plan.ts` or the kit extractor.
 
 ### Structure tests
 
@@ -62,7 +64,9 @@ These read source files and guard wiring rules rather than behaviour:
 | `app/components/main/pageLoaders.test.ts` | `Main.tsx` never value-imports a lazy page; every sidebar view except Home has a shared loader |
 | `app/components/navigation/routes.contract.test.ts` | every view in `viewToPath` has an entry in `app/public/route-contract.json` and round-trips; `robots.txt` blocks stream pages and leaves every other non-admin route crawlable |
 | `app/components/pages/events/stream/streamPanels.test.ts` | Stream tab panels and Match sections keep their order and load only lazily |
+| `app/prePaint.test.ts`, `app/styles/themes.test.ts`, `app/seasonal/logos.test.ts` | the `index.html` pre-paint script's default theme, light themes and seasons equal the registries; every non-default theme has a palette block and only the `solid` group hides the nebula; every season has its logo file |
 | `app/styles/seasons.test.ts`, `app/components/pages/events/stats/teamAccent.test.ts` | seasonal palettes target only the Classic theme; every team accent slot has a dark and a light value and its own hue |
+| `app/utils/recordsDefinitions.test.ts` | cap types, medal multipliers, difficulty tiers, the map author name and the team-run label are defined once in `app/utils/` and never copied into a records file |
 
 When one fails after you add a page, route, panel or palette, its message names the rule: change
 the wiring to follow it.
@@ -87,7 +91,7 @@ Each area under `app/utils/fixtures/` (`eventStats/`, `mapUploads/`, `pickBanVet
   both ways through `satisfies Record<keyof T, true>` maps, so a field added on one side fails
   until both agree.
 - The folder's `.gitattributes` (`*.json -text`) keeps git from rewriting line endings, which
-  would break the pins. Prettier rewrites these files too: keep `npm run format` off them.
+  would break the pins. `.prettierignore` keeps Prettier off them for the same reason.
 
 A fixture changes only when the contract does: replace the file with the new payload, take the new
 hash from the failing pin test (it prints the received value), and update the key maps and the
@@ -205,7 +209,7 @@ when a page stays blank.
 4. Scene specs open through `openScene` and shoot through `expectSceneScreenshot`
    ([stream-kit.md](features/stream-kit.md)).
 5. Verify: `npx playwright test e2e/<file>` passes twice in a row in every project it runs in, and
-   `npm run lint` passes (see the lint cap under [When the gate fails](#when-the-gate-fails)).
+   `npm run typecheck:e2e` and `npm run lint` pass.
 
 ## Screenshot baselines
 
@@ -263,12 +267,27 @@ nondeterminism: pin it (table above) instead of updating.
 
 | Workflow | Trigger | Runs |
 |---|---|---|
-| `.github/workflows/web.yml` | push to `main`, manual | Ubuntu, Node 20: `npm ci`, `npm run quality:web` (`typecheck:web`, `lint`, `test`, `build:web`, `check:bundle`), then a deploy that waits for approval |
+| `.github/workflows/ci.yml`, job `Fast gate` | pull request into `staging` or `main`, push to `staging` | Windows, Node 20: `npm ci`, `typecheck:web`, `typecheck:e2e`, `lint`, `test` (Windows-only suites included), `docs:check`, `build:web`, `check:bundle`, one step each |
+| `.github/workflows/ci.yml`, jobs `Playwright (1/4)` to `Playwright (4/4)` | the same | Windows, Node 20: `npm ci`, `npx playwright install chromium`, `npm run test:e2e -- --shard=<n>/4` (all three projects, against the `-win32` baselines, split across four parallel jobs); on failure each shard uploads its `playwright-report/` and `test-results/` as artifacts |
+| `.github/workflows/web.yml` | push to `main`, manual | Ubuntu, Node 20: `npm ci`, `npm run quality:web` (`typecheck:web`, `typecheck:e2e`, `lint`, `test`, `build:web`, `check:bundle`), then a deploy that waits for approval |
 | `.github/workflows/release.yml` | push to `main` | Windows: builds and publishes the installer when the `package.json` version has no tag yet; no tests |
 
-Nothing runs on pull requests or on `staging`. No workflow runs Playwright, the Windows-only
-Vitest suites or `docs:check`; they gate locally only, so a branch is ready when the gate in
-[build.md](build.md) and `npm run test:e2e` pass. `npm run quality:web` reproduces the `main` job.
+`ci.yml` turns off `core.autocrlf` before checkout, so the runner gets each file's committed line
+endings, as a local checkout does. A newer push to the same pull request cancels its run in
+progress; runs on `staging` finish, so every merged commit gets a result.
+GitHub sets `CI`, so Playwright runs with 2 retries, `forbidOnly` and the `github` reporter
+([Projects](#projects)); the jobs add `--reporter=list,github,html`, so the log shows each test as
+it finishes and a failure leaves an HTML report. The full suite takes too long for one runner, so
+it runs as four shards. Download the failing shard's `playwright-report-<n>` artifact and open its
+`index.html`, or read the images and `trace.zip` in `playwright-test-results-<n>` as in
+[Reading a mismatch](#reading-a-mismatch).
+`docs:check` runs on a shallow checkout with no history before the tested commit, so in CI it
+checks paths, links and the manifest but lists no docs to review; run it locally for that list.
+
+`Fast gate` is the check to require on `staging` and `main`. The `Playwright` shards stay advisory
+until they have been stable. A branch is ready when the gate in [build.md](build.md) and `npm run test:e2e`
+pass locally, the same commands the two jobs run. `npm run quality:web` reproduces the `main` web
+job.
 
 ## When the gate fails
 
@@ -290,10 +309,10 @@ A gate run after a merge went red. Work in this order:
    Report a recurring flake; keep the timeouts, retries and thresholds in specs and config as they
    are.
 4. **Fix the merge.** Each branch passed alone, so look at what the two sides changed together:
-   - `npm run typecheck:web`: one side renamed a type, field or export the other uses; fix the
-     consumer. `tsconfig.web.json` covers `app/`, `lib/` and `resources/`, so no gate type-checks
-     `e2e/` or the two test configs; Playwright strips a spec's types, so a type error there
-     surfaces only as a runtime failure.
+   - `npm run typecheck:web` or `npm run typecheck:e2e`: one side renamed a type, field or export
+     the other uses; fix the consumer. `tsconfig.web.json` covers `app/`, `lib/` and `resources/`;
+     `tsconfig.e2e.json` adds `e2e/` and the two runner configs, so a spec that builds a payload
+     with a dropped field fails here instead of at run time (Playwright strips a spec's types).
    - A structure test (table above) after a new page, route or Stream panel: wire it the way the
      test states.
    - A golden fixture pin or key map after both sides touched one area: keep the contract's bytes,
@@ -306,10 +325,10 @@ A gate run after a merge went red. Work in this order:
      spec's mock.
    - A broadcast screenshot after shared scene CSS or a token changed: decide intended or regression
      as in [Updating a baseline](#updating-a-baseline).
-5. **`npm run lint`.** Fix errors in the files the merge touched. `Too many files (>60) have matched
-   the default project` means `e2e/` outgrew the cap (spec files and the two configs lint through
-   typescript-eslint's default project): raise
-   `maximumDefaultProjectFileMatchCount_THIS_WILL_SLOW_DOWN_LINTING` in `eslint.config.mjs`.
+5. **`npm run lint`.** Fix errors in the files the merge touched. ESLint parses each TypeScript file
+   through the project in `tsconfig.json`'s `references` that includes it, with no file cap. `was not
+   found by the project service` means a new file sits outside every project: add its folder to
+   the matching tsconfig's `include`.
 6. **`npm run check:bundle`.** Run `npm run build:web` first: the check reads
    `dist-web/.vite/manifest.json`, so a stale build gives stale numbers. The closing
    `Web bundle checks failed` list names each broken budget, chunk or desktop-only marker; the usual

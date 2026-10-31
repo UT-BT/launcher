@@ -28,6 +28,7 @@ import { UncappedMapsCard } from './playerDetail/UncappedMapsCard'
 import { PlayerAchievementsCard } from './playerDetail/PlayerAchievementsCard'
 import { AuthoredMapsCard } from './playerDetail/AuthoredMapsCard'
 import { MainSectionTabs, type PlayerDetailTab } from './playerDetail/MainSectionTabs'
+import { DEFAULT_PLAYER_DETAIL_TAB, playerDetailTabs } from './playerDetail/playerDetailTabs'
 
 const PlayerActivityChart = lazy(() => import('./playerDetail/PlayerActivityChart'))
 
@@ -49,7 +50,7 @@ export function PlayerDetailPage({
     const [refreshKey, setRefreshKey] = useState(0)
     const refreshCooldown = useRefreshCooldown()
 
-    const [storedTab, setActiveTab] = useNavState<PlayerDetailTab>('player.activeTab', 'caps')
+    const [storedTab, setActiveTab] = useNavState<PlayerDetailTab>('player.activeTab', DEFAULT_PLAYER_DETAIL_TAB)
     const [changeTitleOpen, setChangeTitleOpen] = useState(false)
 
     const [activity, setActivity] = useState<UserActivityBucket[]>([])
@@ -103,18 +104,7 @@ export function PlayerDetailPage({
 
     const counts = summary?.counts ?? null
     const medals = summary?.medals ?? null
-    const activeTab: PlayerDetailTab = storedTab === 'maps' && authoredMapCount === 0 ? 'caps' : storedTab
-
-    const tabs: { value: PlayerDetailTab; label: string; count?: number; hidden?: boolean }[] = [
-        { value: 'caps', label: 'All Caps', count: counts?.total_caps },
-        { value: 'disallowed', label: 'Disallowed', count: counts?.disallowed_caps, hidden: !counts?.disallowed_caps },
-        { value: 'pbs', label: 'Personal Bests', count: counts?.unique_maps },
-        { value: 'wrs', label: 'World Records', count: counts?.wr_count },
-        { value: 'playtime', label: 'Playtime by Map' },
-        { value: 'uncapped', label: 'Uncapped Maps', count: counts?.uncapped_maps },
-        { value: 'achievements', label: 'Achievements' },
-        { value: 'maps', label: 'Maps Authored', count: authoredMapCount ?? undefined, hidden: !authoredMapCount },
-    ]
+    const { tabs, activeTab } = playerDetailTabs(storedTab, counts, authoredMapCount)
 
     return (
         <div className="space-y-4 h-full flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">

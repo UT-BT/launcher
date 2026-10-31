@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { horizontalOverflow } from './layout'
 import { openStreamPanel } from './streamPanels'
+import { NEWEST_STREAM_SCENE_ID, streamSceneLabel } from '../app/components/stream/streamSceneRegistry'
 
 const SLUG = 'stream-cup'
 const VIEWER_ID = '555555555555'
@@ -155,7 +156,7 @@ test('a streamer who never downloaded the kit is asked to import it', async ({ p
 test('an outdated kit shows the re-import banner and a current kit does not', async ({ page }) => {
     await mockApi(page, { currentVersion: 3, downloadedVersion: 2, zipRequests: [] })
     await openKitPanel(page)
-    await expect(page.getByRole('status').filter({ hasText: 'Kit updated — re-import to get Predictor Standings' })).toBeVisible()
+    await expect(page.getByRole('status').filter({ hasText: `Kit updated — re-import to get ${streamSceneLabel(NEWEST_STREAM_SCENE_ID)}` })).toBeVisible()
     await expect(page.getByRole('status').filter({ hasText: 'Scene Collection > Import' })).toBeVisible()
 })
 

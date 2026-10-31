@@ -11,10 +11,10 @@ loads on first paint. Build commands are in [build.md](build.md).
   `vite.config.web.ts`, `'false'` in `electron.vite.config.ts`). Each artifact is
   deterministic and the dead branch is tree-shaken. Detect the target only through this,
   never by checking whether `window.conveyor` exists.
-- `capabilities.ts`: `game, ping, ini, install, updater, desktopFiles, windowChrome,
-  settingsModal, anonymousBrowse, camTool`. Every flag is `true` on desktop and `false` on
-  web, except `settingsModal` (`true` on both) and `anonymousBrowse` (web only). Gate UI on
-  a capability rather than `IS_WEB`, so a future split stays a one-line change.
+- `capabilities.ts`: `game, ping, ini, install, updater, settingsModal, anonymousBrowse,
+  camTool`. Every flag is `true` on desktop and `false` on web, except `settingsModal`
+  (`true` on both) and `anonymousBrowse` (web only). Gate UI on a capability rather than
+  `IS_WEB`, so a future split stays a one-line change.
 - `index.ts`: `usePlatform()` returns `{ isWeb, capabilities, auth, gateway, external,
   downloads }`. Non-component modules import the named exports (`capabilities`, `IS_WEB`,
   `platformAuth`, `openExternal`, `fetchGatewayServers`, `saveDemoFile`, `saveMapZip`, …).
@@ -35,7 +35,7 @@ loads on first paint. Build commands are in [build.md](build.md).
 
 | Feature | On web | Gate |
 |---|---|---|
-| Launch / join / spectate, sidebar Play + Join Server | hidden | `capabilities.game` in `SidebarActions`, `Home`, `ServerBrowserPage`, `FavoriteServersCard` |
+| Launch / join / spectate, sidebar Play + Join Server | hidden | `capabilities.game` in `SidebarActions`, `ServerBrowserPage`, `FavoriteServersCard`, and in `useServerJoin` / `launchStandaloneGame` before any IPC call |
 | Ping column and server pings | hidden, skipped | `capabilities.ping` in `ServerBrowserPage` (`displayColumnOrder`) and `FavoriteServersCard` |
 | Settings modal | web modal with Appearance + Privacy only; game panels never fetched | `capabilities.settingsModal` + target-specific lazy modal in `AppLayout` |
 | Install banner and patches | off (`validateInstallation` returns early) | `capabilities.install` in `Main.tsx` |
