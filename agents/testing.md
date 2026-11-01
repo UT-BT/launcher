@@ -135,6 +135,11 @@ the website, and desktop-only UI is reached through harness pages.
 - **Port.** `reuseExistingServer` is `false`: a dev server left alive by an aborted run fails the
   next one with `http://127.0.0.1:5175 is already used`. Stop it, or set `E2E_PORT` (also how two
   worktrees run their suites side by side).
+- **Built bundle.** With `E2E_SERVER=build` (set by every `test:mobile*` script) the config builds
+  the web target into `dist-e2e/` (about 15 s) and serves it with `vite preview` instead of the dev
+  server, and runs 6 workers instead of 2. Static chunks load in a fraction of the dev server's
+  time and never hit its Windows socket drops. Harness pages need the dev server's `/@fs/`
+  prefix, so `test:e2e` stays on it.
 
 ### Projects
 
@@ -153,7 +158,7 @@ expect `horizontalOverflow(page)` from `e2e/layout.ts` to be at most 1. Both app
 `utbt:seasonalThemes:v1 = "off"` so seasonal decor stays out of layout checks; `seasonal.spec.ts`
 turns it on itself.
 
-The config runs 2 workers, spec files in parallel and the tests inside a file in order (the mobile
+The config runs 2 workers (6 against the built bundle), spec files in parallel and the tests inside a file in order (the mobile
 suite projects run those in parallel too), with the default 30 s test timeout,
 `trace: 'retain-on-failure'` and `screenshot: 'only-on-failure'`. Retries (2), `forbidOnly` and the
 `github` reporter apply only when `CI` is set; locally there are no retries, the `list` reporter
@@ -286,8 +291,9 @@ never runs it.
 | `npm run test:mobile:ledger`, `npm run test:mobile:ledger:full` | the same two runs in ledger mode: a rule result never fails a test, and the run rewrites `e2e/mobile/ledger/` ([Known-violations ledger](#known-violations-ledger)) |
 
 Narrow a run with `-- -g <surface or viewport>`, for example `npm run test:mobile -- -g cap-detail`
-or `-g 390x844`. All four read `E2E_PORT` through the config. WebKit must be installed:
-`npx playwright install webkit chromium`.
+or `-g 390x844`. All four read `E2E_PORT` through the config, and all four crawl the built bundle
+([Built bundle](#how-specs-reach-the-app)); `npx playwright test e2e/mobile/...` without a script
+crawls the dev server. WebKit must be installed: `npx playwright install webkit chromium`.
 
 The projects are `mobile-suite-webkit` (iPhone 14 base) and `mobile-suite-chromium` (Pixel 7 base),
 both with touch and `isMobile`, seasonal decor off, and each test at its own viewport and screen
@@ -395,8 +401,8 @@ never compared against baselines; every run clears `test-results/`.
 
 ### Dev server drops
 
-When the dev server refuses a document, script or stylesheet while a surface opens (the Windows
-socket flake in [When the gate fails](#when-the-gate-fails)), the crawl prints
+When the server refuses a document, script or stylesheet while a surface opens (the Windows
+socket flake in [When the gate fails](#when-the-gate-fails), seen on the dev server), the crawl prints
 `mobile crawl: the dev server dropped …` and reopens the surface once; the dropped attempt takes no
 further steps. A second drop fails the test.
 
