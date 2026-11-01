@@ -14,6 +14,7 @@ gate goes red. Commands and the pre-commit gate are in [build.md](build.md).
 | `lib/main/*.test.ts` | main-process services against a real temp folder; two suites are Windows-only |
 | `e2e/*.spec.ts` | Playwright specs for the app, run in `desktop-chromium` and `mobile-chromium` |
 | `e2e/*.broadcast.spec.ts` | Playwright specs for OBS scene pages, run only in `broadcast` |
+| `e2e/mobile/` | the mobile suite: crawl, route manifest, fixture router, rules, known-violations ledger, gallery reporter, and Vitest files for its pure logic ([Mobile suite](#mobile-suite)) |
 | `e2e/__screenshots__/` | committed screenshot baselines, one folder per spec file |
 | `e2e/streamHarness.ts` | fake API plus open, settle and screenshot helpers for scene specs |
 | `e2e/sidebarRail.ts`, `e2e/layout.ts`, `e2e/streamPanels.ts` | shared spec helpers: the catch-all `mockApi`, `horizontalOverflow`, `openStreamPanel` |
@@ -23,7 +24,7 @@ gate goes red. Commands and the pre-commit gate are in [build.md](build.md).
 
 ## Vitest
 
-`vitest.config.ts` collects `app/**/*.test.{ts,tsx}` and `lib/**/*.test.ts` and runs them in Node;
+`vitest.config.ts` collects `app/**/*.test.{ts,tsx}`, `lib/**/*.test.ts` and `e2e/mobile/**/*.test.ts` and runs them in Node;
 no DOM library is installed. It defines `__WEB_TARGET__` as `false`, so platform code under test
 takes the desktop branch, and resolves the `@/app`, `@/lib` and `@/resources` aliases.
 
@@ -139,21 +140,25 @@ the website, and desktop-only UI is reached through harness pages.
 
 | Project | Runs | Device | For |
 |---|---|---|---|
-| `desktop-chromium` | every spec except `*.broadcast.spec.ts` | Desktop Chrome, 1280×720 | app UI at desktop width |
+| `desktop-chromium` | every spec except `*.broadcast.spec.ts` and `e2e/mobile/` | Desktop Chrome, 1280×720 | app UI at desktop width |
 | `mobile-chromium` | the same specs | Pixel 7: 412×839, touch, `isMobile` | the same UI on a phone |
 | `broadcast` | only `*.broadcast.spec.ts` | Desktop Chrome at 1920×1080, `deviceScaleFactor: 1` | OBS scene pages and their baselines |
+| `mobile-suite-webkit`, `mobile-suite-chromium` | only `e2e/mobile/**/*.spec.ts` | iPhone 14 and Pixel 7 bases with touch and `isMobile`, sized per test | the mobile suite ([Mobile suite](#mobile-suite)) |
 
-The file name picks the project, and app specs run in both app projects. A test that fits only one
+The file name picks the project, and app specs run in both app projects. The app projects ignore
+`e2e/mobile/`, and `npm run test:e2e` runs only the first three projects. A test that fits only one
 size skips with `test.skip(isMobile, '<reason>')` or `test.skip(!isMobile)`. Specs that sweep
 widths set `test.use({ viewport })` per `describe` (copy `e2e/event-stats-responsive.spec.ts`) and
 expect `horizontalOverflow(page)` from `e2e/layout.ts` to be at most 1. Both app projects preload
 `utbt:seasonalThemes:v1 = "off"` so seasonal decor stays out of layout checks; `seasonal.spec.ts`
 turns it on itself.
 
-The config runs 2 workers, spec files in parallel and the tests inside a file in order, with the
-default 30 s test timeout, `trace: 'retain-on-failure'` and `screenshot: 'only-on-failure'`.
-Retries (2), `forbidOnly` and the `github` reporter apply only when `CI` is set; locally there are
-no retries, and a stray `test.only` silently narrows the run.
+The config runs 2 workers, spec files in parallel and the tests inside a file in order (the mobile
+suite projects run those in parallel too), with the default 30 s test timeout,
+`trace: 'retain-on-failure'` and `screenshot: 'only-on-failure'`. Retries (2), `forbidOnly` and the
+`github` reporter apply only when `CI` is set; locally there are no retries, the `list` reporter
+prints, and a stray `test.only` silently narrows the run. Every run also loads the mobile gallery
+reporter, which writes nothing unless mobile suite tests ran.
 
 ### API mocking
 
@@ -188,16 +193,18 @@ A `@live` test talks to the real public API. Put `@live` in the title, skip unle
 ### Running
 
 ```bash
-npx playwright test                                            # all three projects
+npm run test:e2e                                               # the two app projects and broadcast
+npx playwright test                                            # every project, the mobile suite's PR subset included
 npx playwright test --project=desktop-chromium                 # one project
 npx playwright test e2e/stream-tab.spec.ts --project=desktop-chromium
 npx playwright test e2e/stream-tab.spec.ts:228                 # one test, by its line
 npx playwright test -g "lands on Setup"                        # by title
 ```
 
-`npm run test:e2e -- <args>` is the same. A broadcast spec needs no `--project`: the other projects
-ignore it. Specs that listen for browser errors print `BROWSER PAGE ERROR:` lines; read those first
-when a page stays blank.
+`npm run test:e2e -- <args>` passes the args on with the three projects fixed. A broadcast spec needs
+no `--project`: the other projects ignore it. The mobile suite has its own commands
+([Mobile suite](#mobile-suite)). Specs that listen for browser errors print `BROWSER PAGE ERROR:`
+lines; read those first when a page stays blank.
 
 ### Adding a spec
 
@@ -262,6 +269,136 @@ Keep the baseline and fix the code when the failing screen is one your change wa
 touch, or the diff shows more than your change: shifted neighbours, a missing image, fallback
 glyphs, the mask colour outside the masked region. Two runs that disagree with each other mean
 nondeterminism: pin it (table above) instead of updating.
+
+## Mobile suite
+
+`e2e/mobile/` crawls every surface in the mobile route manifest on WebKit and Chromium at phone,
+landscape, foldable and tablet sizes. It checks a fixed set of mobile rules on each one, compares
+the failures with the known-violations ledger, and writes a screenshot gallery. `npm run test:e2e`
+never runs it.
+
+### Commands
+
+| Command | Runs |
+|---|---|
+| `npm run test:mobile` | the PR subset: WebKit at 390×844 and 844×390, Chromium at 360×780 and 915×412, plus every other `e2e/mobile/*.spec.ts` (interaction specs) on both engines |
+| `npm run test:mobile:full` | every viewport in `e2e/mobile/viewports.ts` on both engines, about 10 minutes locally |
+| `npm run test:mobile:ledger`, `npm run test:mobile:ledger:full` | the same two runs in ledger mode: a rule result never fails a test, and the run rewrites `e2e/mobile/ledger/` ([Known-violations ledger](#known-violations-ledger)) |
+
+Narrow a run with `-- -g <surface or viewport>`, for example `npm run test:mobile -- -g cap-detail`
+or `-g 390x844`. All four read `E2E_PORT` through the config. WebKit must be installed:
+`npx playwright install webkit chromium`.
+
+The projects are `mobile-suite-webkit` (iPhone 14 base) and `mobile-suite-chromium` (Pixel 7 base),
+both with touch and `isMobile`, seasonal decor off, and each test at its own viewport and screen
+size. `MOBILE_MATRIX=full` (set by the `:full` scripts) picks the full matrix. When a viewport
+belongs to one engine only, the crawl tags its tests `@webkit-only` or `@chromium-only`, and each
+project's `grepInvert` drops the other engine's tests. Untagged tests, such as interaction specs, run
+on both engines at the project's default size (390×844 and 360×780).
+
+### Mobile route manifest
+
+`e2e/mobile/manifest/<view>.ts` holds one entry per route-contract view id, and
+`manifest/index.ts` collects them in `MOBILE_MANIFEST`. It is test-side only and never ships in
+`route-contract.json`. Manifest modules import only types from Playwright (no `test`, no `expect`),
+so Vitest can import them too; waits use locator `waitFor()`.
+
+| Field | Holds |
+|---|---|
+| `view` | the route-contract view id |
+| `tier` | `public` or `role-gated` |
+| `path` | the URL that opens the view |
+| `fixtures` | the name of a fixture set in `e2e/mobile/fixtures/index.ts` |
+| `ready` | waits on measurable state that says the page shows its data, such as a heading or a fixture row; never a timeout |
+| `storage` | `localStorage` seeds, such as a tutorial already seen. Analytics consent is always seeded `denied` |
+| `subViews` | tabs and sub-views: `id`, `label`, and either `path` (reached by URL) or `open` (an action on the entry's page), plus optional `ready`, `modals` and `skip` |
+| `modals` | `id`, `label`, `open` (acts, then waits until the modal shows its content), an optional `root` (the CSS selector the rules measure, `[data-modal-backdrop]` by default) and `skip` |
+| `skip` | `{ rule, reason }` for each rule that does not apply, with the reason |
+
+Each entry yields the surfaces `<view>`, `<view>/<modal>`, `<view>/<subView>` and
+`<view>/<subView>/<modal>`. That surface id keys the ledger, the gallery and the test titles. The
+entries so far: `home`, `maps` (with `maps/new`) and `cap-detail` (with `cap-detail/compare-run`).
+
+### Fixture router
+
+`serveFixtureSet(page, name)` in `fixtures/router.ts` serves the entry's set. A set is a list of
+routes `{ host: 'api' | 'gateway', path, reply }`. `path` is an exact path without a trailing slash,
+or a `RegExp`; `reply` is a response or a function of the request URL, and `ok(data)` wraps the
+`{ success, data }` envelope. An API request no route answers falls back to `mockApi` from
+`e2e/sidebarRail.ts`. Any other request off the dev server gets a blank PNG (images) or a 404, so no
+request leaves the machine. The sets so far are builder-made: Home and Maps from typed builders in
+their set modules, the cap page from the run-compare golden fixtures.
+
+### Rules
+
+Each crawl test opens one surface at one viewport on one engine. It waits for the layout to settle:
+fonts loaded, on-screen images complete, no finite animation running, and the same layout signature
+for three animation frames. Then it runs each rule as a `test.step` and takes the gallery shot.
+Boxes are measured against `window.visualViewport`. On a modal surface, tap targets, form controls
+and axe measure only the modal's root, and the top bar rule does not apply.
+
+When the error boundary or the dev server's error overlay shows while a surface opens, the crawl
+stops opening it and runs the rules on what is on screen. A crash then fails `no-error-boundary`,
+which the ledger can list, instead of timing out in `ready`. If that leaves a modal surface without
+its modal, the rules that measure the modal's root report `n/a`.
+
+| Rule | Passes when |
+|---|---|
+| `no-horizontal-overflow` | the document, `body` and `main` scroll at most 1 px sideways, the document fits the visual viewport's width, and the visual viewport is not zoomed |
+| `top-bar-visible` | below 1024 px, the top bar (the hamburger's fixed ancestor) and the "Open navigation" button sit inside the visual viewport, and the point at the hamburger's centre hits the hamburger. It does not apply from `lg` up or with a modal open |
+| `no-error-boundary` | no "Something went wrong" heading and no dev server error overlay |
+| `axe-critical-serious` | no critical or serious axe violation under the WCAG 2 A and AA tags, with `color-contrast` off as in `e2e/responsive-accessibility.spec.ts` |
+| `form-controls-16px` | every rendered text input, select, textarea and contenteditable has a computed font size of at least 16 px (every crawl device is touch) |
+| `tap-targets-44px` | every rendered, enabled link, button, input, select, summary and ARIA widget is at least 44×44 px. A link inside a sentence is exempt, and a checkbox or radio is measured by its label |
+
+A rule returns `pass`, `fail` or `n/a` plus detail lines. To add one, put its id and label in
+`rules/ids.ts`, its check in `rules/<id>.ts` and the pair in `rules/index.ts`. Then seed the ledger
+with the failures that predate it.
+
+### Known-violations ledger
+
+`e2e/mobile/ledger/<rule>.json` holds one file per rule, with one `{ surface, viewport, engine }`
+per line, sorted. The crawl judges each rule result against it:
+
+| Result | Listed | Outcome |
+|---|---|---|
+| `fail` | yes | known: reported in the gallery, the test passes |
+| `fail` | no | new: the test fails with the rule's detail lines |
+| `pass` or `n/a` | yes | stale: the test fails with "remove this entry from e2e/mobile/ledger/<rule>.json" |
+| `pass` or `n/a` | no | pass |
+
+A rule the manifest skips does not run, so it never judges. `e2e/mobile/manifest.test.ts` (Vitest)
+fails on an entry for an unknown surface, viewport or engine, for a rule the manifest skips there, on
+a duplicate, and on a file for an unknown rule.
+
+**Regenerate** with `npm run test:mobile:ledger`, or `npm run test:mobile:ledger:full` for the
+full matrix, narrowed with `-- -g` if you like. The run rewrites only the surface, rule, viewport
+and engine combinations it ran: failures go in, passes come out, and everything it did not run
+stays. Both matrices are seeded.
+
+- A fix deletes the entries it fixes, by hand or by regenerating after the fix.
+- Only a failure that predates your change goes in. Fix a regression your change caused instead of
+  listing it.
+- On a merge collision in a ledger file, regenerate; never hand-merge.
+
+### Gallery
+
+After a run with mobile suite tests, `test-results/mobile-gallery/index.html` opens in a browser. It
+shows a tally per rule, then every surface at every engine and viewport: the viewport screenshot in
+CSS pixels, each rule's outcome with its details, and the run time. `observations.json` beside it
+holds every rule result. The terminal prints the same tallies and the time per surface.
+
+`e2e/mobile/gallery-reporter.ts` writes it, and the config loads that reporter for every run.
+`--reporter` on the command line replaces the config's reporters, so list
+`./e2e/mobile/gallery-reporter.ts` among them when you pass one. The gallery is never committed and
+never compared against baselines; every run clears `test-results/`.
+
+### Dev server drops
+
+When the dev server refuses a document, script or stylesheet while a surface opens (the Windows
+socket flake in [When the gate fails](#when-the-gate-fails)), the crawl prints
+`mobile crawl: the dev server dropped …` and reopens the surface once; the dropped attempt takes no
+further steps. A second drop fails the test.
 
 ## CI
 

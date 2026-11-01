@@ -1,0 +1,56 @@
+import { readdirSync } from 'node:fs'
+import { describe, expect, it } from 'vitest'
+import { FIXTURE_SETS } from './fixtures'
+import { LEDGER_DIR, readLedger } from './ledger'
+import { crawlSurfaces, MOBILE_MANIFEST } from './manifest'
+import { RULE_IDS } from './rules/ids'
+import { ENGINES, MOBILE_VIEWPORTS } from './viewports'
+
+describe('mobile manifest', () => {
+    it('has one entry per view and unique surface ids', () => {
+        const views = MOBILE_MANIFEST.map(entry => entry.view)
+        expect(new Set(views).size).toBe(views.length)
+        const surfaces = crawlSurfaces().map(surface => surface.id)
+        expect(new Set(surfaces).size).toBe(surfaces.length)
+    })
+
+    it('names a fixture set that exists for every entry', () => {
+        for (const entry of MOBILE_MANIFEST) expect(Object.keys(FIXTURE_SETS), entry.view).toContain(entry.fixtures)
+    })
+
+    it('gives every skipped rule a reason', () => {
+        for (const surface of crawlSurfaces()) {
+            for (const skip of surface.skip) expect(skip.reason.trim(), `${surface.id} skips ${skip.rule}`).not.toBe('')
+        }
+    })
+})
+
+describe('known-violations ledger', () => {
+    const ledger = readLedger(LEDGER_DIR, RULE_IDS)
+
+    it('has one file per rule and nothing else', () => {
+        expect(readdirSync(LEDGER_DIR).sort()).toEqual(RULE_IDS.map(rule => `${rule}.json`).sort())
+    })
+
+    it('lists only surfaces, viewports and engines the crawl visits, for rules it runs there', () => {
+        const surfaces = new Map(crawlSurfaces().map(surface => [surface.id, surface]))
+        const viewports = MOBILE_VIEWPORTS.map(viewport => viewport.id)
+        for (const rule of RULE_IDS) {
+            for (const entry of ledger[rule]) {
+                const where = `${rule}.json: ${JSON.stringify(entry)}`
+                expect(surfaces.has(entry.surface), `${where} names no manifest surface; remove it`).toBe(true)
+                expect(viewports, `${where} names no matrix viewport; remove it`).toContain(entry.viewport)
+                expect(ENGINES, `${where} names no engine; remove it`).toContain(entry.engine)
+                const skipped = surfaces.get(entry.surface)?.skip.some(skip => skip.rule === rule)
+                expect(skipped, `${where} is for a rule the manifest skips there; remove it`).toBeFalsy()
+            }
+        }
+    })
+
+    it('lists each combination once', () => {
+        for (const rule of RULE_IDS) {
+            const keys = ledger[rule].map(entry => `${entry.surface} ${entry.viewport} ${entry.engine}`)
+            expect(new Set(keys).size, `${rule}.json has duplicates`).toBe(keys.length)
+        }
+    })
+})
