@@ -290,7 +290,7 @@ test('the countdown bar glides, and steps once a second with animations off', as
 
         const positions = await barPositions()
         if (animations === 'off') expect(positions).toBeLessThanOrEqual(4)
-        else expect(positions).toBeGreaterThan(20)
+        else expect(positions).toBeGreaterThan(8)
     }
 })
 

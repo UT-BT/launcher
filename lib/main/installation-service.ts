@@ -28,17 +28,18 @@ export class InstallationService {
 
             const hash = createHash('md5')
             const stream = createReadStream(this.isoPath)
+            let isValid = false
 
             stream.on('data', (data) => hash.update(data))
             stream.on('end', () => {
                 const fileHash = hash.digest('hex')
                 loggingService.info(`ISO Hash: ${fileHash}`, 'InstallationService')
-                resolve(fileHash === this.EXPECTED_HASH)
+                isValid = fileHash === this.EXPECTED_HASH
             })
             stream.on('error', (err) => {
                 loggingService.error('Hash verification failed', 'InstallationService', err)
-                resolve(false)
             })
+            stream.on('close', () => resolve(isValid))
         })
     }
 
