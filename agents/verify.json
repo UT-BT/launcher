@@ -225,6 +225,9 @@
     "app/components/stream/noIndex.ts",
     "app/components/stream/streamScenes.ts",
     "app/components/ui/modal.tsx",
+    "app/device/deviceEnvironment.ts",
+    "app/device/diagnostics/DiagnosticOverlayTrigger.tsx",
+    "app/device/useDeviceEnvironment.ts",
     "app/index.html",
     "app/platform/auth.ts",
     "app/platform/capabilities.ts",
@@ -243,6 +246,14 @@
     "scripts/check-web-bundle.mjs",
     "vite.config.web.ts",
     "vite.entry.ts"
+  ],
+  "agents/mobile.md": [
+    "app/components/layout/AppLayout.tsx",
+    "app/components/layout/sidebar/SidebarBrand.tsx",
+    "app/device/diagnostics/DiagnosticOverlay.tsx",
+    "app/device/diagnostics/DiagnosticOverlayTrigger.tsx",
+    "app/device/diagnostics/diagnosticTrigger.ts",
+    "app/device/diagnostics/mobileDiagnostics.ts"
   ],
   "agents/features/admin.md": [
     "app/components/main/Main.tsx",

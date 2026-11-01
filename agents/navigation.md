@@ -308,7 +308,7 @@ Title, the collapsed choice) and passes it down:
 
 | Part | Renders |
 |---|---|
-| `SidebarBrand` | logo (with its seasonal-burst click) and, at `lg`+, the collapse toggle in its top-left corner |
+| `SidebarBrand` | logo (with its seasonal-burst click and the diagnostic-overlay long-press, [mobile.md](mobile.md)) and, at `lg`+, the collapse toggle in its top-left corner |
 | `SidebarActions` | Join Server and Launch Game; returns nothing without `capabilities.game` |
 | `SidebarNavItem` | one nav row or rail tile: icon, badge marks, label or caption, Live chip or dot, tooltip |
 | `SidebarCollapseToggle` | the icon-only collapse toggle |

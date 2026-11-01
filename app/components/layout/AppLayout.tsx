@@ -26,6 +26,7 @@ import { SidebarCollapseToggle } from '@/app/components/layout/sidebar/SidebarCo
 import { SidebarNavItem } from '@/app/components/layout/sidebar/SidebarNavItem'
 import { SidebarUserCard } from '@/app/components/layout/sidebar/SidebarUserCard'
 import { readSidebarCollapsed, writeSidebarCollapsed } from '@/app/components/layout/sidebarPreference'
+import { DiagnosticOverlayTrigger } from '@/app/device/diagnostics/DiagnosticOverlayTrigger'
 
 const SIDEBAR_WIDTH_EXPANDED = '16rem'
 const SIDEBAR_WIDTH_COLLAPSED = '5rem'
@@ -205,7 +206,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                 >
                     <Menu className="size-5" />
                 </button>
-                <img src={logo} alt="UTBT Logo" className="size-8 object-contain" />
+                <img src={logo} alt="UTBT Logo" data-diagnostic-trigger style={{ WebkitTouchCallout: 'none' }} className="size-8 object-contain select-none" />
                 <span className="font-bold tracking-tight">UTBT.net</span>
             </div>
 
@@ -375,6 +376,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                 </Suspense>
             )}
 
+            <DiagnosticOverlayTrigger />
         </div>
     )
 }

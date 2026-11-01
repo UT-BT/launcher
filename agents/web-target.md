@@ -225,8 +225,25 @@ cap (owner decision).
   empty news feed) widens to `lg:col-span-12` when alone, so no grid row is left
   half-empty.
 
+- **Device environment.** `app/device/useDeviceEnvironment.ts` exposes the device facts
+  reactively: `touch` (`hover: none`), `belowLg` (below 1024px), `orientation`, `standalone`
+  (display mode or iOS Home Screen) and the current `visualViewport` (scale, offsets, page
+  offsets, width, height). Read them through `useDeviceEnvironment()`, or
+  `useDeviceEnvironment(env => env.touch)` to re-render only when that fact changes;
+  non-component code calls `getDeviceEnvironment()` / `subscribeDeviceEnvironment()`. Don't
+  write new `matchMedia` calls for these facts; CSS may use the same `(hover: none)` and `lg`
+  queries. The pure parts (`deviceEnvironmentFrom`, `sameDeviceEnvironment`, the query
+  strings) live in `deviceEnvironment.ts`.
+- **Diagnostic overlay.** `?debug=mobile`, or a long-press on the logo (top bar or sidebar,
+  anything marked `data-diagnostic-trigger`), toggles a live overlay of the device
+  environment, scroll positions, safe-area insets, open modals and the active view, with a
+  **Copy report** button. Only `DiagnosticOverlayTrigger` (mounted by `AppLayout`) is eager;
+  `DiagnosticOverlay` is a lazy chunk. The iPhone checklist and how to capture a report are in
+  [mobile.md](mobile.md).
+
 Screenshot-verify new surfaces at 390×844, 1024×768 (the breakpoint boundary, the most
-fragile width), 1920×1080 and 3840×2160.
+fragile width), 1920×1080 and 3840×2160, and run the manual iPhone checklist in
+[mobile.md](mobile.md) after mobile work lands.
 
 ## Performance and bundle budgets
 
@@ -246,8 +263,9 @@ Phones parse the web entry chunk on first visit, so it stays lean.
 - **Anything needed only after a user action** (a modal, a detail page, an admin surface)
   gets `lazy()` and a mount gate. Existing examples: `LoginPage`, `UpdateModal` and
   `LegacyInstallCard` in `app.tsx`; the Settings modal and `ChangeTitleModal` in
-  `AppLayout`; per-section Settings panels; the pick/ban `ManagerDock` (fetched only when
-  the manager dock model shows it); `PrivacyPolicyBody` behind `AnalyticsConsentBanner`'s
+  `AppLayout`; the diagnostic overlay behind `DiagnosticOverlayTrigger`; per-section
+  Settings panels; the pick/ban `ManagerDock` (fetched only when the manager dock model
+  shows it); `PrivacyPolicyBody` behind `AnalyticsConsentBanner`'s
   modal, which keeps react-markdown out of the entry. The banner itself stays eager: it
   renders for every first-time visitor, exactly the cohort whose LCP matters.
 - **`vendor-react` chunk.** `manualChunks` in `vite.config.web.ts` pins `react`,
