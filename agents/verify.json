@@ -588,6 +588,7 @@
     "app/components/pages/capDetail/CheckpointSplitsCard.tsx",
     "app/components/pages/capDetail/HeroSection.tsx",
     "app/components/pages/capDetail/capStats.ts",
+    "app/components/pages/capDetail/numericTable.tsx",
     "app/components/pages/capDetail/runDelta/ChartViewToggle.tsx",
     "app/components/pages/capDetail/runDelta/ComparePicker.tsx",
     "app/components/pages/capDetail/runDelta/RoutesDifferView.tsx",
@@ -644,6 +645,9 @@
     "app/utils/medals.ts",
     "app/utils/recordsDefinitions.test.ts",
     "app/utils/teamRunState.ts",
+    "e2e/cap-numeric-tables-desktop.spec.ts",
+    "e2e/capTables.ts",
+    "e2e/mobile/cap-numeric-tables.spec.ts",
     "e2e/profile-tabs-responsive.spec.ts"
   ],
   "agents/features/stream-kit.md": [

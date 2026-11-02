@@ -241,6 +241,20 @@ target or a `null` read) or loading.
   drops a zone whose relative position (cumulative ÷ cap time) differs by more than 6 % and by
   more than 4× its neighbours' mismatch (a skipped or misread checkpoint), and renumbers the kept
   ones `CP1…` between `SPAWN` and `CAP` for the splits table, the delta chart and the scrubber.
+- **Phones.** The splits, sector and speed tables stay tables with every column: they are numeric
+  comparisons, so they have no card rows. Each `DataTableShell` is a `@container/numbers`
+  (`numericTable.tsx`). Below 28rem (448 px), cells drop to `px-1.5`, numbers switch from mono to
+  the system font's tabular digits at `text-xs` with `tracking-tight`, the CP column narrows to
+  2.25rem, and two headers shorten (`NumericHeader`: Cumulative → Cum., Avg speed → Speed, with the
+  full name as the `abbr` title). From the desktop app's 1280 px minimum window up the tables are
+  at least 474 px wide, so desktop keeps the wide look; a browser window between `lg` (1024 px)
+  and about 1230 px halves the card below 28rem and gets the tight layout with every column. The
+  `responsive` widths are the phone minimums and match the tight headers (the CP header is 4rem
+  only above 28rem): every column fits a 360 px phone, and columns drop by priority only on
+  narrower screens. Speed rows keep their sector buttons, so a tap
+  zooms. `e2e/mobile/cap-numeric-tables.spec.ts` checks every column at 360×780 and 780×360 (the
+  recorded cap and its `most-columns` variant, both engines) and the tap zoom;
+  `e2e/cap-numeric-tables-desktop.spec.ts` pins the desktop layout at 1280 and 1920 px.
 
 **Compare Run** (side-by-side video):
 
