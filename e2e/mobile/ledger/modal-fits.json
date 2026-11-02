@@ -1,0 +1,6 @@
+[
+  { "surface": "cap-detail/compare-run", "viewport": "780x360", "engine": "chromium" },
+  { "surface": "cap-detail/compare-run", "viewport": "844x390", "engine": "chromium" },
+  { "surface": "cap-detail/compare-run", "viewport": "780x360", "engine": "webkit" },
+  { "surface": "cap-detail/compare-run", "viewport": "844x390", "engine": "webkit" }
+]

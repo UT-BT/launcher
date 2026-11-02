@@ -1,0 +1,10 @@
+[
+  { "surface": "cap-detail/compare-run", "viewport": "360x780", "engine": "chromium" },
+  { "surface": "cap-detail/compare-run", "viewport": "390x844", "engine": "chromium" },
+  { "surface": "cap-detail/compare-run", "viewport": "393x852", "engine": "chromium" },
+  { "surface": "cap-detail/compare-run", "viewport": "402x874", "engine": "chromium" },
+  { "surface": "cap-detail/compare-run", "viewport": "360x780", "engine": "webkit" },
+  { "surface": "cap-detail/compare-run", "viewport": "390x844", "engine": "webkit" },
+  { "surface": "cap-detail/compare-run", "viewport": "393x852", "engine": "webkit" },
+  { "surface": "cap-detail/compare-run", "viewport": "402x874", "engine": "webkit" }
+]

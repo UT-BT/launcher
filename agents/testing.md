@@ -339,9 +339,13 @@ their set modules, the cap page from the run-compare golden fixtures.
 
 Each crawl test opens one surface at one viewport on one engine. It waits for the layout to settle:
 fonts loaded, on-screen images complete, no finite animation running, and the same layout signature
-for three animation frames. Then it runs each rule as a `test.step` and takes the gallery shot.
-Boxes are measured against `window.visualViewport`. On a modal surface, tap targets, form controls
-and axe measure only the modal's root, and the top bar rule does not apply.
+for three animation frames. Then it runs each rule as a `test.step`: first the rules that only
+measure, then the gallery shot, then the interaction rules, which close the modal, scroll, navigate
+or rotate, in the table's order. Crawl tests are marked `test.slow()`, so each gets 90 s. Boxes are
+measured against `window.visualViewport`. On a modal surface, tap targets, form controls, axe and
+`modal-fits` measure only the modal's root, and the top bar rule does not apply. An interaction rule
+that throws, for example because a tap target never appears, reports `fail` with "the rule could not
+finish" instead of ending the test.
 
 When the error boundary or the dev server's error overlay shows while a surface opens, the crawl
 stops opening it and runs the rules on what is on screen. A crash then fails `no-error-boundary`,
@@ -356,10 +360,47 @@ its modal, the rules that measure the modal's root report `n/a`.
 | `axe-critical-serious` | no critical or serious axe violation under the WCAG 2 A and AA tags, with `color-contrast` off as in `e2e/responsive-accessibility.spec.ts` |
 | `form-controls-16px` | every rendered text input, select, textarea and contenteditable has a computed font size of at least 16 px (every crawl device is touch) |
 | `tap-targets-44px` | every rendered, enabled link, button, input, select, summary and ARIA widget is at least 44×44 px. A link inside a sentence is exempt, and a checkbox or radio is measured by its label |
+| `modal-fits` | on a modal surface, the top-most modal's box sits inside the visual viewport, points along its top and bottom edges hit the box, and its close control (a button whose label or text starts with "Close") sits inside the visual viewport with `elementFromPoint` at its centre hitting the control. `n/a` on a page surface |
+| `scroll-top-after-modal` | on a modal surface, tapping the close control closes the modal, and after a swipe that moves the page down one viewport height and a swipe back to the top the page is at the real top (below). A down swipe that scrolls nothing while `main` holds more than it shows fails, so a page left locked by the modal is caught. If the tap fails or the control can't be tapped, Escape closes the modal and the detail says so; a modal neither closes fails. `n/a` on a page surface |
+| `back-restores-scroll` | on a page surface, after a swipe of one viewport height, a new navigation through the drawer (to World Records, or Home from World Records) starts at the top, and Back returns the swiped scroller to within 4 px of where it was. `n/a` on a modal surface or when nothing scrolls |
+| `rotation-recovers` | after the viewport's width and height are swapped, a modal surface's modal (reopened if an earlier rule closed it) still passes the `modal-fits` checks and closes, and after a swipe that moves the page down one viewport height, scrolling to the top reaches the real top. The page stays rotated, so this rule runs last |
+
+**The real top** means the window and the visual viewport sit at 0,0, `main` and every rendered
+scroller inside it are at 0, the first element in `main` that shows text or media is inside the
+visible area and not covered, and below 1024 px the hamburger is inside the visible area and its
+centre hits it. **Scrolling** is a simulated swipe (`swipeScroll` in `e2e/mobile/interactions.ts`):
+starting from the element at the centre of the visual viewport, it scrolls each user-scrollable
+ancestor in turn until the distance is used up, the way a touch scroll chains. An element with
+`overflow: hidden` or `clip`, including `html` and `body`, is not user-scrollable, so a page stuck
+in one is caught. Playwright has no touch-drag API, so this is the closest it gets. **Rotation** swaps
+`page.setViewportSize`; no engine fires a real orientation change.
 
 A rule returns `pass`, `fail` or `n/a` plus detail lines. To add one, put its id and label in
-`rules/ids.ts`, its check in `rules/<id>.ts` and the pair in `rules/index.ts`. Then seed the ledger
-with the failures that predate it.
+`rules/ids.ts` (with `changesPage: true` if it changes the page, so it runs after the gallery shot),
+its check in `rules/<id>.ts` and the pair in `rules/index.ts`. Then seed the ledger with the
+failures that predate it.
+
+### Interaction specs
+
+Every other `e2e/mobile/*.spec.ts` drives one flow on the crawl's harness: it serves a manifest
+entry's fixture set, opens its path, waits for `ready`, `settleLayout` and `installProbe`, then uses
+the helpers in `e2e/mobile/interactions.ts` (`checkModal`, `closeModal`, `rotate`, `swipeScroll`,
+`swipeOneViewport`, `scrollToTop`, `scrollDownThenToTop`, `stuckPageProblems`, `scrollerTop`,
+`scrollPositionProblems`, `topOfPageProblems`, `tapCentre`, `zoomVisualViewport`). An interaction
+spec that is red today is marked `test.fail()`, with a note naming the ticket that flips it.
+
+- `owner-repro.spec.ts`, the owner's reported bug: Compare runs on the cap page, landscape, zoom in
+  and out, portrait, then the close control closes the modal, the hamburger opens the drawer and a
+  swipe scrolls the page back to the real top. It is expected to fail until the mobile overhaul's
+  one-scroller and viewport-recovery work lands. Today it fails at the landscape step: the fixed top
+  bar covers the modal's top edge.
+- **Zoom is simulated.** No engine can emulate a real pinch. On Chromium, `zoomVisualViewport` sets
+  the page scale through the DevTools protocol (`Emulation.setPageScaleFactor`) and waits for
+  `visualViewport.scale` to follow. It cannot pan the zoomed view, because headless Chromium ignores
+  synthesized pinch and scroll gestures. WebKit has no page-scale API, so the step only notes that it
+  was skipped (a `zoom simulation` annotation says which). The scale iOS keeps after a pinch, and
+  iOS's zoom on focusing a control under 16 px, are left to the manual iPhone checklist in
+  [mobile.md](mobile.md).
 
 ### Known-violations ledger
 

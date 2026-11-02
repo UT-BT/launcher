@@ -1,5 +1,5 @@
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
-import { join, relative } from 'node:path'
+import { basename, join, relative } from 'node:path'
 import type { FullConfig, Reporter, TestCase, TestResult } from '@playwright/test/reporter'
 import { LEDGER_DIR, readLedger, regenerateLedger, writeLedger } from './ledger'
 import { crawlSurfaces } from './manifest'
@@ -19,6 +19,8 @@ interface Unfinished {
     project: string
     error: string
 }
+
+const CRAWL_SPEC = 'crawl.spec.ts'
 
 const TALLIES = ['pass', 'known', 'new', 'stale', 'n/a', 'skipped'] as const
 type Tally = (typeof TALLIES)[number]
@@ -101,7 +103,8 @@ export default class GalleryReporter implements Reporter {
             return
         }
         const project = test.parent.project()?.name ?? ''
-        if (!project.startsWith('mobile-suite') || result.status === 'passed' || result.status === 'skipped') return
+        if (!project.startsWith('mobile-suite') || basename(test.location.file) !== CRAWL_SPEC) return
+        if (result.status === 'passed' || result.status === 'skipped') return
         this.crawled.delete(test.id)
         this.unfinished.set(test.id, {
             title: test.titlePath().slice(3).join(' › '),

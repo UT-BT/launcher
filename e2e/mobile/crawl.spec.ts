@@ -5,7 +5,7 @@ import { judge, LEDGER_DIR, readLedger, type LedgerKey } from './ledger'
 import { crawlSurfaces, surfaceSteps, type CrawlSurface } from './manifest'
 import { CRAWL_RECORD, CRAWL_SHOT, type CrawlRecord, type RuleOutcome } from './record'
 import { RULE_CHECKS } from './rules'
-import { RULE_IDS, type RuleId } from './rules/ids'
+import { INTERACTION_RULE_IDS, MEASURING_RULE_IDS, RULE_IDS, type RuleId } from './rules/ids'
 import { errorScreen } from './rules/no-error-boundary'
 import { installProbe } from './rules/probe'
 import type { RuleContext } from './rules/types'
@@ -78,25 +78,27 @@ for (const viewport of crawlViewports(SCOPE)) {
 
         for (const surface of crawlSurfaces()) {
             test(surface.id, { tag: engineTags(viewport.engines) }, async ({ page, browserName }, testInfo) => {
+                test.slow()
                 const context: RuleContext = { page, surface, viewport, engine: browserName as Engine }
                 await openSurface(page, surface)
                 await settleLayout(page)
                 await installProbe(page)
 
                 const outcomes: RuleOutcome[] = []
-                for (const rule of RULE_IDS) {
-                    await test.step(rule, async () => {
-                        const outcome = await runRule(context, rule)
-                        outcomes.push(outcome)
-                        if (WRITING_LEDGER) return
-                        if (outcome.verdict === 'new') expect.soft(outcome.status, failureMessage(context, outcome)).toBe('pass')
-                        if (outcome.verdict === 'stale') expect.soft(outcome.status, failureMessage(context, outcome)).toBe('fail')
-                    })
-                }
+                const check = (rule: RuleId) => test.step(rule, async () => {
+                    const outcome = await runRule(context, rule)
+                    outcomes.push(outcome)
+                    if (WRITING_LEDGER) return
+                    if (outcome.verdict === 'new') expect.soft(outcome.status, failureMessage(context, outcome)).toBe('pass')
+                    if (outcome.verdict === 'stale') expect.soft(outcome.status, failureMessage(context, outcome)).toBe('fail')
+                })
+                for (const rule of MEASURING_RULE_IDS) await check(rule)
 
                 const shot = testInfo.outputPath('surface.png')
                 await page.screenshot({ path: shot, animations: 'disabled', caret: 'hide', scale: 'css' })
                 await testInfo.attach(CRAWL_SHOT, { path: shot, contentType: 'image/png' })
+
+                for (const rule of INTERACTION_RULE_IDS) await check(rule)
 
                 const record: CrawlRecord = {
                     surface: surface.id,
