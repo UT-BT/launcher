@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, lazy } from 'react'
+import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { AdminSelect, ActionButton } from '@/app/components/pages/admin/components/controls'
-import { ConfirmModal } from '@/app/components/shared/ConfirmModal'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { ErrorBanner, SectionCard } from '@/app/components/pages/teams/teamsShared'
 import {
@@ -9,6 +9,8 @@ import {
 } from '@/app/utils/api'
 import { FormatBuilder } from './FormatBuilder'
 import { emptySpec, parseSpecErrors } from './formatFields'
+
+const ConfirmModal = lazy(() => import('@/app/components/shared/ConfirmModal').then(m => ({ default: m.ConfirmModal })))
 
 interface FormatPanelProps {
     accessToken: string
@@ -133,20 +135,22 @@ export function FormatPanel({
                 />
             </SectionCard>
 
-            <ConfirmModal
-                isOpen={!!confirmReplace}
-                onClose={() => setConfirmReplace(null)}
-                onConfirm={() => {
-                    const target = confirmReplace
-                    setConfirmReplace(null)
-                    if (target) applyTemplate(target)
-                }}
-                title="Replace the format"
-                message={`Replace this event's format with "${preview?.name ?? 'the template'}"?`}
-                detail="Stages that already have matches will block the change until they are reset."
-                confirmText="Replace format"
-                variant="error"
-            />
+            <LazyModalGate open={!!confirmReplace}>
+                <ConfirmModal
+                    isOpen={!!confirmReplace}
+                    onClose={() => setConfirmReplace(null)}
+                    onConfirm={() => {
+                        const target = confirmReplace
+                        setConfirmReplace(null)
+                        if (target) applyTemplate(target)
+                    }}
+                    title="Replace the format"
+                    message={`Replace this event's format with "${preview?.name ?? 'the template'}"?`}
+                    detail="Stages that already have matches will block the change until they are reset."
+                    confirmText="Replace format"
+                    variant="error"
+                />
+            </LazyModalGate>
         </div>
     )
 }

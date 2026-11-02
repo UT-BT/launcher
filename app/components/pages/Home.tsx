@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, lazy } from 'react'
+import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { Activity, AlertTriangle, RefreshCw } from 'lucide-react'
 import {
     UserProfile, fetchSummary, fetchHotMaps, fetchNews, fetchNewsCategories,
@@ -9,9 +10,6 @@ import {
 import type { AchievementsPageCaches } from '@/app/components/pages/AchievementsPage.types'
 import { Button } from '@/app/components/ui/button'
 import { Modal } from '@/app/components/ui/modal'
-import { ReviewModal } from '@/app/components/modals/ReviewModal'
-import { HistoryModal } from '@/app/components/modals/HistoryModal'
-import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
 import { useReplayWatch } from '@/app/hooks/useReplayWatch'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useServerJoin } from '@/app/hooks/useServerJoin'
@@ -34,6 +32,10 @@ import { MedalHuntCard } from './home/MedalHuntCard'
 import { ClosingSoonBanner } from './home/ClosingSoonBanner'
 import { capabilities, fetchGatewayServers } from '@/app/platform'
 import { requestLogin } from '@/app/components/shared/AuthRequiredModal'
+
+const ReviewModal = lazy(() => import('@/app/components/modals/ReviewModal').then(m => ({ default: m.ReviewModal })))
+const HistoryModal = lazy(() => import('@/app/components/modals/HistoryModal').then(m => ({ default: m.HistoryModal })))
+const ReplayVideoModal = lazy(() => import('@/app/components/shared/ReplayVideoModal').then(m => ({ default: m.ReplayVideoModal })))
 
 const ACCENTS: Record<string, SectionAccent> = {
     worldRecords: { tick: 'bg-blue-400' },
@@ -528,31 +530,37 @@ export function Home({
             </div>
 
             {userProfile && (<>
-            <HistoryModal
-                open={historyOpen}
-                onOpenChange={setHistoryOpen}
-                accessToken={userProfile.accessToken}
-                userAlias={userProfile.alias}
-                favoriteMapNames={favoriteMapNames}
-                onToggleFavorite={onToggleFavorite}
-                onReview={handleReviewMap}
-                onMapSelect={onMapSelect}
-            />
+            <LazyModalGate open={historyOpen}>
+                <HistoryModal
+                    open={historyOpen}
+                    onOpenChange={setHistoryOpen}
+                    accessToken={userProfile.accessToken}
+                    userAlias={userProfile.alias}
+                    favoriteMapNames={favoriteMapNames}
+                    onToggleFavorite={onToggleFavorite}
+                    onReview={handleReviewMap}
+                    onMapSelect={onMapSelect}
+                />
+            </LazyModalGate>
 
-            <ReviewModal
-                open={reviewOpen}
-                onOpenChange={setReviewOpen}
-                accessToken={userProfile.accessToken}
-                userId={userProfile.id ?? undefined}
-                mapName={activeReviewMap}
-                onSuccess={() => {
-                    loadData()
-                    setReviewsRefreshKey(k => k + 1)
-                }}
-            />
+            <LazyModalGate open={reviewOpen}>
+                <ReviewModal
+                    open={reviewOpen}
+                    onOpenChange={setReviewOpen}
+                    accessToken={userProfile.accessToken}
+                    userId={userProfile.id ?? undefined}
+                    mapName={activeReviewMap}
+                    onSuccess={() => {
+                        loadData()
+                        setReviewsRefreshKey(k => k + 1)
+                    }}
+                />
+            </LazyModalGate>
             </>)}
 
-            <ReplayVideoModal state={replay.video} onClose={replay.clearVideo} />
+            <LazyModalGate open={replay.video !== null}>
+                <ReplayVideoModal state={replay.video} onClose={replay.clearVideo} />
+            </LazyModalGate>
 
             <Modal
                 isOpen={replay.error !== null}

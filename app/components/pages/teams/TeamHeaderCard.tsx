@@ -1,11 +1,11 @@
-import { useRef, useState, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode, lazy } from 'react'
+import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { Pencil, ArrowRightLeft, Trash2, LogOut, ImagePlus, ImageOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
 import { Modal } from '@/app/components/ui/modal'
 import { Switch } from '@/app/components/ui/switch'
 import { Tooltip } from '@/app/components/ui/tooltip'
-import { ConfirmModal } from '@/app/components/shared/ConfirmModal'
 import { formatAddedDate } from '@/app/utils/format'
 import {
     deleteTeamAvatar, disbandTeam, leaveTeam, setMyTagHidden, transferTeamOwnership, updateTeam, uploadTeamAvatar,
@@ -18,6 +18,8 @@ import {
 import { nameValidationError, tagValidationError, TEAM_NAME_MAX_LENGTH, TAG_MAX_LENGTH } from './tagFormat'
 import { TagPreview, TagStyleFields, type TagStyleValue } from './TagStyleFields'
 import { TeamAvatar } from './TeamAvatar'
+
+const ConfirmModal = lazy(() => import('@/app/components/shared/ConfirmModal').then(m => ({ default: m.ConfirmModal })))
 
 interface TeamHeaderCardProps {
     accessToken: string
@@ -205,27 +207,29 @@ export function TeamHeaderCard({
                 />
             )}
 
-            <ConfirmModal
-                isOpen={confirmDelete}
-                onClose={() => setConfirmDelete(false)}
-                onConfirm={async () => {
-                    setConfirmDelete(false)
-                    setError(null)
-                    try {
-                        await disbandTeam(accessToken, team.id)
-                        refreshUserProfile()
-                        onLeftOrDisbanded()
-                    } catch (e) {
-                        setError(teamErrorMessage(e))
-                    }
-                }}
-                title="Delete team?"
-                message={`This permanently deletes ${team.name} and removes every member from it.`}
-                detail="This cannot be undone."
-                confirmText="Delete"
-                cancelText="Cancel"
-                variant="error"
-            />
+            <LazyModalGate open={confirmDelete}>
+                <ConfirmModal
+                    isOpen={confirmDelete}
+                    onClose={() => setConfirmDelete(false)}
+                    onConfirm={async () => {
+                        setConfirmDelete(false)
+                        setError(null)
+                        try {
+                            await disbandTeam(accessToken, team.id)
+                            refreshUserProfile()
+                            onLeftOrDisbanded()
+                        } catch (e) {
+                            setError(teamErrorMessage(e))
+                        }
+                    }}
+                    title="Delete team?"
+                    message={`This permanently deletes ${team.name} and removes every member from it.`}
+                    detail="This cannot be undone."
+                    confirmText="Delete"
+                    cancelText="Cancel"
+                    variant="error"
+                />
+            </LazyModalGate>
         </section>
     )
 }

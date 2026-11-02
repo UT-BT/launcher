@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useRef, useCallback, Fragment } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback, Fragment, lazy } from 'react'
+import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import { useAutoPageSize } from '@/app/hooks/useAutoPageSize'
@@ -15,7 +16,6 @@ import {
 } from '@/app/utils/api'
 
 import { MapReviewsModal } from '@/app/components/modals/MapReviewsModal'
-import { ReplayPickerModal } from '@/app/components/modals/ReplayPickerModal'
 import { ReplayVideoFooter, ReplayVideoPlayer } from '@/app/components/shared/ReplayVideoModal'
 import { CapTimeLink, openCap, openTeamCap } from '@/app/components/shared/CapTimeLink'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
@@ -70,6 +70,8 @@ import {
     type SortField,
     type WRHolder,
 } from './MapsPage.types'
+
+const ReplayPickerModal = lazy(() => import('@/app/components/modals/ReplayPickerModal').then(m => ({ default: m.ReplayPickerModal })))
 
 export type { MedalTier } from './maps/medals'
 
@@ -2379,24 +2381,26 @@ export function MapsPage({
                 }}
             />
 
-            <ReplayPickerModal
-                open={replayPickerMap !== null}
-                onClose={() => setReplayPickerMap(null)}
-                accessToken={accessToken}
-                userId={userId}
-                mapName={replayPickerMap}
-                mapMetadata={replayPickerMap ? caches.metadata?.find(m => m.name === replayPickerMap) : undefined}
-                onSelect={(video, mapName, entry) => {
-                    setReplayPickerMap(null)
-                    setVideoModal({
-                        video,
-                        mapName,
-                        time: entry.cap_time_seconds,
-                        alias: entry.alias,
-                        fromPicker: true,
-                    })
-                }}
-            />
+            <LazyModalGate open={replayPickerMap !== null}>
+                <ReplayPickerModal
+                    open={replayPickerMap !== null}
+                    onClose={() => setReplayPickerMap(null)}
+                    accessToken={accessToken}
+                    userId={userId}
+                    mapName={replayPickerMap}
+                    mapMetadata={replayPickerMap ? caches.metadata?.find(m => m.name === replayPickerMap) : undefined}
+                    onSelect={(video, mapName, entry) => {
+                        setReplayPickerMap(null)
+                        setVideoModal({
+                            video,
+                            mapName,
+                            time: entry.cap_time_seconds,
+                            alias: entry.alias,
+                            fromPicker: true,
+                        })
+                    }}
+                />
+            </LazyModalGate>
 
             <Modal
                 isOpen={videoModal !== null}

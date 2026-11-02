@@ -1,8 +1,8 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, lazy } from 'react'
+import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { Eye, EyeOff, Plus, RefreshCw, Shuffle, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ActionButton } from '@/app/components/pages/admin/components/controls'
-import { ConfirmModal } from '@/app/components/shared/ConfirmModal'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { ErrorBanner, SectionCard } from '@/app/components/pages/teams/teamsShared'
 import {
@@ -16,7 +16,9 @@ import {
     MatchCard, RELAXED_LABELS, STAGE_STATUS_LABELS, sortedMatches, unfinishedFeeders,
 } from '../bracket/bracketShared'
 import { useNow } from '../predictions/predictionsShared'
-import { MatchEditorModal } from './MatchEditorModal'
+
+const ConfirmModal = lazy(() => import('@/app/components/shared/ConfirmModal').then(m => ({ default: m.ConfirmModal })))
+const MatchEditorModal = lazy(() => import('./MatchEditorModal').then(m => ({ default: m.MatchEditorModal })))
 
 interface BracketPanelProps {
     accessToken: string
@@ -183,89 +185,99 @@ export function BracketPanel({ accessToken, slug, bracket, onBracketChange, onMa
                 />
             ))}
 
-            <ConfirmModal
-                isOpen={confirmPublish}
-                onClose={() => setConfirmPublish(false)}
-                onConfirm={() => {
-                    setConfirmPublish(false)
-                    void run(PUBLISH_KEY, () => setEventBracketPublished(accessToken, slug, true))
-                }}
-                title="Publish the bracket"
-                message="Show this bracket to everyone?"
-                detail="Players will see the published stages, their standings and the tournament format. You can hide it again at any time."
-                confirmText="Publish"
-            />
+            <LazyModalGate open={confirmPublish}>
+                <ConfirmModal
+                    isOpen={confirmPublish}
+                    onClose={() => setConfirmPublish(false)}
+                    onConfirm={() => {
+                        setConfirmPublish(false)
+                        void run(PUBLISH_KEY, () => setEventBracketPublished(accessToken, slug, true))
+                    }}
+                    title="Publish the bracket"
+                    message="Show this bracket to everyone?"
+                    detail="Players will see the published stages, their standings and the tournament format. You can hide it again at any time."
+                    confirmText="Publish"
+                />
+            </LazyModalGate>
 
-            <ConfirmModal
-                isOpen={!!earlyTarget}
-                onClose={() => setEarlyTarget(null)}
-                onConfirm={() => {
-                    const target = earlyTarget
-                    setEarlyTarget(null)
-                    if (target) void generate(target.stage, target.force)
-                }}
-                title="Draw before the results are in?"
-                message={earlyTarget
-                    ? `${feederNames(pendingFor(earlyTarget.stage))} still ${
-                        pendingFor(earlyTarget.stage).length === 1 ? 'has' : 'have'
-                    } matches to play.`
-                    : ''}
-                detail={
-                    'This stage is seeded from those standings, and they will keep moving as '
-                    + 'results come in. Drawing now fixes the pairings against a table that is '
-                    + 'not final, so you would have to redraw — which deletes any results '
-                    + 'recorded here. Wait unless you are rehearsing.'
-                }
-                confirmText="Draw anyway"
-                variant="error"
-            />
+            <LazyModalGate open={!!earlyTarget}>
+                <ConfirmModal
+                    isOpen={!!earlyTarget}
+                    onClose={() => setEarlyTarget(null)}
+                    onConfirm={() => {
+                        const target = earlyTarget
+                        setEarlyTarget(null)
+                        if (target) void generate(target.stage, target.force)
+                    }}
+                    title="Draw before the results are in?"
+                    message={earlyTarget
+                        ? `${feederNames(pendingFor(earlyTarget.stage))} still ${
+                            pendingFor(earlyTarget.stage).length === 1 ? 'has' : 'have'
+                        } matches to play.`
+                        : ''}
+                    detail={
+                        'This stage is seeded from those standings, and they will keep moving as '
+                        + 'results come in. Drawing now fixes the pairings against a table that is '
+                        + 'not final, so you would have to redraw — which deletes any results '
+                        + 'recorded here. Wait unless you are rehearsing.'
+                    }
+                    confirmText="Draw anyway"
+                    variant="error"
+                />
+            </LazyModalGate>
 
-            <ConfirmModal
-                isOpen={!!redrawTarget}
-                onClose={() => setRedrawTarget(null)}
-                onConfirm={() => {
-                    const stage = redrawTarget
-                    setRedrawTarget(null)
-                    if (stage) void generate(stage, true)
-                }}
-                title="Redraw stage"
-                message={`Redraw "${redrawTarget?.name}"?`}
-                detail={
-                    'The current matches and every result recorded on them are deleted permanently, then the stage is drawn again from scratch.'
-                    + bookingCancellationNotice(bookedMatchCount(redrawTarget))
-                }
-                confirmText="Redraw stage"
-                variant="error"
-            />
+            <LazyModalGate open={!!redrawTarget}>
+                <ConfirmModal
+                    isOpen={!!redrawTarget}
+                    onClose={() => setRedrawTarget(null)}
+                    onConfirm={() => {
+                        const stage = redrawTarget
+                        setRedrawTarget(null)
+                        if (stage) void generate(stage, true)
+                    }}
+                    title="Redraw stage"
+                    message={`Redraw "${redrawTarget?.name}"?`}
+                    detail={
+                        'The current matches and every result recorded on them are deleted permanently, then the stage is drawn again from scratch.'
+                        + bookingCancellationNotice(bookedMatchCount(redrawTarget))
+                    }
+                    confirmText="Redraw stage"
+                    variant="error"
+                />
+            </LazyModalGate>
 
-            <ConfirmModal
-                isOpen={!!resetTarget}
-                onClose={() => setResetTarget(null)}
-                onConfirm={() => {
-                    const stage = resetTarget
-                    setResetTarget(null)
-                    if (stage) void run(stage.key, () => resetEventStage(accessToken, slug, stage.key))
-                }}
-                title="Reset stage"
-                message={`Reset "${resetTarget?.name}"?`}
-                detail={
-                    'Its matches, groups and results are deleted permanently. Later stages seeded from it will need redrawing.'
-                    + bookingCancellationNotice(bookedMatchCount(resetTarget))
-                }
-                confirmText="Reset stage"
-                variant="error"
-            />
+            <LazyModalGate open={!!resetTarget}>
+                <ConfirmModal
+                    isOpen={!!resetTarget}
+                    onClose={() => setResetTarget(null)}
+                    onConfirm={() => {
+                        const stage = resetTarget
+                        setResetTarget(null)
+                        if (stage) void run(stage.key, () => resetEventStage(accessToken, slug, stage.key))
+                    }}
+                    title="Reset stage"
+                    message={`Reset "${resetTarget?.name}"?`}
+                    detail={
+                        'Its matches, groups and results are deleted permanently. Later stages seeded from it will need redrawing.'
+                        + bookingCancellationNotice(bookedMatchCount(resetTarget))
+                    }
+                    confirmText="Reset stage"
+                    variant="error"
+                />
+            </LazyModalGate>
 
             {editing && (
-                <MatchEditorModal
-                    accessToken={accessToken}
-                    slug={slug}
-                    match={editing}
-                    entrants={stages.find(stage => stage.id === editing.stage_id)?.entrants ?? []}
-                    drawsAllowed={stages.find(stage => stage.id === editing.stage_id)?.kind === 'groups'}
-                    onClose={() => setEditing(null)}
-                    onSaved={() => void refresh()}
-                />
+                <LazyModalGate open>
+                    <MatchEditorModal
+                        accessToken={accessToken}
+                        slug={slug}
+                        match={editing}
+                        entrants={stages.find(stage => stage.id === editing.stage_id)?.entrants ?? []}
+                        drawsAllowed={stages.find(stage => stage.id === editing.stage_id)?.kind === 'groups'}
+                        onClose={() => setEditing(null)}
+                        onSaved={() => void refresh()}
+                    />
+                </LazyModalGate>
             )}
         </div>
     )

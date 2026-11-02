@@ -1,4 +1,5 @@
-import { lazy, Suspense, useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { lazy, useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import {
     Search, X, Play, Download, SlidersHorizontal,
     Trophy, Crown, ListOrdered, type LucideIcon,
@@ -33,15 +34,12 @@ import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { MapNavLink } from '@/app/components/shared/MapNavLink'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
-import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
-import { DemoDownloadStatusModal } from '@/app/components/shared/DemoDownloadStatusModal'
 import { WorldRecordHistoryTrigger } from '@/app/components/shared/WorldRecordHistoryTrigger'
 import { PaginationBar } from '@/app/components/ui/pagination'
 import { ColumnsMenu } from '@/app/components/shared/ColumnsMenu'
 import { MultiFilterDropdown } from '@/app/components/ui/multi-filter-dropdown'
 import { FilterPanelRow } from '@/app/components/ui/filter-panel-row'
 import { ActiveFilterChip } from '@/app/components/shared/ActiveFilterChip'
-const WorldRecordProgressionModal = lazy(() => import('@/app/components/modals/WorldRecordProgressionModal').then(m => ({ default: m.WorldRecordProgressionModal })))
 import { FilterPresetsMenu, type FilterPreset } from '@/app/components/shared/FilterPresetsMenu'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow,
@@ -68,6 +66,10 @@ import {
     type WrTimeBucket,
     type WrTimeframe,
 } from './WorldRecordsPage.types'
+
+const WorldRecordProgressionModal = lazy(() => import('@/app/components/modals/WorldRecordProgressionModal').then(m => ({ default: m.WorldRecordProgressionModal })))
+const ReplayVideoModal = lazy(() => import('@/app/components/shared/ReplayVideoModal').then(m => ({ default: m.ReplayVideoModal })))
+const DemoDownloadStatusModal = lazy(() => import('@/app/components/shared/DemoDownloadStatusModal').then(m => ({ default: m.DemoDownloadStatusModal })))
 
 export type {
     WorldRecordsColumnId,
@@ -1407,7 +1409,7 @@ export function WorldRecordsPage({
                 />
             )}
 
-            <Suspense fallback={null}>
+            <LazyModalGate open={wrHistory !== null}>
                 <WorldRecordProgressionModal
                     isOpen={wrHistory !== null}
                     onClose={() => setWrHistory(null)}
@@ -1415,9 +1417,11 @@ export function WorldRecordsPage({
                     entries={wrHistory?.entries ?? []}
                     currentUserId={selfId}
                 />
-            </Suspense>
+            </LazyModalGate>
 
-            <ReplayVideoModal state={replay.video} onClose={replay.clearVideo} />
+            <LazyModalGate open={replay.video !== null}>
+                <ReplayVideoModal state={replay.video} onClose={replay.clearVideo} />
+            </LazyModalGate>
 
             <Modal
                 isOpen={replay.error !== null}
@@ -1429,10 +1433,12 @@ export function WorldRecordsPage({
                 <p className="text-sm text-muted-foreground">{replay.error}</p>
             </Modal>
 
-            <DemoDownloadStatusModal
-                state={demoDownload.download}
-                onClose={demoDownload.clear}
-            />
+            <LazyModalGate open={demoDownload.download !== null}>
+                <DemoDownloadStatusModal
+                    state={demoDownload.download}
+                    onClose={demoDownload.clear}
+                />
+            </LazyModalGate>
         </div>
     )
 }

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, lazy } from 'react'
+import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { Play, Download, MessageSquareOff, ShieldCheck, Search, Trophy, Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { fetchPersonalBestsForUser, type UserPersonalBestRow, type CapFilter } from '@/app/utils/api'
@@ -12,8 +13,6 @@ import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { MapNavLink } from '@/app/components/shared/MapNavLink'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
-import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
-import { DemoDownloadStatusModal } from '@/app/components/shared/DemoDownloadStatusModal'
 import { useReplayWatch } from '@/app/hooks/useReplayWatch'
 import { useDemoDownload } from '@/app/hooks/useDemoDownload'
 import { Tooltip } from '@/app/components/ui/tooltip'
@@ -25,6 +24,9 @@ import {
 } from '@/app/components/shared/DataTable'
 import { PaginationBar } from '@/app/components/ui/pagination'
 import { CAP_TYPE_I4GAMES, CAP_TYPE_UTBT_CERTIFIED } from '@/app/utils/capTypes'
+
+const ReplayVideoModal = lazy(() => import('@/app/components/shared/ReplayVideoModal').then(m => ({ default: m.ReplayVideoModal })))
+const DemoDownloadStatusModal = lazy(() => import('@/app/components/shared/DemoDownloadStatusModal').then(m => ({ default: m.DemoDownloadStatusModal })))
 
 interface PersonalBestsCardProps {
     accessToken: string | undefined
@@ -416,7 +418,9 @@ export function PersonalBestsCard({
                 </div>
             )}
 
-            <ReplayVideoModal state={replay.video} onClose={replay.clearVideo} />
+            <LazyModalGate open={replay.video !== null}>
+                <ReplayVideoModal state={replay.video} onClose={replay.clearVideo} />
+            </LazyModalGate>
             <Modal
                 isOpen={replay.error !== null}
                 onClose={replay.clearError}
@@ -426,7 +430,9 @@ export function PersonalBestsCard({
             >
                 <p className="text-sm text-muted-foreground">{replay.error}</p>
             </Modal>
-            <DemoDownloadStatusModal state={demoDownload.download} onClose={demoDownload.clear} />
+            <LazyModalGate open={demoDownload.download !== null}>
+                <DemoDownloadStatusModal state={demoDownload.download} onClose={demoDownload.clear} />
+            </LazyModalGate>
         </div>
     )
 }

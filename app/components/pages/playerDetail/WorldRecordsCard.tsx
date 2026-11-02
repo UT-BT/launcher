@@ -1,4 +1,5 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { lazy, useCallback, useEffect, useMemo, useState } from 'react'
+import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { History, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { fetchUserWorldRecords, fetchWorldRecordProgression, type Record, type WorldRecordProgressionEntry } from '@/app/utils/api'
@@ -303,7 +304,7 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
                 </div>
             )}
 
-            <Suspense fallback={null}>
+            <LazyModalGate open={progressionMap !== null && !progressionLoading}>
                 <WorldRecordProgressionModal
                     isOpen={progressionMap !== null && !progressionLoading}
                     onClose={() => { setProgressionMap(null); setProgressionEntries([]) }}
@@ -311,7 +312,7 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
                     entries={progressionEntries}
                     currentUserId={userId}
                 />
-            </Suspense>
+            </LazyModalGate>
         </div>
     )
 }

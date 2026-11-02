@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import { useDocumentTitle } from '@/app/components/navigation/useDocumentMeta'
@@ -14,7 +15,6 @@ import {
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import { useAsync } from '@/app/hooks/useAsync'
-import { ChangeTitleModal } from '@/app/components/modals/ChangeTitleModal'
 import { HeroSection } from './playerDetail/HeroSection'
 import { MedalShowcaseCard } from './playerDetail/MedalShowcaseCard'
 import { RecentCapsCard } from './playerDetail/RecentCapsCard'
@@ -30,6 +30,7 @@ import { AuthoredMapsCard } from './playerDetail/AuthoredMapsCard'
 import { MainSectionTabs, type PlayerDetailTab } from './playerDetail/MainSectionTabs'
 import { DEFAULT_PLAYER_DETAIL_TAB, playerDetailTabs } from './playerDetail/playerDetailTabs'
 
+const ChangeTitleModal = lazy(() => import('@/app/components/modals/ChangeTitleModal').then(m => ({ default: m.ChangeTitleModal })))
 const PlayerActivityChart = lazy(() => import('./playerDetail/PlayerActivityChart'))
 
 interface PlayerDetailPageProps {
@@ -233,17 +234,19 @@ export function PlayerDetailPage({
                 </div>
             </div>
 
-            <ChangeTitleModal
-                isOpen={changeTitleOpen}
-                onClose={() => setChangeTitleOpen(false)}
-                accessToken={accessToken}
-                userId={currentUserId != null ? String(currentUserId) : undefined}
-                currentTitleId={userProfile?.active_title?.id ?? undefined}
-                onTitleChanged={() => {
-                    window.dispatchEvent(new CustomEvent('refresh-user-profile'))
-                    setRefreshKey(k => k + 1)
-                }}
-            />
+            <LazyModalGate open={changeTitleOpen}>
+                <ChangeTitleModal
+                    isOpen={changeTitleOpen}
+                    onClose={() => setChangeTitleOpen(false)}
+                    accessToken={accessToken}
+                    userId={currentUserId != null ? String(currentUserId) : undefined}
+                    currentTitleId={userProfile?.active_title?.id ?? undefined}
+                    onTitleChanged={() => {
+                        window.dispatchEvent(new CustomEvent('refresh-user-profile'))
+                        setRefreshKey(k => k + 1)
+                    }}
+                />
+            </LazyModalGate>
         </div>
     )
 }

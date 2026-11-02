@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, lazy } from 'react'
+import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { Map as MapIcon, Plus, Pencil, RefreshCw, ImagePlus, ImageOff, AlertTriangle, Megaphone, Gauge, CheckCircle2, Link2 } from 'lucide-react'
 import { Spinner } from '@/app/components/ui/spinner'
 import {
@@ -33,9 +34,10 @@ import {
   DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow, DataTableCell, DataTableEmpty,
   DataTableSkeletonRow, type SortDirection, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
-import { MapScreenshotModal } from '@/app/components/modals/MapScreenshotModal'
 import { MapVideoControl, type MapVideoState } from './MapVideoControl'
 import { useMapUploadsNav } from './mapUploads/useMapUploadsNav'
+
+const MapScreenshotModal = lazy(() => import('@/app/components/modals/MapScreenshotModal').then(m => ({ default: m.MapScreenshotModal })))
 
 const MAPVOTE_STALE_KEY = 'utbt:admin:maps:mapvoteStale:v1'
 const DIFFICULTY_OPTIONS = Array.from({ length: 10 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }))
@@ -264,15 +266,17 @@ function MapFormModal({ open, onClose, token, editing, onSaved, onReload, allTag
       </div>
 
       {editing && (
-        <MapScreenshotModal
-          open={shotModalOpen}
-          onClose={() => setShotModalOpen(false)}
-          accessToken={token}
-          mapName={editing.name}
-          hasScreenshot={shot.has}
-          screenshotVersion={shot.version}
-          onUploaded={(updated) => applyScreenshot(updated.has_screenshot ?? true, updated.screenshot_updated ?? null)}
-        />
+        <LazyModalGate open={shotModalOpen}>
+          <MapScreenshotModal
+            open={shotModalOpen}
+            onClose={() => setShotModalOpen(false)}
+            accessToken={token}
+            mapName={editing.name}
+            hasScreenshot={shot.has}
+            screenshotVersion={shot.version}
+            onUploaded={(updated) => applyScreenshot(updated.has_screenshot ?? true, updated.screenshot_updated ?? null)}
+          />
+        </LazyModalGate>
       )}
     </Modal>
   )

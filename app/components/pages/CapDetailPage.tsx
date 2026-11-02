@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, lazy } from 'react'
+import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { ShieldAlert } from 'lucide-react'
 import { Spinner } from '@/app/components/ui/spinner'
 import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import { Modal } from '@/app/components/ui/modal'
-import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
-import { DemoDownloadStatusModal } from '@/app/components/shared/DemoDownloadStatusModal'
 import { useAsync } from '@/app/hooks/useAsync'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
@@ -25,7 +24,6 @@ import {
     type TeamRunStatus,
     type UserProfile,
 } from '@/app/utils/api'
-import { ReplayPickerModal } from '@/app/components/modals/ReplayPickerModal'
 import { HeroSection } from './capDetail/HeroSection'
 import { CheckpointSplitsCard } from './capDetail/CheckpointSplitsCard'
 import { defaultCompareCandidate } from './capDetail/runDelta/compareCandidates'
@@ -35,6 +33,10 @@ import { MedalThresholdsStrip } from './capDetail/MedalThresholdsStrip'
 import { ClientSettingsGrid } from './capDetail/ClientSettingsGrid'
 import { MovementAnalyticsCard } from './capDetail/MovementAnalyticsCard'
 import { VideoCompareModal } from './capDetail/videoCompare/VideoCompareModal'
+
+const ReplayVideoModal = lazy(() => import('@/app/components/shared/ReplayVideoModal').then(m => ({ default: m.ReplayVideoModal })))
+const DemoDownloadStatusModal = lazy(() => import('@/app/components/shared/DemoDownloadStatusModal').then(m => ({ default: m.DemoDownloadStatusModal })))
+const ReplayPickerModal = lazy(() => import('@/app/components/modals/ReplayPickerModal').then(m => ({ default: m.ReplayPickerModal })))
 
 interface CapDetailPageProps {
     capId: string
@@ -261,21 +263,25 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
                 </>
             )}
 
-            <ReplayVideoModal state={replay.video} onClose={replay.clearVideo} />
+            <LazyModalGate open={replay.video !== null}>
+                <ReplayVideoModal state={replay.video} onClose={replay.clearVideo} />
+            </LazyModalGate>
 
-            <ReplayPickerModal
-                open={comparePickerOpen}
-                onClose={() => setComparePickerOpen(false)}
-                accessToken={accessToken}
-                userId={currentUserId}
-                mapName={cap?.map ?? null}
-                compareMode
-                excludeCapId={cap?.id}
-                onSelect={(_video, _map, entry) => {
-                    setVideoOpponent(entry)
-                    setComparePickerOpen(false)
-                }}
-            />
+            <LazyModalGate open={comparePickerOpen}>
+                <ReplayPickerModal
+                    open={comparePickerOpen}
+                    onClose={() => setComparePickerOpen(false)}
+                    accessToken={accessToken}
+                    userId={currentUserId}
+                    mapName={cap?.map ?? null}
+                    compareMode
+                    excludeCapId={cap?.id}
+                    onSelect={(_video, _map, entry) => {
+                        setVideoOpponent(entry)
+                        setComparePickerOpen(false)
+                    }}
+                />
+            </LazyModalGate>
 
             <Modal
                 isOpen={!!videoOpponent && !videoReady}
@@ -340,10 +346,12 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
                 <p className="text-sm text-muted-foreground">{replay.error}</p>
             </Modal>
 
-            <DemoDownloadStatusModal
-                state={demoDownload.download}
-                onClose={demoDownload.clear}
-            />
+            <LazyModalGate open={demoDownload.download !== null}>
+                <DemoDownloadStatusModal
+                    state={demoDownload.download}
+                    onClose={demoDownload.clear}
+                />
+            </LazyModalGate>
         </div>
     )
 }

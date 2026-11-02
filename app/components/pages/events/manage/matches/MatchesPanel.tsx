@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, lazy } from 'react'
+import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { ExternalLink, Pencil, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
@@ -20,13 +21,14 @@ import {
 import { Chip, MatchStatusChip } from '../../bracket/bracketShared'
 import { matchAdminName, streamerName } from '../../eventsShared'
 import { streamerListNote } from '../../streamerRoster'
-import { MatchEditorModal } from '../MatchEditorModal'
 import { StaffPicker } from '../StaffPicker'
 import { CapsNeedLinking } from './CapsNeedLinking'
 import {
     ALL_STAGES, DEFAULT_MATCHES_FILTER, filterMatchRows, matchRows, matchesSummary, staffChoices, withMatchStaff,
     type MatchRow, type MatchStaffFilter, type MatchStatusFilter, type MatchesFilter,
 } from './matchesTable'
+
+const MatchEditorModal = lazy(() => import('../MatchEditorModal').then(m => ({ default: m.MatchEditorModal })))
 
 type StaffKind = 'streamer' | 'match_admin'
 
@@ -306,15 +308,17 @@ export function MatchesPanel({ accessToken, slug, bracket, onBracketChange }: Ma
             </DataTableShell>
 
             {editing && (
-                <MatchEditorModal
-                    accessToken={accessToken}
-                    slug={slug}
-                    match={editing.match}
-                    entrants={editingStage?.entrants ?? editing.entrants}
-                    drawsAllowed={editing.drawsAllowed}
-                    onClose={() => setEditing(null)}
-                    onSaved={() => void refresh()}
-                />
+                <LazyModalGate open>
+                    <MatchEditorModal
+                        accessToken={accessToken}
+                        slug={slug}
+                        match={editing.match}
+                        entrants={editingStage?.entrants ?? editing.entrants}
+                        drawsAllowed={editing.drawsAllowed}
+                        onClose={() => setEditing(null)}
+                        onSaved={() => void refresh()}
+                    />
+                </LazyModalGate>
             )}
         </section>
     )

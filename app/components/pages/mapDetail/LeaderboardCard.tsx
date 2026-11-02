@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, lazy } from 'react'
+import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { Play, Download, MessageSquareOff, ShieldCheck, ShieldAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavState } from '@/app/components/navigation/useNavState'
@@ -10,8 +11,6 @@ import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { computeMedalTier, TIER_LABELS, type MedalTier } from '@/app/components/pages/maps/medals'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
-import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
-import { DemoDownloadStatusModal } from '@/app/components/shared/DemoDownloadStatusModal'
 import { WorldRecordHistoryTrigger } from '@/app/components/shared/WorldRecordHistoryTrigger'
 import { useReplayWatch } from '@/app/hooks/useReplayWatch'
 import { useDemoDownload } from '@/app/hooks/useDemoDownload'
@@ -31,6 +30,9 @@ import { PaginationBar } from '@/app/components/ui/pagination'
 import type { LeaderboardEntry, TeamLeaderboardEntry, MapMetadata } from '@/app/utils/api'
 import { isCertifiedCap } from '@/app/utils/capTypes'
 import { teamRunStateLabel } from '@/app/utils/teamRunState'
+
+const ReplayVideoModal = lazy(() => import('@/app/components/shared/ReplayVideoModal').then(m => ({ default: m.ReplayVideoModal })))
+const DemoDownloadStatusModal = lazy(() => import('@/app/components/shared/DemoDownloadStatusModal').then(m => ({ default: m.DemoDownloadStatusModal })))
 
 type Tab = 'verified' | 'certified' | 'all'
 type SortField = 'rank' | 'player' | 'time' | 'date'
@@ -466,7 +468,9 @@ function SoloLeaderboardTable({
                 )}
             </div>
 
-            <ReplayVideoModal state={replay.video} onClose={replay.clearVideo} />
+            <LazyModalGate open={replay.video !== null}>
+                <ReplayVideoModal state={replay.video} onClose={replay.clearVideo} />
+            </LazyModalGate>
 
             <Modal
                 isOpen={replay.error !== null}
@@ -478,10 +482,12 @@ function SoloLeaderboardTable({
                 <p className="text-sm text-muted-foreground">{replay.error}</p>
             </Modal>
 
-            <DemoDownloadStatusModal
-                state={demoDownload.download}
-                onClose={demoDownload.clear}
-            />
+            <LazyModalGate open={demoDownload.download !== null}>
+                <DemoDownloadStatusModal
+                    state={demoDownload.download}
+                    onClose={demoDownload.clear}
+                />
+            </LazyModalGate>
         </div>
     )
 }

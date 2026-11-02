@@ -203,6 +203,7 @@ whole thead through the `theadDataAttr` hook:
 | `pages/teams/PlayerSearchInput.tsx` | Pick a UTBT player: `accessToken`, `onPick(player)`, `excludeIds?` (a `Set` of user ids to leave out, such as current members), `disabled?`, `placeholder?`. Searches by alias from 2 characters with a 300 ms debounce, shows up to 8 results through `PlayerInfo`, and clears after a pick. Used by Admin → Streamers, Roles and Events, event sign-up, team members and Stream tab casters. It takes no label, so wrap it in a labelled `role="group"`. |
 | `ui/modal.tsx` | The modal shell: header and footer, focus trap, Escape closes only the top-most modal (`data-modal-backdrop`). Pass `offsetSidebar` so it centres on the content area. |
 | `shared/ConfirmModal.tsx` | Yes/no confirmation (built on the simpler framer-motion `shared/Modal.tsx`). |
+| `shared/LazyModalGate.tsx` | Mount a `lazy()` modal that opens on a user action: `<LazyModalGate open={…}>` renders nothing until the first open, shows a loading spinner while the chunk loads, then keeps the modal mounted. Which modals use it: [web-target.md](web-target.md). |
 | `shared/AuthRequiredModal.tsx` | Prompt a signed-out user: call `requestLogin({ feature, description? })`; the modal is mounted once in `Main.tsx`. |
 | `shared/BackButton.tsx` | "← Back". |
 

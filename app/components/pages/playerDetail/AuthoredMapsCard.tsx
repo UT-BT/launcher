@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, lazy } from 'react'
+import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { ImageOff, ImagePlus, Search } from 'lucide-react'
 import { fetchMaps, type Map as ApiMap } from '@/app/utils/api'
 import { useAsync } from '@/app/hooks/useAsync'
@@ -7,7 +8,6 @@ import { displayMapName, formatAddedDate } from '@/app/utils/format'
 import { difficultyBgColor } from '@/app/utils/scoreColors'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { MapNavLink } from '@/app/components/shared/MapNavLink'
-import { MapScreenshotModal } from '@/app/components/modals/MapScreenshotModal'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell,
     DataTableRow, DataTableCell, DataTableEmpty, DataTableSkeletonRow,
@@ -15,6 +15,8 @@ import {
 } from '@/app/components/shared/DataTable'
 import { PaginationBar } from '@/app/components/ui/pagination'
 import { cn } from '@/lib/utils'
+
+const MapScreenshotModal = lazy(() => import('@/app/components/modals/MapScreenshotModal').then(m => ({ default: m.MapScreenshotModal })))
 
 interface AuthoredMapsCardProps {
     accessToken: string | undefined
@@ -280,21 +282,23 @@ export function AuthoredMapsCard({ accessToken, userId, isSelf, onMapSelect, tab
             )}
 
             {editing && (
-                <MapScreenshotModal
-                    open
-                    onClose={() => setEditing(null)}
-                    accessToken={accessToken}
-                    mapName={editing.name}
-                    hasScreenshot={!!editing.has_screenshot}
-                    screenshotVersion={editing.screenshot_updated}
-                    onUploaded={updated => setOverrides(prev => ({
-                        ...prev,
-                        [updated.name]: {
-                            has_screenshot: updated.has_screenshot,
-                            screenshot_updated: updated.screenshot_updated,
-                        },
-                    }))}
-                />
+                <LazyModalGate open>
+                    <MapScreenshotModal
+                        open
+                        onClose={() => setEditing(null)}
+                        accessToken={accessToken}
+                        mapName={editing.name}
+                        hasScreenshot={!!editing.has_screenshot}
+                        screenshotVersion={editing.screenshot_updated}
+                        onUploaded={updated => setOverrides(prev => ({
+                            ...prev,
+                            [updated.name]: {
+                                has_screenshot: updated.has_screenshot,
+                                screenshot_updated: updated.screenshot_updated,
+                            },
+                        }))}
+                    />
+                </LazyModalGate>
             )}
         </div>
     )

@@ -293,6 +293,32 @@ Phones parse the web entry chunk on first visit, so it stays lean.
   shows it); `PrivacyPolicyBody` behind `AnalyticsConsentBanner`'s
   modal, which keeps react-markdown out of the entry. The banner itself stays eager: it
   renders for every first-time visitor, exactly the cohort whose LCP matters.
+- **Modals opened by a user action mount through `LazyModalGate`**
+  (`shared/LazyModalGate.tsx`). Declare the modal with `lazy()` beside the file's other
+  module-level lazies and wrap it in `<LazyModalGate open={…}>` with the condition the modal
+  itself opens on; a modal already mounted conditionally (`{x && …}`) takes
+  `<LazyModalGate open>`. The gate renders nothing until the first open, shows
+  `ModalLoading` (a spinner on the modal backdrop, `role="status"`, no
+  `data-modal-backdrop`, so the crawl and Escape only ever see the real modal) while the
+  chunk loads, and keeps the modal mounted after it closes, so its state and its
+  reset-on-close effects behave as before. `LazyModalGate.test.ts` lists the gated modals
+  and fails when a page, card or the shell imports one statically; imports between modal
+  modules are modal internals and exempt. `e2e/lazy-modals.spec.ts` checks on a desktop
+  and a phone project that the Map Detail distribution modal fetches its code only on the
+  first tap, behind the loading state, and not again on a reopen, and on desktop that the
+  WR progression modal no longer fetches its chunk when the page renders.
+- **Which modals stay eager.** Each lazy boundary costs about 1 KiB gzip of app JS, so a
+  modal gets its own chunk when it would otherwise sit in the entry, when its module is
+  already a lazy chunk elsewhere, or when it drags a heavy dependency onto its page
+  (recharts behind `CapTimeDistributionModal`, framer-motion behind `ConfirmModal` and
+  `MatchEditorModal`). Small modals that a single lazy page opens stay in that page's chunk
+  (`PlaytimeBreakdownModal`, `MapDownloadStatusModal`, `MapReviewsModal`,
+  `PlayerReviewsModal`, `PlayerFavoritesModal`, `SlotPickerModal`, `BetModal`,
+  `BackersModal`, the admin section modals). Also eager: modals that open themselves from
+  an event or at boot (`PatreonModal`, `AuthRequiredModal`, `FavoritesSyncModal`, the
+  connection `ErrorModal` in `app.tsx`), desktop-only modals, and `VideoCompareModal`,
+  which clears its video durations in an `open` effect: mounted from a Suspense retry that
+  effect can run after the videos' `loadedmetadata`, which leaves Play disabled.
 - **`vendor-react` chunk.** `manualChunks` in `vite.config.web.ts` pins `react`,
   `react-dom`, `scheduler` and `@radix-ui/*` into one chunk so it survives deploys in the
   browser cache. Do not widen it to all of `node_modules` (it would pull recharts,

@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState, lazy } from 'react'
+import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import {
     ShieldAlert, ShieldCheck, Play, Download, Calendar,
     Users,
@@ -9,8 +10,6 @@ import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRes
 import { useDocumentTitle } from '@/app/components/navigation/useDocumentMeta'
 import { SITE_NAME } from '@/app/components/navigation/titles'
 import { Modal } from '@/app/components/ui/modal'
-import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
-import { DemoDownloadStatusModal } from '@/app/components/shared/DemoDownloadStatusModal'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { TeamHolders } from '@/app/components/shared/TeamHolders'
@@ -38,6 +37,9 @@ import {
     type UserProfile,
 } from '@/app/utils/api'
 import { teamRunStateLabel } from '@/app/utils/teamRunState'
+
+const ReplayVideoModal = lazy(() => import('@/app/components/shared/ReplayVideoModal').then(m => ({ default: m.ReplayVideoModal })))
+const DemoDownloadStatusModal = lazy(() => import('@/app/components/shared/DemoDownloadStatusModal').then(m => ({ default: m.DemoDownloadStatusModal })))
 
 interface TeamCapDetailPageProps {
     teamCapId: string
@@ -627,7 +629,9 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                 </>
             )}
 
-            <ReplayVideoModal state={replay.video} onClose={replay.clearVideo} />
+            <LazyModalGate open={replay.video !== null}>
+                <ReplayVideoModal state={replay.video} onClose={replay.clearVideo} />
+            </LazyModalGate>
 
             <Modal
                 isOpen={compareState === 'resolving' || compareState === 'insufficient'}
@@ -667,10 +671,12 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                 <p className="text-sm text-muted-foreground">{replay.error}</p>
             </Modal>
 
-            <DemoDownloadStatusModal
-                state={demoDownload.download}
-                onClose={demoDownload.clear}
-            />
+            <LazyModalGate open={demoDownload.download !== null}>
+                <DemoDownloadStatusModal
+                    state={demoDownload.download}
+                    onClose={demoDownload.clear}
+                />
+            </LazyModalGate>
         </div>
     )
 }
