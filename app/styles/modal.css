@@ -1,8 +1,8 @@
 @media (max-width: 639px), (hover: none) and (max-height: 639px) {
   .modal-backdrop {
-    top: calc(var(--window-titlebar-height) + var(--modal-visible-top, 0px));
+    top: calc(var(--window-titlebar-height, 0px) + var(--modal-visible-top, 0px));
     bottom: auto;
-    height: calc(var(--modal-visible-height, 100dvh) - var(--window-titlebar-height));
+    height: calc(var(--modal-visible-height, 100dvh) - var(--window-titlebar-height, 0px));
     padding: 0;
   }
 
