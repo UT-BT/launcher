@@ -1,0 +1,2429 @@
+{
+  "set": "achievements",
+  "responses": [
+    {
+      "host": "api",
+      "path": "/v2/achievements/definitions",
+      "query": "",
+      "status": 200,
+      "body": {
+        "data": {
+          "achievements": [
+            {
+              "category": "general",
+              "code": "time_played",
+              "description": "Total hours spent playing on UTBT servers (casual and certified both count).",
+              "event": null,
+              "goal": "Reach {n} hours played",
+              "goal_all": null,
+              "icon": "Clock",
+              "metric": "playtime_hours",
+              "name": "Time Played",
+              "team": false,
+              "tiers": [
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 1,
+                  "threshold": 50,
+                  "title": {
+                    "color_b": 128,
+                    "color_g": 128,
+                    "color_r": 128,
+                    "id": 1000000000000000000,
+                    "name": "Server Regular",
+                    "rarity": 1
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 2,
+                  "threshold": 100,
+                  "title": {
+                    "color_b": 170,
+                    "color_g": 125,
+                    "color_r": 96,
+                    "id": 1000000000000000000,
+                    "name": "Always Online",
+                    "rarity": 2
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 3,
+                  "threshold": 250,
+                  "title": {
+                    "color_b": 210,
+                    "color_g": 135,
+                    "color_r": 56,
+                    "id": 1000000000000000000,
+                    "name": "Certified Grinder",
+                    "rarity": 3
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 4,
+                  "threshold": 500,
+                  "title": {
+                    "color_b": 240,
+                    "color_g": 110,
+                    "color_r": 30,
+                    "id": 1000000000000000000,
+                    "name": "Seasoned Veteran",
+                    "rarity": 4
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 5,
+                  "threshold": 1000,
+                  "title": {
+                    "color_b": 255,
+                    "color_g": 170,
+                    "color_r": 60,
+                    "id": 1000000000000000000,
+                    "name": "The Devotee",
+                    "rarity": 5
+                  }
+                }
+              ],
+              "unit": "hours",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "solo",
+              "code": "maps_capped",
+              "description": "Unique solo maps capped on UTBT servers (certified servers only).",
+              "event": null,
+              "goal": "Cap {n} solo maps",
+              "goal_all": "Cap every solo map",
+              "icon": "Map",
+              "metric": "unique_certified_maps",
+              "name": "Maps Capped",
+              "team": false,
+              "tiers": [
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 1,
+                  "threshold": 250,
+                  "title": {
+                    "color_b": 128,
+                    "color_g": 128,
+                    "color_r": 128,
+                    "id": 1000000000000000000,
+                    "name": "Map Tourist",
+                    "rarity": 1
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 2,
+                  "threshold": 500,
+                  "title": {
+                    "color_b": 60,
+                    "color_g": 135,
+                    "color_r": 160,
+                    "id": 1000000000000000000,
+                    "name": "Trail Runner",
+                    "rarity": 2
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 3,
+                  "threshold": 1000,
+                  "title": {
+                    "color_b": 55,
+                    "color_g": 170,
+                    "color_r": 205,
+                    "id": 1000000000000000000,
+                    "name": "Map Hopper",
+                    "rarity": 3
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 4,
+                  "threshold": 2000,
+                  "title": {
+                    "color_b": 25,
+                    "color_g": 200,
+                    "color_r": 235,
+                    "id": 1000000000000000000,
+                    "name": "Master Cartographer",
+                    "rarity": 4
+                  }
+                },
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1166428122414063600,
+                  "is_all": true,
+                  "level": 5,
+                  "threshold": 2989,
+                  "title": {
+                    "color_b": 0,
+                    "color_g": 215,
+                    "color_r": 255,
+                    "id": 1166428122414063600,
+                    "name": "Capped 'em All",
+                    "rarity": 5
+                  }
+                }
+              ],
+              "unit": "maps",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "solo",
+              "code": "record_breaker",
+              "description": "Solo world records you currently hold.",
+              "event": null,
+              "goal": "Hold {n} solo world records",
+              "goal_all": null,
+              "icon": "Crown",
+              "metric": "world_records",
+              "name": "Record Breaker",
+              "team": false,
+              "tiers": [
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 1,
+                  "threshold": 1,
+                  "title": {
+                    "color_b": 128,
+                    "color_g": 128,
+                    "color_r": 128,
+                    "id": 1000000000000000000,
+                    "name": "Record Setter",
+                    "rarity": 1
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 2,
+                  "threshold": 5,
+                  "title": {
+                    "color_b": 170,
+                    "color_g": 160,
+                    "color_r": 110,
+                    "id": 1000000000000000000,
+                    "name": "Pace Setter",
+                    "rarity": 2
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 3,
+                  "threshold": 25,
+                  "title": {
+                    "color_b": 205,
+                    "color_g": 180,
+                    "color_r": 80,
+                    "id": 1000000000000000000,
+                    "name": "Chart Topper",
+                    "rarity": 3
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 4,
+                  "threshold": 50,
+                  "title": {
+                    "color_b": 230,
+                    "color_g": 200,
+                    "color_r": 40,
+                    "id": 1000000000000000000,
+                    "name": "Speed Demon",
+                    "rarity": 4
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 5,
+                  "threshold": 100,
+                  "title": {
+                    "color_b": 255,
+                    "color_g": 235,
+                    "color_r": 150,
+                    "id": 1000000000000000000,
+                    "name": "Faster Than Light",
+                    "rarity": 5
+                  }
+                }
+              ],
+              "unit": "world records",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "solo",
+              "code": "bronze_battler",
+              "description": "Total bronze medal caps on solo maps (higher attained medals also count).",
+              "event": null,
+              "goal": "Earn {n} bronze medals",
+              "goal_all": null,
+              "icon": "Medal",
+              "metric": "bronze_medals",
+              "name": "Bronze Battler",
+              "team": false,
+              "tiers": [
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 1,
+                  "threshold": 100,
+                  "title": {
+                    "color_b": 128,
+                    "color_g": 128,
+                    "color_r": 128,
+                    "id": 1000000000000000000,
+                    "name": "Bronze Tier",
+                    "rarity": 1
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 2,
+                  "threshold": 300,
+                  "title": {
+                    "color_b": 56,
+                    "color_g": 102,
+                    "color_r": 150,
+                    "id": 1000000000000000000,
+                    "name": "Bronze Age",
+                    "rarity": 2
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 3,
+                  "threshold": 700,
+                  "title": {
+                    "color_b": 52,
+                    "color_g": 115,
+                    "color_r": 178,
+                    "id": 1000000000000000000,
+                    "name": "Bronze Brigade",
+                    "rarity": 3
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 4,
+                  "threshold": 1500,
+                  "title": {
+                    "color_b": 50,
+                    "color_g": 127,
+                    "color_r": 205,
+                    "id": 1000000000000000000,
+                    "name": "Bronze Dynasty",
+                    "rarity": 4
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 5,
+                  "threshold": 2500,
+                  "title": {
+                    "color_b": 78,
+                    "color_g": 158,
+                    "color_r": 235,
+                    "id": 1000000000000000000,
+                    "name": "Mountain of Bronze",
+                    "rarity": 5
+                  }
+                }
+              ],
+              "unit": "bronze medals",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "solo",
+              "code": "silver_streak",
+              "description": "Total silver medal caps on solo maps (higher attained medals also count).",
+              "event": null,
+              "goal": "Earn {n} silver medals",
+              "goal_all": null,
+              "icon": "Award",
+              "metric": "silver_medals",
+              "name": "Silver Streak",
+              "team": false,
+              "tiers": [
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 1,
+                  "threshold": 75,
+                  "title": {
+                    "color_b": 128,
+                    "color_g": 128,
+                    "color_r": 128,
+                    "id": 1000000000000000000,
+                    "name": "Silver Lining",
+                    "rarity": 1
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 2,
+                  "threshold": 200,
+                  "title": {
+                    "color_b": 162,
+                    "color_g": 153,
+                    "color_r": 150,
+                    "id": 1000000000000000000,
+                    "name": "Silver Streak",
+                    "rarity": 2
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 3,
+                  "threshold": 500,
+                  "title": {
+                    "color_b": 194,
+                    "color_g": 184,
+                    "color_r": 180,
+                    "id": 1000000000000000000,
+                    "name": "Solid Silver",
+                    "rarity": 3
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 4,
+                  "threshold": 1100,
+                  "title": {
+                    "color_b": 218,
+                    "color_g": 210,
+                    "color_r": 206,
+                    "id": 1000000000000000000,
+                    "name": "Sterling Reserve",
+                    "rarity": 4
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 5,
+                  "threshold": 2000,
+                  "title": {
+                    "color_b": 248,
+                    "color_g": 240,
+                    "color_r": 236,
+                    "id": 1000000000000000000,
+                    "name": "Hallmarked",
+                    "rarity": 5
+                  }
+                }
+              ],
+              "unit": "silver medals",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "solo",
+              "code": "gold_standard",
+              "description": "Total gold medal caps on solo maps (champion medals also count).",
+              "event": null,
+              "goal": "Earn {n} gold medals",
+              "goal_all": null,
+              "icon": "Trophy",
+              "metric": "gold_medals",
+              "name": "Gold Standard",
+              "team": false,
+              "tiers": [
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 1,
+                  "threshold": 50,
+                  "title": {
+                    "color_b": 128,
+                    "color_g": 128,
+                    "color_r": 128,
+                    "id": 1000000000000000000,
+                    "name": "Going for Gold",
+                    "rarity": 1
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 2,
+                  "threshold": 150,
+                  "title": {
+                    "color_b": 46,
+                    "color_g": 150,
+                    "color_r": 178,
+                    "id": 1000000000000000000,
+                    "name": "Gold Plated",
+                    "rarity": 2
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 3,
+                  "threshold": 350,
+                  "title": {
+                    "color_b": 55,
+                    "color_g": 175,
+                    "color_r": 212,
+                    "id": 1000000000000000000,
+                    "name": "Gold Standard",
+                    "rarity": 3
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 4,
+                  "threshold": 800,
+                  "title": {
+                    "color_b": 18,
+                    "color_g": 198,
+                    "color_r": 244,
+                    "id": 1000000000000000000,
+                    "name": "Midas Touch",
+                    "rarity": 4
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 5,
+                  "threshold": 1500,
+                  "title": {
+                    "color_b": 0,
+                    "color_g": 223,
+                    "color_r": 255,
+                    "id": 1000000000000000000,
+                    "name": "El Dorado",
+                    "rarity": 5
+                  }
+                }
+              ],
+              "unit": "gold medals",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "solo",
+              "code": "champion",
+              "description": "Total champion medal and world record caps on solo maps.",
+              "event": null,
+              "goal": "Earn {n} champion medals",
+              "goal_all": null,
+              "icon": "Swords",
+              "metric": "champion_medals",
+              "name": "Champion",
+              "team": false,
+              "tiers": [
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 1,
+                  "threshold": 25,
+                  "title": {
+                    "color_b": 128,
+                    "color_g": 128,
+                    "color_r": 128,
+                    "id": 1000000000000000000,
+                    "name": "Up and Comer",
+                    "rarity": 1
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 2,
+                  "threshold": 75,
+                  "title": {
+                    "color_b": 70,
+                    "color_g": 70,
+                    "color_r": 158,
+                    "id": 1000000000000000000,
+                    "name": "Title Challenger",
+                    "rarity": 2
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 3,
+                  "threshold": 200,
+                  "title": {
+                    "color_b": 56,
+                    "color_g": 56,
+                    "color_r": 196,
+                    "id": 1000000000000000000,
+                    "name": "Reigning Champion",
+                    "rarity": 3
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 4,
+                  "threshold": 500,
+                  "title": {
+                    "color_b": 45,
+                    "color_g": 45,
+                    "color_r": 230,
+                    "id": 1000000000000000000,
+                    "name": "Grand Champion",
+                    "rarity": 4
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 5,
+                  "threshold": 1000,
+                  "title": {
+                    "color_b": 38,
+                    "color_g": 38,
+                    "color_r": 255,
+                    "id": 1000000000000000000,
+                    "name": "Living Legend",
+                    "rarity": 5
+                  }
+                }
+              ],
+              "unit": "champion medals",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "general",
+              "code": "map_critic",
+              "description": "Map reviews you've written.",
+              "event": null,
+              "goal": "Write {n} map reviews",
+              "goal_all": null,
+              "icon": "Star",
+              "metric": "map_review_count",
+              "name": "Map Critic",
+              "team": false,
+              "tiers": [
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 1,
+                  "threshold": 50,
+                  "title": {
+                    "color_b": 128,
+                    "color_g": 128,
+                    "color_r": 128,
+                    "id": 1000000000000000000,
+                    "name": "Armchair Critic",
+                    "rarity": 1
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 2,
+                  "threshold": 250,
+                  "title": {
+                    "color_b": 45,
+                    "color_g": 95,
+                    "color_r": 175,
+                    "id": 1000000000000000000,
+                    "name": "Hot Take Artist",
+                    "rarity": 2
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 3,
+                  "threshold": 500,
+                  "title": {
+                    "color_b": 40,
+                    "color_g": 115,
+                    "color_r": 215,
+                    "id": 1000000000000000000,
+                    "name": "Resident Critic",
+                    "rarity": 3
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 4,
+                  "threshold": 1000,
+                  "title": {
+                    "color_b": 30,
+                    "color_g": 135,
+                    "color_r": 240,
+                    "id": 1000000000000000000,
+                    "name": "Tastemaker",
+                    "rarity": 4
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 5,
+                  "threshold": 2000,
+                  "title": {
+                    "color_b": 30,
+                    "color_g": 150,
+                    "color_r": 255,
+                    "id": 1000000000000000000,
+                    "name": "The Final Word",
+                    "rarity": 5
+                  }
+                }
+              ],
+              "unit": "reviews",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "general",
+              "code": "title_collector",
+              "description": "Titles you've collected across UTBT.",
+              "event": null,
+              "goal": "Collect {n} titles",
+              "goal_all": null,
+              "icon": "Tags",
+              "metric": "titles_owned",
+              "name": "Title Collector",
+              "team": false,
+              "tiers": [
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 1,
+                  "threshold": 1,
+                  "title": {
+                    "color_b": 128,
+                    "color_g": 128,
+                    "color_r": 128,
+                    "id": 1000000000000000000,
+                    "name": "Newly Decorated",
+                    "rarity": 1
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 2,
+                  "threshold": 5,
+                  "title": {
+                    "color_b": 150,
+                    "color_g": 90,
+                    "color_r": 168,
+                    "id": 1000000000000000000,
+                    "name": "Title Hunter",
+                    "rarity": 2
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 3,
+                  "threshold": 10,
+                  "title": {
+                    "color_b": 170,
+                    "color_g": 70,
+                    "color_r": 200,
+                    "id": 1000000000000000000,
+                    "name": "Trophy Hoarder",
+                    "rarity": 3
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 4,
+                  "threshold": 25,
+                  "title": {
+                    "color_b": 190,
+                    "color_g": 55,
+                    "color_r": 230,
+                    "id": 1000000000000000000,
+                    "name": "Title Curator",
+                    "rarity": 4
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 5,
+                  "threshold": 50,
+                  "title": {
+                    "color_b": 210,
+                    "color_g": 60,
+                    "color_r": 255,
+                    "id": 1000000000000000000,
+                    "name": "Walking Trophy Case",
+                    "rarity": 5
+                  }
+                }
+              ],
+              "unit": "titles",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "general",
+              "code": "dodge_master",
+              "description": "Dodges performed across all your caps.",
+              "event": null,
+              "goal": "Perform {n} dodges",
+              "goal_all": null,
+              "icon": "Wind",
+              "metric": "dodge_block_total",
+              "name": "Dodge Master",
+              "team": false,
+              "tiers": [
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 1,
+                  "threshold": 1000,
+                  "title": {
+                    "color_b": 128,
+                    "color_g": 128,
+                    "color_r": 128,
+                    "id": 1000000000000000000,
+                    "name": "Quick Feet",
+                    "rarity": 1
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 2,
+                  "threshold": 10000,
+                  "title": {
+                    "color_b": 172,
+                    "color_g": 158,
+                    "color_r": 140,
+                    "id": 1000000000000000000,
+                    "name": "Slippery Customer",
+                    "rarity": 2
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 3,
+                  "threshold": 50000,
+                  "title": {
+                    "color_b": 210,
+                    "color_g": 190,
+                    "color_r": 165,
+                    "id": 1000000000000000000,
+                    "name": "Hard to Hit",
+                    "rarity": 3
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 4,
+                  "threshold": 150000,
+                  "title": {
+                    "color_b": 235,
+                    "color_g": 215,
+                    "color_r": 192,
+                    "id": 1000000000000000000,
+                    "name": "Phantom Dodger",
+                    "rarity": 4
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 5,
+                  "threshold": 300000,
+                  "title": {
+                    "color_b": 250,
+                    "color_g": 235,
+                    "color_r": 220,
+                    "id": 1000000000000000000,
+                    "name": "Made of Smoke",
+                    "rarity": 5
+                  }
+                }
+              ],
+              "unit": "dodges",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "general",
+              "code": "unbroken",
+              "description": "Longest streak of days with at least one cap. Every 7 cap days nets you a freeze that covers a day off",
+              "event": null,
+              "goal": "Keep a {n}-day streak",
+              "goal_all": null,
+              "icon": "Flame",
+              "metric": "longest_streak_days",
+              "name": "Unbroken",
+              "team": false,
+              "tiers": [
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 1,
+                  "threshold": 7,
+                  "title": {
+                    "color_b": 128,
+                    "color_g": 128,
+                    "color_r": 128,
+                    "id": 1000000000000000000,
+                    "name": "On a Roll",
+                    "rarity": 1
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 2,
+                  "threshold": 30,
+                  "title": {
+                    "color_b": 168,
+                    "color_g": 110,
+                    "color_r": 138,
+                    "id": 1000000000000000000,
+                    "name": "Daily Grinder",
+                    "rarity": 2
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 3,
+                  "threshold": 90,
+                  "title": {
+                    "color_b": 182,
+                    "color_g": 89,
+                    "color_r": 155,
+                    "id": 1000000000000000000,
+                    "name": "Can't Stop",
+                    "rarity": 3
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 4,
+                  "threshold": 180,
+                  "title": {
+                    "color_b": 230,
+                    "color_g": 92,
+                    "color_r": 176,
+                    "id": 1000000000000000000,
+                    "name": "Force of Habit",
+                    "rarity": 4
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 5,
+                  "threshold": 365,
+                  "title": {
+                    "color_b": 255,
+                    "color_g": 110,
+                    "color_r": 196,
+                    "id": 1000000000000000000,
+                    "name": "Ever Present",
+                    "rarity": 5
+                  }
+                }
+              ],
+              "unit": "days",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "solo",
+              "code": "untouchable",
+              "description": "Held a solo world record for 365 days.",
+              "event": null,
+              "goal": "Hold a solo world record for {n} days",
+              "goal_all": null,
+              "icon": "Shield",
+              "metric": "wr_days_held",
+              "name": "Untouchable",
+              "team": false,
+              "tiers": [
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 4,
+                  "threshold": 365,
+                  "title": {
+                    "color_b": 205,
+                    "color_g": 175,
+                    "color_r": 70,
+                    "id": 1000000000000000000,
+                    "name": "Untouchable",
+                    "rarity": 4
+                  }
+                }
+              ],
+              "unit": "days",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "solo",
+              "code": "world_cup_conqueror",
+              "description": "Cap every map from the 2021 and 2024 World Cups.",
+              "event": null,
+              "goal": "Cap {n} World Cup maps",
+              "goal_all": "Cap every World Cup map",
+              "icon": "Globe",
+              "metric": "cup_maps_capped",
+              "name": "World Cup Conqueror",
+              "team": false,
+              "tiers": [
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": true,
+                  "level": 4,
+                  "threshold": 98,
+                  "title": {
+                    "color_b": 35,
+                    "color_g": 165,
+                    "color_r": 235,
+                    "id": 1000000000000000000,
+                    "name": "Bracket Buster",
+                    "rarity": 4
+                  }
+                }
+              ],
+              "unit": "maps",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "team",
+              "code": "first_contact",
+              "description": "Complete your first team map run with a full squad.",
+              "event": null,
+              "goal": "Complete {n} team map",
+              "goal_all": null,
+              "icon": "Handshake",
+              "metric": "team_maps_capped",
+              "name": "First Contact",
+              "team": true,
+              "tiers": [
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": false,
+                  "level": 1,
+                  "threshold": 1,
+                  "title": {
+                    "color_b": 128,
+                    "color_g": 128,
+                    "color_r": 128,
+                    "id": 1000000000000000000,
+                    "name": "First Contact",
+                    "rarity": 1
+                  }
+                }
+              ],
+              "unit": "team maps",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "team",
+              "code": "team_maps_capped",
+              "description": "Unique team maps capped with a full squad.",
+              "event": null,
+              "goal": "Cap {n} team maps",
+              "goal_all": "Cap every team map",
+              "icon": "Users",
+              "metric": "team_maps_capped",
+              "name": "Maps Capped",
+              "team": true,
+              "tiers": [
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 1,
+                  "threshold": 5,
+                  "title": {
+                    "color_b": 128,
+                    "color_g": 128,
+                    "color_r": 128,
+                    "id": 1000000000000000100,
+                    "name": "Buddy System",
+                    "rarity": 1
+                  }
+                },
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 2,
+                  "threshold": 15,
+                  "title": {
+                    "color_b": 60,
+                    "color_g": 135,
+                    "color_r": 160,
+                    "id": 1000000000000000100,
+                    "name": "Wingman",
+                    "rarity": 2
+                  }
+                },
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 3,
+                  "threshold": 30,
+                  "title": {
+                    "color_b": 55,
+                    "color_g": 170,
+                    "color_r": 205,
+                    "id": 1000000000000000100,
+                    "name": "In Lockstep",
+                    "rarity": 3
+                  }
+                },
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 4,
+                  "threshold": 55,
+                  "title": {
+                    "color_b": 25,
+                    "color_g": 200,
+                    "color_r": 235,
+                    "id": 1000000000000000100,
+                    "name": "Dream Team",
+                    "rarity": 4
+                  }
+                },
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": true,
+                  "level": 5,
+                  "threshold": 85,
+                  "title": {
+                    "color_b": 0,
+                    "color_g": 215,
+                    "color_r": 255,
+                    "id": 1000000000000000100,
+                    "name": "All Together Now",
+                    "rarity": 5
+                  }
+                }
+              ],
+              "unit": "team maps",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "team",
+              "code": "team_record_breaker",
+              "description": "Team world records you currently hold, across every team map size.",
+              "event": null,
+              "goal": "Hold {n} team world records",
+              "goal_all": null,
+              "icon": "Zap",
+              "metric": "team_world_records",
+              "name": "Record Breaker",
+              "team": true,
+              "tiers": [
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 1,
+                  "threshold": 1,
+                  "title": {
+                    "color_b": 128,
+                    "color_g": 128,
+                    "color_r": 128,
+                    "id": 1000000000000000100,
+                    "name": "Record Squad",
+                    "rarity": 1
+                  }
+                },
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 2,
+                  "threshold": 4,
+                  "title": {
+                    "color_b": 170,
+                    "color_g": 160,
+                    "color_r": 110,
+                    "id": 1000000000000000100,
+                    "name": "Pace Partners",
+                    "rarity": 2
+                  }
+                },
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 3,
+                  "threshold": 8,
+                  "title": {
+                    "color_b": 205,
+                    "color_g": 180,
+                    "color_r": 80,
+                    "id": 1000000000000000100,
+                    "name": "Chart Crashers",
+                    "rarity": 3
+                  }
+                },
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 4,
+                  "threshold": 17,
+                  "title": {
+                    "color_b": 230,
+                    "color_g": 200,
+                    "color_r": 40,
+                    "id": 1000000000000000100,
+                    "name": "Speed Syndicate",
+                    "rarity": 4
+                  }
+                },
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 5,
+                  "threshold": 26,
+                  "title": {
+                    "color_b": 255,
+                    "color_g": 235,
+                    "color_r": 150,
+                    "id": 1000000000000000100,
+                    "name": "Record Dynasty",
+                    "rarity": 5
+                  }
+                }
+              ],
+              "unit": "world records",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "team",
+              "code": "team_bronze_battler",
+              "description": "Total bronze medal caps on team maps (higher attained medals also count).",
+              "event": null,
+              "goal": "Earn {n} team bronze medals",
+              "goal_all": null,
+              "icon": "Medal",
+              "metric": "team_bronze_medals",
+              "name": "Bronze Battler",
+              "team": true,
+              "tiers": [
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 1,
+                  "threshold": 3,
+                  "title": {
+                    "color_b": 128,
+                    "color_g": 128,
+                    "color_r": 128,
+                    "id": 1000000000000000100,
+                    "name": "Bronze Buddies",
+                    "rarity": 1
+                  }
+                },
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 2,
+                  "threshold": 10,
+                  "title": {
+                    "color_b": 56,
+                    "color_g": 102,
+                    "color_r": 150,
+                    "id": 1000000000000000100,
+                    "name": "Bronze Battalion",
+                    "rarity": 2
+                  }
+                },
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 3,
+                  "threshold": 22,
+                  "title": {
+                    "color_b": 52,
+                    "color_g": 115,
+                    "color_r": 178,
+                    "id": 1000000000000000100,
+                    "name": "Bronze Company",
+                    "rarity": 3
+                  }
+                },
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 4,
+                  "threshold": 48,
+                  "title": {
+                    "color_b": 50,
+                    "color_g": 127,
+                    "color_r": 205,
+                    "id": 1000000000000000100,
+                    "name": "Bronze Legion",
+                    "rarity": 4
+                  }
+                },
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 5,
+                  "threshold": 79,
+                  "title": {
+                    "color_b": 78,
+                    "color_g": 158,
+                    "color_r": 235,
+                    "id": 1000000000000000100,
+                    "name": "Bronze Armada",
+                    "rarity": 5
+                  }
+                }
+              ],
+              "unit": "bronze medals",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "team",
+              "code": "team_silver_streak",
+              "description": "Total silver medal caps on team maps (higher attained medals also count).",
+              "event": null,
+              "goal": "Earn {n} team silver medals",
+              "goal_all": null,
+              "icon": "Award",
+              "metric": "team_silver_medals",
+              "name": "Silver Streak",
+              "team": true,
+              "tiers": [
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 1,
+                  "threshold": 2,
+                  "title": {
+                    "color_b": 128,
+                    "color_g": 128,
+                    "color_r": 128,
+                    "id": 1000000000000000100,
+                    "name": "Silver Squad",
+                    "rarity": 1
+                  }
+                },
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 2,
+                  "threshold": 6,
+                  "title": {
+                    "color_b": 162,
+                    "color_g": 153,
+                    "color_r": 150,
+                    "id": 1000000000000000100,
+                    "name": "Silver Circle",
+                    "rarity": 2
+                  }
+                },
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 3,
+                  "threshold": 16,
+                  "title": {
+                    "color_b": 194,
+                    "color_g": 184,
+                    "color_r": 180,
+                    "id": 1000000000000000100,
+                    "name": "Silver Union",
+                    "rarity": 3
+                  }
+                },
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 4,
+                  "threshold": 35,
+                  "title": {
+                    "color_b": 218,
+                    "color_g": 210,
+                    "color_r": 206,
+                    "id": 1000000000000000100,
+                    "name": "Silver Collective",
+                    "rarity": 4
+                  }
+                },
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 5,
+                  "threshold": 63,
+                  "title": {
+                    "color_b": 248,
+                    "color_g": 240,
+                    "color_r": 236,
+                    "id": 1000000000000000100,
+                    "name": "Silver Coalition",
+                    "rarity": 5
+                  }
+                }
+              ],
+              "unit": "silver medals",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "team",
+              "code": "team_gold_standard",
+              "description": "Total gold medal caps on team maps (champion medals also count).",
+              "event": null,
+              "goal": "Earn {n} team gold medals",
+              "goal_all": null,
+              "icon": "Trophy",
+              "metric": "team_gold_medals",
+              "name": "Gold Standard",
+              "team": true,
+              "tiers": [
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 1,
+                  "threshold": 2,
+                  "title": {
+                    "color_b": 128,
+                    "color_g": 128,
+                    "color_r": 128,
+                    "id": 1000000000000000100,
+                    "name": "Gold Crew",
+                    "rarity": 1
+                  }
+                },
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 2,
+                  "threshold": 5,
+                  "title": {
+                    "color_b": 46,
+                    "color_g": 150,
+                    "color_r": 178,
+                    "id": 1000000000000000100,
+                    "name": "Gold Cartel",
+                    "rarity": 2
+                  }
+                },
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 3,
+                  "threshold": 11,
+                  "title": {
+                    "color_b": 55,
+                    "color_g": 175,
+                    "color_r": 212,
+                    "id": 1000000000000000100,
+                    "name": "Gold Guild",
+                    "rarity": 3
+                  }
+                },
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 4,
+                  "threshold": 25,
+                  "title": {
+                    "color_b": 18,
+                    "color_g": 198,
+                    "color_r": 244,
+                    "id": 1000000000000000100,
+                    "name": "Golden Order",
+                    "rarity": 4
+                  }
+                },
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 5,
+                  "threshold": 48,
+                  "title": {
+                    "color_b": 0,
+                    "color_g": 223,
+                    "color_r": 255,
+                    "id": 1000000000000000100,
+                    "name": "Golden Empire",
+                    "rarity": 5
+                  }
+                }
+              ],
+              "unit": "gold medals",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "team",
+              "code": "team_champion",
+              "description": "Total champion medal and world record caps on team maps.",
+              "event": null,
+              "goal": "Earn {n} team champion medals",
+              "goal_all": null,
+              "icon": "Swords",
+              "metric": "team_champion_medals",
+              "name": "Champion",
+              "team": true,
+              "tiers": [
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 1,
+                  "threshold": 1,
+                  "title": {
+                    "color_b": 128,
+                    "color_g": 128,
+                    "color_r": 128,
+                    "id": 1000000000000000100,
+                    "name": "Contenders",
+                    "rarity": 1
+                  }
+                },
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 2,
+                  "threshold": 2,
+                  "title": {
+                    "color_b": 70,
+                    "color_g": 70,
+                    "color_r": 158,
+                    "id": 1000000000000000100,
+                    "name": "Challengers",
+                    "rarity": 2
+                  }
+                },
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 3,
+                  "threshold": 6,
+                  "title": {
+                    "color_b": 56,
+                    "color_g": 56,
+                    "color_r": 196,
+                    "id": 1000000000000000100,
+                    "name": "Court of Champions",
+                    "rarity": 3
+                  }
+                },
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 4,
+                  "threshold": 16,
+                  "title": {
+                    "color_b": 45,
+                    "color_g": 45,
+                    "color_r": 230,
+                    "id": 1000000000000000100,
+                    "name": "Grand Alliance",
+                    "rarity": 4
+                  }
+                },
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 5,
+                  "threshold": 32,
+                  "title": {
+                    "color_b": 38,
+                    "color_g": 38,
+                    "color_r": 255,
+                    "id": 1000000000000000100,
+                    "name": "Legendary Lineup",
+                    "rarity": 5
+                  }
+                }
+              ],
+              "unit": "champion medals",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "team",
+              "code": "untouchable_team",
+              "description": "Held a team world record for 365 days.",
+              "event": null,
+              "goal": "Hold a team world record for {n} days",
+              "goal_all": null,
+              "icon": "ShieldCheck",
+              "metric": "team_wr_days_held",
+              "name": "Untouchable",
+              "team": true,
+              "tiers": [
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 4,
+                  "threshold": 365,
+                  "title": {
+                    "color_b": 205,
+                    "color_g": 175,
+                    "color_r": 70,
+                    "id": 1000000000000000100,
+                    "name": "Permanent Residents",
+                    "rarity": 4
+                  }
+                }
+              ],
+              "unit": "days",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "mapper",
+              "code": "maps_created",
+              "description": "Active maps in the pool that you authored.",
+              "event": null,
+              "goal": "Create {n} maps",
+              "goal_all": null,
+              "icon": "Hammer",
+              "metric": "maps_authored",
+              "name": "Maps Created",
+              "team": false,
+              "tiers": [
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 1,
+                  "threshold": 1,
+                  "title": {
+                    "color_b": 128,
+                    "color_g": 128,
+                    "color_r": 128,
+                    "id": 1000000000000000100,
+                    "name": "First Draft",
+                    "rarity": 1
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 2,
+                  "threshold": 3,
+                  "title": {
+                    "color_b": 84,
+                    "color_g": 122,
+                    "color_r": 58,
+                    "id": 1000000000000000100,
+                    "name": "Weekend Architect",
+                    "rarity": 2
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 3,
+                  "threshold": 10,
+                  "title": {
+                    "color_b": 102,
+                    "color_g": 158,
+                    "color_r": 46,
+                    "id": 1000000000000000100,
+                    "name": "Terrain Shaper",
+                    "rarity": 3
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 4,
+                  "threshold": 25,
+                  "title": {
+                    "color_b": 120,
+                    "color_g": 196,
+                    "color_r": 36,
+                    "id": 1000000000000000100,
+                    "name": "The Architect",
+                    "rarity": 4
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 5,
+                  "threshold": 50,
+                  "title": {
+                    "color_b": 158,
+                    "color_g": 235,
+                    "color_r": 92,
+                    "id": 1000000000000000100,
+                    "name": "World Builder",
+                    "rarity": 5
+                  }
+                }
+              ],
+              "unit": "maps",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "mapper",
+              "code": "map_playtime",
+              "description": "Hours other players have spent on the maps you authored (your own playtime doesn't count).",
+              "event": null,
+              "goal": "Reach {n} hours played on your maps",
+              "goal_all": null,
+              "icon": "Hourglass",
+              "metric": "authored_playtime_hours",
+              "name": "Played By Others",
+              "team": false,
+              "tiers": [
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 1,
+                  "threshold": 1,
+                  "title": {
+                    "color_b": 128,
+                    "color_g": 128,
+                    "color_r": 128,
+                    "id": 1000000000000000100,
+                    "name": "Playtested",
+                    "rarity": 1
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 2,
+                  "threshold": 10,
+                  "title": {
+                    "color_b": 54,
+                    "color_g": 138,
+                    "color_r": 124,
+                    "id": 1000000000000000100,
+                    "name": "Time Sink",
+                    "rarity": 2
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 3,
+                  "threshold": 50,
+                  "title": {
+                    "color_b": 50,
+                    "color_g": 176,
+                    "color_r": 152,
+                    "id": 1000000000000000100,
+                    "name": "Hours Well Spent",
+                    "rarity": 3
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 4,
+                  "threshold": 250,
+                  "title": {
+                    "color_b": 40,
+                    "color_g": 214,
+                    "color_r": 182,
+                    "id": 1000000000000000100,
+                    "name": "Community Fixture",
+                    "rarity": 4
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 5,
+                  "threshold": 1000,
+                  "title": {
+                    "color_b": 96,
+                    "color_g": 248,
+                    "color_r": 212,
+                    "id": 1000000000000000100,
+                    "name": "Where Everyone Plays",
+                    "rarity": 5
+                  }
+                }
+              ],
+              "unit": "hours",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "mapper",
+              "code": "single_map_playtime",
+              "description": "Hours other players have spent on your single most-played map (your own playtime doesn't count).",
+              "event": null,
+              "goal": "Reach {n} hours on a single map",
+              "goal_all": null,
+              "icon": "Repeat",
+              "metric": "best_map_hours",
+              "name": "Most Played Map",
+              "team": false,
+              "tiers": [
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 1,
+                  "threshold": 5,
+                  "title": {
+                    "color_b": 128,
+                    "color_g": 128,
+                    "color_r": 128,
+                    "id": 1000000000000000100,
+                    "name": "Catching On",
+                    "rarity": 1
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 2,
+                  "threshold": 10,
+                  "title": {
+                    "color_b": 96,
+                    "color_g": 120,
+                    "color_r": 200,
+                    "id": 1000000000000000100,
+                    "name": "Fan Favourite",
+                    "rarity": 2
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 3,
+                  "threshold": 25,
+                  "title": {
+                    "color_b": 84,
+                    "color_g": 116,
+                    "color_r": 226,
+                    "id": 1000000000000000100,
+                    "name": "In Rotation",
+                    "rarity": 3
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 4,
+                  "threshold": 75,
+                  "title": {
+                    "color_b": 76,
+                    "color_g": 112,
+                    "color_r": 248,
+                    "id": 1000000000000000100,
+                    "name": "Certified Hit",
+                    "rarity": 4
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 5,
+                  "threshold": 150,
+                  "title": {
+                    "color_b": 108,
+                    "color_g": 138,
+                    "color_r": 255,
+                    "id": 1000000000000000100,
+                    "name": "Evergreen",
+                    "rarity": 5
+                  }
+                }
+              ],
+              "unit": "hours",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "mapper",
+              "code": "team_maps_created",
+              "description": "Active team maps you authored. These also count towards Maps Created.",
+              "event": null,
+              "goal": "Create {n} team maps",
+              "goal_all": null,
+              "icon": "Blocks",
+              "metric": "team_maps_authored",
+              "name": "Team Maps Created",
+              "team": false,
+              "tiers": [
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 1,
+                  "threshold": 1,
+                  "title": {
+                    "color_b": 128,
+                    "color_g": 128,
+                    "color_r": 128,
+                    "id": 1000000000000000100,
+                    "name": "Duet",
+                    "rarity": 1
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 2,
+                  "threshold": 2,
+                  "title": {
+                    "color_b": 180,
+                    "color_g": 104,
+                    "color_r": 98,
+                    "id": 1000000000000000100,
+                    "name": "Double Act",
+                    "rarity": 2
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 3,
+                  "threshold": 5,
+                  "title": {
+                    "color_b": 216,
+                    "color_g": 104,
+                    "color_r": 94,
+                    "id": 1000000000000000100,
+                    "name": "Choreographer",
+                    "rarity": 3
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 4,
+                  "threshold": 10,
+                  "title": {
+                    "color_b": 250,
+                    "color_g": 106,
+                    "color_r": 90,
+                    "id": 1000000000000000100,
+                    "name": "Conductor",
+                    "rarity": 4
+                  }
+                },
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 5,
+                  "threshold": 20,
+                  "title": {
+                    "color_b": 255,
+                    "color_g": 150,
+                    "color_r": 134,
+                    "id": 1000000000000000100,
+                    "name": "The Maestro",
+                    "rarity": 5
+                  }
+                }
+              ],
+              "unit": "team maps",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "mapper",
+              "code": "map_acclaim",
+              "description": "Authored a map averaging 8.0+ overall from at least 5 reviews (your own review doesn't count).",
+              "event": null,
+              "goal": "Have a map rated 8.0+ from 5+ reviews",
+              "goal_all": null,
+              "icon": "Heart",
+              "metric": "acclaimed_maps",
+              "name": "Acclaimed",
+              "team": false,
+              "tiers": [
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": false,
+                  "level": 4,
+                  "threshold": 1,
+                  "title": {
+                    "color_b": 168,
+                    "color_g": 196,
+                    "color_r": 40,
+                    "id": 1000000000000000100,
+                    "name": "Critically Acclaimed",
+                    "rarity": 4
+                  }
+                }
+              ],
+              "unit": "maps",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "mastery",
+              "code": "godlike",
+              "description": "Reach the max level on every other solo achievement.",
+              "event": null,
+              "goal": "Max {n} solo achievements",
+              "goal_all": "Max every solo achievement",
+              "icon": "Sparkles",
+              "metric": "achievements_maxed",
+              "name": "Godlike",
+              "team": false,
+              "tiers": [
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000000,
+                  "is_all": true,
+                  "level": 5,
+                  "threshold": 13,
+                  "title": {
+                    "color_b": 255,
+                    "color_g": 70,
+                    "color_r": 180,
+                    "id": 1000000000000000000,
+                    "name": "Godlike",
+                    "rarity": 5
+                  }
+                }
+              ],
+              "unit": "achievements",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "mastery",
+              "code": "team_godlike",
+              "description": "Reach the max level on every other team achievement.",
+              "event": null,
+              "goal": "Max {n} team achievements",
+              "goal_all": "Max every team achievement",
+              "icon": "Gem",
+              "metric": "team_achievements_maxed",
+              "name": "Pantheon",
+              "team": true,
+              "tiers": [
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": true,
+                  "level": 5,
+                  "threshold": 8,
+                  "title": {
+                    "color_b": 190,
+                    "color_g": 240,
+                    "color_r": 255,
+                    "id": 1000000000000000100,
+                    "name": "Pantheon",
+                    "rarity": 5
+                  }
+                }
+              ],
+              "unit": "achievements",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "mastery",
+              "code": "mapper_godlike",
+              "description": "Reach the max level on every other mapper achievement.",
+              "event": null,
+              "goal": "Max {n} mapper achievements",
+              "goal_all": "Max every mapper achievement",
+              "icon": "PenTool",
+              "metric": "mapper_achievements_maxed",
+              "name": "Demiurge",
+              "team": false,
+              "tiers": [
+                {
+                  "dynamic": true,
+                  "grants_title_id": 1000000000000000100,
+                  "is_all": true,
+                  "level": 5,
+                  "threshold": 5,
+                  "title": {
+                    "color_b": 140,
+                    "color_g": 92,
+                    "color_r": 255,
+                    "id": 1000000000000000100,
+                    "name": "Demiurge",
+                    "rarity": 5
+                  }
+                }
+              ],
+              "unit": "achievements",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "event",
+              "code": "cup_2026_prophet",
+              "description": "Finish the 2v2 World Cup 2026 on top of the prediction leaderboard.",
+              "event": {
+                "closes_at": "2026-11-22T22:59:00+00:00",
+                "finalised_at": null,
+                "key": "cup-2026-predictions",
+                "name": "UTBT 2v2 World Cup 2026",
+                "opens_at": "2026-09-26T22:00:00+00:00",
+                "state": "live"
+              },
+              "goal": "Finish first on the prediction leaderboard",
+              "goal_all": null,
+              "icon": "Eye",
+              "metric": "event_top_networth",
+              "name": "The Prophet",
+              "team": false,
+              "tiers": [
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1508462332689387500,
+                  "is_all": false,
+                  "level": 5,
+                  "threshold": 1,
+                  "title": {
+                    "color_b": 255,
+                    "color_g": 140,
+                    "color_r": 205,
+                    "id": 1508462332689387500,
+                    "name": "The Prophet",
+                    "rarity": 5
+                  }
+                }
+              ],
+              "unit": "",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "event",
+              "code": "cup_2026_smart_money",
+              "description": "Return more profit per coin staked than anyone else in the 2v2 World Cup 2026, over at least 20 settled predictions.",
+              "event": {
+                "closes_at": "2026-11-22T22:59:00+00:00",
+                "finalised_at": null,
+                "key": "cup-2026-predictions",
+                "name": "UTBT 2v2 World Cup 2026",
+                "opens_at": "2026-09-26T22:00:00+00:00",
+                "state": "live"
+              },
+              "goal": "Finish with the best return per coin staked",
+              "goal_all": null,
+              "icon": "TrendingUp",
+              "metric": "event_top_roi",
+              "name": "Smart Money",
+              "team": false,
+              "tiers": [
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1508462332689387500,
+                  "is_all": false,
+                  "level": 4,
+                  "threshold": 1,
+                  "title": {
+                    "color_b": 235,
+                    "color_g": 92,
+                    "color_r": 176,
+                    "id": 1508462332689387500,
+                    "name": "Smart Money",
+                    "rarity": 4
+                  }
+                }
+              ],
+              "unit": "",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "event",
+              "code": "cup_2026_percentage_player",
+              "description": "Call 65% of your 2v2 World Cup 2026 predictions correctly, over at least 20 settled ones.",
+              "event": {
+                "closes_at": "2026-11-22T22:59:00+00:00",
+                "finalised_at": null,
+                "key": "cup-2026-predictions",
+                "name": "UTBT 2v2 World Cup 2026",
+                "opens_at": "2026-09-26T22:00:00+00:00",
+                "state": "live"
+              },
+              "goal": "Call {n}% of at least 20 settled predictions",
+              "goal_all": null,
+              "icon": "Percent",
+              "metric": "event_win_rate",
+              "name": "Percentage Player",
+              "team": false,
+              "tiers": [
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1508462332689387500,
+                  "is_all": false,
+                  "level": 3,
+                  "threshold": 65,
+                  "title": {
+                    "color_b": 205,
+                    "color_g": 96,
+                    "color_r": 132,
+                    "id": 1508462332689387500,
+                    "name": "Percentage Player",
+                    "rarity": 3
+                  }
+                }
+              ],
+              "unit": "%",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "event",
+              "code": "cup_2026_against_the_odds",
+              "description": "Win 2v2 World Cup 2026 predictions you bought under 20%.",
+              "event": {
+                "closes_at": "2026-11-22T22:59:00+00:00",
+                "finalised_at": null,
+                "key": "cup-2026-predictions",
+                "name": "UTBT 2v2 World Cup 2026",
+                "opens_at": "2026-09-26T22:00:00+00:00",
+                "state": "live"
+              },
+              "goal": "Win {n} predictions bought under 20%",
+              "goal_all": null,
+              "icon": "Dices",
+              "metric": "event_longshot_wins",
+              "name": "Against the Odds",
+              "team": false,
+              "tiers": [
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1508462332689387500,
+                  "is_all": false,
+                  "level": 3,
+                  "threshold": 2,
+                  "title": {
+                    "color_b": 196,
+                    "color_g": 84,
+                    "color_r": 158,
+                    "id": 1508462332689387500,
+                    "name": "Against the Odds",
+                    "rarity": 3
+                  }
+                }
+              ],
+              "unit": "predictions",
+              "unlocks_mid_event": true
+            },
+            {
+              "category": "event",
+              "code": "cup_2026_net_positive",
+              "description": "Finish the 2v2 World Cup 2026 with more coins than you were granted.",
+              "event": {
+                "closes_at": "2026-11-22T22:59:00+00:00",
+                "finalised_at": null,
+                "key": "cup-2026-predictions",
+                "name": "UTBT 2v2 World Cup 2026",
+                "opens_at": "2026-09-26T22:00:00+00:00",
+                "state": "live"
+              },
+              "goal": "Finish above your starting coins",
+              "goal_all": null,
+              "icon": "Coins",
+              "metric": "event_in_profit",
+              "name": "Net Positive",
+              "team": false,
+              "tiers": [
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1508462332689387500,
+                  "is_all": false,
+                  "level": 2,
+                  "threshold": 1,
+                  "title": {
+                    "color_b": 168,
+                    "color_g": 92,
+                    "color_r": 124,
+                    "id": 1508462332689387500,
+                    "name": "Net Positive",
+                    "rarity": 2
+                  }
+                }
+              ],
+              "unit": "",
+              "unlocks_mid_event": false
+            },
+            {
+              "category": "event",
+              "code": "cup_2026_skin_in_the_game",
+              "description": "Put coins on the 2v2 World Cup 2026 final.",
+              "event": {
+                "closes_at": "2026-11-22T22:59:00+00:00",
+                "finalised_at": null,
+                "key": "cup-2026-predictions",
+                "name": "UTBT 2v2 World Cup 2026",
+                "opens_at": "2026-09-26T22:00:00+00:00",
+                "state": "live"
+              },
+              "goal": "Predict the final",
+              "goal_all": null,
+              "icon": "Ticket",
+              "metric": "event_final_predicted",
+              "name": "Skin in the Game",
+              "team": false,
+              "tiers": [
+                {
+                  "dynamic": false,
+                  "grants_title_id": 1508462332689387500,
+                  "is_all": false,
+                  "level": 1,
+                  "threshold": 1,
+                  "title": {
+                    "color_b": 128,
+                    "color_g": 128,
+                    "color_r": 128,
+                    "id": 1508462332689387500,
+                    "name": "Skin in the Game",
+                    "rarity": 1
+                  }
+                }
+              ],
+              "unit": "",
+              "unlocks_mid_event": true
+            }
+          ]
+        },
+        "success": true
+      }
+    },
+    {
+      "host": "gateway",
+      "path": "/patreon",
+      "query": "",
+      "status": 200,
+      "body": {
+        "tier1": [
+          "790880165097504768",
+          "414164967999406090",
+          "270897034796466176",
+          "238598150888095744",
+          "290449564887023617"
+        ],
+        "tier2": [
+          "318842484446724106",
+          "260007417478250497",
+          "242091482541064192"
+        ],
+        "tier3": [
+          "185318594270330880",
+          "265561225428074496"
+        ]
+      }
+    }
+  ]
+}

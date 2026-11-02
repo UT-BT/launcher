@@ -1,1 +1,4 @@
-[]
+[
+  { "surface": "event-team~long-text", "viewport": "360x780", "engine": "chromium" },
+  { "surface": "event-team~long-text", "viewport": "390x844", "engine": "webkit" }
+]

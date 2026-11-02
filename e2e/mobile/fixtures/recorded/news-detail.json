@@ -1,0 +1,124 @@
+{
+  "set": "news-detail",
+  "responses": [
+    {
+      "host": "api",
+      "path": "/v2/news/15",
+      "query": "",
+      "status": 200,
+      "body": {
+        "data": {
+          "author_alias": "NinThomas",
+          "body": "Play-offs are drawn and can be seen under the event on UTBT.net (Bracket > Playoff Stage)\n# Teams that move directly into the Quarter Finals\n\n- 2 guys 1 cap (soupy & kleps)\n- Niagra Fools (NinThomas & gxls)\n- BAD BOYS (Dylanbroo & Bakica)\n- Puzzle Masters (Xclusive & Arturek)\n\n# Teams that move directly into the Pre-Quarter Finals\n\n- Sandbagging (Bun & OwYeaW)\n- Phalanx (PatriK & GiorgiO)\n\n[Illustration here](https://evidence.memenook.com/seafhttp/f/545ac1fa6d9343658fb6/?op=view)\n\nThe three 1st place finishers all move directly into the quarter finals.\n\nPuzzle Masters (Xclusive & Arturek) were the best 2nd place finisher in the group stage, and so also manage to secure their place in the quarter finals.\n\nThe remaining two 2nd place finishers secure their place in the pre-quarter finals.\n\n# But for now... on to the play-offs!\n**All other teams move into the play-offs**\n\n[Illustration here](https://evidence.memenook.com/seafhttp/f/919537f897b649fca22f/?op=view)\n\n**Monday 26th October - Sunday 7th November** (14 days)\n\nThe Playoff Stage uses a modified Swiss style qualification format.\n\n## Play-offs - Round 1 ... 0-0\n\n**Round 1 matches must be played early on, to ensure the other matches are not bottle-necked**\n\n- Team Trials (Vernon & Bugatti) vs Los Primos (Nettlez & TekuMiles)\n- Bunny Hunters (Alexxeh & Slati) vs Buddy System (Riddick & Some_Dude)\n- Div4 (tOmy` & Humak) vs KNRK (twistytank & Rob-Bot)\n\nThe winners of these 3 matches will move up into the 1-0 segment of the play-offs.\n\nThe losers of these 3 matches will move down into the 0-1 segment of the play-offs.\n\n## Play-offs - Round 2 ... 1-0 & 0-1\n\nThe 3rd place finishers await the winning teams from Round 1 in the 1-0 segment.\n\nThe 6th place finishers await the losing teams from Round 1 in the 0-1 segment.\n\n## Play-offs - Round 3 ... 1-1\n\nTeams that have not already qualified or been eliminated will have one more chance to win a match in Round 3.",
+          "category": "2v2_cup",
+          "excerpt": "We've had some amazing games across the 45 matches played so far. At the end of it all, the group stage is complete, with some incredibly tight finishing positions!",
+          "expires_at": null,
+          "id": 15,
+          "link_text": null,
+          "link_url": null,
+          "pinned": false,
+          "published_at": "2026-10-26T00:02:00+00:00",
+          "title": "2v2 Group Stage has completed - on to the play-offs!"
+        },
+        "success": true
+      }
+    },
+    {
+      "host": "api",
+      "path": "/v2/news/categories",
+      "query": "",
+      "status": 200,
+      "body": {
+        "data": {
+          "items": [
+            {
+              "color_b": 0,
+              "color_g": 174,
+              "color_r": 255,
+              "icon": "Trophy",
+              "id": 5,
+              "key": "2v2_cup",
+              "label": "2v2 Cup",
+              "sort_order": 0
+            },
+            {
+              "color_b": 246,
+              "color_g": 130,
+              "color_r": 59,
+              "icon": "Gamepad2",
+              "id": 1,
+              "key": "game_update",
+              "label": "Game Update",
+              "sort_order": 0
+            },
+            {
+              "color_b": 0,
+              "color_g": 0,
+              "color_r": 255,
+              "icon": "Wrench",
+              "id": 6,
+              "key": "outages",
+              "label": "Outages",
+              "sort_order": 0
+            },
+            {
+              "color_b": 247,
+              "color_g": 85,
+              "color_r": 168,
+              "icon": "Calendar",
+              "id": 2,
+              "key": "event",
+              "label": "Event",
+              "sort_order": 1
+            },
+            {
+              "color_b": 238,
+              "color_g": 211,
+              "color_r": 34,
+              "icon": "Download",
+              "id": 3,
+              "key": "launcher_update",
+              "label": "Launcher Update",
+              "sort_order": 2
+            },
+            {
+              "color_b": 129,
+              "color_g": 185,
+              "color_r": 16,
+              "icon": "Megaphone",
+              "id": 4,
+              "key": "general",
+              "label": "General News",
+              "sort_order": 3
+            }
+          ]
+        },
+        "success": true
+      }
+    },
+    {
+      "host": "gateway",
+      "path": "/patreon",
+      "query": "",
+      "status": 200,
+      "body": {
+        "tier1": [
+          "790880165097504768",
+          "414164967999406090",
+          "270897034796466176",
+          "238598150888095744",
+          "290449564887023617"
+        ],
+        "tier2": [
+          "318842484446724106",
+          "260007417478250497",
+          "242091482541064192"
+        ],
+        "tier3": [
+          "185318594270330880",
+          "265561225428074496"
+        ]
+      }
+    }
+  ]
+}

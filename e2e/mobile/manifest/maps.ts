@@ -1,16 +1,26 @@
-import { MAPS_LIST } from '../fixtures/maps'
+import { listed, rowsOf, seen } from './steps'
 import type { MobileRouteEntry } from './types'
+
+const PAGE = 'active=true&limit=10&offset=0&order=desc&sort=added'
+
+function mapsReady(query: string) {
+    return listed({
+        heading: 'Maps',
+        rows: data => rowsOf(data.api('/maps', query)),
+        label: row => String(row.name ?? '').replace(/^CTF-BT-/, ''),
+        empty: 'No maps match your filters.',
+    })
+}
 
 export const maps: MobileRouteEntry = {
     view: 'maps',
     tier: 'public',
     path: '/maps',
     fixtures: 'maps',
-    storage: { 'utbt:mapsPageTutorial:v1': JSON.stringify({ seen: true, version: 1 }) },
-    ready: async page => {
-        await page.getByText(MAPS_LIST[0].name.replace(/^CTF-BT-/, ''), { exact: true }).first().waitFor()
-    },
+    storage: seen('utbt:mapsPageTutorial:v1'),
+    ready: mapsReady(PAGE),
+    stress: { pr: 'most-columns' },
     subViews: [
-        { id: 'new', label: 'New maps only', path: '/maps?new=1' },
+        { id: 'new', label: 'New maps only', path: '/maps?new=1', ready: mapsReady(`${PAGE}&added_since=recent`) },
     ],
 }

@@ -16,6 +16,7 @@ const SCOPE = matrixScope(process.env.MOBILE_MATRIX)
 const WRITING_LEDGER = process.env.MOBILE_LEDGER === 'write'
 const LEDGER = readLedger(LEDGER_DIR, RULE_IDS)
 const CRASHED = Symbol('error screen')
+const CRAWL_TIMEOUT_MS = 60_000
 
 function engineTags(engines: Engine[]): string[] {
     return engines.length === 1 ? [`@${engines[0]}-only`] : []
@@ -65,6 +66,8 @@ async function runRule(context: RuleContext, rule: RuleId): Promise<RuleOutcome>
     return { rule, status: result.status, verdict, detail: result.detail }
 }
 
+test.describe.configure({ timeout: CRAWL_TIMEOUT_MS })
+
 test.beforeEach(async ({ page }) => {
     page.on('pageerror', error => console.error('BROWSER PAGE ERROR:', error.message))
 })
@@ -76,7 +79,7 @@ for (const viewport of crawlViewports(SCOPE)) {
             contextOptions: { screen: { width: viewport.width, height: viewport.height } },
         })
 
-        for (const surface of crawlSurfaces()) {
+        for (const surface of crawlSurfaces(SCOPE)) {
             test(surface.id, { tag: engineTags(viewport.engines) }, async ({ page, browserName }, testInfo) => {
                 test.slow()
                 const context: RuleContext = { page, surface, viewport, engine: browserName as Engine }

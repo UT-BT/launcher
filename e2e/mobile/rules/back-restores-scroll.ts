@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import type { CrawlSurface } from '../manifest'
+import { surfaceShown, type CrawlSurface } from '../manifest'
 import { scrollPositionProblems, scrollerTop, swipeOneViewport } from '../interactions'
 import { settleLayout } from '../settle'
 import { notApplicable, resultOf, type RuleCheck } from './types'
@@ -19,8 +19,7 @@ async function navigateTo(page: Page, label: string) {
 }
 
 async function returnedTo(page: Page, surface: CrawlSurface) {
-    await surface.entry.ready(page)
-    if (surface.subView?.path && surface.subView.ready) await surface.subView.ready(page)
+    await surfaceShown(surface)(page)
     await settleLayout(page)
 }
 

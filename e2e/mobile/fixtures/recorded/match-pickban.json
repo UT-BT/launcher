@@ -1,0 +1,584 @@
+{
+  "set": "match-pickban",
+  "responses": [
+    {
+      "host": "api",
+      "path": "/tournaments/2v2-cup-2026/matches/673d41c0-0ad0-4fdb-8f41-eeb1cb108934/pick-ban",
+      "query": "",
+      "status": 200,
+      "body": {
+        "data": {
+          "a_side": "team_a",
+          "blocking_reason": null,
+          "blocking_reasons": [],
+          "capabilities": {
+            "acting_side": null,
+            "can_choose_side": false,
+            "can_lock_now": false,
+            "can_manage": false,
+            "can_ready": false,
+            "can_veto": false
+          },
+          "completed_at": "2026-10-04T20:06:06.070619+00:00",
+          "current_plan_index": null,
+          "dropped_bans": 0,
+          "edited": false,
+          "end_reason": null,
+          "ended_at": null,
+          "final_maps": [
+            {
+              "decider": false,
+              "map": "CTF-BT-II-FleurdelysV2",
+              "map_number": 1,
+              "side": "team_b"
+            },
+            {
+              "decider": false,
+              "map": "CTF-BT-II-CoZyliciouS",
+              "map_number": 2,
+              "side": "team_a"
+            },
+            {
+              "decider": false,
+              "map": "CTF-BT-II-PaceyCB",
+              "map_number": 3,
+              "side": "team_b"
+            },
+            {
+              "decider": false,
+              "map": "CTF-BT-II-FaithCB",
+              "map_number": 4,
+              "side": "team_a"
+            }
+          ],
+          "id": "9d226454-8992-44b7-a3f8-ff24e5bc9746",
+          "intro_ends_at": "2026-10-04T20:01:04.250442+00:00",
+          "match": {
+            "best_of": 4,
+            "id": "673d41c0-0ad0-4fdb-8f41-eeb1cb108934",
+            "round_label": "Round 1",
+            "round_no": 1,
+            "scheduled_at": "2026-10-04T20:00:00+00:00",
+            "stage_key": "groups",
+            "stage_name": "Group Stage",
+            "status": "complete"
+          },
+          "opened_at": "2026-10-04T20:00:25.970262+00:00",
+          "pacing": {
+            "ban_down_spotlight": 7,
+            "decider_spotlight": 10,
+            "intro": 20,
+            "spotlight": 7
+          },
+          "paused": false,
+          "paused_at": null,
+          "paused_seconds": 0,
+          "phase": "complete",
+          "phase_ends_at": null,
+          "plan": [
+            {
+              "acted_by": {
+                "display_name": "Bun`",
+                "id": "778035658224697377"
+              },
+              "acted_by_admin": false,
+              "action": "ban",
+              "actor": "A",
+              "at": "2026-10-04T20:01:44.361241+00:00",
+              "automatic": false,
+              "index": 0,
+              "map": "CTF-BT-II-DoubleVision-CE",
+              "map_number": null,
+              "reveal_at": "2026-10-04T20:01:45.861241+00:00",
+              "segment": "lettered",
+              "side": "team_a"
+            },
+            {
+              "acted_by": {
+                "display_name": "k2",
+                "id": "220951242338336768"
+              },
+              "acted_by_admin": false,
+              "action": "ban",
+              "actor": "B",
+              "at": "2026-10-04T20:02:10.481882+00:00",
+              "automatic": false,
+              "index": 1,
+              "map": "CTF-BT-II-(K)LegendsV4",
+              "map_number": null,
+              "reveal_at": "2026-10-04T20:02:11.981882+00:00",
+              "segment": "lettered",
+              "side": "team_b"
+            },
+            {
+              "acted_by": {
+                "display_name": "k2",
+                "id": "220951242338336768"
+              },
+              "acted_by_admin": false,
+              "action": "pick",
+              "actor": "B",
+              "at": "2026-10-04T20:02:50.209894+00:00",
+              "automatic": false,
+              "index": 2,
+              "map": "CTF-BT-II-FleurdelysV2",
+              "map_number": 1,
+              "reveal_at": "2026-10-04T20:02:51.709894+00:00",
+              "segment": "lettered",
+              "side": "team_b"
+            },
+            {
+              "acted_by": {
+                "display_name": "Bun`",
+                "id": "778035658224697377"
+              },
+              "acted_by_admin": false,
+              "action": "pick",
+              "actor": "A",
+              "at": "2026-10-04T20:04:11.412580+00:00",
+              "automatic": false,
+              "index": 3,
+              "map": "CTF-BT-II-CoZyliciouS",
+              "map_number": 2,
+              "reveal_at": "2026-10-04T20:04:12.912580+00:00",
+              "segment": "lettered",
+              "side": "team_a"
+            },
+            {
+              "acted_by": {
+                "display_name": "k2",
+                "id": "220951242338336768"
+              },
+              "acted_by_admin": false,
+              "action": "ban",
+              "actor": "B",
+              "at": "2026-10-04T20:04:41.676048+00:00",
+              "automatic": false,
+              "index": 4,
+              "map": "CTF-BT-II-AztecCE",
+              "map_number": null,
+              "reveal_at": "2026-10-04T20:04:43.176048+00:00",
+              "segment": "lettered",
+              "side": "team_b"
+            },
+            {
+              "acted_by": {
+                "display_name": "Bun`",
+                "id": "778035658224697377"
+              },
+              "acted_by_admin": false,
+              "action": "ban",
+              "actor": "A",
+              "at": "2026-10-04T20:04:56.495761+00:00",
+              "automatic": false,
+              "index": 5,
+              "map": "CTF-BT-II-Extant",
+              "map_number": null,
+              "reveal_at": "2026-10-04T20:04:57.995761+00:00",
+              "segment": "lettered",
+              "side": "team_a"
+            },
+            {
+              "acted_by": {
+                "display_name": "k2",
+                "id": "220951242338336768"
+              },
+              "acted_by_admin": false,
+              "action": "pick",
+              "actor": "B",
+              "at": "2026-10-04T20:05:31.541745+00:00",
+              "automatic": false,
+              "index": 6,
+              "map": "CTF-BT-II-PaceyCB",
+              "map_number": 3,
+              "reveal_at": "2026-10-04T20:05:33.041745+00:00",
+              "segment": "lettered",
+              "side": "team_b"
+            },
+            {
+              "acted_by": {
+                "display_name": "Bun`",
+                "id": "778035658224697377"
+              },
+              "acted_by_admin": false,
+              "action": "pick",
+              "actor": "A",
+              "at": "2026-10-04T20:06:06.070619+00:00",
+              "automatic": false,
+              "index": 7,
+              "map": "CTF-BT-II-FaithCB",
+              "map_number": 4,
+              "reveal_at": "2026-10-04T20:06:07.570619+00:00",
+              "segment": "lettered",
+              "side": "team_a"
+            }
+          ],
+          "pool": [
+            {
+              "excluded": false,
+              "exclusion": null,
+              "map": "CTF-BT-II-(K)LegendsV4",
+              "screenshot_version": "2026-09-23T17:41:23.943818+00:00",
+              "tags": []
+            },
+            {
+              "excluded": false,
+              "exclusion": null,
+              "map": "CTF-BT-II-AztecCE",
+              "screenshot_version": "2026-08-25T19:33:00.325887+00:00",
+              "tags": []
+            },
+            {
+              "excluded": false,
+              "exclusion": null,
+              "map": "CTF-BT-II-CoZyliciouS",
+              "screenshot_version": "2026-08-25T19:47:15.889439+00:00",
+              "tags": []
+            },
+            {
+              "excluded": true,
+              "exclusion": {
+                "min_pre_cup_seed": 10,
+                "tag": "Hard",
+                "triggered_by": [
+                  {
+                    "pre_cup_seed": 16,
+                    "side": "team_b",
+                    "team_id": "5e08b92e-7d37-45ca-8684-f3826845fdeb"
+                  }
+                ]
+              },
+              "map": "CTF-BT-II-Diplopia-V4",
+              "screenshot_version": "2026-09-06T19:13:38.666757+00:00",
+              "tags": [
+                "Hard"
+              ]
+            },
+            {
+              "excluded": false,
+              "exclusion": null,
+              "map": "CTF-BT-II-DoubleVision-CE",
+              "screenshot_version": "2026-08-25T19:25:05.195024+00:00",
+              "tags": []
+            },
+            {
+              "excluded": false,
+              "exclusion": null,
+              "map": "CTF-BT-II-Extant",
+              "screenshot_version": "2026-09-04T22:37:04.911730+00:00",
+              "tags": []
+            },
+            {
+              "excluded": false,
+              "exclusion": null,
+              "map": "CTF-BT-II-FaithCB",
+              "screenshot_version": "2026-08-25T20:08:54.683514+00:00",
+              "tags": []
+            },
+            {
+              "excluded": false,
+              "exclusion": null,
+              "map": "CTF-BT-II-FleurdelysV2",
+              "screenshot_version": "2026-09-23T17:41:56.597668+00:00",
+              "tags": []
+            },
+            {
+              "excluded": true,
+              "exclusion": {
+                "min_pre_cup_seed": 10,
+                "tag": "Hard",
+                "triggered_by": [
+                  {
+                    "pre_cup_seed": 16,
+                    "side": "team_b",
+                    "team_id": "5e08b92e-7d37-45ca-8684-f3826845fdeb"
+                  }
+                ]
+              },
+              "map": "CTF-BT-II-FuriumMineCE2",
+              "screenshot_version": "2026-09-23T17:42:18.665445+00:00",
+              "tags": [
+                "Hard"
+              ]
+            },
+            {
+              "excluded": true,
+              "exclusion": {
+                "min_pre_cup_seed": 10,
+                "tag": "Hard",
+                "triggered_by": [
+                  {
+                    "pre_cup_seed": 16,
+                    "side": "team_b",
+                    "team_id": "5e08b92e-7d37-45ca-8684-f3826845fdeb"
+                  }
+                ]
+              },
+              "map": "CTF-BT-II-InventionCE2",
+              "screenshot_version": "2026-09-23T17:42:32.650010+00:00",
+              "tags": [
+                "Hard"
+              ]
+            },
+            {
+              "excluded": false,
+              "exclusion": null,
+              "map": "CTF-BT-II-PaceyCB",
+              "screenshot_version": "2026-08-25T20:06:13.798636+00:00",
+              "tags": []
+            },
+            {
+              "excluded": false,
+              "exclusion": null,
+              "map": "CTF-BT-II-SkaarjInvasion-vF",
+              "screenshot_version": "2026-09-24T13:39:58.822830+00:00",
+              "tags": []
+            },
+            {
+              "excluded": true,
+              "exclusion": {
+                "min_pre_cup_seed": 10,
+                "tag": "Hard",
+                "triggered_by": [
+                  {
+                    "pre_cup_seed": 16,
+                    "side": "team_b",
+                    "team_id": "5e08b92e-7d37-45ca-8684-f3826845fdeb"
+                  }
+                ]
+              },
+              "map": "CTF-BT-II-Synchronize-vF2",
+              "screenshot_version": "2026-09-27T12:24:27.028514+00:00",
+              "tags": [
+                "Hard"
+              ]
+            }
+          ],
+          "ready": {
+            "team_a": null,
+            "team_b": null
+          },
+          "results_present": true,
+          "selection_preview": null,
+          "sequence": {
+            "ban_down": false,
+            "from_stage_key": "groups",
+            "preset_id": "bo4_ban_pick",
+            "steps": [
+              {
+                "action": "ban",
+                "actor": "A"
+              },
+              {
+                "action": "ban",
+                "actor": "B"
+              },
+              {
+                "action": "pick",
+                "actor": "B"
+              },
+              {
+                "action": "pick",
+                "actor": "A"
+              },
+              {
+                "action": "ban",
+                "actor": "B"
+              },
+              {
+                "action": "ban",
+                "actor": "A"
+              },
+              {
+                "action": "pick",
+                "actor": "B"
+              },
+              {
+                "action": "pick",
+                "actor": "A"
+              }
+            ]
+          },
+          "server_now": "2026-11-01T18:01:21.312019+00:00",
+          "side": {
+            "cards": [
+              {
+                "color": "red",
+                "letter": "A",
+                "steps": [
+                  {
+                    "action": "ban",
+                    "n": 1,
+                    "segment": "lettered"
+                  },
+                  {
+                    "action": "pick",
+                    "n": 4,
+                    "segment": "lettered"
+                  },
+                  {
+                    "action": "ban",
+                    "n": 6,
+                    "segment": "lettered"
+                  },
+                  {
+                    "action": "pick",
+                    "n": 8,
+                    "segment": "lettered"
+                  }
+                ]
+              },
+              {
+                "color": "blue",
+                "letter": "B",
+                "steps": [
+                  {
+                    "action": "ban",
+                    "n": 2,
+                    "segment": "lettered"
+                  },
+                  {
+                    "action": "pick",
+                    "n": 3,
+                    "segment": "lettered"
+                  },
+                  {
+                    "action": "ban",
+                    "n": 5,
+                    "segment": "lettered"
+                  },
+                  {
+                    "action": "pick",
+                    "n": 7,
+                    "segment": "lettered"
+                  }
+                ]
+              }
+            ],
+            "changed_mid_veto": false,
+            "chooser": "team_b",
+            "chooser_basis": {
+              "chooser": 16,
+              "other": 2
+            },
+            "chooser_reason": "lower_pre_cup_seed",
+            "confirmed": true,
+            "red": "team_a",
+            "set_at": "2026-10-26T23:03:17.979003+00:00",
+            "source": "backfill"
+          },
+          "skipped_bans": [],
+          "spotlight_ends_at": "2026-10-04T20:06:14.570619+00:00",
+          "started_at": "2026-10-04T20:00:42.750442+00:00",
+          "status": "complete",
+          "teams": {
+            "team_a": {
+              "ab": "A",
+              "id": "01c942d8-95ac-49cd-85be-791b18e24b86",
+              "members": [
+                {
+                  "acting_captain": false,
+                  "avatar": "https://gateway.utbt.net/users/778035658224697377/avatar",
+                  "captain": true,
+                  "display_name": "Bun`",
+                  "id": "778035658224697377",
+                  "online": false,
+                  "title": {
+                    "color": "255,138,108",
+                    "color_b": 108,
+                    "color_g": 138,
+                    "color_r": 255,
+                    "id": "1000000000000000118",
+                    "name": "Evergreen",
+                    "rarity": 5
+                  }
+                },
+                {
+                  "acting_captain": false,
+                  "avatar": "https://gateway.utbt.net/users/684851153095360533/avatar",
+                  "captain": false,
+                  "display_name": "OwYeaW",
+                  "id": "684851153095360533",
+                  "online": false,
+                  "title": {
+                    "color": "247,223,156",
+                    "color_b": 156,
+                    "color_g": 223,
+                    "color_r": 247,
+                    "id": "1508462332689387563",
+                    "name": "OnlyCUp! | Peak Conqueror",
+                    "rarity": 4
+                  }
+                }
+              ],
+              "name": "Sandbagging",
+              "pre_cup_seed": 2,
+              "side": "team_a",
+              "stage_seed": 2
+            },
+            "team_b": {
+              "ab": "B",
+              "id": "5e08b92e-7d37-45ca-8684-f3826845fdeb",
+              "members": [
+                {
+                  "acting_captain": false,
+                  "avatar": "https://gateway.utbt.net/users/220951242338336768/avatar",
+                  "captain": true,
+                  "display_name": "k2",
+                  "id": "220951242338336768",
+                  "online": false,
+                  "title": null
+                },
+                {
+                  "acting_captain": false,
+                  "avatar": "https://gateway.utbt.net/users/347446178331230209/avatar",
+                  "captain": false,
+                  "display_name": "nchris",
+                  "id": "347446178331230209",
+                  "online": false,
+                  "title": null
+                }
+              ],
+              "name": "Cranium Bashers",
+              "pre_cup_seed": 16,
+              "side": "team_b",
+              "stage_seed": 16
+            }
+          },
+          "version": 26,
+          "veto": null,
+          "viewer": {
+            "roster_captain": false,
+            "side": null
+          },
+          "warnings": []
+        },
+        "success": true
+      }
+    },
+    {
+      "host": "gateway",
+      "path": "/patreon",
+      "query": "",
+      "status": 200,
+      "body": {
+        "tier1": [
+          "790880165097504768",
+          "414164967999406090",
+          "270897034796466176",
+          "238598150888095744",
+          "290449564887023617"
+        ],
+        "tier2": [
+          "260007417478250497",
+          "242091482541064192",
+          "318842484446724106"
+        ],
+        "tier3": [
+          "185318594270330880",
+          "265561225428074496"
+        ]
+      }
+    }
+  ]
+}

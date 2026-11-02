@@ -31,6 +31,7 @@
     "test:mobile:full": "cross-env E2E_SERVER=build MOBILE_MATRIX=full playwright test --project=mobile-suite-webkit --project=mobile-suite-chromium",
     "test:mobile:ledger": "cross-env E2E_SERVER=build MOBILE_LEDGER=write playwright test --project=mobile-suite-webkit --project=mobile-suite-chromium",
     "test:mobile:ledger:full": "cross-env E2E_SERVER=build MOBILE_MATRIX=full MOBILE_LEDGER=write playwright test --project=mobile-suite-webkit --project=mobile-suite-chromium",
+    "test:mobile:refresh-fixtures": "playwright test --config e2e/mobile/refresh.config.ts",
     "check:bundle": "node scripts/check-web-bundle.mjs",
     "docs:check": "node scripts/check-docs.mjs",
     "quality:web": "npm-run-all typecheck:web typecheck:e2e lint test build:web check:bundle"

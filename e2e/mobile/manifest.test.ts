@@ -1,6 +1,7 @@
 import { readdirSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { FIXTURE_SETS } from './fixtures'
+import { FIXTURE_SETS, fixtureSetNamed } from './fixtures'
+import { STRESS_VARIANTS } from './fixtures/stress'
 import { LEDGER_DIR, readLedger } from './ledger'
 import { crawlSurfaces, MOBILE_MANIFEST } from './manifest'
 import { RULE_IDS } from './rules/ids'
@@ -16,6 +17,34 @@ describe('mobile manifest', () => {
 
     it('names a fixture set that exists for every entry', () => {
         for (const entry of MOBILE_MANIFEST) expect(Object.keys(FIXTURE_SETS), entry.view).toContain(entry.fixtures)
+        for (const surface of crawlSurfaces('full')) expect(fixtureSetNamed(surface.entry.fixtures), surface.id).toBeDefined()
+    })
+
+    it('crawls each stressed page or tab once per variant in the full matrix and once with its PR variant in the PR subset', () => {
+        const stressed = MOBILE_MANIFEST.flatMap(entry => [
+            ...(entry.stress ? [{ id: entry.view, fixtures: entry.fixtures, plan: entry.stress }] : []),
+            ...(entry.subViews ?? []).flatMap(subView => subView.stress ? [{ id: `${entry.view}/${subView.id}`, fixtures: entry.fixtures, plan: subView.stress }] : []),
+        ])
+        expect(stressed.length).toBeGreaterThan(0)
+        const variantsIn = (scope: 'pr' | 'full') => crawlSurfaces(scope)
+            .filter(surface => surface.variant)
+            .map(surface => `${surface.id} ${surface.entry.fixtures}`)
+        expect(variantsIn('full').sort()).toEqual(stressed
+            .flatMap(({ id, fixtures }) => STRESS_VARIANTS.map(variant => `${id}~${variant} ${fixtures}~${variant}`)).sort())
+        expect(variantsIn('pr').sort()).toEqual(stressed.map(({ id, fixtures, plan }) => `${id}~${plan.pr} ${fixtures}~${plan.pr}`).sort())
+    })
+
+    it('runs the same default surfaces in both matrices', () => {
+        const defaults = (scope: 'pr' | 'full') => crawlSurfaces(scope).filter(surface => !surface.variant).map(surface => surface.id)
+        expect(defaults('pr')).toEqual(defaults('full'))
+    })
+
+    it('gives every tab or sub-view reached by a tap its own ready step, so Back can tell it is shown again', () => {
+        for (const entry of MOBILE_MANIFEST) {
+            for (const subView of entry.subViews ?? []) {
+                if (subView.open) expect(subView.ready, `${entry.view}/${subView.id}`).toBeDefined()
+            }
+        }
     })
 
     it('gives every skipped rule a reason', () => {
@@ -33,7 +62,7 @@ describe('known-violations ledger', () => {
     })
 
     it('lists only surfaces, viewports and engines the crawl visits, for rules it runs there', () => {
-        const surfaces = new Map(crawlSurfaces().map(surface => [surface.id, surface]))
+        const surfaces = new Map(crawlSurfaces('full').map(surface => [surface.id, surface]))
         const viewports = MOBILE_VIEWPORTS.map(viewport => viewport.id)
         for (const rule of RULE_IDS) {
             for (const entry of ledger[rule]) {

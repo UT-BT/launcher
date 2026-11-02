@@ -1,7 +1,9 @@
 import { expect, test, type Page } from '@playwright/test'
+import { dataFrom } from './mobile/fixtures/data'
+import { FIXTURE_SETS, fixtureSetNamed } from './mobile/fixtures'
 import { serveFixtureSet } from './mobile/fixtures/router'
-import { MAPS_LIST } from './mobile/fixtures/maps'
-import { CAP_ID } from './mobile/fixtures/cap-detail'
+import { CAP_ID } from './mobile/manifest/cap-detail'
+import { maps } from './mobile/manifest/maps'
 
 const DESKTOP_WIDTHS = [1280, 1920]
 
@@ -33,7 +35,7 @@ for (const width of DESKTOP_WIDTHS) {
 
         test('shows the blurred sidebar and no top bar or status strip', async ({ page }) => {
             await openPage(page, 'maps', '/maps')
-            await page.getByText(MAPS_LIST[0].name.replace(/^CTF-BT-/, ''), { exact: true }).first().waitFor()
+            await maps.ready(page, dataFrom(FIXTURE_SETS.maps))
             await expect(page.getByRole('button', { name: 'Open navigation' })).toBeHidden()
             await expect(page.getByRole('button', { name: 'Reload app' })).toHaveCount(0)
             const sidebar = page.locator('aside#app-navigation')
@@ -45,8 +47,8 @@ for (const width of DESKTOP_WIDTHS) {
         })
 
         test('keeps the Maps control font sizes', async ({ page }) => {
-            await openPage(page, 'maps', '/maps')
-            await page.getByText(MAPS_LIST[0].name.replace(/^CTF-BT-/, ''), { exact: true }).first().waitFor()
+            await openPage(page, 'maps~single-row', '/maps')
+            await maps.ready(page, dataFrom(fixtureSetNamed('maps~single-row')!))
             expect(await controlFontSizes(page)).toEqual([
                 'input Search for a map name or tag...: 14px',
                 'select Rows per page: 12px',

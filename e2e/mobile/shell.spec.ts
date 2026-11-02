@@ -1,10 +1,11 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import sharp from 'sharp'
+import { dataFrom } from './fixtures/data'
+import { FIXTURE_SETS } from './fixtures'
 import { serveFixtureSet } from './fixtures/router'
-import { MAPS_LIST } from './fixtures/maps'
+import { maps } from './manifest/maps'
 
 const STATUS_STRIP_RGB = [0x07, 0x0b, 0x12]
-const FIRST_MAP = MAPS_LIST[0].name.replace(/^CTF-BT-/, '')
 
 interface SafeArea {
     top?: number
@@ -23,7 +24,7 @@ async function openMaps(page: Page, storage: Record<string, string> = {}) {
     })
     await serveFixtureSet(page, 'maps')
     await page.goto('/maps')
-    await page.getByText(FIRST_MAP, { exact: true }).first().waitFor()
+    await maps.ready(page, dataFrom(FIXTURE_SETS.maps))
 }
 
 async function simulateSafeArea(page: Page, area: SafeArea) {

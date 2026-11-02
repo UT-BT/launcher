@@ -1,0 +1,4619 @@
+{
+  "set": "cap-detail",
+  "responses": [
+    {
+      "host": "api",
+      "path": "/caps/258021df-51b1-4ed3-99cc-62d4e75892a7/detail",
+      "query": "",
+      "status": 200,
+      "body": {
+        "data": {
+          "cap": {
+            "active_title": {
+              "color_b": 248,
+              "color_g": 150,
+              "color_r": 200,
+              "name": "Puzzle Master",
+              "rarity": 4
+            },
+            "added": "2026-11-01 12:42:32.254746",
+            "alias": "Arturek ;)",
+            "cap_time_seconds": 109.36,
+            "cap_type": 2,
+            "disallowed": false,
+            "dodge_after_landing_50pc": 0.107,
+            "dodge_bind_uses": 52,
+            "dodge_block_count": 51,
+            "dodge_init_after_landing_50pc": 0.044,
+            "engine": "469d - Release",
+            "fps_1pc": 238,
+            "fps_25pc": 370,
+            "fps_50pc": 384,
+            "fps_5pc": 322,
+            "has_ghost": true,
+            "id": "258021df-51b1-4ed3-99cc-62d4e75892a7",
+            "map": "CTF-BT-HumanResources",
+            "medal": 4,
+            "netspeed_max": 25000,
+            "netspeed_min": 25000,
+            "ping_1pc": 13,
+            "ping_25pc": 15,
+            "ping_50pc": 15,
+            "ping_5pc": 14,
+            "renderer": "D3D11Drv",
+            "spawn_count": 35,
+            "team": 0,
+            "team_run_id": null,
+            "time_between_dodges_50pc": 0.429,
+            "user": "265561225428074496",
+            "verified": true
+          },
+          "checkpoints": [
+            {
+              "cumulative": 0.05,
+              "segment": 0.05,
+              "zone": "1"
+            },
+            {
+              "cumulative": 37.464,
+              "segment": 37.414,
+              "zone": "3"
+            },
+            {
+              "cumulative": 47.441,
+              "segment": 9.977,
+              "zone": "11"
+            },
+            {
+              "cumulative": 47.692,
+              "segment": 0.251,
+              "zone": "10"
+            },
+            {
+              "cumulative": 105.945,
+              "segment": 58.253,
+              "zone": "17"
+            }
+          ],
+          "compare_candidates": [
+            {
+              "alias": "nightZ",
+              "cap_time_seconds": 129.31,
+              "has_ghost": true,
+              "id": "418b0aec-34c5-40e7-acf4-f2bc33373063",
+              "user": "1102738082685534299"
+            },
+            {
+              "alias": "Safester",
+              "cap_time_seconds": 148.436,
+              "has_ghost": true,
+              "id": "dcdb521b-2ef7-4640-acf7-de55b9b65c16",
+              "user": "181320322736193536"
+            }
+          ],
+          "deltas": {
+            "bronze": -58.824,
+            "champion": 1.617,
+            "gold": -8.894,
+            "silver": -27.29,
+            "wr": 4.245
+          },
+          "has_checkpoints": true,
+          "medals": {
+            "bronze": 168.184,
+            "champion": 107.743,
+            "gold": 118.254,
+            "silver": 136.65,
+            "world_record": 105.115
+          },
+          "neighbors": {
+            "above": [
+              {
+                "active_title": {
+                  "color_b": 248,
+                  "color_g": 150,
+                  "color_r": 200,
+                  "name": "Puzzle Master",
+                  "rarity": 4
+                },
+                "alias": "Xclusive",
+                "cap_time_seconds": 105.115,
+                "id": "8d742df9-2f14-4998-835c-3c16c1d1ee92",
+                "rank": 1,
+                "user": "260007417478250497"
+              }
+            ],
+            "below": [
+              {
+                "active_title": {
+                  "color_b": 46,
+                  "color_g": 150,
+                  "color_r": 178,
+                  "name": "Gold Cartel",
+                  "rarity": 2
+                },
+                "alias": "nightZ",
+                "cap_time_seconds": 129.31,
+                "id": "418b0aec-34c5-40e7-acf4-f2bc33373063",
+                "rank": 3,
+                "user": "1102738082685534299"
+              },
+              {
+                "active_title": {
+                  "color_b": 76,
+                  "color_g": 112,
+                  "color_r": 248,
+                  "name": "Certified Hit",
+                  "rarity": 4
+                },
+                "alias": "Safester",
+                "cap_time_seconds": 148.436,
+                "id": "dcdb521b-2ef7-4640-acf7-de55b9b65c16",
+                "rank": 4,
+                "user": "181320322736193536"
+              }
+            ]
+          },
+          "rank_on_map": 2,
+          "server": {
+            "name": "UTBT Public PL - Certified Server",
+            "region": "Poland"
+          },
+          "total_on_map": 4,
+          "wr_cap_id": "8d742df9-2f14-4998-835c-3c16c1d1ee92",
+          "wr_checkpoints": [
+            {
+              "cumulative": 0.017,
+              "segment": 0.017,
+              "zone": "21"
+            },
+            {
+              "cumulative": 34.872,
+              "segment": 34.855,
+              "zone": "33"
+            },
+            {
+              "cumulative": 44.835,
+              "segment": 9.963,
+              "zone": "34"
+            },
+            {
+              "cumulative": 45.053,
+              "segment": 0.218,
+              "zone": "35"
+            },
+            {
+              "cumulative": 101.378,
+              "segment": 56.325,
+              "zone": "40"
+            }
+          ],
+          "wr_time_seconds": 105.115
+        },
+        "success": true
+      }
+    },
+    {
+      "host": "api",
+      "path": "/caps/418b0aec-34c5-40e7-acf4-f2bc33373063/detail",
+      "query": "",
+      "status": 200,
+      "body": {
+        "data": {
+          "cap": {
+            "active_title": {
+              "color_b": 46,
+              "color_g": 150,
+              "color_r": 178,
+              "name": "Gold Cartel",
+              "rarity": 2
+            },
+            "added": "2026-11-01 12:24:05.190151",
+            "alias": "nightZ",
+            "cap_time_seconds": 129.31,
+            "cap_type": 2,
+            "disallowed": false,
+            "dodge_after_landing_50pc": 0,
+            "dodge_bind_uses": 0,
+            "dodge_block_count": 47,
+            "dodge_init_after_landing_50pc": 0,
+            "engine": "469d - Release",
+            "fps_1pc": 169,
+            "fps_25pc": 384,
+            "fps_50pc": 384,
+            "fps_5pc": 357,
+            "has_ghost": true,
+            "id": "418b0aec-34c5-40e7-acf4-f2bc33373063",
+            "map": "CTF-BT-HumanResources",
+            "medal": 3,
+            "netspeed_max": 25000,
+            "netspeed_min": 25000,
+            "ping_1pc": 47,
+            "ping_25pc": 50,
+            "ping_50pc": 50,
+            "ping_5pc": 49,
+            "renderer": "D3D11Drv",
+            "spawn_count": 53,
+            "team": 0,
+            "team_run_id": null,
+            "time_between_dodges_50pc": 0.503,
+            "user": "1102738082685534299",
+            "verified": true
+          },
+          "checkpoints": [
+            {
+              "cumulative": 0.033,
+              "segment": 0.033,
+              "zone": "1"
+            },
+            {
+              "cumulative": 53.659,
+              "segment": 53.626,
+              "zone": "3"
+            },
+            {
+              "cumulative": 54.127,
+              "segment": 0.468,
+              "zone": "11"
+            },
+            {
+              "cumulative": 56.085,
+              "segment": 1.958,
+              "zone": "10"
+            },
+            {
+              "cumulative": 124.727,
+              "segment": 68.642,
+              "zone": "17"
+            }
+          ],
+          "compare_candidates": [
+            {
+              "alias": "Arturek ;)",
+              "cap_time_seconds": 109.36,
+              "has_ghost": true,
+              "id": "258021df-51b1-4ed3-99cc-62d4e75892a7",
+              "user": "265561225428074496"
+            },
+            {
+              "alias": "Safester",
+              "cap_time_seconds": 148.436,
+              "has_ghost": true,
+              "id": "dcdb521b-2ef7-4640-acf7-de55b9b65c16",
+              "user": "181320322736193536"
+            }
+          ],
+          "deltas": {
+            "bronze": -38.874,
+            "champion": 21.567,
+            "gold": 11.056,
+            "silver": -7.34,
+            "wr": 24.195
+          },
+          "has_checkpoints": true,
+          "medals": {
+            "bronze": 168.184,
+            "champion": 107.743,
+            "gold": 118.254,
+            "silver": 136.65,
+            "world_record": 105.115
+          },
+          "neighbors": {
+            "above": [
+              {
+                "active_title": {
+                  "color_b": 248,
+                  "color_g": 150,
+                  "color_r": 200,
+                  "name": "Puzzle Master",
+                  "rarity": 4
+                },
+                "alias": "Arturek ;)",
+                "cap_time_seconds": 109.36,
+                "id": "258021df-51b1-4ed3-99cc-62d4e75892a7",
+                "rank": 2,
+                "user": "265561225428074496"
+              },
+              {
+                "active_title": {
+                  "color_b": 248,
+                  "color_g": 150,
+                  "color_r": 200,
+                  "name": "Puzzle Master",
+                  "rarity": 4
+                },
+                "alias": "Xclusive",
+                "cap_time_seconds": 105.115,
+                "id": "8d742df9-2f14-4998-835c-3c16c1d1ee92",
+                "rank": 1,
+                "user": "260007417478250497"
+              }
+            ],
+            "below": [
+              {
+                "active_title": {
+                  "color_b": 76,
+                  "color_g": 112,
+                  "color_r": 248,
+                  "name": "Certified Hit",
+                  "rarity": 4
+                },
+                "alias": "Safester",
+                "cap_time_seconds": 148.436,
+                "id": "dcdb521b-2ef7-4640-acf7-de55b9b65c16",
+                "rank": 4,
+                "user": "181320322736193536"
+              }
+            ]
+          },
+          "rank_on_map": 3,
+          "server": {
+            "name": "UTBT Public DE - Certified Server",
+            "region": "Germany"
+          },
+          "total_on_map": 4,
+          "wr_cap_id": "8d742df9-2f14-4998-835c-3c16c1d1ee92",
+          "wr_checkpoints": [
+            {
+              "cumulative": 0.017,
+              "segment": 0.017,
+              "zone": "21"
+            },
+            {
+              "cumulative": 34.872,
+              "segment": 34.855,
+              "zone": "33"
+            },
+            {
+              "cumulative": 44.835,
+              "segment": 9.963,
+              "zone": "34"
+            },
+            {
+              "cumulative": 45.053,
+              "segment": 0.218,
+              "zone": "35"
+            },
+            {
+              "cumulative": 101.378,
+              "segment": 56.325,
+              "zone": "40"
+            }
+          ],
+          "wr_time_seconds": 105.115
+        },
+        "success": true
+      }
+    },
+    {
+      "host": "api",
+      "path": "/caps/8d742df9-2f14-4998-835c-3c16c1d1ee92/detail",
+      "query": "",
+      "status": 200,
+      "body": {
+        "data": {
+          "cap": {
+            "active_title": {
+              "color_b": 248,
+              "color_g": 150,
+              "color_r": 200,
+              "name": "Puzzle Master",
+              "rarity": 4
+            },
+            "added": "2026-11-01 12:43:17.126052",
+            "alias": "Xclusive",
+            "cap_time_seconds": 105.115,
+            "cap_type": 2,
+            "disallowed": false,
+            "dodge_after_landing_50pc": 0.115,
+            "dodge_bind_uses": 48,
+            "dodge_block_count": 50,
+            "dodge_init_after_landing_50pc": 0.05,
+            "engine": "469f - Sep 24 2026 Preview",
+            "fps_1pc": 312,
+            "fps_25pc": 344,
+            "fps_50pc": 357,
+            "fps_5pc": 333,
+            "has_ghost": true,
+            "id": "8d742df9-2f14-4998-835c-3c16c1d1ee92",
+            "map": "CTF-BT-HumanResources",
+            "medal": 6,
+            "netspeed_max": 25000,
+            "netspeed_min": 25000,
+            "ping_1pc": 13,
+            "ping_25pc": 15,
+            "ping_50pc": 15,
+            "ping_5pc": 14,
+            "renderer": "D3D11Drv",
+            "spawn_count": 75,
+            "team": 1,
+            "team_run_id": null,
+            "time_between_dodges_50pc": 0.454,
+            "user": "260007417478250497",
+            "verified": true
+          },
+          "checkpoints": [
+            {
+              "cumulative": 0.017,
+              "segment": 0.017,
+              "zone": "21"
+            },
+            {
+              "cumulative": 34.872,
+              "segment": 34.855,
+              "zone": "33"
+            },
+            {
+              "cumulative": 44.835,
+              "segment": 9.963,
+              "zone": "34"
+            },
+            {
+              "cumulative": 45.053,
+              "segment": 0.218,
+              "zone": "35"
+            },
+            {
+              "cumulative": 101.378,
+              "segment": 56.325,
+              "zone": "40"
+            }
+          ],
+          "compare_candidates": [],
+          "deltas": {
+            "bronze": -63.069,
+            "champion": -2.628,
+            "gold": -13.139,
+            "silver": -31.535,
+            "wr": 0
+          },
+          "has_checkpoints": true,
+          "medals": {
+            "bronze": 168.184,
+            "champion": 107.743,
+            "gold": 118.254,
+            "silver": 136.65,
+            "world_record": 105.115
+          },
+          "neighbors": {
+            "above": [],
+            "below": [
+              {
+                "active_title": {
+                  "color_b": 248,
+                  "color_g": 150,
+                  "color_r": 200,
+                  "name": "Puzzle Master",
+                  "rarity": 4
+                },
+                "alias": "Arturek ;)",
+                "cap_time_seconds": 109.36,
+                "id": "258021df-51b1-4ed3-99cc-62d4e75892a7",
+                "rank": 2,
+                "user": "265561225428074496"
+              },
+              {
+                "active_title": {
+                  "color_b": 46,
+                  "color_g": 150,
+                  "color_r": 178,
+                  "name": "Gold Cartel",
+                  "rarity": 2
+                },
+                "alias": "nightZ",
+                "cap_time_seconds": 129.31,
+                "id": "418b0aec-34c5-40e7-acf4-f2bc33373063",
+                "rank": 3,
+                "user": "1102738082685534299"
+              }
+            ]
+          },
+          "rank_on_map": 1,
+          "server": {
+            "name": "UTBT Public NL - Certified Server",
+            "region": "Netherlands"
+          },
+          "total_on_map": 4,
+          "wr_cap_id": "8d742df9-2f14-4998-835c-3c16c1d1ee92",
+          "wr_checkpoints": [
+            {
+              "cumulative": 0.017,
+              "segment": 0.017,
+              "zone": "21"
+            },
+            {
+              "cumulative": 34.872,
+              "segment": 34.855,
+              "zone": "33"
+            },
+            {
+              "cumulative": 44.835,
+              "segment": 9.963,
+              "zone": "34"
+            },
+            {
+              "cumulative": 45.053,
+              "segment": 0.218,
+              "zone": "35"
+            },
+            {
+              "cumulative": 101.378,
+              "segment": 56.325,
+              "zone": "40"
+            }
+          ],
+          "wr_time_seconds": 105.115
+        },
+        "success": true
+      }
+    },
+    {
+      "host": "api",
+      "path": "/caps/leaderboard/map/CTF-BT-HumanResources",
+      "query": "verified=true",
+      "status": 200,
+      "body": {
+        "data": [
+          {
+            "active_title": {
+              "color_b": 248,
+              "color_g": 150,
+              "color_r": 200,
+              "name": "Puzzle Master",
+              "rarity": 4
+            },
+            "added": "2026-11-01 12:43:17.126052",
+            "alias": "Xclusive",
+            "cap_time_seconds": 105.115,
+            "cap_type": 2,
+            "disallowed": false,
+            "dodge_after_landing_50pc": 0.115,
+            "dodge_bind_uses": 48,
+            "dodge_block_count": 50,
+            "dodge_init_after_landing_50pc": 0.05,
+            "engine": "469f - Sep 24 2026 Preview",
+            "fps_1pc": 312,
+            "fps_25pc": 344,
+            "fps_50pc": 357,
+            "fps_5pc": 333,
+            "has_ghost": true,
+            "id": "8d742df9-2f14-4998-835c-3c16c1d1ee92",
+            "map": "CTF-BT-HumanResources",
+            "medal": 6,
+            "netspeed_max": 25000,
+            "netspeed_min": 25000,
+            "ping_1pc": 13,
+            "ping_25pc": 15,
+            "ping_50pc": 15,
+            "ping_5pc": 14,
+            "renderer": "D3D11Drv",
+            "server": "2479a5c5-e963-4a46-bc9a-7ff2040c738e",
+            "spawn_count": 75,
+            "team": 1,
+            "team_run_id": null,
+            "team_size": "",
+            "time_between_dodges_50pc": 0.454,
+            "user": "260007417478250497",
+            "verified": true,
+            "verified_at": "2026-11-01 12:43:19.669928",
+            "zone_checkpoints": "21-0.017;33-34.872;34-44.835;35-45.053;40-101.378;"
+          },
+          {
+            "active_title": {
+              "color_b": 248,
+              "color_g": 150,
+              "color_r": 200,
+              "name": "Puzzle Master",
+              "rarity": 4
+            },
+            "added": "2026-11-01 12:42:32.254746",
+            "alias": "Arturek ;)",
+            "cap_time_seconds": 109.36,
+            "cap_type": 2,
+            "disallowed": false,
+            "dodge_after_landing_50pc": 0.107,
+            "dodge_bind_uses": 52,
+            "dodge_block_count": 51,
+            "dodge_init_after_landing_50pc": 0.044,
+            "engine": "469d - Release",
+            "fps_1pc": 238,
+            "fps_25pc": 370,
+            "fps_50pc": 384,
+            "fps_5pc": 322,
+            "has_ghost": true,
+            "id": "258021df-51b1-4ed3-99cc-62d4e75892a7",
+            "map": "CTF-BT-HumanResources",
+            "medal": 4,
+            "netspeed_max": 25000,
+            "netspeed_min": 25000,
+            "ping_1pc": 13,
+            "ping_25pc": 15,
+            "ping_50pc": 15,
+            "ping_5pc": 14,
+            "renderer": "D3D11Drv",
+            "server": "8205637c-bf17-49c1-9443-2b9b40dfdf41",
+            "spawn_count": 35,
+            "team": 0,
+            "team_run_id": null,
+            "team_size": "",
+            "time_between_dodges_50pc": 0.429,
+            "user": "265561225428074496",
+            "verified": true,
+            "verified_at": "2026-11-01 12:42:35.181139",
+            "zone_checkpoints": "1-0.050;3-37.464;11-47.441;10-47.692;17-105.945;"
+          },
+          {
+            "active_title": {
+              "color_b": 46,
+              "color_g": 150,
+              "color_r": 178,
+              "name": "Gold Cartel",
+              "rarity": 2
+            },
+            "added": "2026-11-01 12:24:05.190151",
+            "alias": "nightZ",
+            "cap_time_seconds": 129.31,
+            "cap_type": 2,
+            "disallowed": false,
+            "dodge_after_landing_50pc": 0,
+            "dodge_bind_uses": 0,
+            "dodge_block_count": 47,
+            "dodge_init_after_landing_50pc": 0,
+            "engine": "469d - Release",
+            "fps_1pc": 169,
+            "fps_25pc": 384,
+            "fps_50pc": 384,
+            "fps_5pc": 357,
+            "has_ghost": true,
+            "id": "418b0aec-34c5-40e7-acf4-f2bc33373063",
+            "map": "CTF-BT-HumanResources",
+            "medal": 3,
+            "netspeed_max": 25000,
+            "netspeed_min": 25000,
+            "ping_1pc": 47,
+            "ping_25pc": 50,
+            "ping_50pc": 50,
+            "ping_5pc": 49,
+            "renderer": "D3D11Drv",
+            "server": "d97043b7-38d4-495c-90e9-61cd71e1a7ee",
+            "spawn_count": 53,
+            "team": 0,
+            "team_run_id": null,
+            "team_size": "",
+            "time_between_dodges_50pc": 0.503,
+            "user": "1102738082685534299",
+            "verified": true,
+            "verified_at": "2026-11-01 12:27:26.571149",
+            "zone_checkpoints": "1-0.033;3-43.188;11-53.157;3-53.659;11-54.127;10-56.085;17-124.727;"
+          },
+          {
+            "active_title": {
+              "color_b": 76,
+              "color_g": 112,
+              "color_r": 248,
+              "name": "Certified Hit",
+              "rarity": 4
+            },
+            "added": "2026-10-31 14:25:09.195509",
+            "alias": "Safester",
+            "cap_time_seconds": 148.436,
+            "cap_type": 2,
+            "disallowed": false,
+            "dodge_after_landing_50pc": 0,
+            "dodge_bind_uses": 0,
+            "dodge_block_count": 36,
+            "dodge_init_after_landing_50pc": 0.075,
+            "engine": "469e - Mar 30 2025 Preview",
+            "fps_1pc": 263,
+            "fps_25pc": 384,
+            "fps_50pc": 384,
+            "fps_5pc": 384,
+            "has_ghost": true,
+            "id": "dcdb521b-2ef7-4640-acf7-de55b9b65c16",
+            "map": "CTF-BT-HumanResources",
+            "medal": 2,
+            "netspeed_max": 25000,
+            "netspeed_min": 25000,
+            "ping_1pc": 18,
+            "ping_25pc": 20,
+            "ping_50pc": 20,
+            "ping_5pc": 19,
+            "renderer": "D3D11Drv",
+            "server": "4466528b-96a7-4fcc-845f-568043150f55",
+            "spawn_count": 32,
+            "team": 0,
+            "team_run_id": null,
+            "team_size": "",
+            "time_between_dodges_50pc": 0.522,
+            "user": "181320322736193536",
+            "verified": true,
+            "verified_at": "2026-10-31 14:25:41.455155",
+            "zone_checkpoints": "1-0.033;3-44.893;11-54.853;10-56.694;17-143.597;"
+          }
+        ],
+        "success": true
+      }
+    },
+    {
+      "host": "api",
+      "path": "/ghosts/compare",
+      "query": "reference=418b0aec-34c5-40e7-acf4-f2bc33373063&runner=258021df-51b1-4ed3-99cc-62d4e75892a7&v=2",
+      "status": 200,
+      "body": {
+        "data": {
+          "algo_version": 1,
+          "coverage": 1,
+          "duration_ms": 129310,
+          "final_delta_ms": -19950,
+          "reference": {
+            "alias": "nightZ",
+            "cap_id": "418b0aec-34c5-40e7-acf4-f2bc33373063",
+            "cap_time_ms": 129310,
+            "team": 0,
+            "user": "1102738082685534299"
+          },
+          "runner": {
+            "alias": "Arturek ;)",
+            "cap_id": "258021df-51b1-4ed3-99cc-62d4e75892a7",
+            "cap_time_ms": 109360,
+            "team": 0,
+            "user": "265561225428074496"
+          },
+          "sectors": [
+            {
+              "delta_line_ms": -457,
+              "delta_speed_ms": -1060,
+              "delta_split_ms": -1517,
+              "delta_total_ms": -1517,
+              "end_ms": 12931,
+              "index": 1,
+              "reference_distance_uu": 5069,
+              "reference_speed_uu_s": 356,
+              "runner_distance_uu": 4882,
+              "runner_speed_uu_s": 389,
+              "separated": false,
+              "split_ms": 11414
+            },
+            {
+              "delta_line_ms": -431,
+              "delta_speed_ms": -1442,
+              "delta_split_ms": -1873,
+              "delta_total_ms": -3390,
+              "end_ms": 25862,
+              "index": 2,
+              "reference_distance_uu": 5516,
+              "reference_speed_uu_s": 388,
+              "runner_distance_uu": 5321,
+              "runner_speed_uu_s": 437,
+              "separated": false,
+              "split_ms": 11058
+            },
+            {
+              "delta_line_ms": -32,
+              "delta_speed_ms": -2236,
+              "delta_split_ms": -2268,
+              "delta_total_ms": -5658,
+              "end_ms": 38793,
+              "index": 3,
+              "reference_distance_uu": 4279,
+              "reference_speed_uu_s": 301,
+              "runner_distance_uu": 4267,
+              "runner_speed_uu_s": 364,
+              "separated": false,
+              "split_ms": 10663
+            },
+            {
+              "delta_line_ms": 596,
+              "delta_speed_ms": -658,
+              "delta_split_ms": -62,
+              "delta_total_ms": -5720,
+              "end_ms": 51724,
+              "index": 4,
+              "reference_distance_uu": 1778,
+              "reference_speed_uu_s": 125,
+              "runner_distance_uu": 1862,
+              "runner_speed_uu_s": 132,
+              "separated": false,
+              "split_ms": 12869
+            },
+            {
+              "delta_line_ms": -108,
+              "delta_speed_ms": -3545,
+              "delta_split_ms": -3653,
+              "delta_total_ms": -9373,
+              "end_ms": 64655,
+              "index": 5,
+              "reference_distance_uu": 3265,
+              "reference_speed_uu_s": 230,
+              "runner_distance_uu": 3233,
+              "runner_speed_uu_s": 317,
+              "separated": true,
+              "split_ms": 9278
+            },
+            {
+              "delta_line_ms": -481,
+              "delta_speed_ms": -1578,
+              "delta_split_ms": -2059,
+              "delta_total_ms": -11432,
+              "end_ms": 77586,
+              "index": 6,
+              "reference_distance_uu": 5265,
+              "reference_speed_uu_s": 370,
+              "runner_distance_uu": 5056,
+              "runner_speed_uu_s": 423,
+              "separated": false,
+              "split_ms": 10872
+            },
+            {
+              "delta_line_ms": -292,
+              "delta_speed_ms": -825,
+              "delta_split_ms": -1117,
+              "delta_total_ms": -12549,
+              "end_ms": 90517,
+              "index": 7,
+              "reference_distance_uu": 3398,
+              "reference_speed_uu_s": 239,
+              "runner_distance_uu": 3318,
+              "runner_speed_uu_s": 255,
+              "separated": false,
+              "split_ms": 11814
+            },
+            {
+              "delta_line_ms": 1356,
+              "delta_speed_ms": 924,
+              "delta_split_ms": 2280,
+              "delta_total_ms": -10269,
+              "end_ms": 103448,
+              "index": 8,
+              "reference_distance_uu": 5219,
+              "reference_speed_uu_s": 367,
+              "runner_distance_uu": 5749,
+              "runner_speed_uu_s": 344,
+              "separated": true,
+              "split_ms": 15211
+            },
+            {
+              "delta_line_ms": -5889,
+              "delta_speed_ms": -1856,
+              "delta_split_ms": -7745,
+              "delta_total_ms": -18014,
+              "end_ms": 116379,
+              "index": 9,
+              "reference_distance_uu": 4929,
+              "reference_speed_uu_s": 347,
+              "runner_distance_uu": 2446,
+              "runner_speed_uu_s": 429,
+              "separated": true,
+              "split_ms": 5186
+            },
+            {
+              "delta_line_ms": -1070,
+              "delta_speed_ms": -866,
+              "delta_split_ms": -1936,
+              "delta_total_ms": -19950,
+              "end_ms": 129310,
+              "index": 10,
+              "reference_distance_uu": 4843,
+              "reference_speed_uu_s": 340,
+              "runner_distance_uu": 4428,
+              "runner_speed_uu_s": 366,
+              "separated": false,
+              "split_ms": 10995
+            }
+          ],
+          "segments": [
+            [
+              [
+                0,
+                0
+              ],
+              [
+                18,
+                -50
+              ],
+              [
+                735,
+                -153
+              ],
+              [
+                833,
+                -156
+              ],
+              [
+                1217,
+                -159
+              ],
+              [
+                1350,
+                -161
+              ],
+              [
+                1892,
+                -170
+              ],
+              [
+                1988,
+                -173
+              ],
+              [
+                2489,
+                -190
+              ],
+              [
+                2706,
+                -186
+              ],
+              [
+                3137,
+                -168
+              ],
+              [
+                3344,
+                -170
+              ],
+              [
+                3840,
+                -200
+              ],
+              [
+                4094,
+                -259
+              ],
+              [
+                5028,
+                -542
+              ],
+              [
+                5133,
+                -559
+              ],
+              [
+                5744,
+                -649
+              ],
+              [
+                5864,
+                -666
+              ],
+              [
+                6555,
+                -781
+              ],
+              [
+                6643,
+                -795
+              ],
+              [
+                7300,
+                -869
+              ],
+              [
+                7365,
+                -873
+              ],
+              [
+                7888,
+                -885
+              ],
+              [
+                8092,
+                -883
+              ],
+              [
+                8583,
+                -866
+              ],
+              [
+                8852,
+                -855
+              ],
+              [
+                9186,
+                -901
+              ],
+              [
+                9444,
+                -986
+              ],
+              [
+                10204,
+                -1211
+              ],
+              [
+                10820,
+                -1261
+              ],
+              [
+                11543,
+                -1399
+              ],
+              [
+                11692,
+                -1425
+              ],
+              [
+                12592,
+                -1488
+              ],
+              [
+                12662,
+                -1492
+              ],
+              [
+                12862,
+                -1509
+              ],
+              [
+                13288,
+                -1556
+              ],
+              [
+                13580,
+                -1588
+              ],
+              [
+                13792,
+                -1617
+              ],
+              [
+                14389,
+                -1687
+              ],
+              [
+                14475,
+                -1691
+              ],
+              [
+                15074,
+                -1704
+              ],
+              [
+                15249,
+                -1712
+              ],
+              [
+                15752,
+                -1731
+              ],
+              [
+                15873,
+                -1731
+              ],
+              [
+                16404,
+                -1716
+              ],
+              [
+                16502,
+                -1716
+              ],
+              [
+                17042,
+                -1732
+              ],
+              [
+                17140,
+                -1736
+              ],
+              [
+                17748,
+                -1754
+              ],
+              [
+                17857,
+                -1759
+              ],
+              [
+                18366,
+                -1824
+              ],
+              [
+                18520,
+                -1867
+              ],
+              [
+                19437,
+                -2120
+              ],
+              [
+                19671,
+                -2122
+              ],
+              [
+                20007,
+                -2133
+              ],
+              [
+                20144,
+                -2143
+              ],
+              [
+                20773,
+                -2198
+              ],
+              [
+                20871,
+                -2219
+              ],
+              [
+                21820,
+                -2522
+              ],
+              [
+                21884,
+                -2525
+              ],
+              [
+                22926,
+                -2906
+              ],
+              [
+                23016,
+                -2944
+              ],
+              [
+                23620,
+                -3070
+              ],
+              [
+                23718,
+                -3084
+              ],
+              [
+                24251,
+                -3127
+              ],
+              [
+                24379,
+                -3135
+              ],
+              [
+                24978,
+                -3176
+              ],
+              [
+                25062,
+                -3180
+              ],
+              [
+                25750,
+                -3337
+              ],
+              [
+                26448,
+                -3667
+              ],
+              [
+                26536,
+                -3698
+              ],
+              [
+                26604,
+                -3710
+              ],
+              [
+                26877,
+                -3752
+              ],
+              [
+                27723,
+                -4186
+              ],
+              [
+                28272,
+                -4275
+              ],
+              [
+                28384,
+                -4296
+              ],
+              [
+                29091,
+                -4458
+              ],
+              [
+                29239,
+                -4494
+              ],
+              [
+                30447,
+                -5027
+              ],
+              [
+                30547,
+                -5027
+              ],
+              [
+                31206,
+                -5102
+              ],
+              [
+                31353,
+                -5126
+              ],
+              [
+                31766,
+                -5166
+              ],
+              [
+                31954,
+                -5165
+              ],
+              [
+                32285,
+                -5160
+              ],
+              [
+                32650,
+                -5164
+              ],
+              [
+                33649,
+                -5335
+              ],
+              [
+                33745,
+                -5332
+              ],
+              [
+                34271,
+                -5185
+              ],
+              [
+                34531,
+                -5028
+              ],
+              [
+                35768,
+                -5579
+              ],
+              [
+                36057,
+                -5522
+              ],
+              [
+                36557,
+                -5182
+              ],
+              [
+                36927,
+                -4990
+              ],
+              [
+                37993,
+                -5483
+              ],
+              [
+                38093,
+                -5490
+              ],
+              [
+                38590,
+                -5560
+              ],
+              [
+                38673,
+                -5597
+              ],
+              [
+                39226,
+                -5876
+              ],
+              [
+                39383,
+                -5955
+              ],
+              [
+                40158,
+                -6175
+              ],
+              [
+                40680,
+                -6213
+              ],
+              [
+                40884,
+                -6188
+              ],
+              [
+                40964,
+                -6168
+              ],
+              [
+                41655,
+                -5857
+              ],
+              [
+                41733,
+                -5827
+              ],
+              [
+                42232,
+                -5736
+              ],
+              [
+                42330,
+                -5732
+              ],
+              [
+                42619,
+                -5728
+              ],
+              [
+                43026,
+                -5730
+              ],
+              [
+                43441,
+                -5732
+              ],
+              [
+                43641,
+                -5731
+              ],
+              [
+                44226,
+                -5727
+              ],
+              [
+                44326,
+                -5727
+              ],
+              [
+                44623,
+                -5726
+              ],
+              [
+                44929,
+                -5726
+              ],
+              [
+                45327,
+                -5725
+              ],
+              [
+                45626,
+                -5725
+              ],
+              [
+                46130,
+                -5724
+              ],
+              [
+                46223,
+                -5724
+              ],
+              [
+                46924,
+                -5724
+              ],
+              [
+                47223,
+                -5723
+              ],
+              [
+                47517,
+                -5723
+              ],
+              [
+                48131,
+                -5729
+              ],
+              [
+                48240,
+                -5731
+              ],
+              [
+                48533,
+                -5733
+              ],
+              [
+                48835,
+                -5732
+              ],
+              [
+                49430,
+                -5728
+              ],
+              [
+                49531,
+                -5727
+              ],
+              [
+                50019,
+                -5723
+              ],
+              [
+                50119,
+                -5722
+              ],
+              [
+                50731,
+                -5717
+              ],
+              [
+                50809,
+                -5717
+              ],
+              [
+                51221,
+                -5719
+              ],
+              [
+                51425,
+                -5719
+              ],
+              [
+                51722,
+                -5720
+              ],
+              [
+                51809,
+                -5720
+              ],
+              [
+                52107,
+                -5721
+              ],
+              [
+                52328,
+                -5722
+              ],
+              [
+                53016,
+                -5719
+              ],
+              [
+                53113,
+                -5718
+              ]
+            ],
+            [
+              [
+                57086,
+                -9301
+              ],
+              [
+                57308,
+                -9032
+              ],
+              [
+                57650,
+                -8800
+              ],
+              [
+                58244,
+                -8617
+              ],
+              [
+                58306,
+                -8601
+              ],
+              [
+                58549,
+                -8539
+              ],
+              [
+                58593,
+                -8529
+              ],
+              [
+                58919,
+                -8494
+              ],
+              [
+                59439,
+                -8522
+              ],
+              [
+                59938,
+                -8569
+              ],
+              [
+                60091,
+                -8582
+              ],
+              [
+                60529,
+                -8601
+              ],
+              [
+                60838,
+                -8582
+              ],
+              [
+                61413,
+                -8399
+              ],
+              [
+                61759,
+                -8346
+              ],
+              [
+                63162,
+                -9255
+              ],
+              [
+                63200,
+                -9266
+              ],
+              [
+                63711,
+                -9374
+              ],
+              [
+                64122,
+                -9213
+              ],
+              [
+                64160,
+                -9199
+              ],
+              [
+                65080,
+                -9522
+              ],
+              [
+                65365,
+                -9607
+              ],
+              [
+                65965,
+                -9723
+              ],
+              [
+                66462,
+                -9772
+              ],
+              [
+                66545,
+                -9777
+              ],
+              [
+                67193,
+                -9855
+              ],
+              [
+                67300,
+                -9880
+              ],
+              [
+                68023,
+                -10111
+              ],
+              [
+                68500,
+                -10296
+              ],
+              [
+                70165,
+                -10479
+              ],
+              [
+                70323,
+                -10440
+              ],
+              [
+                70626,
+                -10392
+              ],
+              [
+                70700,
+                -10392
+              ],
+              [
+                71671,
+                -10635
+              ],
+              [
+                71819,
+                -10674
+              ],
+              [
+                73131,
+                -10864
+              ],
+              [
+                73225,
+                -10852
+              ],
+              [
+                73539,
+                -10814
+              ],
+              [
+                73746,
+                -10837
+              ],
+              [
+                74529,
+                -10983
+              ],
+              [
+                74665,
+                -10986
+              ],
+              [
+                75054,
+                -10967
+              ],
+              [
+                75240,
+                -10971
+              ],
+              [
+                76127,
+                -11224
+              ],
+              [
+                76219,
+                -11253
+              ],
+              [
+                76815,
+                -11325
+              ],
+              [
+                76913,
+                -11327
+              ],
+              [
+                77336,
+                -11374
+              ],
+              [
+                78057,
+                -11540
+              ],
+              [
+                78274,
+                -11600
+              ],
+              [
+                78379,
+                -11635
+              ],
+              [
+                79504,
+                -11861
+              ],
+              [
+                79767,
+                -11862
+              ],
+              [
+                80519,
+                -11967
+              ],
+              [
+                80643,
+                -11990
+              ],
+              [
+                81308,
+                -12075
+              ],
+              [
+                81608,
+                -12068
+              ],
+              [
+                81921,
+                -12078
+              ],
+              [
+                82044,
+                -12089
+              ],
+              [
+                82729,
+                -12155
+              ],
+              [
+                82850,
+                -12164
+              ],
+              [
+                83400,
+                -12203
+              ],
+              [
+                83772,
+                -12219
+              ],
+              [
+                84128,
+                -12199
+              ],
+              [
+                84229,
+                -12182
+              ],
+              [
+                84717,
+                -12083
+              ],
+              [
+                84810,
+                -12070
+              ],
+              [
+                85481,
+                -12040
+              ],
+              [
+                85567,
+                -12038
+              ],
+              [
+                85914,
+                -12030
+              ],
+              [
+                86109,
+                -12035
+              ],
+              [
+                86917,
+                -12177
+              ],
+              [
+                87032,
+                -12207
+              ],
+              [
+                88293,
+                -12384
+              ],
+              [
+                88342,
+                -12389
+              ],
+              [
+                89462,
+                -12546
+              ],
+              [
+                89980,
+                -12513
+              ],
+              [
+                90388,
+                -12535
+              ],
+              [
+                90540,
+                -12552
+              ],
+              [
+                90849,
+                -12585
+              ],
+              [
+                91059,
+                -12597
+              ],
+              [
+                91442,
+                -12583
+              ],
+              [
+                91580,
+                -12573
+              ],
+              [
+                91927,
+                -12557
+              ],
+              [
+                92097,
+                -12560
+              ],
+              [
+                92839,
+                -12644
+              ],
+              [
+                92946,
+                -12662
+              ],
+              [
+                93576,
+                -12787
+              ],
+              [
+                93684,
+                -12809
+              ],
+              [
+                94476,
+                -12957
+              ],
+              [
+                95287,
+                -12325
+              ],
+              [
+                95581,
+                -11289
+              ],
+              [
+                95600,
+                -11205
+              ],
+              [
+                96182,
+                -9427
+              ],
+              [
+                96259,
+                -9352
+              ],
+              [
+                96427,
+                -9293
+              ],
+              [
+                97283,
+                -9330
+              ],
+              [
+                97700,
+                -9104
+              ],
+              [
+                97749,
+                -9067
+              ],
+              [
+                98873,
+                -8769
+              ],
+              [
+                99137,
+                -8770
+              ]
+            ],
+            [
+              [
+                101984,
+                -10253
+              ],
+              [
+                102027,
+                -10249
+              ],
+              [
+                102509,
+                -10228
+              ],
+              [
+                102712,
+                -10233
+              ],
+              [
+                103300,
+                -10265
+              ],
+              [
+                103391,
+                -10268
+              ],
+              [
+                103490,
+                -10270
+              ],
+              [
+                104045,
+                -10262
+              ],
+              [
+                104195,
+                -10264
+              ]
+            ],
+            [
+              [
+                111476,
+                -17275
+              ],
+              [
+                111592,
+                -17271
+              ],
+              [
+                111761,
+                -17265
+              ],
+              [
+                112152,
+                -17278
+              ],
+              [
+                112264,
+                -17290
+              ],
+              [
+                113017,
+                -17446
+              ],
+              [
+                113179,
+                -17490
+              ],
+              [
+                114193,
+                -17740
+              ],
+              [
+                114306,
+                -17759
+              ],
+              [
+                114907,
+                -17820
+              ],
+              [
+                115031,
+                -17831
+              ],
+              [
+                115538,
+                -17875
+              ],
+              [
+                115653,
+                -17889
+              ],
+              [
+                116259,
+                -17993
+              ],
+              [
+                116500,
+                -18036
+              ],
+              [
+                116731,
+                -18068
+              ],
+              [
+                117008,
+                -18082
+              ],
+              [
+                117263,
+                -18074
+              ],
+              [
+                117571,
+                -18069
+              ],
+              [
+                117983,
+                -18074
+              ],
+              [
+                118363,
+                -18071
+              ],
+              [
+                119617,
+                -18635
+              ],
+              [
+                119813,
+                -18604
+              ],
+              [
+                120691,
+                -18465
+              ],
+              [
+                120939,
+                -18474
+              ],
+              [
+                121959,
+                -18641
+              ],
+              [
+                122054,
+                -18648
+              ],
+              [
+                122628,
+                -18672
+              ],
+              [
+                122992,
+                -18670
+              ],
+              [
+                123267,
+                -18675
+              ],
+              [
+                123359,
+                -18680
+              ],
+              [
+                124054,
+                -18743
+              ],
+              [
+                124164,
+                -18752
+              ],
+              [
+                124675,
+                -18836
+              ],
+              [
+                124800,
+                -18902
+              ],
+              [
+                126009,
+                -19425
+              ],
+              [
+                126100,
+                -19428
+              ],
+              [
+                126685,
+                -19447
+              ],
+              [
+                126735,
+                -19447
+              ],
+              [
+                127181,
+                -19432
+              ],
+              [
+                127400,
+                -19434
+              ],
+              [
+                128037,
+                -19483
+              ],
+              [
+                128088,
+                -19488
+              ],
+              [
+                129179,
+                -19934
+              ],
+              [
+                129249,
+                -19979
+              ],
+              [
+                129310,
+                -19950
+              ]
+            ]
+          ],
+          "separations": [
+            {
+              "end_delta_ms": -9301,
+              "end_ms": 57086,
+              "rejoined": true,
+              "start_delta_ms": -5718,
+              "start_ms": 53113
+            },
+            {
+              "end_delta_ms": -10253,
+              "end_ms": 101984,
+              "rejoined": true,
+              "start_delta_ms": -8770,
+              "start_ms": 99137
+            },
+            {
+              "end_delta_ms": -17275,
+              "end_ms": 111476,
+              "rejoined": true,
+              "start_delta_ms": -10264,
+              "start_ms": 104195
+            }
+          ],
+          "speed": {
+            "reference": [
+              [
+                [
+                  0,
+                  250
+                ],
+                [
+                  100,
+                  284
+                ],
+                [
+                  900,
+                  480
+                ],
+                [
+                  1000,
+                  484
+                ],
+                [
+                  1700,
+                  539
+                ],
+                [
+                  1900,
+                  535
+                ],
+                [
+                  2700,
+                  496
+                ],
+                [
+                  2800,
+                  487
+                ],
+                [
+                  3600,
+                  459
+                ],
+                [
+                  3700,
+                  446
+                ],
+                [
+                  4200,
+                  367
+                ],
+                [
+                  4800,
+                  399
+                ],
+                [
+                  5300,
+                  373
+                ],
+                [
+                  5500,
+                  376
+                ],
+                [
+                  6400,
+                  436
+                ],
+                [
+                  6500,
+                  454
+                ],
+                [
+                  6900,
+                  504
+                ],
+                [
+                  7400,
+                  449
+                ],
+                [
+                  8200,
+                  400
+                ],
+                [
+                  8300,
+                  399
+                ],
+                [
+                  9100,
+                  322
+                ],
+                [
+                  9200,
+                  304
+                ],
+                [
+                  9600,
+                  269
+                ],
+                [
+                  10100,
+                  265
+                ],
+                [
+                  10900,
+                  85
+                ],
+                [
+                  11100,
+                  69
+                ],
+                [
+                  11800,
+                  112
+                ],
+                [
+                  11900,
+                  118
+                ],
+                [
+                  12800,
+                  166
+                ],
+                [
+                  12900,
+                  171
+                ],
+                [
+                  13000,
+                  178
+                ],
+                [
+                  13100,
+                  189
+                ],
+                [
+                  13900,
+                  363
+                ],
+                [
+                  14000,
+                  380
+                ],
+                [
+                  14800,
+                  495
+                ],
+                [
+                  14900,
+                  499
+                ],
+                [
+                  15400,
+                  479
+                ],
+                [
+                  15900,
+                  493
+                ],
+                [
+                  16400,
+                  462
+                ],
+                [
+                  16900,
+                  489
+                ],
+                [
+                  17500,
+                  433
+                ],
+                [
+                  17600,
+                  421
+                ],
+                [
+                  18500,
+                  390
+                ],
+                [
+                  18700,
+                  387
+                ],
+                [
+                  19400,
+                  410
+                ],
+                [
+                  19500,
+                  409
+                ],
+                [
+                  20300,
+                  389
+                ],
+                [
+                  20400,
+                  384
+                ],
+                [
+                  21200,
+                  258
+                ],
+                [
+                  21300,
+                  254
+                ],
+                [
+                  21900,
+                  330
+                ],
+                [
+                  22500,
+                  245
+                ],
+                [
+                  23000,
+                  377
+                ],
+                [
+                  23100,
+                  406
+                ],
+                [
+                  23400,
+                  439
+                ],
+                [
+                  24000,
+                  404
+                ],
+                [
+                  24900,
+                  387
+                ],
+                [
+                  25000,
+                  378
+                ],
+                [
+                  25800,
+                  193
+                ],
+                [
+                  25900,
+                  183
+                ],
+                [
+                  26000,
+                  185
+                ],
+                [
+                  26100,
+                  199
+                ],
+                [
+                  26600,
+                  313
+                ],
+                [
+                  27300,
+                  206
+                ],
+                [
+                  27800,
+                  361
+                ],
+                [
+                  27900,
+                  393
+                ],
+                [
+                  28200,
+                  435
+                ],
+                [
+                  28800,
+                  403
+                ],
+                [
+                  29600,
+                  303
+                ],
+                [
+                  29700,
+                  284
+                ],
+                [
+                  30000,
+                  255
+                ],
+                [
+                  30600,
+                  282
+                ],
+                [
+                  31500,
+                  494
+                ],
+                [
+                  31900,
+                  552
+                ],
+                [
+                  32400,
+                  502
+                ],
+                [
+                  32500,
+                  480
+                ],
+                [
+                  33300,
+                  259
+                ],
+                [
+                  33400,
+                  270
+                ],
+                [
+                  33900,
+                  384
+                ],
+                [
+                  34300,
+                  295
+                ],
+                [
+                  35000,
+                  82
+                ],
+                [
+                  35200,
+                  100
+                ],
+                [
+                  36000,
+                  309
+                ],
+                [
+                  36100,
+                  317
+                ],
+                [
+                  37000,
+                  133
+                ],
+                [
+                  37200,
+                  116
+                ],
+                [
+                  37900,
+                  276
+                ],
+                [
+                  38300,
+                  327
+                ],
+                [
+                  38700,
+                  284
+                ],
+                [
+                  38800,
+                  277
+                ],
+                [
+                  38900,
+                  276
+                ],
+                [
+                  39100,
+                  293
+                ],
+                [
+                  39900,
+                  395
+                ],
+                [
+                  40100,
+                  398
+                ],
+                [
+                  40800,
+                  330
+                ],
+                [
+                  40900,
+                  304
+                ],
+                [
+                  41600,
+                  166
+                ],
+                [
+                  41900,
+                  171
+                ],
+                [
+                  42600,
+                  117
+                ],
+                [
+                  42700,
+                  107
+                ],
+                [
+                  43600,
+                  56
+                ],
+                [
+                  43700,
+                  53
+                ],
+                [
+                  44500,
+                  34
+                ],
+                [
+                  44600,
+                  33
+                ],
+                [
+                  45400,
+                  22
+                ],
+                [
+                  45600,
+                  19
+                ],
+                [
+                  46300,
+                  49
+                ],
+                [
+                  46400,
+                  62
+                ],
+                [
+                  47200,
+                  173
+                ],
+                [
+                  47400,
+                  185
+                ],
+                [
+                  48100,
+                  134
+                ],
+                [
+                  48200,
+                  123
+                ],
+                [
+                  49100,
+                  60
+                ],
+                [
+                  49200,
+                  54
+                ],
+                [
+                  50000,
+                  33
+                ],
+                [
+                  50100,
+                  32
+                ],
+                [
+                  50400,
+                  33
+                ],
+                [
+                  51000,
+                  33
+                ],
+                [
+                  51700,
+                  69
+                ],
+                [
+                  51800,
+                  82
+                ],
+                [
+                  52000,
+                  111
+                ],
+                [
+                  52100,
+                  127
+                ],
+                [
+                  52700,
+                  197
+                ],
+                [
+                  53000,
+                  177
+                ],
+                [
+                  53800,
+                  64
+                ],
+                [
+                  53900,
+                  59
+                ],
+                [
+                  54700,
+                  26
+                ],
+                [
+                  54800,
+                  21
+                ],
+                [
+                  55600,
+                  3
+                ],
+                [
+                  55700,
+                  3
+                ],
+                [
+                  55900,
+                  3
+                ],
+                [
+                  56700,
+                  39
+                ],
+                [
+                  56800,
+                  53
+                ],
+                [
+                  57600,
+                  287
+                ],
+                [
+                  57700,
+                  329
+                ],
+                [
+                  58400,
+                  532
+                ],
+                [
+                  58600,
+                  525
+                ],
+                [
+                  59400,
+                  456
+                ],
+                [
+                  59700,
+                  437
+                ],
+                [
+                  60300,
+                  487
+                ],
+                [
+                  60400,
+                  489
+                ],
+                [
+                  61200,
+                  297
+                ],
+                [
+                  61300,
+                  272
+                ],
+                [
+                  61900,
+                  196
+                ],
+                [
+                  62300,
+                  235
+                ],
+                [
+                  62800,
+                  304
+                ],
+                [
+                  63300,
+                  266
+                ],
+                [
+                  63900,
+                  347
+                ],
+                [
+                  64500,
+                  241
+                ],
+                [
+                  64600,
+                  244
+                ],
+                [
+                  64700,
+                  259
+                ],
+                [
+                  65100,
+                  362
+                ],
+                [
+                  65300,
+                  375
+                ],
+                [
+                  66000,
+                  301
+                ],
+                [
+                  66100,
+                  299
+                ],
+                [
+                  66900,
+                  197
+                ],
+                [
+                  67000,
+                  198
+                ],
+                [
+                  67900,
+                  445
+                ],
+                [
+                  68400,
+                  444
+                ],
+                [
+                  68800,
+                  467
+                ],
+                [
+                  68900,
+                  468
+                ],
+                [
+                  69700,
+                  380
+                ],
+                [
+                  69800,
+                  380
+                ],
+                [
+                  70600,
+                  400
+                ],
+                [
+                  70700,
+                  400
+                ],
+                [
+                  71500,
+                  398
+                ],
+                [
+                  71600,
+                  397
+                ],
+                [
+                  72400,
+                  329
+                ],
+                [
+                  72500,
+                  312
+                ],
+                [
+                  73000,
+                  251
+                ],
+                [
+                  73600,
+                  282
+                ],
+                [
+                  74100,
+                  254
+                ],
+                [
+                  74400,
+                  273
+                ],
+                [
+                  75100,
+                  365
+                ],
+                [
+                  75700,
+                  328
+                ],
+                [
+                  76100,
+                  402
+                ],
+                [
+                  76200,
+                  444
+                ],
+                [
+                  76800,
+                  633
+                ],
+                [
+                  76900,
+                  626
+                ],
+                [
+                  77200,
+                  523
+                ],
+                [
+                  77500,
+                  334
+                ],
+                [
+                  77600,
+                  269
+                ],
+                [
+                  78200,
+                  62
+                ],
+                [
+                  78400,
+                  54
+                ],
+                [
+                  79100,
+                  82
+                ],
+                [
+                  79200,
+                  93
+                ],
+                [
+                  80000,
+                  143
+                ],
+                [
+                  80100,
+                  146
+                ],
+                [
+                  81000,
+                  188
+                ],
+                [
+                  81100,
+                  196
+                ],
+                [
+                  81900,
+                  304
+                ],
+                [
+                  82300,
+                  353
+                ],
+                [
+                  82800,
+                  299
+                ],
+                [
+                  83000,
+                  281
+                ],
+                [
+                  83700,
+                  340
+                ],
+                [
+                  84300,
+                  345
+                ],
+                [
+                  84600,
+                  355
+                ],
+                [
+                  84700,
+                  368
+                ],
+                [
+                  85400,
+                  499
+                ],
+                [
+                  85600,
+                  491
+                ],
+                [
+                  86500,
+                  316
+                ],
+                [
+                  86600,
+                  290
+                ],
+                [
+                  87400,
+                  122
+                ],
+                [
+                  87500,
+                  120
+                ],
+                [
+                  88300,
+                  315
+                ],
+                [
+                  88400,
+                  324
+                ],
+                [
+                  89200,
+                  133
+                ],
+                [
+                  89300,
+                  134
+                ],
+                [
+                  90100,
+                  229
+                ],
+                [
+                  90200,
+                  231
+                ],
+                [
+                  90500,
+                  249
+                ],
+                [
+                  90600,
+                  263
+                ],
+                [
+                  91200,
+                  390
+                ],
+                [
+                  91300,
+                  412
+                ],
+                [
+                  91900,
+                  492
+                ],
+                [
+                  92200,
+                  458
+                ],
+                [
+                  93100,
+                  293
+                ],
+                [
+                  93200,
+                  279
+                ],
+                [
+                  94000,
+                  152
+                ],
+                [
+                  94100,
+                  150
+                ],
+                [
+                  94900,
+                  346
+                ],
+                [
+                  95000,
+                  366
+                ],
+                [
+                  95800,
+                  454
+                ],
+                [
+                  96100,
+                  475
+                ],
+                [
+                  96700,
+                  405
+                ],
+                [
+                  96800,
+                  395
+                ],
+                [
+                  97600,
+                  327
+                ],
+                [
+                  98100,
+                  231
+                ],
+                [
+                  98600,
+                  355
+                ],
+                [
+                  98700,
+                  397
+                ],
+                [
+                  99100,
+                  483
+                ],
+                [
+                  99600,
+                  409
+                ],
+                [
+                  100400,
+                  357
+                ],
+                [
+                  100500,
+                  344
+                ],
+                [
+                  101000,
+                  288
+                ],
+                [
+                  101400,
+                  367
+                ],
+                [
+                  101800,
+                  438
+                ],
+                [
+                  102300,
+                  410
+                ],
+                [
+                  102700,
+                  400
+                ],
+                [
+                  103200,
+                  401
+                ],
+                [
+                  103400,
+                  399
+                ],
+                [
+                  103500,
+                  397
+                ],
+                [
+                  104200,
+                  315
+                ],
+                [
+                  104300,
+                  290
+                ],
+                [
+                  104700,
+                  224
+                ],
+                [
+                  105300,
+                  283
+                ],
+                [
+                  106100,
+                  352
+                ],
+                [
+                  106200,
+                  359
+                ],
+                [
+                  106900,
+                  410
+                ],
+                [
+                  107100,
+                  403
+                ],
+                [
+                  107900,
+                  288
+                ],
+                [
+                  108400,
+                  187
+                ],
+                [
+                  108800,
+                  296
+                ],
+                [
+                  108900,
+                  345
+                ],
+                [
+                  109400,
+                  508
+                ],
+                [
+                  109800,
+                  463
+                ],
+                [
+                  110400,
+                  392
+                ],
+                [
+                  110700,
+                  396
+                ],
+                [
+                  111300,
+                  403
+                ],
+                [
+                  111700,
+                  402
+                ],
+                [
+                  112500,
+                  356
+                ],
+                [
+                  112600,
+                  341
+                ],
+                [
+                  113400,
+                  236
+                ],
+                [
+                  113800,
+                  206
+                ],
+                [
+                  114300,
+                  307
+                ],
+                [
+                  114400,
+                  336
+                ],
+                [
+                  115200,
+                  423
+                ],
+                [
+                  115300,
+                  423
+                ],
+                [
+                  116100,
+                  344
+                ],
+                [
+                  116200,
+                  337
+                ],
+                [
+                  116300,
+                  336
+                ],
+                [
+                  116400,
+                  340
+                ],
+                [
+                  117200,
+                  465
+                ],
+                [
+                  117400,
+                  450
+                ],
+                [
+                  118200,
+                  354
+                ],
+                [
+                  118300,
+                  337
+                ],
+                [
+                  119000,
+                  239
+                ],
+                [
+                  119200,
+                  245
+                ],
+                [
+                  119700,
+                  287
+                ],
+                [
+                  120100,
+                  262
+                ],
+                [
+                  120700,
+                  210
+                ],
+                [
+                  121000,
+                  213
+                ],
+                [
+                  121800,
+                  248
+                ],
+                [
+                  121900,
+                  270
+                ],
+                [
+                  122700,
+                  479
+                ],
+                [
+                  122800,
+                  476
+                ],
+                [
+                  123700,
+                  203
+                ],
+                [
+                  123800,
+                  167
+                ],
+                [
+                  124600,
+                  22
+                ],
+                [
+                  124700,
+                  23
+                ],
+                [
+                  125500,
+                  258
+                ],
+                [
+                  125600,
+                  311
+                ],
+                [
+                  126400,
+                  493
+                ],
+                [
+                  126900,
+                  505
+                ],
+                [
+                  127300,
+                  488
+                ],
+                [
+                  127900,
+                  504
+                ],
+                [
+                  128200,
+                  483
+                ],
+                [
+                  128500,
+                  456
+                ],
+                [
+                  129200,
+                  544
+                ],
+                [
+                  129300,
+                  564
+                ]
+              ]
+            ],
+            "runner": [
+              [
+                [
+                  0,
+                  418
+                ],
+                [
+                  18,
+                  418
+                ],
+                [
+                  735,
+                  530
+                ],
+                [
+                  833,
+                  538
+                ],
+                [
+                  909,
+                  542
+                ],
+                [
+                  1350,
+                  540
+                ],
+                [
+                  1892,
+                  528
+                ],
+                [
+                  1988,
+                  525
+                ],
+                [
+                  2668,
+                  485
+                ],
+                [
+                  2820,
+                  461
+                ],
+                [
+                  3237,
+                  483
+                ],
+                [
+                  3344,
+                  490
+                ],
+                [
+                  3636,
+                  494
+                ],
+                [
+                  4171,
+                  497
+                ],
+                [
+                  5028,
+                  448
+                ],
+                [
+                  5133,
+                  436
+                ],
+                [
+                  5561,
+                  421
+                ],
+                [
+                  5864,
+                  432
+                ],
+                [
+                  6555,
+                  505
+                ],
+                [
+                  6867,
+                  523
+                ],
+                [
+                  7300,
+                  481
+                ],
+                [
+                  7365,
+                  462
+                ],
+                [
+                  8002,
+                  400
+                ],
+                [
+                  8092,
+                  397
+                ],
+                [
+                  8583,
+                  380
+                ],
+                [
+                  8678,
+                  376
+                ],
+                [
+                  9186,
+                  367
+                ],
+                [
+                  9444,
+                  363
+                ],
+                [
+                  10204,
+                  268
+                ],
+                [
+                  10820,
+                  103
+                ],
+                [
+                  11038,
+                  73
+                ],
+                [
+                  11692,
+                  100
+                ],
+                [
+                  12592,
+                  161
+                ],
+                [
+                  12662,
+                  163
+                ],
+                [
+                  12862,
+                  164
+                ],
+                [
+                  13288,
+                  179
+                ],
+                [
+                  13580,
+                  320
+                ],
+                [
+                  13792,
+                  355
+                ],
+                [
+                  14389,
+                  464
+                ],
+                [
+                  14475,
+                  476
+                ],
+                [
+                  14875,
+                  501
+                ],
+                [
+                  15300,
+                  490
+                ],
+                [
+                  15752,
+                  499
+                ],
+                [
+                  15873,
+                  500
+                ],
+                [
+                  16404,
+                  464
+                ],
+                [
+                  16502,
+                  466
+                ],
+                [
+                  17042,
+                  499
+                ],
+                [
+                  17140,
+                  496
+                ],
+                [
+                  17646,
+                  450
+                ],
+                [
+                  17748,
+                  450
+                ],
+                [
+                  18366,
+                  490
+                ],
+                [
+                  18520,
+                  484
+                ],
+                [
+                  19391,
+                  429
+                ],
+                [
+                  19437,
+                  426
+                ],
+                [
+                  19859,
+                  445
+                ],
+                [
+                  20144,
+                  439
+                ],
+                [
+                  20687,
+                  391
+                ],
+                [
+                  20961,
+                  379
+                ],
+                [
+                  21820,
+                  396
+                ],
+                [
+                  21884,
+                  405
+                ],
+                [
+                  22189,
+                  473
+                ],
+                [
+                  23016,
+                  482
+                ],
+                [
+                  23620,
+                  435
+                ],
+                [
+                  23718,
+                  429
+                ],
+                [
+                  24200,
+                  465
+                ],
+                [
+                  24540,
+                  480
+                ],
+                [
+                  24978,
+                  441
+                ],
+                [
+                  25062,
+                  427
+                ],
+                [
+                  25610,
+                  387
+                ],
+                [
+                  25750,
+                  387
+                ],
+                [
+                  26448,
+                  390
+                ],
+                [
+                  26536,
+                  396
+                ],
+                [
+                  26877,
+                  493
+                ],
+                [
+                  27900,
+                  521
+                ],
+                [
+                  28100,
+                  474
+                ],
+                [
+                  28776,
+                  452
+                ],
+                [
+                  29091,
+                  486
+                ],
+                [
+                  29239,
+                  492
+                ],
+                [
+                  30347,
+                  430
+                ],
+                [
+                  30693,
+                  383
+                ],
+                [
+                  31206,
+                  432
+                ],
+                [
+                  31353,
+                  445
+                ],
+                [
+                  31828,
+                  489
+                ],
+                [
+                  31954,
+                  501
+                ],
+                [
+                  32596,
+                  446
+                ],
+                [
+                  32650,
+                  424
+                ],
+                [
+                  33441,
+                  368
+                ],
+                [
+                  33920,
+                  455
+                ],
+                [
+                  34271,
+                  333
+                ],
+                [
+                  34448,
+                  235
+                ],
+                [
+                  35873,
+                  320
+                ],
+                [
+                  36057,
+                  332
+                ],
+                [
+                  36557,
+                  220
+                ],
+                [
+                  36594,
+                  188
+                ],
+                [
+                  37895,
+                  343
+                ],
+                [
+                  37993,
+                  367
+                ],
+                [
+                  38485,
+                  462
+                ],
+                [
+                  38673,
+                  494
+                ],
+                [
+                  39226,
+                  505
+                ],
+                [
+                  39383,
+                  509
+                ],
+                [
+                  40035,
+                  452
+                ],
+                [
+                  40158,
+                  435
+                ],
+                [
+                  40770,
+                  347
+                ],
+                [
+                  40884,
+                  323
+                ],
+                [
+                  41356,
+                  110
+                ],
+                [
+                  41655,
+                  149
+                ],
+                [
+                  41933,
+                  180
+                ],
+                [
+                  42232,
+                  162
+                ],
+                [
+                  42834,
+                  86
+                ],
+                [
+                  42933,
+                  78
+                ],
+                [
+                  43441,
+                  52
+                ],
+                [
+                  43540,
+                  48
+                ],
+                [
+                  44126,
+                  28
+                ],
+                [
+                  44226,
+                  25
+                ],
+                [
+                  44727,
+                  13
+                ],
+                [
+                  44830,
+                  12
+                ],
+                [
+                  45327,
+                  8
+                ],
+                [
+                  45417,
+                  8
+                ],
+                [
+                  45626,
+                  10
+                ],
+                [
+                  46130,
+                  35
+                ],
+                [
+                  46223,
+                  47
+                ],
+                [
+                  46822,
+                  154
+                ],
+                [
+                  47027,
+                  174
+                ],
+                [
+                  47422,
+                  138
+                ],
+                [
+                  47517,
+                  119
+                ],
+                [
+                  48131,
+                  34
+                ],
+                [
+                  48240,
+                  28
+                ],
+                [
+                  48638,
+                  20
+                ],
+                [
+                  48835,
+                  23
+                ],
+                [
+                  49430,
+                  92
+                ],
+                [
+                  49531,
+                  115
+                ],
+                [
+                  50019,
+                  226
+                ],
+                [
+                  50119,
+                  234
+                ],
+                [
+                  50731,
+                  136
+                ],
+                [
+                  50809,
+                  111
+                ],
+                [
+                  51322,
+                  47
+                ],
+                [
+                  51425,
+                  50
+                ],
+                [
+                  51722,
+                  75
+                ],
+                [
+                  51809,
+                  86
+                ],
+                [
+                  52222,
+                  124
+                ],
+                [
+                  52328,
+                  130
+                ],
+                [
+                  52525,
+                  136
+                ],
+                [
+                  53016,
+                  130
+                ],
+                [
+                  53113,
+                  132
+                ]
+              ],
+              [
+                [
+                  57086,
+                  178
+                ],
+                [
+                  57497,
+                  387
+                ],
+                [
+                  57650,
+                  421
+                ],
+                [
+                  57973,
+                  441
+                ],
+                [
+                  58306,
+                  423
+                ],
+                [
+                  58444,
+                  408
+                ],
+                [
+                  58593,
+                  427
+                ],
+                [
+                  59337,
+                  496
+                ],
+                [
+                  59439,
+                  496
+                ],
+                [
+                  59734,
+                  488
+                ],
+                [
+                  60234,
+                  501
+                ],
+                [
+                  60640,
+                  441
+                ],
+                [
+                  60838,
+                  413
+                ],
+                [
+                  61413,
+                  249
+                ],
+                [
+                  61421,
+                  285
+                ],
+                [
+                  63162,
+                  429
+                ],
+                [
+                  63200,
+                  424
+                ],
+                [
+                  63942,
+                  324
+                ],
+                [
+                  64096,
+                  250
+                ],
+                [
+                  64160,
+                  311
+                ],
+                [
+                  65080,
+                  338
+                ],
+                [
+                  65365,
+                  381
+                ],
+                [
+                  65965,
+                  359
+                ],
+                [
+                  66462,
+                  286
+                ],
+                [
+                  66839,
+                  261
+                ],
+                [
+                  67193,
+                  358
+                ],
+                [
+                  67300,
+                  399
+                ],
+                [
+                  68023,
+                  515
+                ],
+                [
+                  68500,
+                  512
+                ],
+                [
+                  70165,
+                  444
+                ],
+                [
+                  70323,
+                  436
+                ],
+                [
+                  70465,
+                  420
+                ],
+                [
+                  70700,
+                  449
+                ],
+                [
+                  71091,
+                  484
+                ],
+                [
+                  71819,
+                  437
+                ],
+                [
+                  73200,
+                  304
+                ],
+                [
+                  73225,
+                  304
+                ],
+                [
+                  73642,
+                  360
+                ],
+                [
+                  73746,
+                  363
+                ],
+                [
+                  74529,
+                  329
+                ],
+                [
+                  74575,
+                  328
+                ],
+                [
+                  75150,
+                  391
+                ],
+                [
+                  75240,
+                  404
+                ],
+                [
+                  76127,
+                  508
+                ],
+                [
+                  76219,
+                  537
+                ],
+                [
+                  76633,
+                  629
+                ],
+                [
+                  76730,
+                  634
+                ],
+                [
+                  77019,
+                  575
+                ],
+                [
+                  77336,
+                  423
+                ],
+                [
+                  78057,
+                  174
+                ],
+                [
+                  78379,
+                  107
+                ],
+                [
+                  78721,
+                  98
+                ],
+                [
+                  79767,
+                  158
+                ],
+                [
+                  80050,
+                  165
+                ],
+                [
+                  80643,
+                  207
+                ],
+                [
+                  80900,
+                  210
+                ],
+                [
+                  80989,
+                  212
+                ],
+                [
+                  81494,
+                  218
+                ],
+                [
+                  82044,
+                  309
+                ],
+                [
+                  82459,
+                  330
+                ],
+                [
+                  82729,
+                  319
+                ],
+                [
+                  82979,
+                  313
+                ],
+                [
+                  83481,
+                  328
+                ],
+                [
+                  83543,
+                  329
+                ],
+                [
+                  84128,
+                  301
+                ],
+                [
+                  84428,
+                  286
+                ],
+                [
+                  84810,
+                  393
+                ],
+                [
+                  84902,
+                  423
+                ],
+                [
+                  85414,
+                  481
+                ],
+                [
+                  85567,
+                  464
+                ],
+                [
+                  86109,
+                  391
+                ],
+                [
+                  86270,
+                  381
+                ],
+                [
+                  86917,
+                  291
+                ],
+                [
+                  87361,
+                  195
+                ],
+                [
+                  88342,
+                  269
+                ],
+                [
+                  89462,
+                  188
+                ],
+                [
+                  89909,
+                  200
+                ],
+                [
+                  90201,
+                  200
+                ],
+                [
+                  90388,
+                  204
+                ],
+                [
+                  90540,
+                  211
+                ],
+                [
+                  90964,
+                  258
+                ],
+                [
+                  91059,
+                  280
+                ],
+                [
+                  91442,
+                  397
+                ],
+                [
+                  91580,
+                  418
+                ],
+                [
+                  92097,
+                  506
+                ],
+                [
+                  92194,
+                  504
+                ],
+                [
+                  92839,
+                  426
+                ],
+                [
+                  92946,
+                  406
+                ],
+                [
+                  93684,
+                  281
+                ],
+                [
+                  94080,
+                  268
+                ],
+                [
+                  94873,
+                  458
+                ],
+                [
+                  95505,
+                  496
+                ],
+                [
+                  95581,
+                  391
+                ],
+                [
+                  95700,
+                  428
+                ],
+                [
+                  96091,
+                  470
+                ],
+                [
+                  96259,
+                  449
+                ],
+                [
+                  96938,
+                  375
+                ],
+                [
+                  97346,
+                  374
+                ],
+                [
+                  97700,
+                  297
+                ],
+                [
+                  98777,
+                  502
+                ],
+                [
+                  99137,
+                  442
+                ]
+              ],
+              [
+                [
+                  101984,
+                  282
+                ],
+                [
+                  102027,
+                  300
+                ],
+                [
+                  102140,
+                  320
+                ],
+                [
+                  102591,
+                  387
+                ],
+                [
+                  102712,
+                  392
+                ],
+                [
+                  103300,
+                  409
+                ],
+                [
+                  103391,
+                  416
+                ],
+                [
+                  103490,
+                  425
+                ],
+                [
+                  103587,
+                  438
+                ],
+                [
+                  104045,
+                  524
+                ],
+                [
+                  104195,
+                  532
+                ]
+              ],
+              [
+                [
+                  111476,
+                  512
+                ],
+                [
+                  111654,
+                  474
+                ],
+                [
+                  112152,
+                  407
+                ],
+                [
+                  112264,
+                  401
+                ],
+                [
+                  113017,
+                  381
+                ],
+                [
+                  113361,
+                  378
+                ],
+                [
+                  114193,
+                  427
+                ],
+                [
+                  114306,
+                  443
+                ],
+                [
+                  114688,
+                  477
+                ],
+                [
+                  115031,
+                  462
+                ],
+                [
+                  115538,
+                  434
+                ],
+                [
+                  115653,
+                  429
+                ],
+                [
+                  116157,
+                  406
+                ],
+                [
+                  116259,
+                  404
+                ],
+                [
+                  116500,
+                  405
+                ],
+                [
+                  116842,
+                  425
+                ],
+                [
+                  117092,
+                  440
+                ],
+                [
+                  117337,
+                  425
+                ],
+                [
+                  117983,
+                  380
+                ],
+                [
+                  118082,
+                  372
+                ],
+                [
+                  119728,
+                  290
+                ],
+                [
+                  119813,
+                  275
+                ],
+                [
+                  120691,
+                  188
+                ],
+                [
+                  121500,
+                  193
+                ],
+                [
+                  121959,
+                  277
+                ],
+                [
+                  122054,
+                  316
+                ],
+                [
+                  122713,
+                  474
+                ],
+                [
+                  122811,
+                  469
+                ],
+                [
+                  123267,
+                  372
+                ],
+                [
+                  123359,
+                  346
+                ],
+                [
+                  124054,
+                  176
+                ],
+                [
+                  124247,
+                  151
+                ],
+                [
+                  124675,
+                  221
+                ],
+                [
+                  124800,
+                  261
+                ],
+                [
+                  126009,
+                  489
+                ],
+                [
+                  126100,
+                  505
+                ],
+                [
+                  126685,
+                  543
+                ],
+                [
+                  126946,
+                  559
+                ],
+                [
+                  127314,
+                  543
+                ],
+                [
+                  127400,
+                  538
+                ],
+                [
+                  128037,
+                  521
+                ],
+                [
+                  128088,
+                  521
+                ],
+                [
+                  129179,
+                  586
+                ],
+                [
+                  129249,
+                  603
+                ]
+              ]
+            ]
+          },
+          "state": "aligned"
+        },
+        "success": true
+      }
+    },
+    {
+      "host": "gateway",
+      "path": "/patreon",
+      "query": "",
+      "status": 200,
+      "body": {
+        "tier1": [
+          "790880165097504768",
+          "414164967999406090",
+          "270897034796466176",
+          "238598150888095744",
+          "290449564887023617"
+        ],
+        "tier2": [
+          "260007417478250497",
+          "242091482541064192",
+          "318842484446724106"
+        ],
+        "tier3": [
+          "185318594270330880",
+          "265561225428074496"
+        ]
+      }
+    },
+    {
+      "host": "gateway",
+      "path": "/replays/258021df-51b1-4ed3-99cc-62d4e75892a7",
+      "query": "",
+      "status": 200,
+      "body": {
+        "source": "utrecorder",
+        "mp4_url": "https://recorder.utbt.net/mp4/258021df-51b1-4ed3-99cc-62d4e75892a7",
+        "view_url": "https://recorder.utbt.net/view/258021df-51b1-4ed3-99cc-62d4e75892a7",
+        "fps": 60
+      }
+    },
+    {
+      "host": "gateway",
+      "path": "/replays/418b0aec-34c5-40e7-acf4-f2bc33373063",
+      "query": "",
+      "status": 200,
+      "body": {
+        "source": "utrecorder",
+        "mp4_url": "https://recorder.utbt.net/mp4/418b0aec-34c5-40e7-acf4-f2bc33373063",
+        "view_url": "https://recorder.utbt.net/view/418b0aec-34c5-40e7-acf4-f2bc33373063",
+        "fps": 60
+      }
+    },
+    {
+      "host": "gateway",
+      "path": "/replays/8d742df9-2f14-4998-835c-3c16c1d1ee92",
+      "query": "",
+      "status": 200,
+      "body": {
+        "source": "utrecorder",
+        "mp4_url": "https://recorder.utbt.net/mp4/8d742df9-2f14-4998-835c-3c16c1d1ee92",
+        "view_url": "https://recorder.utbt.net/view/8d742df9-2f14-4998-835c-3c16c1d1ee92",
+        "fps": 60
+      }
+    },
+    {
+      "host": "gateway",
+      "path": "/replays/dcdb521b-2ef7-4640-acf7-de55b9b65c16",
+      "query": "",
+      "status": 200,
+      "body": {
+        "source": "utrecorder",
+        "mp4_url": "https://recorder.utbt.net/mp4/dcdb521b-2ef7-4640-acf7-de55b9b65c16",
+        "view_url": "https://recorder.utbt.net/view/dcdb521b-2ef7-4640-acf7-de55b9b65c16",
+        "fps": 60
+      }
+    }
+  ]
+}

@@ -1,0 +1,1546 @@
+{
+  "set": "world-records",
+  "responses": [
+    {
+      "host": "api",
+      "path": "/v2/world_records/filter_options",
+      "query": "",
+      "status": 200,
+      "body": {
+        "data": {
+          "holders": [
+            {
+              "alias": "Nightwolf`",
+              "count": 895,
+              "user_id": "290456398251425792"
+            },
+            {
+              "alias": "fierd_6",
+              "count": 418,
+              "user_id": "404713576947908618"
+            },
+            {
+              "alias": "Bun` #OF",
+              "count": 352,
+              "user_id": "778035658224697377"
+            },
+            {
+              "alias": "TriHard",
+              "count": 332,
+              "user_id": "215435124773224459"
+            },
+            {
+              "alias": "fierd_2",
+              "count": 181,
+              "user_id": "290449564887023617"
+            },
+            {
+              "alias": "Arturek ;)",
+              "count": 152,
+              "user_id": "265561225428074496"
+            },
+            {
+              "alias": "gxls",
+              "count": 112,
+              "user_id": "414164967999406090"
+            },
+            {
+              "alias": "PuTZe",
+              "count": 80,
+              "user_id": "308971028405551115"
+            },
+            {
+              "alias": "Xclusive",
+              "count": 49,
+              "user_id": "260007417478250497"
+            },
+            {
+              "alias": "ASG.noaction",
+              "count": 35,
+              "user_id": "149146615020519424"
+            },
+            {
+              "alias": "<Krad.pX4",
+              "count": 34,
+              "user_id": "700566293702770709"
+            },
+            {
+              "alias": "ASG.Naru",
+              "count": 30,
+              "user_id": "1044388201135087656"
+            },
+            {
+              "alias": "ch3kz",
+              "count": 29,
+              "user_id": "223422402950987777"
+            },
+            {
+              "alias": "PatriK.pX3",
+              "count": 29,
+              "user_id": "668134009682919460"
+            },
+            {
+              "alias": "huskywusky",
+              "count": 27,
+              "user_id": "251250666125787136"
+            },
+            {
+              "alias": "Mike'",
+              "count": 25,
+              "user_id": "335191702157393922"
+            },
+            {
+              "alias": "OwYeaW #OF",
+              "count": 20,
+              "user_id": "684851153095360533"
+            },
+            {
+              "alias": "Berserker",
+              "count": 19,
+              "user_id": "184727707102347266"
+            },
+            {
+              "alias": "~DarK~JoJo~",
+              "count": 18,
+              "user_id": "933076765847453726"
+            },
+            {
+              "alias": "[AoB] Riddick",
+              "count": 15,
+              "user_id": "596462369698349176"
+            },
+            {
+              "alias": "Bakica026",
+              "count": 14,
+              "user_id": "1254416467160596565"
+            },
+            {
+              "alias": "{xBTp}goku`",
+              "count": 13,
+              "user_id": "270897034796466176"
+            },
+            {
+              "alias": "Fulcrum",
+              "count": 11,
+              "user_id": "227009880093884416"
+            },
+            {
+              "alias": "GiorgiO.pX5",
+              "count": 11,
+              "user_id": "648734832783785995"
+            },
+            {
+              "alias": "ASG.PHILLIP",
+              "count": 11,
+              "user_id": "203755218804932608"
+            },
+            {
+              "alias": "Alexxeh.pX7",
+              "count": 10,
+              "user_id": "763081904563552298"
+            },
+            {
+              "alias": "fierd_1",
+              "count": 8,
+              "user_id": "290062867452133377"
+            },
+            {
+              "alias": "At[3*ATB",
+              "count": 7,
+              "user_id": "553356218609958923"
+            },
+            {
+              "alias": "Marmolak",
+              "count": 7,
+              "user_id": "583998231520870410"
+            },
+            {
+              "alias": "dEviL^-",
+              "count": 6,
+              "user_id": "185318594270330880"
+            },
+            {
+              "alias": "[TT] Vernon",
+              "count": 5,
+              "user_id": "247671958571843585"
+            },
+            {
+              "alias": "kleps",
+              "count": 4,
+              "user_id": "424992398657978370"
+            },
+            {
+              "alias": "lord_naru",
+              "count": 3,
+              "user_id": "1145069134909030543"
+            },
+            {
+              "alias": "Nick[#TeamDylan]",
+              "count": 3,
+              "user_id": "248228289317961729"
+            },
+            {
+              "alias": "Patrick",
+              "count": 3,
+              "user_id": "1480215433406714059"
+            },
+            {
+              "alias": "VRN|Ron",
+              "count": 3,
+              "user_id": "238598150888095744"
+            },
+            {
+              "alias": "dsn",
+              "count": 2,
+              "user_id": "1403482874728022078"
+            },
+            {
+              "alias": "haunting / christ",
+              "count": 2,
+              "user_id": "648880957524541441"
+            },
+            {
+              "alias": "Hera",
+              "count": 2,
+              "user_id": "456725971626622978"
+            },
+            {
+              "alias": "Nightmare9202",
+              "count": 2,
+              "user_id": "339440110745419807"
+            },
+            {
+              "alias": "NuLL",
+              "count": 2,
+              "user_id": "228152236587483136"
+            },
+            {
+              "alias": "glad",
+              "count": 1,
+              "user_id": "790880165097504768"
+            },
+            {
+              "alias": "NinThomas",
+              "count": 1,
+              "user_id": "315881722375831553"
+            },
+            {
+              "alias": "RedDynastyPT",
+              "count": 1,
+              "user_id": "136888505006555136"
+            },
+            {
+              "alias": "shipo",
+              "count": 1,
+              "user_id": "331899563269160970"
+            },
+            {
+              "alias": "Some_Dude",
+              "count": 1,
+              "user_id": "510627247263055874"
+            },
+            {
+              "alias": "TriGGeR",
+              "count": 1,
+              "user_id": "1494797673407189112"
+            },
+            {
+              "alias": "yungkya",
+              "count": 1,
+              "user_id": "191604335749103617"
+            }
+          ],
+          "years": [
+            2026,
+            2025,
+            2024,
+            2023,
+            2022
+          ]
+        },
+        "success": true
+      }
+    },
+    {
+      "host": "api",
+      "path": "/v2/world_records/progression/CTF-BT-Qamariya-v2",
+      "query": "",
+      "status": 200,
+      "body": {
+        "data": [
+          {
+            "active_title": {
+              "color_b": 248,
+              "color_g": 150,
+              "color_r": 200,
+              "name": "Puzzle Master",
+              "rarity": 4
+            },
+            "added": "2026-10-31T21:02:14.000304",
+            "alias": "Xclusive",
+            "cap_id": "364285e9-b6c4-4dd3-a0f7-1339c15ac244",
+            "cap_time_seconds": 23.021,
+            "user_id": "260007417478250497"
+          },
+          {
+            "active_title": {
+              "color_b": 248,
+              "color_g": 150,
+              "color_r": 200,
+              "name": "Puzzle Master",
+              "rarity": 4
+            },
+            "added": "2026-10-31T21:32:08.829195",
+            "alias": "Arturek ;)",
+            "cap_id": "f35f5edd-af76-463a-8a7c-9f08829aedcb",
+            "cap_time_seconds": 23.004,
+            "user_id": "265561225428074496"
+          },
+          {
+            "active_title": {
+              "color_b": 248,
+              "color_g": 150,
+              "color_r": 200,
+              "name": "Puzzle Master",
+              "rarity": 4
+            },
+            "added": "2026-10-31T21:35:42.274663",
+            "alias": "Arturek ;)",
+            "cap_id": "cb82e70d-392a-4152-a381-f87a1010bf6e",
+            "cap_time_seconds": 22.601,
+            "user_id": "265561225428074496"
+          },
+          {
+            "active_title": {
+              "color_b": 248,
+              "color_g": 150,
+              "color_r": 200,
+              "name": "Puzzle Master",
+              "rarity": 4
+            },
+            "added": "2026-10-31T21:36:38.492940",
+            "alias": "Arturek ;)",
+            "cap_id": "a766c910-347e-4918-99cd-b4a1f389ad94",
+            "cap_time_seconds": 22.389,
+            "user_id": "265561225428074496"
+          },
+          {
+            "active_title": {
+              "color_b": 248,
+              "color_g": 150,
+              "color_r": 200,
+              "name": "Puzzle Master",
+              "rarity": 4
+            },
+            "added": "2026-10-31T21:41:59.728807",
+            "alias": "Arturek ;)",
+            "cap_id": "9c51e44b-2988-4adc-8017-7dc88aa81686",
+            "cap_time_seconds": 22.387,
+            "user_id": "265561225428074496"
+          },
+          {
+            "active_title": {
+              "color_b": 248,
+              "color_g": 150,
+              "color_r": 200,
+              "name": "Puzzle Master",
+              "rarity": 4
+            },
+            "added": "2026-10-31T21:42:23.816393",
+            "alias": "Arturek ;)",
+            "cap_id": "03e97bea-b7f4-4847-a341-3c9453a21259",
+            "cap_time_seconds": 22.347,
+            "user_id": "265561225428074496"
+          },
+          {
+            "active_title": {
+              "color_b": 248,
+              "color_g": 150,
+              "color_r": 200,
+              "name": "Puzzle Master",
+              "rarity": 4
+            },
+            "added": "2026-10-31T21:42:47.893326",
+            "alias": "Arturek ;)",
+            "cap_id": "392ce3a1-2cf0-42b6-8b05-36930f59c776",
+            "cap_time_seconds": 22.212,
+            "user_id": "265561225428074496"
+          },
+          {
+            "active_title": {
+              "color_b": 248,
+              "color_g": 150,
+              "color_r": 200,
+              "name": "Puzzle Master",
+              "rarity": 4
+            },
+            "added": "2026-10-31T21:49:34.018837",
+            "alias": "Arturek ;)",
+            "cap_id": "864a1995-3af8-44a5-93db-d2486ad217b3",
+            "cap_time_seconds": 22.196,
+            "user_id": "265561225428074496"
+          },
+          {
+            "active_title": {
+              "color_b": 248,
+              "color_g": 150,
+              "color_r": 200,
+              "name": "Puzzle Master",
+              "rarity": 4
+            },
+            "added": "2026-10-31T21:51:43.228012",
+            "alias": "Xclusive",
+            "cap_id": "a0eda000-3fcc-49f3-9e7e-33acd51cce95",
+            "cap_time_seconds": 22.146,
+            "user_id": "260007417478250497"
+          },
+          {
+            "active_title": {
+              "color_b": 248,
+              "color_g": 150,
+              "color_r": 200,
+              "name": "Puzzle Master",
+              "rarity": 4
+            },
+            "added": "2026-10-31T21:54:59.374544",
+            "alias": "Arturek ;)",
+            "cap_id": "d2bb13fb-3d96-4657-9424-3782a58a11c9",
+            "cap_time_seconds": 22.095,
+            "user_id": "265561225428074496"
+          },
+          {
+            "active_title": {
+              "color_b": 248,
+              "color_g": 150,
+              "color_r": 200,
+              "name": "Puzzle Master",
+              "rarity": 4
+            },
+            "added": "2026-10-31T21:59:24.350446",
+            "alias": "Arturek ;)",
+            "cap_id": "9c2c94d7-ad06-45e9-92b3-2fe31968a5e7",
+            "cap_time_seconds": 22.089,
+            "user_id": "265561225428074496"
+          },
+          {
+            "active_title": {
+              "color_b": 248,
+              "color_g": 150,
+              "color_r": 200,
+              "name": "Puzzle Master",
+              "rarity": 4
+            },
+            "added": "2026-10-31T22:00:22.746375",
+            "alias": "Arturek ;)",
+            "cap_id": "e08ba19b-f438-494e-b42f-6b0d4a640ea7",
+            "cap_time_seconds": 22.02,
+            "user_id": "265561225428074496"
+          },
+          {
+            "active_title": {
+              "color_b": 248,
+              "color_g": 150,
+              "color_r": 200,
+              "name": "Puzzle Master",
+              "rarity": 4
+            },
+            "added": "2026-10-31T22:01:59.521419",
+            "alias": "Arturek ;)",
+            "cap_id": "a444e664-1ee6-40c0-aa7f-223a421fa155",
+            "cap_time_seconds": 22.007,
+            "user_id": "265561225428074496"
+          },
+          {
+            "active_title": {
+              "color_b": 248,
+              "color_g": 150,
+              "color_r": 200,
+              "name": "Puzzle Master",
+              "rarity": 4
+            },
+            "added": "2026-10-31T22:10:38.105518",
+            "alias": "Arturek ;)",
+            "cap_id": "3d5ad118-87ba-4850-8edd-c4757a917dad",
+            "cap_time_seconds": 21.997,
+            "user_id": "265561225428074496"
+          },
+          {
+            "active_title": {
+              "color_b": 248,
+              "color_g": 150,
+              "color_r": 200,
+              "name": "Puzzle Master",
+              "rarity": 4
+            },
+            "added": "2026-10-31T22:12:36.573576",
+            "alias": "Arturek ;)",
+            "cap_id": "d46a65db-6678-4fbb-b394-9549043fc36d",
+            "cap_time_seconds": 21.964,
+            "user_id": "265561225428074496"
+          },
+          {
+            "active_title": {
+              "color_b": 248,
+              "color_g": 150,
+              "color_r": 200,
+              "name": "Puzzle Master",
+              "rarity": 4
+            },
+            "added": "2026-10-31T22:36:50.231583",
+            "alias": "Arturek ;)",
+            "cap_id": "b79299a5-8da8-4370-81c1-96be97a05403",
+            "cap_time_seconds": 21.958,
+            "user_id": "265561225428074496"
+          },
+          {
+            "active_title": {
+              "color_b": 108,
+              "color_g": 138,
+              "color_r": 255,
+              "name": "Evergreen",
+              "rarity": 5
+            },
+            "added": "2026-10-31T22:39:46.168057",
+            "alias": "Bun` #OF",
+            "cap_id": "2230fe0d-3058-47e4-a15b-d38a757bcb9f",
+            "cap_time_seconds": 21.81,
+            "user_id": "778035658224697377"
+          },
+          {
+            "active_title": {
+              "color_b": 0,
+              "color_g": 223,
+              "color_r": 255,
+              "name": "Fortune Teller",
+              "rarity": 1
+            },
+            "added": "2026-10-31T23:03:03.297352",
+            "alias": "TriHard",
+            "cap_id": "019a725f-8d50-49f2-9334-9da44779e841",
+            "cap_time_seconds": 21.732,
+            "user_id": "215435124773224459"
+          },
+          {
+            "active_title": {
+              "color_b": 45,
+              "color_g": 45,
+              "color_r": 230,
+              "name": "Grand Champion",
+              "rarity": 4
+            },
+            "added": "2026-10-31T23:25:00.853789",
+            "alias": "fierd_2",
+            "cap_id": "2f1f598e-de8d-41b4-b0ff-e008e8d5f050",
+            "cap_time_seconds": 21.667,
+            "user_id": "290449564887023617"
+          },
+          {
+            "active_title": {
+              "color_b": 248,
+              "color_g": 150,
+              "color_r": 200,
+              "name": "Puzzle Master",
+              "rarity": 4
+            },
+            "added": "2026-11-01T10:23:14.131106",
+            "alias": "Xclusive",
+            "cap_id": "526932bb-35e7-4660-af36-037c49718a8d",
+            "cap_time_seconds": 21.628,
+            "user_id": "260007417478250497"
+          },
+          {
+            "active_title": {
+              "color_b": 248,
+              "color_g": 150,
+              "color_r": 200,
+              "name": "Puzzle Master",
+              "rarity": 4
+            },
+            "added": "2026-11-01T10:32:01.715916",
+            "alias": "Xclusive",
+            "cap_id": "3ddbf2ca-26fd-481e-a882-6543692f6ac8",
+            "cap_time_seconds": 21.596,
+            "user_id": "260007417478250497"
+          },
+          {
+            "active_title": {
+              "color_b": 248,
+              "color_g": 150,
+              "color_r": 200,
+              "name": "Puzzle Master",
+              "rarity": 4
+            },
+            "added": "2026-11-01T11:44:29.801227",
+            "alias": "Arturek ;)",
+            "cap_id": "8bca40d2-318e-4add-92bb-ae16c2d2cc02",
+            "cap_time_seconds": 21.551,
+            "user_id": "265561225428074496"
+          },
+          {
+            "active_title": {
+              "color_b": 248,
+              "color_g": 150,
+              "color_r": 200,
+              "name": "Puzzle Master",
+              "rarity": 4
+            },
+            "added": "2026-11-01T12:07:18.268063",
+            "alias": "Arturek ;)",
+            "cap_id": "98f266ab-b28d-4c5b-ab51-6d59a6146322",
+            "cap_time_seconds": 21.543,
+            "user_id": "265561225428074496"
+          },
+          {
+            "active_title": {
+              "color_b": 45,
+              "color_g": 45,
+              "color_r": 230,
+              "name": "Grand Champion",
+              "rarity": 4
+            },
+            "added": "2026-11-01T14:54:19.187755",
+            "alias": "fierd_2",
+            "cap_id": "6bcc254a-5ce6-46a6-8ba9-f8f009233cb8",
+            "cap_time_seconds": 21.534,
+            "user_id": "290449564887023617"
+          },
+          {
+            "active_title": {
+              "color_b": 45,
+              "color_g": 45,
+              "color_r": 230,
+              "name": "Grand Champion",
+              "rarity": 4
+            },
+            "added": "2026-11-01T14:59:33.545436",
+            "alias": "fierd_2",
+            "cap_id": "416d6162-92ba-48a9-934a-a3e0870036a7",
+            "cap_time_seconds": 21.521,
+            "user_id": "290449564887023617"
+          },
+          {
+            "active_title": {
+              "color_b": 0,
+              "color_g": 223,
+              "color_r": 255,
+              "name": "Fortune Teller",
+              "rarity": 1
+            },
+            "added": "2026-11-02T01:31:19.282609",
+            "alias": "TriHard",
+            "cap_id": "8b806e0b-456d-470a-a859-084c3b06b06d",
+            "cap_time_seconds": 21.504,
+            "user_id": "215435124773224459"
+          }
+        ],
+        "success": true
+      }
+    },
+    {
+      "host": "api",
+      "path": "/v2/world_records/rushers",
+      "query": "limit=10&offset=0",
+      "status": 200,
+      "body": {
+        "data": {
+          "items": [
+            {
+              "active_title": {
+                "color": "255,215,0",
+                "color_b": 0,
+                "color_g": 215,
+                "color_r": 255,
+                "id": "846334094051770378",
+                "name": "2021 World Champion",
+                "rarity": 5
+              },
+              "alias": "Nightwolf`",
+              "average": 55.74977877094972,
+              "count": 895,
+              "median": 46.4,
+              "user_id": "290456398251425792"
+            },
+            {
+              "active_title": {
+                "color": "150,235,255",
+                "color_b": 255,
+                "color_g": 235,
+                "color_r": 150,
+                "id": "1000000000000000015",
+                "name": "Faster Than Light",
+                "rarity": 5
+              },
+              "alias": "fierd_6",
+              "average": 93.91556698564594,
+              "count": 418,
+              "median": 68.394,
+              "user_id": "404713576947908618"
+            },
+            {
+              "active_title": {
+                "color": "255,138,108",
+                "color_b": 108,
+                "color_g": 138,
+                "color_r": 255,
+                "id": "1000000000000000118",
+                "name": "Evergreen",
+                "rarity": 5
+              },
+              "alias": "Bun` #OF",
+              "average": 105.26670170454545,
+              "count": 352,
+              "median": 74.502,
+              "user_id": "778035658224697377"
+            },
+            {
+              "active_title": {
+                "color": "255,223,0",
+                "color_b": 0,
+                "color_g": 223,
+                "color_r": 255,
+                "id": "1390465356081926284",
+                "name": "Fortune Teller",
+                "rarity": 1
+              },
+              "alias": "TriHard",
+              "average": 29.477496987951806,
+              "count": 332,
+              "median": 20.936,
+              "user_id": "215435124773224459"
+            },
+            {
+              "active_title": {
+                "color": "230,45,45",
+                "color_b": 45,
+                "color_g": 45,
+                "color_r": 230,
+                "id": "1000000000000000034",
+                "name": "Grand Champion",
+                "rarity": 4
+              },
+              "alias": "fierd_2",
+              "average": 70.52439226519337,
+              "count": 181,
+              "median": 61.936,
+              "user_id": "290449564887023617"
+            },
+            {
+              "active_title": {
+                "color": "200,150,248",
+                "color_b": 248,
+                "color_g": 150,
+                "color_r": 200,
+                "id": "1448458783238918144",
+                "name": "Puzzle Master",
+                "rarity": 4
+              },
+              "alias": "Arturek ;)",
+              "average": 209.11606578947368,
+              "count": 152,
+              "median": 165.96,
+              "user_id": "265561225428074496"
+            },
+            {
+              "active_title": {
+                "color": "150,235,255",
+                "color_b": 255,
+                "color_g": 235,
+                "color_r": 150,
+                "id": "1000000000000000015",
+                "name": "Faster Than Light",
+                "rarity": 5
+              },
+              "alias": "gxls",
+              "average": 95.61827678571429,
+              "count": 112,
+              "median": 73.622,
+              "user_id": "414164967999406090"
+            },
+            {
+              "active_title": {
+                "color": "255,215,0",
+                "color_b": 0,
+                "color_g": 215,
+                "color_r": 255,
+                "id": "1313098714658897971",
+                "name": "World Cup '24 | Division 1: 1st Place",
+                "rarity": 4
+              },
+              "alias": "PuTZe",
+              "average": 98.8876875,
+              "count": 80,
+              "median": 89.063,
+              "user_id": "308971028405551115"
+            },
+            {
+              "active_title": {
+                "color": "200,150,248",
+                "color_b": 248,
+                "color_g": 150,
+                "color_r": 200,
+                "id": "1448458783238918144",
+                "name": "Puzzle Master",
+                "rarity": 4
+              },
+              "alias": "Xclusive",
+              "average": 109.91828571428572,
+              "count": 49,
+              "median": 81.67,
+              "user_id": "260007417478250497"
+            },
+            {
+              "active_title": {
+                "color": "196,56,56",
+                "color_b": 56,
+                "color_g": 56,
+                "color_r": 196,
+                "id": "1000000000000000033",
+                "name": "Reigning Champion",
+                "rarity": 3
+              },
+              "alias": "ASG.noaction",
+              "average": 48.41045714285714,
+              "count": 35,
+              "median": 24.772,
+              "user_id": "149146615020519424"
+            }
+          ],
+          "max_count": 895,
+          "total": 48,
+          "total_records": 2988
+        },
+        "success": true
+      }
+    },
+    {
+      "host": "api",
+      "path": "/v2/world_records/rushers",
+      "query": "limit=10&offset=10",
+      "status": 200,
+      "body": {
+        "data": {
+          "items": [
+            {
+              "active_title": {
+                "color": "255,38,38",
+                "color_b": 38,
+                "color_g": 38,
+                "color_r": 255,
+                "id": "1000000000000000091",
+                "name": "Legendary Lineup",
+                "rarity": 5
+              },
+              "alias": "<Krad.pX4",
+              "average": 129.97564705882354,
+              "count": 34,
+              "median": 130.564,
+              "user_id": "700566293702770709"
+            },
+            {
+              "active_title": {
+                "color": "255,215,0",
+                "color_b": 0,
+                "color_g": 215,
+                "color_r": 255,
+                "id": "1311645023078711318",
+                "name": "2024 World Champion",
+                "rarity": 5
+              },
+              "alias": "ASG.Naru",
+              "average": 110.72806666666666,
+              "count": 30,
+              "median": 90.428,
+              "user_id": "1044388201135087656"
+            },
+            {
+              "active_title": {
+                "color": "255,215,0",
+                "color_b": 0,
+                "color_g": 215,
+                "color_r": 255,
+                "id": "1166428122414063696",
+                "name": "Capped 'em All",
+                "rarity": 5
+              },
+              "alias": "ch3kz",
+              "average": 125.42420689655172,
+              "count": 29,
+              "median": 88.669,
+              "user_id": "223422402950987777"
+            },
+            {
+              "active_title": {
+                "color": "235,200,25",
+                "color_b": 25,
+                "color_g": 200,
+                "color_r": 235,
+                "id": "1000000000000000009",
+                "name": "Master Cartographer",
+                "rarity": 4
+              },
+              "alias": "PatriK.pX3",
+              "average": 148.23075862068964,
+              "count": 29,
+              "median": 114.132,
+              "user_id": "668134009682919460"
+            },
+            {
+              "active_title": {
+                "color": "70,175,205",
+                "color_b": 205,
+                "color_g": 175,
+                "color_r": 70,
+                "id": "1000000000000000056",
+                "name": "Untouchable",
+                "rarity": 4
+              },
+              "alias": "huskywusky",
+              "average": 136.5522962962963,
+              "count": 27,
+              "median": 102.303,
+              "user_id": "251250666125787136"
+            },
+            {
+              "active_title": null,
+              "alias": "Mike'",
+              "average": 68.02616,
+              "count": 25,
+              "median": 64.94,
+              "user_id": "335191702157393922"
+            },
+            {
+              "active_title": {
+                "color": "247,223,156",
+                "color_b": 156,
+                "color_g": 223,
+                "color_r": 247,
+                "id": "1508462332689387563",
+                "name": "OnlyCUp! | Peak Conqueror",
+                "rarity": 4
+              },
+              "alias": "OwYeaW #OF",
+              "average": 85.9909,
+              "count": 20,
+              "median": 39.015,
+              "user_id": "684851153095360533"
+            },
+            {
+              "active_title": {
+                "color": "255,215,0",
+                "color_b": 0,
+                "color_g": 215,
+                "color_r": 255,
+                "id": "1314949258431955014",
+                "name": "World Cup '24 | Division 2: 1st Place",
+                "rarity": 3
+              },
+              "alias": "Berserker",
+              "average": 60.346526315789475,
+              "count": 19,
+              "median": 42.457,
+              "user_id": "184727707102347266"
+            },
+            {
+              "active_title": {
+                "color": "200,70,170",
+                "color_b": 170,
+                "color_g": 70,
+                "color_r": 200,
+                "id": "1000000000000000043",
+                "name": "Trophy Hoarder",
+                "rarity": 3
+              },
+              "alias": "~DarK~JoJo~",
+              "average": 94.61444444444444,
+              "count": 18,
+              "median": 60.992,
+              "user_id": "933076765847453726"
+            },
+            {
+              "active_title": {
+                "color": "160,153,189",
+                "color_b": 189,
+                "color_g": 153,
+                "color_r": 160,
+                "id": "1508462332689387565",
+                "name": "OnlyCUp! | Cloudwalker",
+                "rarity": 2
+              },
+              "alias": "[AoB] Riddick",
+              "average": 212.5524,
+              "count": 15,
+              "median": 183.757,
+              "user_id": "596462369698349176"
+            }
+          ],
+          "max_count": 895,
+          "total": 48,
+          "total_records": 2988
+        },
+        "success": true
+      }
+    },
+    {
+      "host": "api",
+      "path": "/v2/world_records",
+      "query": "count=true",
+      "status": 200,
+      "body": {
+        "data": {
+          "count": 3073
+        },
+        "success": true
+      }
+    },
+    {
+      "host": "api",
+      "path": "/v2/world_records",
+      "query": "limit=10&offset=0&sort=desc&sort_by=added",
+      "status": 200,
+      "body": {
+        "data": [
+          {
+            "active_title": {
+              "color": "255,223,0",
+              "color_b": 0,
+              "color_g": 223,
+              "color_r": 255,
+              "id": "1390465356081926284",
+              "name": "Fortune Teller",
+              "rarity": 1
+            },
+            "added": "2026-11-02T01:31:19.282609",
+            "alias": "TriHard",
+            "cap_id": "8b806e0b-456d-470a-a859-084c3b06b06d",
+            "cap_time_seconds": 21.504,
+            "color_b": 0,
+            "color_g": 223,
+            "color_r": 255,
+            "difficulty": 1,
+            "map": "CTF-BT-Qamariya-v2",
+            "members": null,
+            "user_id": "215435124773224459"
+          },
+          {
+            "active_title": null,
+            "added": "2026-11-01T21:35:32.019816",
+            "alias": "Vernon, Bugatti",
+            "cap_id": "82c7e569-7895-4f39-aa8b-3e9f97bc569c",
+            "cap_time_seconds": 99.347,
+            "color_b": null,
+            "color_g": null,
+            "color_r": null,
+            "difficulty": 4,
+            "map": "CTF-BT-II-FleurdelysV2",
+            "members": [
+              {
+                "active_title": {
+                  "color": "128,128,128",
+                  "color_b": 128,
+                  "color_g": 128,
+                  "color_r": 128,
+                  "id": "1000000000000000026",
+                  "name": "Going for Gold",
+                  "rarity": 1
+                },
+                "alias": "Vernon",
+                "cap_id": "b5908fce-d5c2-4d0f-9d41-24e246e35d0b",
+                "cap_time_seconds": 99.163,
+                "user": "247671958571843585",
+                "verified": true
+              },
+              {
+                "active_title": {
+                  "color": "206,137,70",
+                  "color_b": 70,
+                  "color_g": 137,
+                  "color_r": 206,
+                  "id": "1314949593699454986",
+                  "name": "World Cup '24 | Division 2: 3rd Place",
+                  "rarity": 3
+                },
+                "alias": "Bugatti",
+                "cap_id": "052830c2-9e0d-447c-b477-5c94f857c341",
+                "cap_time_seconds": 99.347,
+                "user": "287350843639070742",
+                "verified": true
+              }
+            ],
+            "team_size": 2,
+            "user_id": null
+          },
+          {
+            "active_title": {
+              "color": "200,150,248",
+              "color_b": 248,
+              "color_g": 150,
+              "color_r": 200,
+              "id": "1448458783238918144",
+              "name": "Puzzle Master",
+              "rarity": 4
+            },
+            "added": "2026-11-01T12:43:17.126052",
+            "alias": "Xclusive",
+            "cap_id": "8d742df9-2f14-4998-835c-3c16c1d1ee92",
+            "cap_time_seconds": 105.115,
+            "color_b": 248,
+            "color_g": 150,
+            "color_r": 200,
+            "difficulty": 3,
+            "map": "CTF-BT-HumanResources",
+            "members": null,
+            "user_id": "260007417478250497"
+          },
+          {
+            "active_title": {
+              "color": "255,223,0",
+              "color_b": 0,
+              "color_g": 223,
+              "color_r": 255,
+              "id": "1390465356081926284",
+              "name": "Fortune Teller",
+              "rarity": 1
+            },
+            "added": "2026-11-01T05:34:06.425353",
+            "alias": "TriHard",
+            "cap_id": "7beeddfb-4861-4186-8237-624c6caa4b5a",
+            "cap_time_seconds": 17.677,
+            "color_b": 0,
+            "color_g": 223,
+            "color_r": 255,
+            "difficulty": 2,
+            "map": "CTF-BT-(Slu)OverTheSpace",
+            "members": null,
+            "user_id": "215435124773224459"
+          },
+          {
+            "active_title": {
+              "color": "255,223,0",
+              "color_b": 0,
+              "color_g": 223,
+              "color_r": 255,
+              "id": "1390465356081926284",
+              "name": "Fortune Teller",
+              "rarity": 1
+            },
+            "added": "2026-10-31T23:59:01.563271",
+            "alias": "TriHard",
+            "cap_id": "87deea84-e707-49dd-aa9f-cbdad8808a6f",
+            "cap_time_seconds": 14.783,
+            "color_b": 0,
+            "color_g": 223,
+            "color_r": 255,
+            "difficulty": 2,
+            "map": "CTF-BT-(TR)UnrealDefrag(PX)_V2",
+            "members": null,
+            "user_id": "215435124773224459"
+          },
+          {
+            "active_title": {
+              "color": "70,175,205",
+              "color_b": 205,
+              "color_g": 175,
+              "color_r": 70,
+              "id": "1000000000000000056",
+              "name": "Untouchable",
+              "rarity": 4
+            },
+            "added": "2026-10-31T22:27:05.959814",
+            "alias": "ASG.PHILLIP",
+            "cap_id": "7b6cbe35-3695-4212-bfa3-2dc156d8a6a0",
+            "cap_time_seconds": 115.799,
+            "color_b": 205,
+            "color_g": 175,
+            "color_r": 70,
+            "difficulty": 7,
+            "map": "CTF-BT-DSILLFER-V2",
+            "members": null,
+            "user_id": "203755218804932608"
+          },
+          {
+            "active_title": {
+              "color": "255,215,0",
+              "color_b": 0,
+              "color_g": 215,
+              "color_r": 255,
+              "id": "846334094051770378",
+              "name": "2021 World Champion",
+              "rarity": 5
+            },
+            "added": "2026-10-31T20:13:26.331798",
+            "alias": "Nightwolf`",
+            "cap_id": "5f5fdf68-c628-4603-b1c5-29526f3b1fe1",
+            "cap_time_seconds": 49.194,
+            "color_b": 0,
+            "color_g": 215,
+            "color_r": 255,
+            "difficulty": 4,
+            "map": "CTF-BT-Drop&Hop_Level1",
+            "members": null,
+            "user_id": "290456398251425792"
+          },
+          {
+            "active_title": {
+              "color": "255,215,0",
+              "color_b": 0,
+              "color_g": 215,
+              "color_r": 255,
+              "id": "1311645023078711318",
+              "name": "2024 World Champion",
+              "rarity": 5
+            },
+            "added": "2026-10-31T13:12:25.952661",
+            "alias": "ASG.Naru",
+            "cap_id": "c0d6a0ce-994e-46ee-8d55-dc192d408a5b",
+            "cap_time_seconds": 87.924,
+            "color_b": 0,
+            "color_g": 215,
+            "color_r": 255,
+            "difficulty": 4,
+            "map": "CTF-BT-Eternity",
+            "members": null,
+            "user_id": "1044388201135087656"
+          },
+          {
+            "active_title": {
+              "color": "255,223,0",
+              "color_b": 0,
+              "color_g": 223,
+              "color_r": 255,
+              "id": "1390465356081926284",
+              "name": "Fortune Teller",
+              "rarity": 1
+            },
+            "added": "2026-10-31T04:35:57.743620",
+            "alias": "TriHard",
+            "cap_id": "83676d05-96ce-48f4-b8a6-f19a5ecd0c34",
+            "cap_time_seconds": 4.152,
+            "color_b": 0,
+            "color_g": 223,
+            "color_r": 255,
+            "difficulty": 7,
+            "map": "CTF-BT-LEVEL7",
+            "members": null,
+            "user_id": "215435124773224459"
+          },
+          {
+            "active_title": {
+              "color": "255,223,0",
+              "color_b": 0,
+              "color_g": 223,
+              "color_r": 255,
+              "id": "1390465356081926284",
+              "name": "Fortune Teller",
+              "rarity": 1
+            },
+            "added": "2026-10-31T03:46:36.414575",
+            "alias": "TriHard",
+            "cap_id": "29c69767-a091-4d6a-a0ae-503ebcae5e82",
+            "cap_time_seconds": 2.71,
+            "color_b": 0,
+            "color_g": 223,
+            "color_r": 255,
+            "difficulty": 1,
+            "map": "CTF-BT-(Cal)Bounce!-i4g",
+            "members": null,
+            "user_id": "215435124773224459"
+          }
+        ],
+        "success": true
+      }
+    },
+    {
+      "host": "api",
+      "path": "/v2/world_records",
+      "query": "limit=10&offset=10&sort=desc&sort_by=added",
+      "status": 200,
+      "body": {
+        "data": [
+          {
+            "active_title": {
+              "color": "255,223,0",
+              "color_b": 0,
+              "color_g": 223,
+              "color_r": 255,
+              "id": "1390465356081926284",
+              "name": "Fortune Teller",
+              "rarity": 1
+            },
+            "added": "2026-10-31T03:21:10.153183",
+            "alias": "TriHard",
+            "cap_id": "6956ccd6-9c6f-4739-90be-c7ccf8944b27",
+            "cap_time_seconds": 8.277,
+            "color_b": 0,
+            "color_g": 223,
+            "color_r": 255,
+            "difficulty": 1,
+            "map": "CTF-BT-3pullthetriggerbaby",
+            "members": null,
+            "user_id": "215435124773224459"
+          },
+          {
+            "active_title": {
+              "color": "255,223,0",
+              "color_b": 0,
+              "color_g": 223,
+              "color_r": 255,
+              "id": "1390465356081926284",
+              "name": "Fortune Teller",
+              "rarity": 1
+            },
+            "added": "2026-10-31T01:30:30.248379",
+            "alias": "TriHard",
+            "cap_id": "94a3d3c8-b667-4f10-8a73-92ca7ecd8f57",
+            "cap_time_seconds": 26.809,
+            "color_b": 0,
+            "color_g": 223,
+            "color_r": 255,
+            "difficulty": 5,
+            "map": "CTF-BT-Surf-TestMap1",
+            "members": null,
+            "user_id": "215435124773224459"
+          },
+          {
+            "active_title": {
+              "color": "255,223,0",
+              "color_b": 0,
+              "color_g": 223,
+              "color_r": 255,
+              "id": "1390465356081926284",
+              "name": "Fortune Teller",
+              "rarity": 1
+            },
+            "added": "2026-10-30T22:18:41.290975",
+            "alias": "TriHard",
+            "cap_id": "9c555b9a-f299-45cf-bda7-f61c6a213fc4",
+            "cap_time_seconds": 5.092,
+            "color_b": 0,
+            "color_g": 223,
+            "color_r": 255,
+            "difficulty": 1,
+            "map": "CTF-BT-8-seconds-vF",
+            "members": null,
+            "user_id": "215435124773224459"
+          },
+          {
+            "active_title": {
+              "color": "196,56,56",
+              "color_b": 56,
+              "color_g": 56,
+              "color_r": 196,
+              "id": "1000000000000000033",
+              "name": "Reigning Champion",
+              "rarity": 3
+            },
+            "added": "2026-10-30T20:20:45.833801",
+            "alias": "ASG.noaction",
+            "cap_id": "2ebaa78d-fb76-4d5b-acdb-3e9a895172d7",
+            "cap_time_seconds": 79.78,
+            "color_b": 56,
+            "color_g": 56,
+            "color_r": 196,
+            "difficulty": 3,
+            "map": "CTF-BT-[KAI]-Gasometer",
+            "members": null,
+            "user_id": "149146615020519424"
+          },
+          {
+            "active_title": null,
+            "added": "2026-10-30T17:08:00.268318",
+            "alias": "Vernon, Bugatti",
+            "cap_id": "ef3a434c-0399-4ad8-b4d6-ca914c13eb48",
+            "cap_time_seconds": 133.911,
+            "color_b": null,
+            "color_g": null,
+            "color_r": null,
+            "difficulty": 7,
+            "map": "CTF-BT-II-FuriumMineCE2",
+            "members": [
+              {
+                "active_title": {
+                  "color": "128,128,128",
+                  "color_b": 128,
+                  "color_g": 128,
+                  "color_r": 128,
+                  "id": "1000000000000000026",
+                  "name": "Going for Gold",
+                  "rarity": 1
+                },
+                "alias": "Vernon",
+                "cap_id": "100f479e-b4ef-478f-8617-7d9d0c3d6d22",
+                "cap_time_seconds": 133.399,
+                "user": "247671958571843585",
+                "verified": true
+              },
+              {
+                "active_title": {
+                  "color": "206,137,70",
+                  "color_b": 70,
+                  "color_g": 137,
+                  "color_r": 206,
+                  "id": "1314949593699454986",
+                  "name": "World Cup '24 | Division 2: 3rd Place",
+                  "rarity": 3
+                },
+                "alias": "Bugatti",
+                "cap_id": "288eb6da-f2bd-4723-936a-86e1616e9f59",
+                "cap_time_seconds": 133.911,
+                "user": "287350843639070742",
+                "verified": true
+              }
+            ],
+            "team_size": 2,
+            "user_id": null
+          },
+          {
+            "active_title": {
+              "color": "200,70,170",
+              "color_b": 170,
+              "color_g": 70,
+              "color_r": 200,
+              "id": "1000000000000000043",
+              "name": "Trophy Hoarder",
+              "rarity": 3
+            },
+            "added": "2026-10-30T11:25:30.958327",
+            "alias": "glad",
+            "cap_id": "07c7bf63-d3d7-49a0-9c64-28f2e3b35c98",
+            "cap_time_seconds": 165.353,
+            "color_b": 170,
+            "color_g": 70,
+            "color_r": 200,
+            "difficulty": 7,
+            "map": "CTF-BT-Tartarus-v2",
+            "members": null,
+            "user_id": "790880165097504768"
+          },
+          {
+            "active_title": {
+              "color": "255,223,0",
+              "color_b": 0,
+              "color_g": 223,
+              "color_r": 255,
+              "id": "1390465356081926284",
+              "name": "Fortune Teller",
+              "rarity": 1
+            },
+            "added": "2026-10-30T04:32:07.451413",
+            "alias": "TriHard",
+            "cap_id": "a856cc1a-8a4c-4201-9a65-0de6f956708d",
+            "cap_time_seconds": 20.991,
+            "color_b": 0,
+            "color_g": 223,
+            "color_r": 255,
+            "difficulty": 1,
+            "map": "CTF-BT-(goku)-CarPark",
+            "members": null,
+            "user_id": "215435124773224459"
+          },
+          {
+            "active_title": {
+              "color": "255,223,0",
+              "color_b": 0,
+              "color_g": 223,
+              "color_r": 255,
+              "id": "1390465356081926284",
+              "name": "Fortune Teller",
+              "rarity": 1
+            },
+            "added": "2026-10-30T04:15:27.358094",
+            "alias": "TriHard",
+            "cap_id": "8ea88430-d02f-4ecd-bf61-cf323d7e2ff6",
+            "cap_time_seconds": 12.451,
+            "color_b": 0,
+            "color_g": 223,
+            "color_r": 255,
+            "difficulty": 1,
+            "map": "CTF-BT-(Keu)EasyForNoobs",
+            "members": null,
+            "user_id": "215435124773224459"
+          },
+          {
+            "active_title": {
+              "color": "255,223,0",
+              "color_b": 0,
+              "color_g": 223,
+              "color_r": 255,
+              "id": "1390465356081926284",
+              "name": "Fortune Teller",
+              "rarity": 1
+            },
+            "added": "2026-10-30T03:49:40.657672",
+            "alias": "TriHard",
+            "cap_id": "dd4bd13b-817a-48e5-a2b3-d44a9e27ca7f",
+            "cap_time_seconds": 19.777,
+            "color_b": 0,
+            "color_g": 223,
+            "color_r": 255,
+            "difficulty": 1,
+            "map": "CTF-BT-NoobShit-HV",
+            "members": null,
+            "user_id": "215435124773224459"
+          },
+          {
+            "active_title": {
+              "color": "255,223,0",
+              "color_b": 0,
+              "color_g": 223,
+              "color_r": 255,
+              "id": "1390465356081926284",
+              "name": "Fortune Teller",
+              "rarity": 1
+            },
+            "added": "2026-10-30T03:27:08.339625",
+            "alias": "TriHard",
+            "cap_id": "c4a7e98f-5325-432f-ad56-1dfa6c06930e",
+            "cap_time_seconds": 33.543,
+            "color_b": 0,
+            "color_g": 223,
+            "color_r": 255,
+            "difficulty": 3,
+            "map": "CTF-BT-shitfest-4-14",
+            "members": null,
+            "user_id": "215435124773224459"
+          }
+        ],
+        "success": true
+      }
+    },
+    {
+      "host": "gateway",
+      "path": "/patreon",
+      "query": "",
+      "status": 200,
+      "body": {
+        "tier1": [
+          "290449564887023617",
+          "238598150888095744",
+          "790880165097504768",
+          "270897034796466176",
+          "414164967999406090"
+        ],
+        "tier2": [
+          "242091482541064192",
+          "318842484446724106",
+          "260007417478250497"
+        ],
+        "tier3": [
+          "185318594270330880",
+          "265561225428074496"
+        ]
+      }
+    },
+    {
+      "host": "gateway",
+      "path": "/replays/8d742df9-2f14-4998-835c-3c16c1d1ee92",
+      "query": "",
+      "status": 200,
+      "body": {
+        "source": "utrecorder",
+        "mp4_url": "https://recorder.utbt.net/mp4/8d742df9-2f14-4998-835c-3c16c1d1ee92",
+        "view_url": "https://recorder.utbt.net/view/8d742df9-2f14-4998-835c-3c16c1d1ee92",
+        "fps": 60
+      }
+    }
+  ]
+}

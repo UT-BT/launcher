@@ -17,7 +17,7 @@ import { MODAL_ROOT } from './manifest/types'
 import { installProbe } from './rules/probe'
 import { settleLayout } from './settle'
 
-const compareRun = capDetail.modals!.find(modal => modal.id === 'compare-run')!
+const compareRuns = capDetail.modals!.find(modal => modal.id === 'compare-runs')!
 const ZOOM = 2
 
 test.beforeEach(async ({ page }) => {
@@ -37,7 +37,7 @@ test('owner repro: Compare runs, landscape, zoom, portrait, then close, menu and
     await installProbe(page)
 
     await test.step('open Compare runs on the cap page', async () => {
-        await compareRun.open(page)
+        await compareRuns.open(page)
         await settleLayout(page)
         expect.soft((await checkModal(page, MODAL_ROOT)).problems, 'portrait: the modal fits and its close control can be tapped').toEqual([])
     })

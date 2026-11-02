@@ -1,4 +1,4 @@
-import { HOME_RECORDS } from '../fixtures/home'
+import { listed, recordShown, rowsOf, watchesReplay } from './steps'
 import type { MobileRouteEntry } from './types'
 
 export const home: MobileRouteEntry = {
@@ -6,8 +6,20 @@ export const home: MobileRouteEntry = {
     tier: 'public',
     path: '/',
     fixtures: 'home',
-    ready: async page => {
-        await page.getByRole('heading', { name: 'Latest World Records' }).waitFor()
-        await page.getByText(HOME_RECORDS[0].alias!, { exact: true }).first().waitFor()
-    },
+    ready: listed({
+        heading: 'Latest World Records',
+        rows: data => rowsOf(data.api('/v2/summary'), 'recentWorldRecords'),
+        label: recordShown,
+        empty: /^No (world )?records/i,
+    }),
+    stress: { pr: 'long-text' },
+    modals: [
+        {
+            id: 'watch-replay',
+            label: 'Replay video',
+            open: watchesReplay(page => page.locator('section').filter({
+                has: page.getByRole('heading', { name: 'Latest World Records' }),
+            })),
+        },
+    ],
 }

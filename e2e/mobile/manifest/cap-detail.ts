@@ -1,23 +1,42 @@
-import { CAP_ID, FIRST_RIVAL_ALIAS } from '../fixtures/cap-detail'
-import type { MobileRouteEntry } from './types'
+import type { Page } from '@playwright/test'
+import { modalHeading, opens, shows } from './steps'
+import type { MobileRouteEntry, PageStep } from './types'
+
+export const CAP_ID = '258021df-51b1-4ed3-99cc-62d4e75892a7'
+
+const firstRival = (page: Page) => page.locator('[data-modal-backdrop] [role="button"][aria-disabled="false"]').first()
+
+const openPicker: PageStep = async page => {
+    await page.getByRole('button', { name: 'Compare Run' }).click()
+    await modalHeading(page, /^Compare run/).waitFor()
+    await firstRival(page).waitFor()
+}
 
 export const capDetail: MobileRouteEntry = {
     view: 'cap-detail',
     tier: 'public',
     path: `/caps/${CAP_ID}`,
     fixtures: 'cap-detail',
-    ready: async page => {
-        await page.getByText('Checkpoint Deltas', { exact: true }).waitFor()
-    },
+    ready: shows(page => page.getByRole('button', { name: 'Watch Replay' })),
     modals: [
         {
             id: 'compare-run',
             label: 'Compare run picker',
+            open: openPicker,
+        },
+        {
+            id: 'compare-runs',
+            label: 'Compare runs video',
             open: async page => {
-                await page.getByRole('button', { name: 'Compare Run' }).click()
-                await page.getByRole('heading', { name: /^Compare run/ }).waitFor()
-                await page.locator('[role="button"][aria-disabled="false"]', { hasText: FIRST_RIVAL_ALIAS }).waitFor()
+                await openPicker(page)
+                await firstRival(page).click()
+                await modalHeading(page, /^Replay Comparison/).waitFor()
             },
+        },
+        {
+            id: 'watch-replay',
+            label: 'Replay video',
+            open: opens(page => page.getByRole('button', { name: 'Watch Replay' }), /^Replay/),
         },
     ],
 }

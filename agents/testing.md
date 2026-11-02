@@ -14,7 +14,7 @@ gate goes red. Commands and the pre-commit gate are in [build.md](build.md).
 | `lib/main/*.test.ts` | main-process services against a real temp folder; two suites are Windows-only |
 | `e2e/*.spec.ts` | Playwright specs for the app, run in `desktop-chromium` and `mobile-chromium` |
 | `e2e/*.broadcast.spec.ts` | Playwright specs for OBS scene pages, run only in `broadcast` |
-| `e2e/mobile/` | the mobile suite: crawl, route manifest, fixture router, rules, known-violations ledger, gallery reporter, and Vitest files for its pure logic ([Mobile suite](#mobile-suite)) |
+| `e2e/mobile/` | the mobile suite: crawl, route manifest, recorded fixtures and their refresh script, fixture router, stress variants, rules, known-violations ledger, gallery reporter, and Vitest files for its pure logic ([Mobile suite](#mobile-suite)) |
 | `e2e/__screenshots__/` | committed screenshot baselines, one folder per spec file |
 | `e2e/streamHarness.ts` | fake API plus open, settle and screenshot helpers for scene specs |
 | `e2e/sidebarRail.ts`, `e2e/layout.ts`, `e2e/streamPanels.ts` | shared spec helpers: the catch-all `mockApi`, `horizontalOverflow`, `openStreamPanel` |
@@ -288,13 +288,15 @@ never runs it.
 | Command | Runs |
 |---|---|
 | `npm run test:mobile` | the PR subset: WebKit at 390×844 and 844×390, Chromium at 360×780 and 915×412, plus every other `e2e/mobile/*.spec.ts` (interaction specs) on both engines |
-| `npm run test:mobile:full` | every viewport in `e2e/mobile/viewports.ts` on both engines, about 10 minutes locally |
+| `npm run test:mobile:full` | every viewport in `e2e/mobile/viewports.ts` on both engines, with every stress variant: several hours locally, so narrow it with `-g` |
 | `npm run test:mobile:ledger`, `npm run test:mobile:ledger:full` | the same two runs in ledger mode: a rule result never fails a test, and the run rewrites `e2e/mobile/ledger/` ([Known-violations ledger](#known-violations-ledger)) |
+| `npm run test:mobile:refresh-fixtures` | re-records the public fixture sets from the live public API ([Test data](#test-data)) |
 
 Narrow a run with `-- -g <surface or viewport>`, for example `npm run test:mobile -- -g cap-detail`
-or `-g 390x844`. All four read `E2E_PORT` through the config, and all four crawl the built bundle
-([Built bundle](#how-specs-reach-the-app)); `npx playwright test e2e/mobile/...` without a script
-crawls the dev server. WebKit must be installed: `npx playwright install webkit chromium`.
+or `-g 390x844`. All five read `E2E_PORT` through the config. The four `test:mobile` and
+`test:mobile:ledger` scripts crawl the built bundle ([Built bundle](#how-specs-reach-the-app));
+`test:mobile:refresh-fixtures` and `npx playwright test e2e/mobile/...` without a script use the
+dev server. WebKit must be installed: `npx playwright install webkit chromium`.
 
 The projects are `mobile-suite-webkit` (iPhone 14 base) and `mobile-suite-chromium` (Pixel 7 base),
 both with touch and `isMobile`, seasonal decor off, and each test at its own viewport and screen
@@ -308,7 +310,10 @@ on both engines at the project's default size (390×844 and 360×780).
 `e2e/mobile/manifest/<view>.ts` holds one entry per route-contract view id, and
 `manifest/index.ts` collects them in `MOBILE_MANIFEST`. It is test-side only and never ships in
 `route-contract.json`. Manifest modules import only types from Playwright (no `test`, no `expect`),
-so Vitest can import them too; waits use locator `waitFor()`.
+so Vitest can import them too; waits use locator `waitFor()`. The step helpers they share (`listed`,
+`recordShown`, `rowsOf`, `heading`, `shows`, `text`, `tap`, `steps`, `opens`, `opensWhenShown`,
+`watchesReplay`, `modalHeading`, `seen`) and the shared `watchRun` and `wrHistory` modals are in
+`manifest/steps.ts`.
 
 | Field | Holds |
 |---|---|
@@ -316,15 +321,29 @@ so Vitest can import them too; waits use locator `waitFor()`.
 | `tier` | `public` or `role-gated` |
 | `path` | the URL that opens the view |
 | `fixtures` | the name of a fixture set in `e2e/mobile/fixtures/index.ts` |
-| `ready` | waits on measurable state that says the page shows its data, such as a heading or a fixture row; never a timeout |
+| `ready` | waits on measurable state that says the page shows its data, such as a heading or a fixture row; never a timeout. Steps receive the served set's data (`data.api(path, query)`, `data.gateway(path, query)`), so a list page waits for its first served row, or for its empty text when a stress variant served none |
 | `storage` | `localStorage` seeds, such as a tutorial already seen. Analytics consent is always seeded `denied` |
-| `subViews` | tabs and sub-views: `id`, `label`, and either `path` (reached by URL) or `open` (an action on the entry's page), plus optional `ready`, `modals` and `skip` |
+| `subViews` | tabs and sub-views: `id`, `label`, and either `path` (reached by URL) or `open` (an action on the entry's page), plus `ready` (optional, required with `open`: `manifest.test.ts` checks it), `modals`, `stress` and `skip` |
 | `modals` | `id`, `label`, `open` (acts, then waits until the modal shows its content), an optional `root` (the CSS selector the rules measure, `[data-modal-backdrop]` by default) and `skip` |
+| `stress` | `{ pr: <variant> }` on a page or tab that shows a table or list: the full matrix crawls it with every [stress variant](#stress-variants), the PR subset with the one named |
 | `skip` | `{ rule, reason }` for each rule that does not apply, with the reason |
 
 Each entry yields the surfaces `<view>`, `<view>/<modal>`, `<view>/<subView>` and
-`<view>/<subView>/<modal>`. That surface id keys the ledger, the gallery and the test titles. The
-entries so far: `home`, `maps` (with `maps/new`) and `cap-detail` (with `cap-detail/compare-run`).
+`<view>/<subView>/<modal>`, and `<surface>~<variant>` for each stress variant crawled. That surface
+id keys the ledger, the gallery and the test titles.
+
+Every public view of the route contract has an entry, with every tab an anonymous visitor sees and
+every modal it can open by tapping. History, settings and the other signed-in modals belong to the
+role-gated entries. A modal that needs data a recording may lack, such as WR progression on a map
+without a record history, opens through `opensWhenShown`, which leaves the page as it is when the
+trigger is not on screen. `watchesReplay` taps the visible replay buttons in turn, closing "Replay
+not available" until a replay video opens. When either leaves no modal open, the rules that measure
+the modal's root report `n/a`, but `rotation-recovers` fails with "the modal is not open": the
+portrait `rotation-recovers` entries on `watch-run` and `wr-progression` surfaces record a trigger
+phones don't show, not a rotation bug. A trigger that lives only in table rows phones show as cards
+is not crawled until the cards expose it: the Maps page's reviews and Demos (15). Event tabs that
+show only while signups are open (`players`, `signup`) or only to signed-in staff (`stream`,
+`manage`) are not crawled on the public event.
 
 ### Fixture router
 
@@ -333,20 +352,69 @@ routes `{ host: 'api' | 'gateway', path, reply }`. `path` is an exact path witho
 or a `RegExp`; `reply` is a response or a function of the request URL, and `ok(data)` wraps the
 `{ success, data }` envelope. An API request no route answers falls back to `mockApi` from
 `e2e/sidebarRail.ts`. Any other request off the dev server gets a blank PNG (images) or a 404, so no
-request leaves the machine. The sets so far are builder-made: Home and Maps from typed builders in
-their set modules, the cap page from the run-compare golden fixtures.
+request leaves the machine. `fixtureSetNamed(name)` in `fixtures/index.ts` resolves a set name, and
+`<set>~<variant>` resolves to that set with a stress variant applied to every reply.
+
+### Test data
+
+Public entries are served **recorded** sets: snapshots of public API responses in
+`e2e/mobile/fixtures/recorded/<set>.json`, one file per set named in `RECORDED_SETS`
+(`fixtures/index.ts`). A file holds `{ set, responses }`; each response is `{ host, path, query,
+status, body }`, sorted by host, path and query. `fixtures/recording.ts` turns a file into a set. A
+request gets the response with the same path and the same query, whatever the parameter order, or
+else the response for that path whose query shares the most parameters. That keeps date-stamped
+queries (the Maps page's "new since" filter) and later pages answered after the clock moves on.
+Role-gated entries use synthetic sets.
+
+**Refresh** with `npm run test:mobile:refresh-fixtures`, or `-- -g <set>` for one set. It runs
+`e2e/mobile/refresh-fixtures.ts` under `e2e/mobile/refresh.config.ts`: the dev server on
+`E2E_PORT`, a Chromium phone at 390×844 and again at 844×390 (so triggers shown only from
+landscape up, such as table-row replays, record their data), and every public entry's PR-subset
+surfaces opened with the entry's own steps. Each GET to the public API goes out without
+credentials, cookies or cache validators, and its answer is recorded; nothing else leaves the
+machine. It writes one file per set, so a re-run reproduces the same layout and the diff shows only
+what the API now says. When a surface no longer opens, it still writes the file and then fails:
+the entry's ids or `ready` step name data the API no longer has, so update the entry.
+
+The script records only public data the site already shows:
+
+- `fixtures/scrub.ts` drops every field whose key names a credential, contact or hardware value
+  (token, secret, password, email, hardware or machine id, MAC address, fingerprint, cookie, API
+  key), the admin anti-cheat values whose names the shared API types declare (`btpog`,
+  `client_cap_delta`, `set_fps`), and every field name the public client never reads
+  (`fixtures/client-fields.ts` collects the identifiers in `app/`, admin pages excluded). It
+  replaces each IPv4 address with its own `192.0.2.<n>` and an email address inside text with
+  `[email removed]`.
+- A list longer than 300 items is cut to 300, keeping the items other responses in the set mention.
+- Before committing a refresh, grep the files for tokens, emails, IP addresses and hardware ids. The
+  only addresses allowed are the `192.0.2.0/24` replacements.
+
+### Stress variants
+
+`fixtures/stress.ts` derives four variants from any set, so they need no recording of their own:
+
+| Variant | Every reply |
+|---|---|
+| `long-text` | aliases, names, titles and hostnames in list rows get a long suffix, map names a longer one; ids, numbers and detail objects stay as they are |
+| `most-columns` | in each list, every row's empty optional field is filled from another row, so every optional column shows |
+| `empty` | every list is emptied and every `count` is 0 |
+| `single-row` | every list keeps its first row and every `count` is at most 1 |
+
+An entry or tab opts in with `stress: { pr: <variant> }`. The full matrix crawls every variant there
+(`<surface>~<variant>`); the PR subset crawls the default set plus the one variant named.
 
 ### Rules
 
-Each crawl test opens one surface at one viewport on one engine. It waits for the layout to settle:
-fonts loaded, on-screen images complete, no finite animation running, and the same layout signature
-for three animation frames. Then it runs each rule as a `test.step`: first the rules that only
-measure, then the gallery shot, then the interaction rules, which close the modal, scroll, navigate
-or rotate, in the table's order. Crawl tests are marked `test.slow()`, so each gets 90 s. Boxes are
-measured against `window.visualViewport`. On a modal surface, tap targets, form controls, axe and
-`modal-fits` measure only the modal's root, and the top bar rule does not apply. An interaction rule
-that throws, for example because a tap target never appears, reports `fail` with "the rule could not
-finish" instead of ending the test.
+Each crawl test opens one surface at one viewport on one engine, with a 60 s base timeout (WebKit
+needs about 20 s for a large recorded page, and close to 30 s on a busy machine). It waits for the
+layout to settle: fonts loaded, on-screen images complete, no finite animation running, and the
+same layout signature for three animation frames. Then it runs each rule as a `test.step`: first
+the rules that only measure, then the gallery shot, then the interaction rules, which close the
+modal, scroll, navigate or rotate, in the table's order. Crawl tests are marked `test.slow()`, which
+triples that to 180 s. Boxes are measured against `window.visualViewport`. On a modal surface, tap
+targets, form controls, axe and `modal-fits` measure only the modal's root, and the top bar rule
+does not apply. An interaction rule that throws, for example because a tap target never appears,
+reports `fail` with "the rule could not finish" instead of ending the test.
 
 When the error boundary or the dev server's error overlay shows while a surface opens, the crawl
 stops opening it and runs the rules on what is on screen. A crash then fails `no-error-boundary`,
@@ -363,7 +431,7 @@ its modal, the rules that measure the modal's root report `n/a`.
 | `tap-targets-44px` | every rendered, enabled link, button, input, select, summary and ARIA widget is at least 44×44 px. A link inside a sentence is exempt, and a checkbox or radio is measured by its label |
 | `modal-fits` | on a modal surface, the top-most modal's box sits inside the visual viewport, points along its top and bottom edges hit the box, and its close control (a button whose label or text starts with "Close") sits inside the visual viewport with `elementFromPoint` at its centre hitting the control. `n/a` on a page surface |
 | `scroll-top-after-modal` | on a modal surface, tapping the close control closes the modal, and after a swipe that moves the page down one viewport height and a swipe back to the top the page is at the real top (below). A down swipe that scrolls nothing while `main` holds more than it shows fails, so a page left locked by the modal is caught. If the tap fails or the control can't be tapped, Escape closes the modal and the detail says so; a modal neither closes fails. `n/a` on a page surface |
-| `back-restores-scroll` | on a page surface, after a swipe of one viewport height, a new navigation through the drawer (to World Records, or Home from World Records) starts at the top, and Back returns the swiped scroller to within 4 px of where it was. `n/a` on a modal surface or when nothing scrolls |
+| `back-restores-scroll` | on a page surface, after a swipe of one viewport height, a new navigation through the drawer (to World Records, or Home from World Records) starts at the top, and Back returns the swiped scroller to within 4 px of where it was, measured once the surface's own `ready` (its tab's or sub-view's, else the page's) holds again. `n/a` on a modal surface or when nothing scrolls |
 | `rotation-recovers` | after the viewport's width and height are swapped, a modal surface's modal (reopened if an earlier rule closed it) still passes the `modal-fits` checks and closes, and after a swipe that moves the page down one viewport height, scrolling to the top reaches the real top. The page stays rotated, so this rule runs last |
 
 **The real top** means the window and the visual viewport sit at 0,0, `main` and every rendered
@@ -390,11 +458,11 @@ the helpers in `e2e/mobile/interactions.ts` (`checkModal`, `closeModal`, `rotate
 `scrollPositionProblems`, `topOfPageProblems`, `tapCentre`, `zoomVisualViewport`). An interaction
 spec that is red today is marked `test.fail()`, with a note naming the ticket that flips it.
 
-- `owner-repro.spec.ts`, the owner's reported bug: Compare runs on the cap page, landscape, zoom in
-  and out, portrait, then the close control closes the modal, the hamburger opens the drawer and a
-  swipe scrolls the page back to the real top. It passes in emulation since the shared modal opens
-  as a sheet portalled above the top bar; what a real pinch and rotation leave behind on iOS stays
-  on the manual iPhone checklist.
+- `owner-repro.spec.ts`, the owner's reported bug: the Compare runs video (`cap-detail`'s
+  `compare-runs` modal) on the cap page, landscape, zoom in and out, portrait, then the close
+  control closes the modal, the hamburger opens the drawer and a swipe scrolls the page back to the
+  real top. It passes in emulation since the shared modal opens as a sheet portalled above the top
+  bar; what a real pinch and rotation leave behind on iOS stays on the manual iPhone checklist.
 - `modal-sheet.spec.ts`: a page modal opens as a sheet over the top bar that fills the visible area
   in portrait and at 844×390, and a swipe inside a sheet scrolls only its body while the header and
   close stay in view.
@@ -422,10 +490,16 @@ A rule the manifest skips does not run, so it never judges. `e2e/mobile/manifest
 fails on an entry for an unknown surface, viewport or engine, for a rule the manifest skips there, on
 a duplicate, and on a file for an unknown rule.
 
-**Regenerate** with `npm run test:mobile:ledger`, or `npm run test:mobile:ledger:full` for the
-full matrix, narrowed with `-- -g` if you like. The run rewrites only the surface, rule, viewport
-and engine combinations it ran: failures go in, passes come out, and everything it did not run
-stays. Both matrices are seeded.
+**Regenerate** with `npm run test:mobile:ledger`, or `npm run test:mobile:ledger:full` for the full
+matrix, narrowed with `-- -g` if you like. The gallery reporter writes the ledger, so a `--reporter`
+override must keep `./e2e/mobile/gallery-reporter.ts`. The run rewrites only the surface, rule,
+viewport and engine combinations it ran: failures go in, passes come out, and everything it did not
+run stays. The PR subset is seeded for every surface. The full matrix is seeded only for `home`,
+`maps`, `maps/new`, `cap-detail`, `cap-detail/compare-run` and the `news` stress variants at the
+viewports outside the PR subset, and those entries predate the modal, rotation and scroll rules and,
+for all but the `news` variants, the recorded data. The other stress variants the PR subset does not
+crawl hold only the entries of a partial run. Seed the rest with `npm run test:mobile:ledger:full`
+before a full run gates anything.
 
 - A fix deletes the entries it fixes, by hand or by regenerating after the fix.
 - Only a failure that predates your change goes in. Fix a regression your change caused instead of
