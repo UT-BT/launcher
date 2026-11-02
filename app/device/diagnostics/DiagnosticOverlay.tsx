@@ -1,6 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { Button } from '@/app/components/ui/button'
 import { useNavigation } from '@/app/components/navigation/NavigationContext'
+import { scrollLockCount } from '@/app/components/ui/scrollLock'
 import { getDeviceEnvironment, subscribeDeviceEnvironment } from '../useDeviceEnvironment'
 import { diagnosticRows, formatDiagnosticReport, type DiagnosticSample, type Insets } from './mobileDiagnostics'
 
@@ -70,7 +71,7 @@ function measure(probe: HTMLElement | null): Measurement {
         shellScroll: readShellScroll(),
         safeArea: readSafeArea(probe),
         openModals: countOpenModals(),
-        scrollLocks: null,
+        scrollLocks: scrollLockCount(),
         path: window.location.pathname + window.location.search,
     }
 }

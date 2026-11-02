@@ -17,7 +17,7 @@ export interface DiagnosticSample {
     shellScroll: { top: number; max: number } | null
     safeArea: Insets
     openModals: number
-    scrollLocks: number | null
+    scrollLocks: number
     activeView: string
     activeParams: NavParams
     path: string
@@ -58,7 +58,7 @@ export function diagnosticRows(sample: DiagnosticSample): DiagnosticRow[] {
         { label: 'Below lg', value: yesNo(environment.belowLg) },
         { label: 'Safe area', value: `top ${num(safeArea.top)}, right ${num(safeArea.right)}, bottom ${num(safeArea.bottom)}, left ${num(safeArea.left)}` },
         { label: 'Open modals', value: String(sample.openModals) },
-        { label: 'Scroll locks', value: sample.scrollLocks === null ? 'n/a' : String(sample.scrollLocks) },
+        { label: 'Scroll locks', value: String(sample.scrollLocks) },
         { label: 'Active view', value: viewLabel(sample.activeView, sample.activeParams) },
         { label: 'Path', value: sample.path },
     ]

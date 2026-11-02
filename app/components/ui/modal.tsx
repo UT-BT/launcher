@@ -1,10 +1,12 @@
 import { Button } from '@/app/components/ui/button'
 import { X } from 'lucide-react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
 import { getDeviceEnvironment, subscribeDeviceEnvironment } from '@/app/device/useDeviceEnvironment'
 import { sheetBounds } from './modalSheet'
+import { focusFirst, isTopMostModal, openerOf, returnFocus, trapTab } from './modalFocus'
+import { lockShellScroll } from './scrollLock'
 
 interface ModalProps {
     isOpen: boolean
@@ -42,20 +44,19 @@ export function Modal({
     const closeButtonRef = useRef<HTMLButtonElement>(null)
     const pressedBackdrop = useRef(false)
 
+    useLayoutEffect(() => {
+        if (!isOpen) return
+        return lockShellScroll()
+    }, [isOpen])
+
     useEffect(() => {
         if (!isOpen) return
 
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                // Check if this is the top-most modal
-                const backdrops = document.querySelectorAll('[data-modal-backdrop]')
-                const isTopMost = backdrops[backdrops.length - 1] === modalRef.current?.parentElement
-
-                if (isTopMost) {
-                    e.preventDefault()
-                    e.stopImmediatePropagation()
-                    onClose()
-                }
+            if (e.key === 'Escape' && modalRef.current && isTopMostModal(modalRef.current)) {
+                e.preventDefault()
+                e.stopImmediatePropagation()
+                onClose()
             }
         }
 
@@ -64,43 +65,21 @@ export function Modal({
     }, [isOpen, onClose])
 
     useEffect(() => {
-        if (!isOpen || !modalRef.current) return
+        const panel = modalRef.current
+        if (!isOpen || !panel) return
 
-        const modalElement = modalRef.current
-        const focusableElements = modalElement.querySelectorAll<HTMLElement>(
-            'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]), [role="button"], [role="link"]'
-        )
-
-        if (focusableElements.length === 0) {
-            modalElement.focus()
-            return
-        }
-
-        const firstElement = focusableElements[0]
-        const lastElement = focusableElements[focusableElements.length - 1]
-
-        if (firstElement) {
-            firstElement.focus()
-        }
+        const opener = openerOf(panel)
+        focusFirst(panel)
 
         const handleTabKey = (e: KeyboardEvent) => {
-            if (e.key !== 'Tab') return
-
-            if (e.shiftKey) {
-                if (document.activeElement === firstElement) {
-                    e.preventDefault()
-                    lastElement?.focus()
-                }
-            } else {
-                if (document.activeElement === lastElement) {
-                    e.preventDefault()
-                    firstElement?.focus()
-                }
-            }
+            if (e.key === 'Tab' && !e.defaultPrevented && isTopMostModal(panel)) trapTab(e, panel)
         }
 
-        modalElement.addEventListener('keydown', handleTabKey)
-        return () => modalElement.removeEventListener('keydown', handleTabKey)
+        document.addEventListener('keydown', handleTabKey)
+        return () => {
+            document.removeEventListener('keydown', handleTabKey)
+            returnFocus(opener, panel)
+        }
     }, [isOpen])
 
     useEffect(() => {
@@ -164,7 +143,7 @@ export function Modal({
                 </div>
 
                 {/* Content */}
-                <div className="p-4 sm:p-6 overflow-y-auto flex-1">
+                <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain flex-1">
                     {children}
                 </div>
 

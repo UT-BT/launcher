@@ -232,6 +232,24 @@ whole thead through the `theadDataAttr` hook:
   a token shown once, a running sync).
 - **Touch** (`hover: none`): the backdrop is a solid `bg-black/80` tint, the panel drops any
   `backdrop-blur`, and the header close grows to 44px. Desktop keeps the blur and the 32px close.
+- **Scroll lock.** An open modal holds the counted scroll lock (`ui/scrollLock.ts`): the shell
+  scroller (`main.shell-main`) gets `overflow: hidden`, plus `scrollbar-gutter: stable` when it
+  shows a scrollbar that takes width, so nothing reflows. Stacked and nested modals each hold one;
+  the scroller is freed when the last is released, including when a modal unmounts while open (a
+  route change unmounts the page and its modals). The body scrolls with
+  `overscroll-behavior: contain`, so a swipe past its end doesn't chain to the page. An overlay
+  that isn't a `Modal` takes the same lock: call `lockShellScroll()` in a layout effect and return
+  the release it gives. `scrollLockCount()` and `subscribeScrollLock()` read the count; the
+  diagnostic overlay shows it.
+- **Focus** (`ui/modalFocus.ts`). Opening focuses the first tabbable element (`leftAction` or the
+  header close), or the panel when there is none. Tab and Shift+Tab wrap inside the top-most
+  modal, also from a clicked element that isn't a tab stop, and the tabbable list is read at each
+  key press, so content that loads after opening joins the trap. Closing returns focus to the
+  opener: the element focused when the modal opened, or the control last pressed where the browser
+  doesn't focus a tapped button (Safari focuses the nearest focusable container instead, such as
+  the panel of the modal underneath). It returns only if focus was still in the modal, so a modal
+  closing under another doesn't take focus from it.
+  Every programmatic focus passes `preventScroll`, so neither the window nor the page moves.
 
 ### Team identity
 

@@ -20,7 +20,7 @@ const SAMPLE: DiagnosticSample = {
     shellScroll: { top: 1200, max: 4800 },
     safeArea: { top: 0, right: 47, bottom: 21, left: 47 },
     openModals: 1,
-    scrollLocks: null,
+    scrollLocks: 1,
     activeView: 'map-detail',
     activeParams: { mapName: 'BT-Example' },
     path: '/maps/BT-Example',
@@ -66,15 +66,16 @@ describe('diagnosticRows', () => {
             { label: 'Below lg', value: 'yes' },
             { label: 'Safe area', value: 'top 0, right 47, bottom 21, left 47' },
             { label: 'Open modals', value: '1' },
-            { label: 'Scroll locks', value: 'n/a' },
+            { label: 'Scroll locks', value: '1' },
             { label: 'Active view', value: 'map-detail {"mapName":"BT-Example"}' },
             { label: 'Path', value: '/maps/BT-Example' },
         ])
     })
 
-    it('shows the scroll-lock count once one is reported, and n/a without a shell scroller', () => {
+    it('shows stacked scroll locks and no locks, and n/a without a shell scroller', () => {
         const rows = diagnosticRows({ ...SAMPLE, scrollLocks: 2, shellScroll: null, activeParams: {} })
         expect(rows).toContainEqual({ label: 'Scroll locks', value: '2' })
+        expect(diagnosticRows({ ...SAMPLE, scrollLocks: 0 })).toContainEqual({ label: 'Scroll locks', value: '0' })
         expect(rows).toContainEqual({ label: 'Shell scroll', value: 'n/a' })
         expect(rows).toContainEqual({ label: 'Active view', value: 'map-detail' })
     })
@@ -101,7 +102,7 @@ describe('formatDiagnosticReport', () => {
             'Below lg: yes',
             'Safe area: top 0, right 47, bottom 21, left 47',
             'Open modals: 1',
-            'Scroll locks: n/a',
+            'Scroll locks: 1',
             'Active view: map-detail {"mapName":"BT-Example"}',
             'Path: /maps/BT-Example',
         ])

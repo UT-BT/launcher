@@ -9,7 +9,7 @@ reproduce. Responsive layout rules are in [web-target.md](web-target.md).
 The diagnostic overlay shows what the app thinks is happening on the device: the
 `visualViewport` scale, offsets and size, `innerHeight` and `innerWidth`, the window and shell
 scroll positions, orientation, standalone mode, touch and below-`lg`, the safe-area insets,
-the open modal count, the scroll-lock count (`n/a` until the counted scroll lock exists), the
+the open modal count, the scroll-lock count (how many open modals hold the page still), the
 active view and the path. It is part of the production build and sends nothing anywhere.
 
 1. Turn it on:

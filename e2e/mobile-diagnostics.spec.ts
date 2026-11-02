@@ -83,7 +83,7 @@ test.describe('on a phone', () => {
         await expect(field(page, 'Viewport scale')).toHaveText('1')
         await expect(field(page, 'Touch')).toHaveText('yes')
         await expect(field(page, 'Below lg')).toHaveText('yes')
-        await expect(field(page, 'Scroll locks')).toHaveText('n/a')
+        await expect(field(page, 'Scroll locks')).toHaveText('0')
         await expect(field(page, 'Open modals')).toHaveText('0')
         await expect(field(page, 'Active view')).toHaveText('home')
         await expect(field(page, 'Orientation')).toHaveText('portrait')
@@ -122,7 +122,7 @@ test.describe('on a phone', () => {
         for (const label of FIELDS) {
             expect(lines.some(line => line.startsWith(`${label}: `)), label).toBe(true)
         }
-        expect(lines).toContain('Scroll locks: n/a')
+        expect(lines).toContain('Scroll locks: 0')
     })
 
     test('long-pressing the logo toggles the overlay; a tap does not', async ({ page }) => {

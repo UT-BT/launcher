@@ -466,6 +466,10 @@ spec that is red today is marked `test.fail()`, with a note naming the ticket th
 - `modal-sheet.spec.ts`: a page modal opens as a sheet over the top bar that fills the visible area
   in portrait and at 844×390, and a swipe inside a sheet scrolls only its body while the header and
   close stay in view.
+- `modal-lock.spec.ts`: a tapped-open sheet holds the shell scroller and the window still through a
+  swipe over it; closing it returns focus to the tapped opener (WebKit doesn't focus a tapped
+  button, so this covers the Safari path) and the shell scroller takes a swipe again. A sheet opened
+  by a tapped button inside a sheet returns focus to that button, not to the panel WebKit focused.
 - **Zoom is simulated.** No engine can emulate a real pinch. On Chromium, `zoomVisualViewport` sets
   the page scale through the DevTools protocol (`Emulation.setPageScaleFactor`) and waits for
   `visualViewport.scale` to follow. It cannot pan the zoomed view, because headless Chromium ignores
