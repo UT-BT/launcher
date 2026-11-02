@@ -183,5 +183,8 @@ Admin-only example.
    `{ activeSection: '<id>' }` under `utbt:adminState:v1` and a staff session under
    `utbt:webAuth:v1`, `page.route` answers `/users/me` with the role and the section's
    reads; it covers the role gate and fits 390 px and 1920 px (`horizontalOverflow` ≤ 1).
+   A sub-view for the section in the `admin` mobile manifest entry (`e2e/mobile/manifest/admin.ts`),
+   with the section's reads in the synthetic `admin` set (`e2e/mobile/fixtures/synthetic/admin.ts`):
+   `routes.contract.test.ts` fails until it exists ([testing.md](../testing.md#role-gated-entries)).
 7. **Verify.** `npm run typecheck:web`, `npm test` and the new spec pass; `npm run build:web`
    then `npm run check:bundle` passes (every section sits in the one lazy admin chunk).

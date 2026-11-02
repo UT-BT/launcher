@@ -5,6 +5,7 @@ import { pathToNav, viewToPath } from './routes'
 import { titleForRoute } from './titles'
 import type { NavParams } from './NavigationContext'
 import { STREAM_SCENES, parseStreamScenePath } from '../stream/streamScenes'
+import { ADMIN_SECTIONS } from '../pages/admin/registry'
 
 interface ContractRoute {
     path: string
@@ -79,6 +80,54 @@ describe('route contract', () => {
         const title = titleForRoute(route.view, paramsFor(route))
         expect(title).not.toBe('UTBT.net')
         expect(title.length).toBeGreaterThan(0)
+    })
+})
+
+interface ManifestEntry {
+    view: string
+    id?: string
+    tier: 'public' | 'role-gated'
+    subViews?: { id: string }[]
+}
+
+const MOBILE_MANIFEST_MODULE = '../../../e2e/mobile/manifest'
+
+const { MOBILE_MANIFEST }: { MOBILE_MANIFEST: readonly ManifestEntry[] } = await import(MOBILE_MANIFEST_MODULE)
+
+function entryId(entry: ManifestEntry): string {
+    return entry.id ?? entry.view
+}
+
+const ROLE_GATED_ENTRIES = ['admin', 'home:signed-in', 'event-detail:manager', 'match-pickban:captain', 'match-pickban:manager']
+
+describe('mobile route manifest', () => {
+    const entries = new Map(MOBILE_MANIFEST.map(entry => [entryId(entry), entry]))
+    const contractViews = new Set(contract.routes.map(route => route.view))
+
+    it.each(contract.routes)('$kind has a mobile manifest entry for its view', route => {
+        expect(entries.get(route.view), `e2e/mobile/manifest has no entry for the ${route.view} view; add one (agents/testing.md, Mobile route manifest)`).toBeDefined()
+    })
+
+    it.each(MOBILE_MANIFEST.map(entry => ({ id: entryId(entry), view: entry.view })))('the $id manifest entry names a contract view', ({ id, view }) => {
+        expect(contractViews.has(view), `${id} names the ${view} view, which route-contract.json does not have`).toBe(true)
+    })
+
+    it.each(ROLE_GATED_ENTRIES)('crawls %s as a role-gated entry', id => {
+        expect(entries.get(id)?.tier, `e2e/mobile/manifest has no role-gated ${id} entry`).toBe('role-gated')
+    })
+
+    it('names each role-gated entry on a public view <view>:<who>', () => {
+        for (const [id, entry] of entries) {
+            if (id === entry.view) continue
+            expect(id, `${id} is a second entry for ${entry.view}`).toMatch(new RegExp(`^${entry.view}:[a-z-]+$`))
+            expect(entry.tier, `${id} is a second entry for ${entry.view}`).toBe('role-gated')
+        }
+    })
+
+    it.each(ADMIN_SECTIONS.map(section => section.id))('crawls the %s admin section', id => {
+        const admin = entries.get('admin')
+        const crawled = [ADMIN_SECTIONS[0].id, ...(admin?.subViews ?? []).map(subView => subView.id)]
+        expect(crawled, `the admin manifest entry has no sub-view for the ${id} section`).toContain(id)
     })
 })
 

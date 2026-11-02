@@ -2,28 +2,30 @@ import { readdirSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { FIXTURE_SETS, fixtureSetNamed } from './fixtures'
 import { STRESS_VARIANTS } from './fixtures/stress'
+import { SYNTHETIC_SETS } from './fixtures/synthetic'
+import { WEB_AUTH_KEY } from './fixtures/synthetic/session'
 import { LEDGER_DIR, readLedger } from './ledger'
-import { crawlSurfaces, MOBILE_MANIFEST } from './manifest'
+import { crawlSurfaces, entryId, MOBILE_MANIFEST } from './manifest'
 import { RULE_IDS } from './rules/ids'
 import { ENGINES, MOBILE_VIEWPORTS } from './viewports'
 
 describe('mobile manifest', () => {
-    it('has one entry per view and unique surface ids', () => {
-        const views = MOBILE_MANIFEST.map(entry => entry.view)
-        expect(new Set(views).size).toBe(views.length)
+    it('has unique entry ids and unique surface ids', () => {
+        const ids = MOBILE_MANIFEST.map(entryId)
+        expect(new Set(ids).size).toBe(ids.length)
         const surfaces = crawlSurfaces().map(surface => surface.id)
         expect(new Set(surfaces).size).toBe(surfaces.length)
     })
 
     it('names a fixture set that exists for every entry', () => {
-        for (const entry of MOBILE_MANIFEST) expect(Object.keys(FIXTURE_SETS), entry.view).toContain(entry.fixtures)
+        for (const entry of MOBILE_MANIFEST) expect(Object.keys(FIXTURE_SETS), entryId(entry)).toContain(entry.fixtures)
         for (const surface of crawlSurfaces('full')) expect(fixtureSetNamed(surface.entry.fixtures), surface.id).toBeDefined()
     })
 
     it('crawls each stressed page or tab once per variant in the full matrix and once with its PR variant in the PR subset', () => {
         const stressed = MOBILE_MANIFEST.flatMap(entry => [
-            ...(entry.stress ? [{ id: entry.view, fixtures: entry.fixtures, plan: entry.stress }] : []),
-            ...(entry.subViews ?? []).flatMap(subView => subView.stress ? [{ id: `${entry.view}/${subView.id}`, fixtures: entry.fixtures, plan: subView.stress }] : []),
+            ...(entry.stress ? [{ id: entryId(entry), fixtures: entry.fixtures, plan: entry.stress }] : []),
+            ...(entry.subViews ?? []).flatMap(subView => subView.stress ? [{ id: `${entryId(entry)}/${subView.id}`, fixtures: entry.fixtures, plan: subView.stress }] : []),
         ])
         expect(stressed.length).toBeGreaterThan(0)
         const variantsIn = (scope: 'pr' | 'full') => crawlSurfaces(scope)
@@ -42,8 +44,16 @@ describe('mobile manifest', () => {
     it('gives every tab or sub-view reached by a tap its own ready step, so Back can tell it is shown again', () => {
         for (const entry of MOBILE_MANIFEST) {
             for (const subView of entry.subViews ?? []) {
-                if (subView.open) expect(subView.ready, `${entry.view}/${subView.id}`).toBeDefined()
+                if (subView.open) expect(subView.ready, `${entryId(entry)}/${subView.id}`).toBeDefined()
             }
+        }
+    })
+
+    it('signs every role-gated entry in and serves it a synthetic fixture set', () => {
+        const synthetic = SYNTHETIC_SETS.map(set => set.name)
+        for (const entry of MOBILE_MANIFEST.filter(candidate => candidate.tier === 'role-gated')) {
+            expect(entry.storage?.[WEB_AUTH_KEY], `${entryId(entry)} does not sign in`).toBeDefined()
+            expect(synthetic, `${entryId(entry)} serves a fixture set that is not synthetic`).toContain(entry.fixtures)
         }
     })
 

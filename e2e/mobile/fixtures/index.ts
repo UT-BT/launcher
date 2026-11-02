@@ -1,5 +1,6 @@
 import { hasRecording, recordedFixtureSet } from './recording'
 import { stressed, STRESS_VARIANTS, type StressVariant } from './stress'
+import { SYNTHETIC_SETS } from './synthetic'
 import type { FixtureReply, FixtureSet } from './types'
 
 export const RECORDED_SETS: readonly string[] = [
@@ -25,7 +26,7 @@ export const RECORDED_SETS: readonly string[] = [
 ]
 
 export const FIXTURE_SETS: Readonly<Record<string, FixtureSet>> = Object.fromEntries(
-    RECORDED_SETS.filter(hasRecording).map(recordedFixtureSet).map(set => [set.name, set]),
+    [...RECORDED_SETS.filter(hasRecording).map(recordedFixtureSet), ...SYNTHETIC_SETS].map(set => [set.name, set]),
 )
 
 function isVariant(value: string): value is StressVariant {

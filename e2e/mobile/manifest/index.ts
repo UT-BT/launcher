@@ -4,15 +4,19 @@ import { fixtureSetNamed } from '../fixtures/index'
 import { STRESS_VARIANTS, type StressVariant } from '../fixtures/stress'
 import type { MatrixScope } from '../viewports'
 import { achievements } from './achievements'
+import { admin } from './admin'
 import { capDetail } from './cap-detail'
 import { capItAll } from './cap-it-all'
 import { eventDetail } from './event-detail'
+import { eventDetailManager } from './event-detail-manager'
 import { eventTeam } from './event-team'
 import { events } from './events'
 import { home } from './home'
+import { homeSignedIn } from './home-signed-in'
 import { maps } from './maps'
 import { mapsDetail } from './maps-detail'
 import { matchPickban } from './match-pickban'
+import { matchPickbanCaptain, matchPickbanManager } from './match-pickban-roles'
 import { news } from './news'
 import { newsDetail } from './news-detail'
 import { playerDetail } from './player-detail'
@@ -44,7 +48,16 @@ export const MOBILE_MANIFEST: readonly MobileRouteEntry[] = [
     achievements,
     news,
     newsDetail,
+    homeSignedIn,
+    admin,
+    eventDetailManager,
+    matchPickbanCaptain,
+    matchPickbanManager,
 ]
+
+export function entryId(entry: MobileRouteEntry): string {
+    return entry.id ?? entry.view
+}
 
 export interface CrawlSurface {
     id: string
@@ -95,7 +108,8 @@ function stressedSurfaces(surface: CrawlSurface, plan: StressPlan | undefined, s
 export function crawlSurfaces(scope: MatrixScope = 'full'): CrawlSurface[] {
     return MOBILE_MANIFEST.flatMap(entry => {
         const base = entry.skip ?? []
-        const page: CrawlSurface = { id: entry.view, label: entry.view, entry, skip: base }
+        const root = entryId(entry)
+        const page: CrawlSurface = { id: root, label: root, entry, skip: base }
         const modalsOf = (owner: CrawlSurface, modals: MobileModal[] = []): CrawlSurface[] =>
             modals.map(modal => ({
                 id: `${owner.id}/${modal.id}`,
@@ -107,8 +121,8 @@ export function crawlSurfaces(scope: MatrixScope = 'full'): CrawlSurface[] {
             }))
         const subViews = (entry.subViews ?? []).flatMap(subView => {
             const surface: CrawlSurface = {
-                id: `${entry.view}/${subView.id}`,
-                label: `${entry.view} › ${subView.label}`,
+                id: `${root}/${subView.id}`,
+                label: `${root} › ${subView.label}`,
                 entry,
                 subView,
                 skip: [...base, ...(subView.skip ?? [])],

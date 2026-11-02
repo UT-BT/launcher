@@ -1,4 +1,6 @@
 [
+  { "surface": "admin/hosts-management", "viewport": "360x780", "engine": "chromium" },
+  { "surface": "admin/hosts-management", "viewport": "390x844", "engine": "webkit" },
   { "surface": "event-team~long-text", "viewport": "360x780", "engine": "chromium" },
   { "surface": "event-team~long-text", "viewport": "390x844", "engine": "webkit" }
 ]

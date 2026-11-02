@@ -14,7 +14,7 @@ gate goes red. Commands and the pre-commit gate are in [build.md](build.md).
 | `lib/main/*.test.ts` | main-process services against a real temp folder; two suites are Windows-only |
 | `e2e/*.spec.ts` | Playwright specs for the app, run in `desktop-chromium` and `mobile-chromium` |
 | `e2e/*.broadcast.spec.ts` | Playwright specs for OBS scene pages, run only in `broadcast` |
-| `e2e/mobile/` | the mobile suite: crawl, route manifest, recorded fixtures and their refresh script, fixture router, stress variants, rules, known-violations ledger, gallery reporter, and Vitest files for its pure logic ([Mobile suite](#mobile-suite)) |
+| `e2e/mobile/` | the mobile suite: crawl, route manifest, recorded fixtures and their refresh script, synthetic role-gated fixtures, fixture router, stress variants, rules, known-violations ledger, gallery reporter, and Vitest files for its pure logic ([Mobile suite](#mobile-suite)) |
 | `e2e/__screenshots__/` | committed screenshot baselines, one folder per spec file |
 | `e2e/streamHarness.ts` | fake API plus open, settle and screenshot helpers for scene specs |
 | `e2e/sidebarRail.ts`, `e2e/layout.ts`, `e2e/streamPanels.ts` | shared spec helpers: the catch-all `mockApi`, `horizontalOverflow`, `openStreamPanel` |
@@ -63,7 +63,7 @@ These read source files and guard wiring rules rather than behaviour:
 | Test | Guards |
 |---|---|
 | `app/components/main/pageLoaders.test.ts` | `Main.tsx` never value-imports a lazy page; every sidebar view except Home has a shared loader |
-| `app/components/navigation/routes.contract.test.ts` | every view in `viewToPath` has an entry in `app/public/route-contract.json` and round-trips; `robots.txt` blocks stream pages and leaves every other non-admin route crawlable |
+| `app/components/navigation/routes.contract.test.ts` | every view in `viewToPath` has an entry in `app/public/route-contract.json` and round-trips; `robots.txt` blocks stream pages and leaves every other non-admin route crawlable; every contract view has a [mobile manifest](#mobile-route-manifest) entry, every entry names a contract view, the role-gated entries exist, and the `admin` entry crawls every section in `ADMIN_SECTIONS` |
 | `app/components/pages/events/stream/streamPanels.test.ts` | Stream tab panels and Match sections keep their order and load only lazily |
 | `app/components/shared/LazyModalGate.test.ts` | pages, cards and the shell never value-import a modal listed as opened by a user action; those mount only through `LazyModalGate` ([web-target.md](web-target.md)) |
 | `app/prePaint.test.ts`, `app/styles/themes.test.ts`, `app/seasonal/logos.test.ts` | the `index.html` pre-paint script's default theme, light themes and seasons equal the registries; every non-default theme has a palette block and only the `solid` group hides the nebula; every season has its logo file |
@@ -307,8 +307,9 @@ on both engines at the project's default size (390×844 and 360×780).
 
 ### Mobile route manifest
 
-`e2e/mobile/manifest/<view>.ts` holds one entry per route-contract view id, and
-`manifest/index.ts` collects them in `MOBILE_MANIFEST`. It is test-side only and never ships in
+`e2e/mobile/manifest/<view>.ts` holds one public entry per route-contract view id, and
+`manifest/index.ts` collects them in `MOBILE_MANIFEST` with the role-gated entries
+([Role-gated entries](#role-gated-entries)). It is test-side only and never ships in
 `route-contract.json`. Manifest modules import only types from Playwright (no `test`, no `expect`),
 so Vitest can import them too; waits use locator `waitFor()`. The step helpers they share (`listed`,
 `recordShown`, `rowsOf`, `heading`, `shows`, `text`, `tap`, `steps`, `opens`, `opensWhenShown`,
@@ -318,6 +319,7 @@ so Vitest can import them too; waits use locator `waitFor()`. The step helpers t
 | Field | Holds |
 |---|---|
 | `view` | the route-contract view id |
+| `id` | only on a second entry for a view: `<view>:<who>`, such as `event-detail:manager`. It replaces `view` in the surface ids |
 | `tier` | `public` or `role-gated` |
 | `path` | the URL that opens the view |
 | `fixtures` | the name of a fixture set in `e2e/mobile/fixtures/index.ts` |
@@ -328,8 +330,9 @@ so Vitest can import them too; waits use locator `waitFor()`. The step helpers t
 | `stress` | `{ pr: <variant> }` on a page or tab that shows a table or list: the full matrix crawls it with every [stress variant](#stress-variants), the PR subset with the one named |
 | `skip` | `{ rule, reason }` for each rule that does not apply, with the reason |
 
-Each entry yields the surfaces `<view>`, `<view>/<modal>`, `<view>/<subView>` and
-`<view>/<subView>/<modal>`, and `<surface>~<variant>` for each stress variant crawled. That surface
+Each entry yields the surfaces `<id>`, `<id>/<modal>`, `<id>/<subView>` and
+`<id>/<subView>/<modal>`, where `<id>` is the entry's `id` or else its `view`, and
+`<surface>~<variant>` for each stress variant crawled. That surface
 id keys the ledger, the gallery and the test titles.
 
 Every public view of the route contract has an entry, with every tab an anonymous visitor sees and
@@ -342,8 +345,30 @@ the modal's root report `n/a`, but `rotation-recovers` fails with "the modal is 
 portrait `rotation-recovers` entries on `watch-run` and `wr-progression` surfaces record a trigger
 phones don't show, not a rotation bug. A trigger that lives only in table rows phones show as cards
 is not crawled until the cards expose it: the Maps page's reviews and Demos (15). Event tabs that
-show only while signups are open (`players`, `signup`) or only to signed-in staff (`stream`,
-`manage`) are not crawled on the public event.
+show only while signups are open (`players`, `signup`) are not crawled on the public event; the
+staff-only `manage` and `stream` tabs are crawled by `event-detail:manager`.
+
+**Contract.** `routes.contract.test.ts` (Vitest) fails when a route-contract view has no entry,
+when an entry names a view the contract does not have, when one of the role-gated entries below is
+missing, and when an `ADMIN_SECTIONS` section has no `admin` sub-view. A new route, or a new admin
+section, therefore needs its entry in the same change.
+
+#### Role-gated entries
+
+Role-gated entries have `tier: 'role-gated'`, sign in through `storage` (`signedInStorage()` in
+`fixtures/synthetic/session.ts` seeds `utbt:webAuth:v1`, and the set answers `/users/me` with the
+role), and serve a synthetic set ([Synthetic sets](#synthetic-sets)). `manifest.test.ts` checks
+both.
+
+| Entry | Signed in as | Crawls |
+|---|---|---|
+| `admin` | Admin, so every section shows | Overview, then one sub-view per section in `ADMIN_SECTIONS`, picked in the section `<select>` (or the side nav from `lg`), plus the Anti-Cheat High Cap Delta and Low FPS WRs tabs |
+| `home:signed-in` | a user | the signed-in Home, the Recent Caps History modal (See More) and Settings (drawer, user card menu) |
+| `event-detail:manager` | an event manager (`/tournaments/<slug>/me` with `can_manage`) | the Manage tab and its Signups, Format, Bracket, Matches (plus the match editor), Picks & Bans, Schedule and Predictions sub-tabs, and the Stream tab as a manager sees it |
+| `match-pickban:captain`, `match-pickban:manager` | the lobby's acting captain; a manager | the pick/ban page with the captain's dock, and with Match Control |
+
+A role-gated tab or modal on a public view goes in a `<view>:<who>` entry of its own, in its own
+module, and in `ROLE_GATED_ENTRIES` in the contract test.
 
 ### Fixture router
 
@@ -364,7 +389,7 @@ status, body }`, sorted by host, path and query. `fixtures/recording.ts` turns a
 request gets the response with the same path and the same query, whatever the parameter order, or
 else the response for that path whose query shares the most parameters. That keeps date-stamped
 queries (the Maps page's "new since" filter) and later pages answered after the clock moves on.
-Role-gated entries use synthetic sets.
+Role-gated entries use [synthetic sets](#synthetic-sets).
 
 **Refresh** with `npm run test:mobile:refresh-fixtures`, or `-- -g <set>` for one set. It runs
 `e2e/mobile/refresh-fixtures.ts` under `e2e/mobile/refresh.config.ts`: the dev server on
@@ -388,6 +413,30 @@ The script records only public data the site already shows:
 - A list longer than 300 items is cut to 300, keeping the items other responses in the set mention.
 - Before committing a refresh, grep the files for tokens, emails, IP addresses and hardware ids. The
   only addresses allowed are the `192.0.2.0/24` replacements.
+
+### Synthetic sets
+
+Role-gated entries never serve recorded data. Their sets are built in code in
+`e2e/mobile/fixtures/synthetic/` and listed in `SYNTHETIC_SETS` (`synthetic/index.ts`), which
+`fixtures/index.ts` registers beside the recorded sets:
+
+| Set | Module | Serves |
+|---|---|---|
+| `admin` | `admin.ts` | every admin section's reads, paged by `limit`/`offset` with realistic totals |
+| `event-manager` | `event-manager.ts` | a managed event with three stages from the standings scene builders, teams, staff, queue, windows and audit |
+| `match-pickban-captain`, `match-pickban-manager` | `pickban.ts` | the lobby state from the pick/ban veto golden fixtures, seen by a captain and by a manager |
+| `home-signed-in` | `signed-in.ts` | the viewer's summary, caps history, medal hunt and reviews to write, over the recorded `home` set |
+
+- Builders are typed with the app's API types, so a contract change breaks `typecheck:e2e`.
+- Identities are synthetic: long player ids start `9000000000` (`syntheticId`), the reused golden
+  fixtures keep their short made-up ids (`Player 2000`…), aliases are made-up word pairs, IPs come
+  from the documentation ranges (`192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24`), hardware
+  ids are `FAKE-HWID-<n>-0000-0000-TEST`, and maps are `CTF-BT-Test<Word>`. No real anti-cheat data.
+- Every optional field is filled, so the default set is the most-columns case; volumes match a live
+  dashboard (a full page of 50 rows, totals in the thousands).
+- `synthetic/synthetic.test.ts` (Vitest) fails on an IP outside the documentation ranges, a
+  hardware id that is not obviously fake, a player id without the synthetic prefix, an email
+  address or a token in any synthetic route.
 
 ### Stress variants
 
@@ -498,12 +547,13 @@ a duplicate, and on a file for an unknown rule.
 matrix, narrowed with `-- -g` if you like. The gallery reporter writes the ledger, so a `--reporter`
 override must keep `./e2e/mobile/gallery-reporter.ts`. The run rewrites only the surface, rule,
 viewport and engine combinations it ran: failures go in, passes come out, and everything it did not
-run stays. The PR subset is seeded for every surface. The full matrix is seeded only for `home`,
-`maps`, `maps/new`, `cap-detail`, `cap-detail/compare-run` and the `news` stress variants at the
-viewports outside the PR subset, and those entries predate the modal, rotation and scroll rules and,
-for all but the `news` variants, the recorded data. The other stress variants the PR subset does not
-crawl hold only the entries of a partial run. Seed the rest with `npm run test:mobile:ledger:full`
-before a full run gates anything.
+run stays. The PR subset is seeded for every surface, role-gated ones included. The full matrix is
+seeded only for `home`, `maps`, `maps/new`, `cap-detail`, `cap-detail/compare-run` and the `news`
+stress variants at the viewports outside the PR subset, and those entries predate the modal,
+rotation and scroll rules and, for all but the `news` variants, the recorded data. Role-gated
+surfaces have no full-matrix entries yet. The other stress variants the PR subset does not crawl
+hold only the entries of a partial run. Seed the rest with `npm run test:mobile:ledger:full` before
+a full run gates anything.
 
 - A fix deletes the entries it fixes, by hand or by regenerating after the fix.
 - Only a failure that predates your change goes in. Fix a regression your change caused instead of

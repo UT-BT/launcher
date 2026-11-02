@@ -41,6 +41,7 @@ export type MobileSubView = Reach & {
 
 export interface MobileRouteEntry {
     view: string
+    id?: string
     tier: Tier
     path: string
     fixtures: string
