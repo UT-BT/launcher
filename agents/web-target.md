@@ -193,9 +193,31 @@ cap (owner decision).
 
 - **Drawer below `lg`.** `AppLayout` turns the same single `<aside>` into an off-canvas
   drawer (CSS `max-lg:` translate, no duplicated markup), opened from a fixed top bar
-  (hamburger + logo). The drawer hides the big logo block (`max-lg:hidden`) so nav items
-  and the profile card fit an 800px-tall phone. Every nav action goes through
-  `changeView`, which closes the drawer.
+  (a 44px hamburger + logo). The drawer hides the big logo block (`max-lg:hidden`) so nav
+  items and the profile card fit an 800px-tall phone. Every nav action goes through
+  `changeView`, which closes the drawer. Only in drawer mode, a **Reload app** item
+  (`SidebarReloadApp`) sits between the nav and the profile card: it calls
+  `location.reload()`, and URL sync brings the same route back. It is the escape hatch for
+  a standalone Home Screen app, which has no browser reload button.
+- **Top bar height.** `--top-bar-offset` (`app/styles/shell.css`) is `3.5rem`, or `3rem` in
+  landscape below `lg`, plus the top safe-area inset. The bar (`.shell-top-bar`) and the
+  main element's top padding (`.shell-main`) both read it, so they never drift apart.
+- **Safe areas.** `shell.css` exposes the insets as `--safe-area-top/right/bottom/left`
+  (`env(safe-area-inset-*)`, `0px` where the browser has none, so desktop is unchanged).
+  The shell classes in the same file apply them: the top bar pads by the top inset and, in
+  landscape, insets the hamburger and its right edge from the notch side; the drawer
+  (`.shell-drawer`) pads top, bottom and left; the main element pads top (at `lg`+, where
+  there is no top bar), right, bottom and, below `lg`, left. Shell
+  code reads the variables, never `env()` directly, so `e2e/mobile/shell.spec.ts` can
+  simulate a notch by setting them on `<html>`. Modal sheets and the bottom tab bar pad
+  themselves.
+- **Status-bar strip.** `body::before` paints the top inset `#070b12`
+  (`shell.css`) above everything, in every theme: a Home Screen app uses
+  `black-translucent`, whose white status-bar text iOS picks once at launch, so the strip
+  keeps it readable in the Light theme.
+- **Touch chrome.** On touch devices (`hover: none`) the top bar, the drawer and the
+  drawer backdrop drop `backdrop-blur` for solid tints (`touch:` variant,
+  [styling.md](styling.md)); desktop keeps the blur.
 - **Rail at `lg` and up.** The sidebar sits beside the content, expanded (16rem) or
   collapsed (5rem, icon tiles with short captions), toggled by the button in its top-left
   corner or `Ctrl+B` / `⌘B`, on both targets. The choice is per device
@@ -207,8 +229,11 @@ cap (owner decision).
   `AppLayout` in a layout effect before paint. Anything offset beside the rail reads it
   ([styling.md](styling.md)). Never assume the sidebar is visible; anything positioned
   relative to it needs the `lg:` variant.
-- Content padding is `p-4 sm:p-6 lg:p-8`; the app root uses `h-dvh` (mobile browser
-  toolbars); the web entry sets `--window-titlebar-height` to `0px`.
+- Content padding is `p-4 sm:p-6 lg:p-8`, inside the main element's safe-area padding;
+  the app root uses `h-dvh` (mobile browser toolbars); the web entry sets
+  `--window-titlebar-height` to `0px`.
+- **Form controls are 16px or more on touch**, at any width, so iOS never zooms on focus
+  ([styling.md](styling.md#form-inputs)).
 - **Modals.** `offsetSidebar` pads left by the rail width plus 1rem
   (`pl-[calc(var(--sidebar-width,0px)_+_1rem)]`), so a modal centres on the content area
   in both rail modes and on the viewport on phones. A modal with its own internal rail
@@ -314,6 +339,18 @@ stylesheet `<link>` and modulepreload hints in the document. Behind a runtime `i
 the browser sees neither until the shim has run: two extra serial round trips before
 paint, and CSS injected by JavaScript. The 50 KiB entry floor in `check:bundle` exists to
 catch that regression.
+
+## Home Screen app (PWA)
+
+- `app/public/site.webmanifest`: `id: "/"` (stable, so a reinstall keeps the same app),
+  `display: standalone`, `orientation: any`, the name, `#070b12` colours and the 192, 512
+  and maskable icons.
+- `app/index.html` declares `apple-mobile-web-app-capable`, `mobile-web-app-capable`,
+  `apple-mobile-web-app-status-bar-style: black-translucent` and
+  `apple-mobile-web-app-title` (`UTBT`). The viewport keeps `viewport-fit=cover` and allows
+  pinch zoom: never add `maximum-scale` or `user-scalable=no`. No iOS launch-screen
+  images.
+- `e2e/mobile/shell.spec.ts` checks the served manifest and head tags.
 
 ## SEO and link previews
 

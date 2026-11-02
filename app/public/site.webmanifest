@@ -1,8 +1,11 @@
 {
+  "id": "/",
   "name": "UTBT.net",
   "short_name": "UTBT",
   "start_url": "/",
   "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
   "background_color": "#070b12",
   "theme_color": "#070b12",
   "icons": [

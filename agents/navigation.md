@@ -312,6 +312,7 @@ Title, the collapsed choice) and passes it down:
 | `SidebarActions` | Join Server and Launch Game; returns nothing without `capabilities.game` |
 | `SidebarNavItem` | one nav row or rail tile: icon, badge marks, label or caption, Live chip or dot, tooltip |
 | `SidebarCollapseToggle` | the icon-only collapse toggle |
+| `SidebarReloadApp` | the drawer-only "Reload app" button (`location.reload()`); `AppLayout` mounts it only below `lg` |
 | `SidebarUserCard` | the signed-in profile menu, or the Discord login and its error |
 
 `SidebarActions` and `SidebarUserCard` read capabilities through `usePlatform()` themselves

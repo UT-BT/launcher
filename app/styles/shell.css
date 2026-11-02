@@ -1,0 +1,60 @@
+@custom-variant touch (@media (hover: none));
+
+:root {
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --top-bar-offset: calc(3.5rem + var(--safe-area-top));
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0 0 auto;
+  height: var(--safe-area-top);
+  background: #070b12;
+  pointer-events: none;
+  z-index: 2147483647;
+}
+
+.shell-top-bar {
+  height: var(--top-bar-offset);
+  padding: var(--safe-area-top) max(1rem, var(--safe-area-right)) 0 max(0.5rem, var(--safe-area-left));
+}
+
+.shell-drawer {
+  padding-top: var(--safe-area-top);
+  padding-bottom: var(--safe-area-bottom);
+}
+
+.shell-main {
+  padding: var(--safe-area-top) max(0.25rem, var(--safe-area-right)) var(--safe-area-bottom) 0;
+}
+
+@media (max-width: 1023px) {
+  .shell-drawer {
+    width: calc(18rem + var(--safe-area-left));
+    padding-left: var(--safe-area-left);
+  }
+
+  .shell-main {
+    padding-top: var(--top-bar-offset);
+    padding-left: var(--safe-area-left);
+  }
+
+  @media (orientation: landscape) {
+    :root {
+      --top-bar-offset: calc(3rem + var(--safe-area-top));
+    }
+  }
+}
+
+@media (hover: none) {
+  input:not([type=checkbox], [type=radio], [type=range], [type=file], [type=color]),
+  select,
+  textarea,
+  [contenteditable] {
+    font-size: max(16px, 1em);
+  }
+}

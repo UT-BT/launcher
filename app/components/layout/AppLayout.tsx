@@ -24,6 +24,7 @@ import { SidebarActions } from '@/app/components/layout/sidebar/SidebarActions'
 import { SidebarBrand } from '@/app/components/layout/sidebar/SidebarBrand'
 import { SidebarCollapseToggle } from '@/app/components/layout/sidebar/SidebarCollapseToggle'
 import { SidebarNavItem } from '@/app/components/layout/sidebar/SidebarNavItem'
+import { SidebarReloadApp } from '@/app/components/layout/sidebar/SidebarReloadApp'
 import { SidebarUserCard } from '@/app/components/layout/sidebar/SidebarUserCard'
 import { readSidebarCollapsed, writeSidebarCollapsed } from '@/app/components/layout/sidebarPreference'
 import { DiagnosticOverlayTrigger } from '@/app/device/diagnostics/DiagnosticOverlayTrigger'
@@ -194,7 +195,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
             {currentView === 'home' && <SeasonalAmbient />}
 
             {/* Mobile top bar */}
-            <div className="lg:hidden fixed top-0 inset-x-0 h-14 z-30 flex items-center gap-3 px-4 bg-card/80 backdrop-blur-xl border-b border-hairline/10">
+            <div className="lg:hidden shell-top-bar fixed top-0 inset-x-0 z-30 flex items-center gap-3 bg-card/80 backdrop-blur-xl touch:bg-card touch:backdrop-filter-none border-b border-hairline/10">
                 <button
                     ref={mobileMenuButtonRef}
                     type="button"
@@ -202,7 +203,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                     aria-controls="app-navigation"
                     aria-expanded={mobileNavOpen}
                     onClick={() => setMobileNavOpen(true)}
-                    className="inline-flex items-center justify-center size-10 -ml-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-hairline/10 transition-colors cursor-pointer"
+                    className="inline-flex items-center justify-center size-11 rounded-lg text-muted-foreground hover:text-foreground hover:bg-hairline/10 transition-colors cursor-pointer"
                 >
                     <Menu className="size-5" />
                 </button>
@@ -215,7 +216,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                 <button
                     type="button"
                     aria-label="Close navigation"
-                    className="lg:hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
+                    className="lg:hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm touch:bg-black/80 touch:backdrop-filter-none"
                     onClick={() => setMobileNavOpen(false)}
                 />
             )}
@@ -227,8 +228,8 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                 aria-label="Primary navigation"
                 tabIndex={-1}
                 className={cn(
-                "w-[var(--sidebar-width,0px)] bg-card/50 backdrop-blur-xl border-r border-hairline/10 flex flex-col relative z-20",
-                "max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:z-50 max-lg:w-72 max-lg:max-w-[85vw] max-lg:bg-card/95 max-lg:transition-transform max-lg:duration-200",
+                "shell-drawer w-[var(--sidebar-width,0px)] bg-card/50 backdrop-blur-xl border-r border-hairline/10 flex flex-col relative z-20",
+                "max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:z-50 max-lg:max-w-[85vw] max-lg:bg-card/95 max-lg:touch:bg-card max-lg:touch:backdrop-filter-none max-lg:transition-transform max-lg:duration-200",
                 mobileNavOpen ? "max-lg:translate-x-0" : "max-lg:-translate-x-full"
                 )}
             >
@@ -278,6 +279,8 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                     ))}
                 </nav>
 
+                {isMobileViewport && <SidebarReloadApp />}
+
                 <SidebarUserCard
                     userProfile={userProfile}
                     collapsed={collapsed}
@@ -292,7 +295,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 overflow-y-auto relative z-10 pr-1 max-lg:pt-14">
+            <main className="shell-main flex-1 overflow-y-auto relative z-10">
                 <PageRefreshProvider>
                     <div className="p-4 sm:p-6 lg:p-8 min-h-full">
                         <NavHistoryBar />

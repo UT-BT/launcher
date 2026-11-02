@@ -329,7 +329,8 @@ leave `whitespace-nowrap` off it.
 
 The sidebar's width is one property, `--sidebar-width`, which `AppLayout` sets on
 `document.documentElement` in a layout effect before first paint: `16rem` expanded,
-`5rem` collapsed, `0px` below `lg` (where the sidebar is a drawer, `max-lg:w-72`). It
+`5rem` collapsed, `0px` below `lg` (where the sidebar is a drawer, 18rem plus the left
+safe-area inset, set by `.shell-drawer` in `app/styles/shell.css`). It
 is removed on unmount, so an overlay rendered before the layout falls back to `0px`.
 
 Anything beside the rail reads `var(--sidebar-width,0px)`, always with the fallback,
@@ -508,6 +509,14 @@ Checkbox: `accent-[var(--accent-500)] cursor-pointer` (favourites:
 Native `<select>`: always `style={{ colorScheme: 'dark' }}`, so Chromium draws dark form
 chrome on Windows (Light overrides it in `themes.css`).
 
+**16px on touch.** iOS zooms the page when a focused control's text is below 16px. One
+unlayered rule in `app/styles/shell.css` sets every text input, `select`, `textarea` and
+contenteditable to `max(16px, 1em)` under `(hover: none)`, at any width. Being unlayered,
+it beats every Tailwind font-size utility, so the `text-xs` / `text-sm` classes above stay
+as the desktop sizes and nothing per control is needed. Keep it that way: no `!text-*`
+or inline `fontSize` on a control, which would beat the rule. The mobile suite's
+`form-controls-16px` rule checks it.
+
 ## Sidebar
 
 Visual tokens for the sidebar parts. What each part does, the nav registry, badges'
@@ -636,6 +645,14 @@ an explicit `animate` flag, sets `reducedMotion="never"`, and marks its wrapper
 `data-motion="on"` while animating (details in
 [pick-ban-ui.md](features/pick-ban-ui.md)).
 
+## Touch variant
+
+`touch:` (`@custom-variant` in `app/styles/shell.css`) is `@media (hover: none)`, the SPEC's
+"any touch device" tier, at any width. Use it for touch-only styling in markup
+(`touch:backdrop-filter-none`, which compiles far smaller than `touch:backdrop-blur-none`);
+code reads the same fact from the device environment
+([web-target.md](web-target.md)).
+
 ## CSS runtime cost
 
 The renderer runs on phones and in Electron beside the game, so styles have a
@@ -644,7 +661,8 @@ compositor cost:
 - `backdrop-blur` is the most expensive effect. The budget is the existing chrome:
   sidebar, top bar, sticky theads, modals, tooltips and popover menus, and the
   pick/ban stage's paused overlay (present only while paused). Blur one surface, never each row or card of a
-  list.
+  list. On touch the top bar (`touch:bg-card`), the drawer (`bg-card`) and the drawer
+  backdrop (`bg-black/80`) swap the blur for a solid tint.
 - Infinite animations (`animate-pulse`, `animate-ping`, the legendary pulses) keep the
   compositor awake. Use them on singletons (a badge, one hero), never per row.
   Skeleton `animate-pulse` is fine because it exists only while loading.
