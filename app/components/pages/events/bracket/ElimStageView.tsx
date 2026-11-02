@@ -1,8 +1,10 @@
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import type { EventBracketStage, EventMatch } from '@/app/utils/api'
 import { MatchCard, schedulerEligible, sortedMatches, teamLabel } from './bracketShared'
 import { TeamName } from '../TeamRoster'
+
+const PHONE_ROUND_WIDTH = 'max-lg:w-[min(20rem,calc(100vw-5.5rem))]'
 
 interface Round {
     no: number
@@ -46,32 +48,49 @@ export function ElimStageView({ stage, now, onMapSelect, onScheduleMatch, eventS
     myTeamId?: string | null
 }) {
     const rounds = useMemo(() => buildRounds(stage), [stage])
+    const roundHeaders = useRef<HTMLDivElement>(null)
 
     if (rounds.length === 0) {
         return <p className="text-sm text-muted-foreground">This stage has not been drawn yet.</p>
     }
 
     return (
-        <div className="overflow-x-auto pb-2">
-            <div className="flex gap-4 min-w-max lg:min-w-0">
-                {rounds.map(round => (
-                    <div key={round.no} className="flex-1 min-w-[15rem] space-y-2">
-                        <h3 className="text-[11px] uppercase tracking-wider text-muted-foreground sticky top-0">
+        <div>
+            <div ref={roundHeaders} className="lg:hidden sticky top-0 z-10 overflow-hidden bg-background py-2">
+                <div className="flex gap-4 min-w-max">
+                    {rounds.map(round => (
+                        <h3 key={round.no} className={cn(PHONE_ROUND_WIDTH, 'shrink-0 truncate text-[11px] uppercase tracking-wider text-muted-foreground')}>
                             {round.label}
                         </h3>
-                        <div className={cn(
-                            'space-y-2',
-                            round.no > 1 && 'lg:flex lg:flex-col lg:justify-around lg:h-[calc(100%-1.5rem)]',
-                        )}>
-                            {round.matches.map(match => (
-                                match.status === 'bye'
-                                    ? <ByeCard key={match.id} match={match} />
-                                    : <MatchCard key={match.id} match={match} now={now} onMapSelect={onMapSelect} eventSlug={eventSlug} myTeamId={myTeamId}
-                                        onClick={onScheduleMatch && schedulerEligible(match) ? () => onScheduleMatch(match.id) : undefined} />
-                            ))}
+                    ))}
+                </div>
+            </div>
+            <div
+                className="overflow-x-auto pb-2 max-lg:snap-x max-lg:snap-mandatory"
+                onScroll={event => {
+                    if (roundHeaders.current) roundHeaders.current.scrollLeft = event.currentTarget.scrollLeft
+                }}
+            >
+                <div className="flex gap-4 min-w-max lg:min-w-0">
+                    {rounds.map(round => (
+                        <div key={round.no} className={cn(PHONE_ROUND_WIDTH, 'flex-1 min-w-[15rem] space-y-2 max-lg:flex-none max-lg:snap-start max-lg:snap-always')}>
+                            <h3 className="text-[11px] uppercase tracking-wider text-muted-foreground sticky top-0 max-lg:hidden">
+                                {round.label}
+                            </h3>
+                            <div className={cn(
+                                'space-y-2',
+                                round.no > 1 && 'lg:flex lg:flex-col lg:justify-around lg:h-[calc(100%-1.5rem)]',
+                            )}>
+                                {round.matches.map(match => (
+                                    match.status === 'bye'
+                                        ? <ByeCard key={match.id} match={match} />
+                                        : <MatchCard key={match.id} match={match} now={now} onMapSelect={onMapSelect} eventSlug={eventSlug} myTeamId={myTeamId}
+                                            onClick={onScheduleMatch && schedulerEligible(match) ? () => onScheduleMatch(match.id) : undefined} />
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    ))}
+                </div>
             </div>
         </div>
     )

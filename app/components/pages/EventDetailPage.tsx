@@ -373,7 +373,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
     if (statsTab.isNew && activeTab === 'teams') setStatsSeen(true)
 
     return (
-        <div className="h-full flex flex-col overflow-hidden space-y-4 animate-in fade-in slide-in-from-bottom-0 duration-500">
+        <div className="h-full flex flex-col overflow-hidden max-lg:overflow-x-clip max-lg:overflow-y-visible space-y-4 animate-in fade-in slide-in-from-bottom-0 duration-500">
             <div className="shrink-0 space-y-3">
                 <button
                     onClick={onBack}
@@ -451,7 +451,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                 </div>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-auto px-0.5 pb-2">
+            <div className="flex-1 min-h-0 overflow-auto max-lg:overflow-x-clip max-lg:overflow-y-visible px-0.5 pb-2">
                 <EventRosterProvider teams={teams}>
                 <PredictionOddsProvider markets={lockedPredictions?.markets ?? []}>
                 {activeTab === 'info' && (

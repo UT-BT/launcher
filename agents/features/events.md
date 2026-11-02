@@ -29,7 +29,7 @@ owns all of it except `schedule/`, `pickban/`, `manage/pickban/` and `stream/` (
 | `events/predictions/` | Predictions tab, bet modal, odds context; pure `marketLock.ts`, `leaderboardView.ts`, `predictionsShared.tsx` |
 | `events/achievements/`, `events/maps/` | the lazy Achievements tab (`eventAchievementBoard.ts`) and the Maps tab (`mapsShared.ts`, also its gate); achievement rules app-wide in `app/components/pages/achievements/eventAchievements.ts` |
 | `app/utils/api.ts`, `app/utils/fixtures/eventStats/` | event fetchers and types; the sha-pinned stats payloads |
-| `e2e/` | `event-stats-responsive`, `event-achievements-responsive`, `predictions-responsive`, `manage-matches` specs |
+| `e2e/` | `event-stats-responsive`, `event-achievements-responsive`, `predictions-responsive`, `manage-matches` and `bracket-desktop` specs; `mobile/bracket-snap.spec.ts` |
 
 ## Brackets and formats
 
@@ -51,6 +51,27 @@ server-side.
 - Format validation answers one 400 whose message lists every problem as `field.path: reason` joined
   with `; `. `parseSpecErrors` (`manage/formatFields.tsx`) splits it so `FormatBuilder` shows each error
   on its own control.
+
+### Elimination stage on phones
+
+`ElimStageView` (`bracket/ElimStageView.tsx`) lays a `single_elim` stage out as one column per round in a
+sideways scroller. At `lg` and up every round keeps its own heading and later rounds spread their matches
+to sit between their feeders. Below `lg`:
+
+- **Round snapping.** Each round is `min(20rem, 100vw - 5.5rem)` wide, so about 2rem of the next round
+  peeks in, and the scroller snaps each round's left edge to its own (`snap-mandatory`, `snap-always`):
+  a sideways swipe moves one round.
+- **Round headers stay visible.** The headings move to a strip above the scroller that is `sticky` at the
+  top of the page scroller, under the top bar (the shell scroller's top padding keeps it there). The
+  scroller's `onScroll` copies its `scrollLeft` to the strip, so each heading stays over its round. Both
+  use the same width, so they line up.
+- **Nothing between the bracket and the page scroller may be a scroll container,** or the strip sticks
+  to that box instead. `EventDetailPage`'s page root and its tab-content wrapper use `overflow-x: clip`
+  below `lg` for that reason.
+
+`e2e/mobile/bracket-snap.spec.ts` checks the snap and the sticky headers on both phone engines.
+`e2e/bracket-desktop.spec.ts` checks the desktop layout at 1280 and 1920 px. Both serve the recorded
+event with its first stage's matches turned into a 16-team elimination stage (`e2e/eliminationBracket.ts`).
 
 ### Match card
 
