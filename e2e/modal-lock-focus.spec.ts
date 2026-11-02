@@ -1,13 +1,12 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import { FIRST_RIVAL_ALIAS } from './mobile/fixtures/cap-detail'
 import { serveFixtureSet } from './mobile/fixtures/router'
-import { capDetail } from './mobile/manifest/cap-detail'
+import { capDetail, capDetailRivals } from './mobile/manifest/cap-detail'
 import { settleLayout } from './mobile/settle'
-import { runCompareFixture } from '../app/utils/fixtures/runCompareFixtures'
 
-const CANDIDATES = runCompareFixture('capDetailCandidates').compare_candidates.toSorted((a, b) => a.cap_time_seconds - b.cap_time_seconds)
-const RIVAL = { capId: CANDIDATES[0].id, userId: CANDIDATES[0].user }
-const SLOWEST_RIVAL_CAP_ID = CANDIDATES.at(-1)!.id
+const RIVALS = capDetailRivals()
+const RIVAL = { capId: RIVALS[0].id, userId: RIVALS[0].user }
+const FIRST_RIVAL_ALIAS = RIVALS[0].alias
+const SLOWEST_RIVAL_CAP_ID = RIVALS.at(-1)!.id
 const PATRON_BADGE = 'Tier 2 Patreon Supporter'
 
 interface Point {
@@ -263,7 +262,7 @@ test.describe('focus', () => {
         releaseLeaderboard()
         await waitForPickerRows(page)
         const rows = playableRows(dialog)
-        await expect(rows).toHaveCount(4)
+        await expect(rows).toHaveCount(RIVALS.length)
 
         await page.keyboard.press('Tab')
         await expect(rows.first()).toBeFocused()

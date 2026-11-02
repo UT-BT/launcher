@@ -1,14 +1,13 @@
 import { expect, test, type Page } from '@playwright/test'
-import { runCompareFixture } from '../../app/utils/fixtures/runCompareFixtures'
 import { reopenOnDroppedModule } from './dev-server'
 import { serveFixtureSet } from './fixtures/router'
 import { closeModal, swipeScroll } from './interactions'
-import { capDetail } from './manifest/cap-detail'
+import { capDetail, capDetailRivals } from './manifest/cap-detail'
 import { MODAL_ROOT } from './manifest/types'
 import { installProbe } from './rules/probe'
 import { settleLayout } from './settle'
 
-const RIVAL_USER_ID = runCompareFixture('capDetailCandidates').compare_candidates[0].user
+const RIVAL_USER_ID = capDetailRivals()[0].user
 const PATRON_BADGE = 'Tier 2 Patreon Supporter'
 
 async function openCapDetail(page: Page) {
