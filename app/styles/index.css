@@ -5,6 +5,7 @@
 
 @import './shared.css';
 @import './shell.css';
+@import './modal.css';
 
 @import './components.css';
 @import './installation.css';

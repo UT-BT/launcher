@@ -185,6 +185,7 @@ function MapFormModal({ open, onClose, token, editing, onSaved, onReload, allTag
     <Modal
       isOpen={open}
       onClose={onClose}
+      closeOnBackdrop={false}
       title={`Edit map — ${editing?.name ?? ''}`}
       offsetSidebar
       maxWidth="42rem"
@@ -374,7 +375,7 @@ function MapvoteModal({ open, onClose, token, onRegenerated }: { open: boolean; 
 
   return (
     <>
-      <Modal isOpen={open} onClose={onClose} title="Mapvote" offsetSidebar maxWidth="40rem"
+      <Modal isOpen={open} onClose={onClose} closeOnBackdrop={false} title="Mapvote" offsetSidebar maxWidth="40rem"
         footer={
           <div className="p-4 border-t border-border bg-muted/50 flex justify-end gap-2">
             <Button variant="outline" onClick={onClose} disabled={!!busy}>Close</Button>
@@ -535,7 +536,7 @@ function DifficultySyncModal({ open, onClose, token, onApplied }: {
   )
 
   return (
-    <Modal isOpen={open} onClose={state.status === 'applying' ? () => {} : onClose} title="Sync map difficulties" offsetSidebar maxWidth="44rem" footer={footer}>
+    <Modal isOpen={open} onClose={state.status === 'applying' ? () => {} : onClose} closeOnBackdrop={false} title="Sync map difficulties" offsetSidebar maxWidth="44rem" footer={footer}>
       <div className="space-y-4">
         {state.status === 'loading' && (
           <div className="flex items-center justify-center gap-3 py-12 text-muted-foreground">

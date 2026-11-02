@@ -299,8 +299,9 @@ through `app.setDemoWatcherConfig`, and the game's own recording switch `AutoDem
 - Buttons that open UI living under `App` dispatch a `window` event instead: Settings sends
   `open-settings` ([navigation.md](../navigation.md)), Impersonate sends
   `DEV_IMPERSONATE_EVENT` for `DevImpersonateModal`. Game Profiles and Demo Uploads render
-  their own `ui/modal.tsx` modals in place (`offsetSidebar`, no portal, so their
-  `ConfirmModal`s stay on top). Links and the About page open URLs through `web-open-url`.
+  their own `ui/modal.tsx` modals (`offsetSidebar`), which portal to `document.body` like
+  every shared modal; Game Profiles' `ConfirmModal`s (`.modal-overlay`, z-index 1000) still
+  stack above it. Links and the About page open URLs through `web-open-url`.
 - `--window-titlebar-height` (26 px in `app/styles/window.css`, 0 px on web) is the top
   offset of full-window overlays (`top-[var(--window-titlebar-height)]` in
   `app/components/ui/modal.tsx`, `ErrorModal`, the settings fallback), which keeps the

@@ -112,7 +112,9 @@ swaps in the panel full-width with a `Back` bar. One `compactDetail` state drive
 everything else is `@max-3xl/settings:` / `@3xl/settings:` classes, so a resize needs no
 listener. Gating on the modal keeps it monotonic: the modal is `w-[95%] max-w-[1400px]`,
 which never shrinks as the viewport grows, so widening the window never flips the layout
-backwards.
+backwards. On a phone the modal is a full-screen sheet instead
+([shared-components.md](../../../../agents/shared-components.md#modal)), and the same gate
+reads the sheet's width.
 
 Desktop normally stays two-pane (the window's `minWidth` is 1280), but at the 150% UI
 scale maximum the CSS viewport is about 853px and the body lands near the gate, so the
@@ -128,9 +130,9 @@ floor (key-bind buttons, progress bars) need no change.
 
 **Overlays.** `@container` applies layout containment, which makes the container the
 containing block for `position: fixed` descendants, so an overlay inside a panel must be
-portalled to `document.body`. `Modal` does this only with its `portal` prop (the panels'
-import modals pass it); hand-rolled overlays call `createPortal` themselves, as
-`GameInputSettings`' bind capture does.
+portalled to `document.body`. `Modal` does this by default (`portal={false}` would trap
+it); hand-rolled overlays call `createPortal` themselves, as `GameInputSettings`' bind
+capture does.
 
 **Touch.** Tailwind v4 wraps `hover:` in `@media (hover: hover)`, so a hover-only treatment
 is bare static text on a phone. Below `@3xl/settings` each rail row is a tile

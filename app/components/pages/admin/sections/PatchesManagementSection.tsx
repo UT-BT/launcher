@@ -228,6 +228,7 @@ function PatchFormModal({ open, onClose, token, editing, onSaved }: {
     <Modal
       isOpen={open}
       onClose={onClose}
+      closeOnBackdrop={false}
       title={isEdit ? `Edit patch — ${editing?.channel}/${editing?.tag}` : 'Publish a new patch'}
       offsetSidebar
       maxWidth="42rem"

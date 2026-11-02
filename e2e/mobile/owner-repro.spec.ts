@@ -25,7 +25,6 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('owner repro: Compare runs, landscape, zoom, portrait, then close, menu and scroll all work', async ({ page }) => {
-    test.fail(true, 'The owner-reported bug: 13 (one scroller and viewport recovery) flips this to passing once 10 and 11 have landed')
     test.slow()
 
     await page.addInitScript(() => localStorage.setItem('utbt:analyticsConsent:v1', 'denied'))

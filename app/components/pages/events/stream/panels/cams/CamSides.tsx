@@ -73,6 +73,7 @@ function SwapConfirmDialog({ swap, busy, onConfirm, onCancel }: {
         <Modal
             isOpen
             onClose={onCancel}
+            closeOnBackdrop={false}
             offsetSidebar
             portal
             maxWidth="30rem"

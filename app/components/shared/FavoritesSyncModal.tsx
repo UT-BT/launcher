@@ -138,6 +138,7 @@ export function FavoritesSyncModal({
         <Modal
             isOpen={open}
             onClose={onDismiss}
+            closeOnBackdrop={false}
             title="Favorites Mismatch"
             maxWidth="900px"
             leftAction={<AlertTriangle className="size-4 text-amber-400" />}

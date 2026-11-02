@@ -304,6 +304,7 @@ export function MapAuthorsModal({ open, onClose, token, onApplied }: {
     <Modal
       isOpen={open}
       onClose={step.status === 'applying' ? () => {} : onClose}
+      closeOnBackdrop={false}
       title={title}
       offsetSidebar
       maxWidth="52rem"

@@ -201,11 +201,37 @@ whole thead through the `theadDataAttr` hook:
 | `shared/MarkdownBody.tsx` | Render markdown text with the app's typography. |
 | `shared/MapSearchInput.tsx` | Pick one map by searching (`accessToken`, `value`, `onChange`). |
 | `pages/teams/PlayerSearchInput.tsx` | Pick a UTBT player: `accessToken`, `onPick(player)`, `excludeIds?` (a `Set` of user ids to leave out, such as current members), `disabled?`, `placeholder?`. Searches by alias from 2 characters with a 300 ms debounce, shows up to 8 results through `PlayerInfo`, and clears after a pick. Used by Admin → Streamers, Roles and Events, event sign-up, team members and Stream tab casters. It takes no label, so wrap it in a labelled `role="group"`. |
-| `ui/modal.tsx` | The modal shell: header and footer, focus trap, Escape closes only the top-most modal (`data-modal-backdrop`). Pass `offsetSidebar` so it centres on the content area. |
+| `ui/modal.tsx` | The modal shell: a sheet on phones, a centred card elsewhere, with a header close that is always there. Props and dismissal rules: [Modal](#modal). |
 | `shared/ConfirmModal.tsx` | Yes/no confirmation (built on the simpler framer-motion `shared/Modal.tsx`). |
 | `shared/LazyModalGate.tsx` | Mount a `lazy()` modal that opens on a user action: `<LazyModalGate open={…}>` renders nothing until the first open, shows a loading spinner while the chunk loads, then keeps the modal mounted. Which modals use it: [web-target.md](web-target.md). |
 | `shared/AuthRequiredModal.tsx` | Prompt a signed-out user: call `requestLogin({ feature, description? })`; the modal is mounted once in `Main.tsx`. |
 | `shared/BackButton.tsx` | "← Back". |
+
+### Modal
+
+`ui/modal.tsx` (styles in `app/styles/modal.css`):
+
+- **Portalled by default** into `document.body`, so it stacks above the top bar, the drawer and,
+  on desktop, the rail. `portal={false}` renders it in place; no call site needs that.
+- **A sheet on phones.** Below `sm` (640px wide), and on a touch screen under 640px tall (a phone
+  in landscape), the modal fills the visible area:
+  - Its top and height follow `visualViewport` through the device environment (`sheetBounds` in
+    `ui/modalSheet.ts`), so the keyboard never covers the focused field. While pinch-zoomed it
+    falls back to `100dvh`.
+  - It pads by the safe-area insets, drops the card's border and radius, and ignores `maxWidth`,
+    `maxHeight` and width classes.
+  - The header (title, `leftAction`, close) and the footer stay put; only the body scrolls.
+- **A centred card** at `sm` and up: `maxWidth`, `maxHeight` (default `90dvh`) and `className`
+  size it. `offsetSidebar` pads the backdrop by the rail width plus 1rem, so the card centres on
+  the content area.
+- **Dismissal.** The header close (`Close modal`) is always rendered, whatever `footer` holds:
+  omitted gives a Close button, `null` none, or pass your own. Escape closes only the top-most
+  modal (`data-modal-backdrop`). A tap on the backdrop closes it too; pass
+  `closeOnBackdrop={false}` when the modal holds unsaved input (a form, a draft, a crop, a
+  selection) or a destructive or one-time step (a confirm that overwrites, deletes or reassigns,
+  a token shown once, a running sync).
+- **Touch** (`hover: none`): the backdrop is a solid `bg-black/80` tint, the panel drops any
+  `backdrop-blur`, and the header close grows to 44px. Desktop keeps the blur and the 32px close.
 
 ### Team identity
 

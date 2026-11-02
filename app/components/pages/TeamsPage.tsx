@@ -185,6 +185,7 @@ export function TeamsPage({ userProfile, state, onStateChange, caches, onCachesC
             <Modal
                 isOpen={createOpen}
                 onClose={() => setCreateOpen(false)}
+                closeOnBackdrop={false}
                 title="Create a Team"
                 offsetSidebar
                 maxWidth="40rem"

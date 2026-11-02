@@ -215,9 +215,9 @@ cap (owner decision).
   (`shell.css`) above everything, in every theme: a Home Screen app uses
   `black-translucent`, whose white status-bar text iOS picks once at launch, so the strip
   keeps it readable in the Light theme.
-- **Touch chrome.** On touch devices (`hover: none`) the top bar, the drawer and the
-  drawer backdrop drop `backdrop-blur` for solid tints (`touch:` variant,
-  [styling.md](styling.md)); desktop keeps the blur.
+- **Touch chrome.** On touch devices (`hover: none`) the top bar, the drawer, the drawer
+  backdrop and the modal backdrop drop `backdrop-blur` for solid tints, and the modal panel
+  drops its blur (`touch:` variant, [styling.md](styling.md)); desktop keeps the blur.
 - **Rail at `lg` and up.** The sidebar sits beside the content, expanded (16rem) or
   collapsed (5rem, icon tiles with short captions), toggled by the button in its top-left
   corner or `Ctrl+B` / `⌘B`, on both targets. The choice is per device
@@ -234,10 +234,13 @@ cap (owner decision).
   `--window-titlebar-height` to `0px`.
 - **Form controls are 16px or more on touch**, at any width, so iOS never zooms on focus
   ([styling.md](styling.md#form-inputs)).
-- **Modals.** `offsetSidebar` pads left by the rail width plus 1rem
-  (`pl-[calc(var(--sidebar-width,0px)_+_1rem)]`), so a modal centres on the content area
-  in both rail modes and on the viewport on phones. A modal with its own internal rail
-  sizes by container query, not viewport: see Settings in
+- **Modals.** `ui/modal.tsx` portals into `document.body` and, below `sm` or on a touch
+  screen under 640px tall, opens as a full-screen sheet that follows `visualViewport` and
+  pads by the safe areas ([shared-components.md](shared-components.md#modal)). As a card,
+  `offsetSidebar` pads left by the rail width plus 1rem
+  (`pl-[calc(var(--sidebar-width,0px)_+_1rem)]`), so it centres on the content area in both
+  rail modes. A modal with its own internal rail sizes by container query, not viewport:
+  see Settings in
   [app/components/pages/settings/README.md](../app/components/pages/settings/README.md).
   A `position: fixed` overlay inside a container-query ancestor must be portalled to
   `document.body`, or containment traps it.

@@ -120,7 +120,7 @@ export const UploadLogModal = ({ isOpen, onClose }: UploadLogModalProps) => {
                 onClose={onClose}
                 title="Demo Uploads"
                 maxWidth="64rem"
-                maxHeight="80vh"
+                maxHeight="80dvh"
                 offsetSidebar
             >
                 <div className="space-y-4">

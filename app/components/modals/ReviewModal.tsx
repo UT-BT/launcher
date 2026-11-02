@@ -201,6 +201,7 @@ export function ReviewModal({ open, onOpenChange, accessToken, userId, mapName, 
         <Modal
             isOpen={open}
             onClose={handleClose}
+            closeOnBackdrop={false}
             title={submitted ? "Review Published" : (mapName ? displayMapName(mapName) : 'Review Map')}
             offsetSidebar
             maxWidth="520px"

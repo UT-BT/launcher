@@ -339,7 +339,8 @@ instead of `16rem`, `lg:pl-64` or `256px`:
 
 - a modal passes `offsetSidebar`, which pads the backdrop
   `pl-[calc(var(--sidebar-width,0px)_+_1rem)]`, centring the dialog on the content
-  area in both rail modes and on the viewport on phones;
+  area in both rail modes (on phones the modal is a full-screen sheet instead,
+  [shared-components.md](shared-components.md#modal));
 - a full-height overlay starts at `left-[var(--sidebar-width,0px)]` (`ErrorModal`'s
   non-fullscreen backdrop, the Game Input key-capture overlay and bind-conflict
   dialog);
@@ -662,8 +663,9 @@ compositor cost:
 - `backdrop-blur` is the most expensive effect. The budget is the existing chrome:
   sidebar, top bar, sticky theads, modals, tooltips and popover menus, and the
   pick/ban stage's paused overlay (present only while paused). Blur one surface, never each row or card of a
-  list. On touch the top bar (`touch:bg-card`), the drawer (`bg-card`) and the drawer
-  backdrop (`bg-black/80`) swap the blur for a solid tint.
+  list. On touch the top bar (`touch:bg-card`), the drawer (`bg-card`), the drawer
+  backdrop and the modal backdrop (`bg-black/80`) swap the blur for a solid tint, and
+  the modal panel drops its blur.
 - Infinite animations (`animate-pulse`, `animate-ping`, the legendary pulses) keep the
   compositor awake. Use them on singletons (a badge, one hero), never per row.
   Skeleton `animate-pulse` is fine because it exists only while loading.

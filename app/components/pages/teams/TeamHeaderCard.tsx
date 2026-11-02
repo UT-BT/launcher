@@ -282,6 +282,7 @@ function EditTeamModal({ accessToken, team, userProfile, rawAlias, memberNumber,
         <Modal
             isOpen
             onClose={onClose}
+            closeOnBackdrop={false}
             title="Edit Team"
             offsetSidebar
             maxWidth="34rem"
@@ -344,6 +345,7 @@ function TransferOwnershipModal({ accessToken, team, onClose, onTransferred }: {
         <Modal
             isOpen
             onClose={onClose}
+            closeOnBackdrop={false}
             title="Transfer Ownership"
             offsetSidebar
             maxWidth="34rem"

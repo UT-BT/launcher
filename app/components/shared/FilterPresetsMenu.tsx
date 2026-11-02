@@ -160,6 +160,7 @@ export function FilterPresetsMenu<TFilters>({
             <Modal
                 isOpen={saveOpen}
                 onClose={() => setSaveOpen(false)}
+                closeOnBackdrop={false}
                 title="Save filter preset"
                 className="w-[95%] sm:w-[480px] max-w-md"
                 offsetSidebar
@@ -199,6 +200,7 @@ export function FilterPresetsMenu<TFilters>({
             <Modal
                 isOpen={pendingDelete !== null}
                 onClose={() => setPendingDelete(null)}
+                closeOnBackdrop={false}
                 title="Delete preset?"
                 className="w-[95%] sm:w-[420px] max-w-md"
                 offsetSidebar

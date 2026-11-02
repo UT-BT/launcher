@@ -201,7 +201,7 @@ test.describe('safe areas', () => {
 
 test.describe('Reload app', () => {
     test('reloads the page onto the route reached inside the app', async ({ page }) => {
-        await openMaps(page)
+        await openMaps(page, { 'utbt:serversPageTutorial:v1': JSON.stringify({ seen: true, version: 1 }) })
         await (await openDrawer(page)).getByRole('link', { name: 'Servers', exact: true }).click()
         await expect.poll(() => new URL(page.url()).pathname).toBe('/servers')
         await page.evaluate(() => { (window as unknown as { beforeReload: boolean }).beforeReload = true })

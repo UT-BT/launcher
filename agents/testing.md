@@ -392,9 +392,12 @@ spec that is red today is marked `test.fail()`, with a note naming the ticket th
 
 - `owner-repro.spec.ts`, the owner's reported bug: Compare runs on the cap page, landscape, zoom in
   and out, portrait, then the close control closes the modal, the hamburger opens the drawer and a
-  swipe scrolls the page back to the real top. It is expected to fail until the mobile overhaul's
-  one-scroller and viewport-recovery work lands. Today it fails at the landscape step: the fixed top
-  bar covers the modal's top edge.
+  swipe scrolls the page back to the real top. It passes in emulation since the shared modal opens
+  as a sheet portalled above the top bar; what a real pinch and rotation leave behind on iOS stays
+  on the manual iPhone checklist.
+- `modal-sheet.spec.ts`: a page modal opens as a sheet over the top bar that fills the visible area
+  in portrait and at 844×390, and a swipe inside a sheet scrolls only its body while the header and
+  close stay in view.
 - **Zoom is simulated.** No engine can emulate a real pinch. On Chromium, `zoomVisualViewport` sets
   the page scale through the DevTools protocol (`Emulation.setPageScaleFactor`) and waits for
   `visualViewport.scale` to follow. It cannot pan the zoomed view, because headless Chromium ignores

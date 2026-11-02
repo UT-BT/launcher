@@ -106,6 +106,7 @@ function TitleFormModal({ open, onClose, token, editing, onSaved, previewUserId,
     <Modal
       isOpen={open}
       onClose={onClose}
+      closeOnBackdrop={false}
       title={isEditing ? 'Edit title' : 'Add a new title'}
       offsetSidebar
       maxWidth="32rem"

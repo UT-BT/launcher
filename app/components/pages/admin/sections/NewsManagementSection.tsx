@@ -140,6 +140,7 @@ function CategoriesModal({ open, onClose, token, categories, onChanged }: {
     <Modal
       isOpen={open}
       onClose={onClose}
+      closeOnBackdrop={false}
       title={mode === 'form' ? (editing ? `Edit category — ${editing.label}` : 'New category') : 'News categories'}
       offsetSidebar
       maxWidth="34rem"
@@ -336,6 +337,7 @@ function NewsFormModal({ open, onClose, token, editing, categories, onSaved }: {
     <Modal
       isOpen={open}
       onClose={onClose}
+      closeOnBackdrop={false}
       title={isEdit ? `Edit news — ${editing?.title}` : 'Post news'}
       offsetSidebar
       maxWidth="60rem"
