@@ -534,6 +534,14 @@ spec that is red today is marked `test.fail()`, with a note naming the ticket th
   after it closes `main` takes a swipe again. A multi-filter dropdown and a `modal={false}` menu
   fit the visible area and hold the page still too. Signed-in overlays sign in by seeding the
   stored login and answering the profile request.
+- `screenshot-viewer.spec.ts`: at 390×844 and 844×390, tapping the map hero opens the screenshot
+  viewer, which fetches its chunk only on that tap. Its close is in view and on top, a swipe over
+  it moves neither `main` nor the window, and a two-finger spread and a double tap zoom the
+  screenshot while `visualViewport.scale` stays 1. On Chromium the spread is real touch input
+  (`Input.dispatchTouchEvent` with two touch points), so it also proves the page doesn't zoom;
+  WebKit has no multi-touch input, so there the spread is synthetic pointer events on the frame.
+  The double tap uses the touchscreen on both engines. `e2e/map-screenshot-viewer.spec.ts`
+  checks that desktop keeps the plain hero and that Change still opens the screenshot editor.
 - **Zoom is simulated.** No engine can emulate a real pinch. On Chromium, `zoomVisualViewport` sets
   the page scale through the DevTools protocol (`Emulation.setPageScaleFactor`) and waits for
   `visualViewport.scale` to follow. It cannot pan the zoomed view, because headless Chromium ignores

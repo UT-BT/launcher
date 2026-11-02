@@ -1,4 +1,4 @@
-import { opens, opensWhenShown, shows, tap, watchRun, wrHistory } from './steps'
+import { opens, opensWhenShown, shows, steps, tap, watchRun, wrHistory } from './steps'
 import type { MobileRouteEntry, PageStep } from './types'
 
 export const MAP_NAME = 'CTF-BT-HumanResources'
@@ -33,6 +33,14 @@ export const mapsDetail: MobileRouteEntry = {
             id: 'sign-in-to-review',
             label: 'Sign in to review',
             open: opens(page => page.getByRole('button', { name: 'Add a Review' }), 'Sign in to review maps'),
+        },
+        {
+            id: 'screenshot-viewer',
+            label: 'Screenshot viewer',
+            open: steps(
+                tap(page => page.getByRole('button', { name: 'View screenshot' })),
+                shows(page => page.getByRole('img', { name: /Pinch or double-tap to zoom/ })),
+            ),
         },
     ],
     subViews: [

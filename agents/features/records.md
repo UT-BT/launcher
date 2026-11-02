@@ -198,6 +198,17 @@ those rows; none fetches for itself except the version bar.
   (`author_ref`) renders as `PlayerInfo`, so it links to the profile; a free-text author renders
   as a plain `MetaPill`. The Maps table does the same through `PlayerInfo presentation="name"`
   ([shared-components.md](../shared-components.md)).
+- **Screenshot viewer** (`modals/MapScreenshotViewer.tsx`, lazy behind `LazyModalGate` in
+  `mapDetail/HeroSection.tsx`): on a touch device (the device environment's `touch`) the hero
+  screenshot is a "View screenshot" button that opens the 1024 px screenshot in a `Modal` (a sheet
+  on phones). Pinch zooms around the fingers, one finger pans a zoomed screenshot and a double tap
+  zooms in at the tap or back out, all with pointer events on a `touch-action: none` frame, so the
+  page itself never zooms. The zoom math is `modals/screenshotZoom.ts` (`screenshotZoom.test.ts`):
+  1× to 4×, panned only as far as the screenshot still covers the frame; a rotation (the frame
+  changing width) zooms back out. Desktop renders the hero
+  as before and never loads the viewer. The Add/Change screenshot button sits beside the viewer
+  button, not inside it, so it still opens the editor. Team screenshots have no viewer: there is
+  no team screenshot component.
 - **Inactive version** (`active === false`): an amber "no longer in rotation" banner, reviews
   closed (`ReviewsCard canSubmit`), screenshot editing for staff only. The screenshot permission
   rule is in [api.md](../api.md).
@@ -396,6 +407,7 @@ the new-map highlight apply to either.
 | `modals/PlayerFavoritesModal.tsx`, `PlayerReviewsModal.tsx` | profile sidebar cards | The full list behind each card's preview. |
 | `modals/ReviewModal.tsx` | Map Detail, Home | Map Detail prefills it with the viewer's existing review and refetches on success. |
 | `modals/MapScreenshotModal.tsx` | map hero, Maps Authored | [api.md](../api.md) |
+| `modals/MapScreenshotViewer.tsx` | map hero, touch devices only | Read-only pinch-zoom viewer; see Map detail above. |
 
 ## Adding a profile tab
 

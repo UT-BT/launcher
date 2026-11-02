@@ -9,6 +9,7 @@ const ACTION_MODALS: Record<string, string> = {
     'components/modals/ChangeTitleModal.tsx': 'ChangeTitleModal',
     'components/modals/HistoryModal.tsx': 'HistoryModal',
     'components/modals/MapScreenshotModal.tsx': 'MapScreenshotModal',
+    'components/modals/MapScreenshotViewer.tsx': 'MapScreenshotViewer',
     'components/modals/ReplayPickerModal.tsx': 'ReplayPickerModal',
     'components/modals/ReviewModal.tsx': 'ReviewModal',
     'components/modals/WorldRecordProgressionModal.tsx': 'WorldRecordProgressionModal',

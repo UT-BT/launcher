@@ -256,6 +256,7 @@
     "e2e/mobile/rules/tap-targets-44px.ts",
     "e2e/mobile/rules/top-bar-visible.ts",
     "e2e/mobile/rules/types.ts",
+    "e2e/mobile/screenshot-viewer.spec.ts",
     "e2e/mobile/settle.ts",
     "e2e/mobile/viewports.ts",
     "e2e/responsive-accessibility.spec.ts",
@@ -595,8 +596,10 @@
   "agents/features/records.md": [
     "app/components/modals/CapTimeDistributionModal.tsx",
     "app/components/modals/HistoryModal.tsx",
+    "app/components/modals/MapScreenshotViewer.tsx",
     "app/components/modals/ReplayPickerModal.tsx",
     "app/components/modals/replayPickerCache.ts",
+    "app/components/modals/screenshotZoom.ts",
     "app/components/pages/CapDetailPage.tsx",
     "app/components/pages/CapItAllPage.tsx",
     "app/components/pages/MapDetailPage.tsx",
@@ -667,6 +670,7 @@
     "app/utils/teamRunState.ts",
     "e2e/cap-numeric-tables-desktop.spec.ts",
     "e2e/capTables.ts",
+    "e2e/map-screenshot-viewer.spec.ts",
     "e2e/mobile/cap-numeric-tables.spec.ts",
     "e2e/profile-tabs-responsive.spec.ts"
   ],
