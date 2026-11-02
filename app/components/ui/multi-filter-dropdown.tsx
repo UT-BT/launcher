@@ -49,7 +49,7 @@ export function MultiFilterDropdown({
                         <ChevronDown className="size-3.5 opacity-60 shrink-0" />
                     </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="min-w-56">
+                <DropdownMenuContent align="start" className="min-w-56 flex flex-col">
                     {searchable && (
                         <div className="px-1 pb-1 sticky top-0 bg-popover z-10">
                             <input
@@ -63,7 +63,7 @@ export function MultiFilterDropdown({
                             />
                         </div>
                     )}
-                    <div className="max-h-64 overflow-y-auto">
+                    <div className="min-h-0 max-h-64 overflow-y-auto overscroll-contain">
                         {filteredOptions.length === 0 ? (
                             <div className="px-2 py-2 text-xs text-muted-foreground">No matches.</div>
                         ) : filteredOptions.map(([value, optLabel]) => {
@@ -96,7 +96,7 @@ export function MultiFilterDropdown({
                     </div>
                     {values.length > 0 && (
                         <>
-                            <DropdownMenuSeparator />
+                            <DropdownMenuSeparator className="shrink-0" />
                             <DropdownMenuItem
                                 onSelect={e => {
                                     e.preventDefault()

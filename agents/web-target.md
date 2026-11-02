@@ -301,7 +301,8 @@ Phones parse the web entry chunk on first visit, so it stays lean.
   module-level lazies and wrap it in `<LazyModalGate open={…}>` with the condition the modal
   itself opens on; a modal already mounted conditionally (`{x && …}`) takes
   `<LazyModalGate open>`. The gate renders nothing until the first open, shows
-  `ModalLoading` (a spinner on the modal backdrop, `role="status"`, no
+  `ModalLoading` (a spinner on the modal backdrop, `role="status"`, portalled to
+  `document.body` above the top bar and holding the scroll lock, but with no
   `data-modal-backdrop`, so the crawl and Escape only ever see the real modal) while the
   chunk loads, and keeps the modal mounted after it closes, so its state and its
   reset-on-close effects behave as before. `LazyModalGate.test.ts` lists the gated modals

@@ -1,4 +1,5 @@
 import { listed, rowsOf, seen } from './steps'
+import { pageTutorial } from './overlays'
 import type { MobileRouteEntry } from './types'
 
 export const players: MobileRouteEntry = {
@@ -13,5 +14,6 @@ export const players: MobileRouteEntry = {
         label: row => row.alias,
         empty: 'No players found.',
     }),
+    modals: [pageTutorial('Players')],
     stress: { pr: 'long-text' },
 }

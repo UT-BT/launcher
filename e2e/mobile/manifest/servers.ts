@@ -1,4 +1,5 @@
 import { listed, rowsOf, seen } from './steps'
+import { pageTutorial } from './overlays'
 import type { MobileRouteEntry } from './types'
 
 export const servers: MobileRouteEntry = {
@@ -13,5 +14,6 @@ export const servers: MobileRouteEntry = {
         label: (_row, page) => page.getByRole('button', { name: /^Favorite / }).first(),
         empty: 'No servers match your filters.',
     }),
+    modals: [pageTutorial('Servers')],
     stress: { pr: 'long-text' },
 }

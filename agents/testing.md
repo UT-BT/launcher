@@ -314,7 +314,10 @@ on both engines at the project's default size (390×844 and 360×780).
 so Vitest can import them too; waits use locator `waitFor()`. The step helpers they share (`listed`,
 `recordShown`, `rowsOf`, `heading`, `shows`, `text`, `tap`, `steps`, `opens`, `opensWhenShown`,
 `watchesReplay`, `modalHeading`, `seen`) and the shared `watchRun` and `wrHistory` modals are in
-`manifest/steps.ts`.
+`manifest/steps.ts`. The overlays that aren't a page's own modal are in `manifest/overlays.ts`:
+`pageTutorial(page)` (the Servers, Maps and Players tutorial card, opened from the page's help
+button, with the card's dialog as `root`) and `consentPolicy(ready)` (the consent banner's privacy
+policy on Home: it drops the seeded consent and reloads once, so the banner shows).
 
 | Field | Holds |
 |---|---|
@@ -337,7 +340,11 @@ id keys the ledger, the gallery and the test titles.
 
 Every public view of the route contract has an entry, with every tab an anonymous visitor sees and
 every modal it can open by tapping. History, settings and the other signed-in modals belong to the
-role-gated entries. A modal that needs data a recording may lack, such as WR progression on a map
+role-gated entries (`home:signed-in` crawls Settings). `overlays.spec.ts` covers the overlays the
+crawl can't hold or close: the Settings loading placeholder (shown only while its chunk loads),
+and those with no named close (`^close`), which `modal-fits`, `scroll-top-after-modal` and
+`rotation-recovers` need: the sign-out confirm (Cancel), the boot connection error (Retry) and
+dropdown menus (an outside tap or Escape). A modal that needs data a recording may lack, such as WR progression on a map
 without a record history, opens through `opensWhenShown`, which leaves the page as it is when the
 trigger is not on screen. `watchesReplay` taps the visible replay buttons in turn, closing "Replay
 not available" until a replay video opens. When either leaves no modal open, the rules that measure
@@ -519,6 +526,14 @@ spec that is red today is marked `test.fail()`, with a note naming the ticket th
   swipe over it; closing it returns focus to the tapped opener (WebKit doesn't focus a tapped
   button, so this covers the Safari path) and the shell scroller takes a swipe again. A sheet opened
   by a tapped button inside a sheet returns focus to that button, not to the panel WebKit focused.
+- `overlays.spec.ts`: the overlays that aren't plain manifest modals, at 390×844 and 844×390. The
+  sign-out confirm, the Settings loading placeholder (its chunk held), the consent banner's privacy
+  policy and the lazy-modal loading spinner draw over the top bar; the tutorial card stays below
+  it; the connection error at boot covers the visible area. Each box sits inside the visible area
+  with its close (Cancel, Retry) on top, a swipe over it moves neither `main` nor the window, and
+  after it closes `main` takes a swipe again. A multi-filter dropdown and a `modal={false}` menu
+  fit the visible area and hold the page still too. Signed-in overlays sign in by seeding the
+  stored login and answering the profile request.
 - **Zoom is simulated.** No engine can emulate a real pinch. On Chromium, `zoomVisualViewport` sets
   the page scale through the DevTools protocol (`Emulation.setPageScaleFactor`) and waits for
   `visualViewport.scale` to follow. It cannot pan the zoomed view, because headless Chromium ignores

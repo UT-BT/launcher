@@ -1,7 +1,7 @@
 import { ReactNode, lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { LogOut, Menu } from 'lucide-react'
+import { Menu } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Button } from '@/app/components/ui/button'
+import { Modal } from '@/app/components/ui/modal'
 import { NavHistoryBar } from '@/app/components/navigation/NavHistoryBar'
 import { buildNavSections, isEventLinkLive, isNavItemActive, navItemDestination, type NavBadge } from '@/app/components/navigation/nav-items'
 import type { NavParams } from '@/app/components/navigation/NavigationContext'
@@ -26,6 +26,7 @@ import { SidebarCollapseToggle } from '@/app/components/layout/sidebar/SidebarCo
 import { SidebarNavItem } from '@/app/components/layout/sidebar/SidebarNavItem'
 import { SidebarReloadApp } from '@/app/components/layout/sidebar/SidebarReloadApp'
 import { SidebarUserCard } from '@/app/components/layout/sidebar/SidebarUserCard'
+import { SignOutConfirm } from '@/app/components/layout/SignOutConfirm'
 import { readSidebarCollapsed, writeSidebarCollapsed } from '@/app/components/layout/sidebarPreference'
 import { DiagnosticOverlayTrigger } from '@/app/device/diagnostics/DiagnosticOverlayTrigger'
 
@@ -317,57 +318,24 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                 )}
             </main>
 
-            {/* Logout Confirmation Modal */}
-            {
-                showLogoutConfirm && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                        <div className="w-full max-w-md bg-card border border-border rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-                            <div className="p-6 space-y-4">
-                                <div className="flex flex-col items-center text-center gap-2">
-                                    <div className="p-3 rounded-full bg-red-500/10 text-red-500 mb-2">
-                                        <LogOut className="size-8" />
-                                    </div>
-                                    <h3 className="text-xl font-bold">Sign Out</h3>
-                                    <p className="text-muted-foreground">
-                                        Are you sure you want to sign out?
-                                        <br />
-                                        <br />
-                                        You will need to sign in again to access UTBT.
-                                    </p>
-                                </div>
-                                <div className="flex gap-3 justify-center pt-4">
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => setShowLogoutConfirm(false)}
-                                        className="min-w-[100px]"
-                                    >
-                                        Cancel
-                                    </Button>
-                                    <Button
-                                        variant="destructive"
-                                        onClick={() => auth.logout().then(() => window.location.reload())}
-                                        className="min-w-[100px]"
-                                    >
-                                        Sign Out
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )
-            }
+            {showLogoutConfirm && (
+                <SignOutConfirm
+                    onCancel={() => setShowLogoutConfirm(false)}
+                    onConfirm={() => auth.logout().then(() => window.location.reload())}
+                />
+            )}
 
             {capabilities.settingsModal && isSettingsOpen && (
                 <Suspense fallback={
-                    <div className="fixed top-[var(--window-titlebar-height)] right-0 bottom-0 left-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-                        <div className="w-[95%] lg:w-[70%] max-w-7xl h-[90vh] rounded-xl border border-border bg-card shadow-2xl p-6 animate-pulse" aria-label="Loading settings">
+                    <Modal isOpen onClose={() => setIsSettingsOpen(false)} title="Settings" backdropClassName="z-[100]" className="w-[95%] lg:w-[95%] max-w-[1400px] max-h-[90vh] h-full p-0 overflow-hidden">
+                        <div role="status" aria-label="Loading settings" className="animate-pulse">
                             <div className="h-7 w-32 rounded bg-hairline/10" />
-                            <div className="mt-8 grid grid-cols-[14rem_1fr] gap-8">
+                            <div className="mt-8 grid grid-cols-[14rem_1fr] gap-8 max-sm:grid-cols-1">
                                 <div className="h-64 rounded-xl bg-hairline/5" />
                                 <div className="h-48 rounded-xl bg-hairline/5" />
                             </div>
                         </div>
-                    </div>
+                    </Modal>
                 }>
                     <SettingsModal
                         isOpen={isSettingsOpen}

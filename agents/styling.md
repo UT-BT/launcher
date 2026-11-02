@@ -665,7 +665,7 @@ compositor cost:
   pick/ban stage's paused overlay (present only while paused). Blur one surface, never each row or card of a
   list. On touch the top bar (`touch:bg-card`), the drawer (`bg-card`), the drawer
   backdrop and the modal backdrop (`bg-black/80`) swap the blur for a solid tint, and
-  the modal panel drops its blur.
+  the modal panel and the tutorial dim drop their blur.
 - Infinite animations (`animate-pulse`, `animate-ping`, the legendary pulses) keep the
   compositor awake. Use them on singletons (a badge, one hero), never per row.
   Skeleton `animate-pulse` is fine because it exists only while loading.

@@ -163,6 +163,11 @@ and `onMenuOpenChange` serve the tutorial.
   `title`, `body`, an optional `targetRef` or `targetRefs`, and `onEnter` / `onExit`.
 - Steps live in a per-page file (`app/components/pages/<page>/<page>TutorialSteps.ts`)
   because they reference page refs; that file re-exports `TutorialStep`.
+- The card follows the [modal rules](#modal): on touch it holds the shell scroll lock (steps
+  still `scrollIntoView` their targets; on desktop the page scrolls under the card as before), takes
+  focus and returns it, closes on Escape, and grows its close and buttons to 44px on touch. It sits above the bottom safe area and its body scrolls, so
+  it never reaches under the top bar. The dim overlay doesn't take pointer events and stays under
+  the top bar and, on desktop, the rail.
 
 A sticky `<thead>` with a z-index is a stacking context that traps the tutorial's
 inline z-index lift on its children. When a step targets a header button, lift the
@@ -239,8 +244,8 @@ whole thead through the `theadDataAttr` hook:
   route change unmounts the page and its modals). The body scrolls with
   `overscroll-behavior: contain`, so a swipe past its end doesn't chain to the page. An overlay
   that isn't a `Modal` takes the same lock: call `lockShellScroll()` in a layout effect and return
-  the release it gives. `scrollLockCount()` and `subscribeScrollLock()` read the count; the
-  diagnostic overlay shows it.
+  the release it gives (`LazyModalGate`'s loading spinner does). `scrollLockCount()` and
+  `subscribeScrollLock()` read the count; the diagnostic overlay shows it.
 - **Focus** (`ui/modalFocus.ts`). Opening focuses the first tabbable element (`leftAction` or the
   header close), or the panel when there is none. Tab and Shift+Tab wrap inside the top-most
   modal, also from a clicked element that isn't a tab stop, and the tabbable list is read at each
@@ -250,6 +255,19 @@ whole thead through the `theadDataAttr` hook:
   the panel of the modal underneath). It returns only if focus was still in the modal, so a modal
   closing under another doesn't take focus from it.
   Every programmatic focus passes `preventScroll`, so neither the window nor the page moves.
+- **Overlays with their own markup** follow the same rules through
+  `useModalBehaviour(panelRef, isOpen, onEscape?, lockScroll?)` (`ui/useModalBehaviour.ts`): the
+  counted lock (unless `lockScroll` is false), the focus trap and return, and Escape for the
+  top-most overlay when `onEscape` is given. The
+  overlay portals into `document.body` itself, puts `data-modal-backdrop` on the panel's parent
+  and stacks at `z-50` or higher, above the top bar (`z-30`) and the drawer. `ErrorModal` (no
+  Escape with `disableClose`), the sign-out confirm (`layout/SignOutConfirm.tsx`; Escape and
+  Cancel close it, a backdrop tap does not) and the tutorial card use it. Reach for `Modal` first;
+  the hook is for an overlay whose look must not change. The Settings loading placeholder in
+  `AppLayout` is a `Modal` with the Settings modal's own props, so it already has the header close.
+- **Popovers.** `ui/dropdown-menu` content portals at `z-[1000]`, above every modal and overlay
+  (modals sit at `z-50`, the tutorial card at `z-80`, the Settings modal at `z-[100]`), so a menu
+  opened inside one stacks over it.
 
 ### Team identity
 
@@ -264,9 +282,9 @@ Members are `TeamHolderMember` (`userId`, `alias`, `activeTitle`); pass
 | Component | Use for |
 |---|---|
 | `pagination.tsx`: `PaginationBar` | Page count, per-page select, prev/next and ellipsis; optional `meta` ("search", "filtered") labels the count. Below `sm` it renders a touch bar (`‹ Prev [page]/total Next ›`), so pages need no second pager. |
-| `multi-filter-dropdown.tsx`: `MultiFilterDropdown` | Multi-select with optional fuzzy search (`searchable`) and per-option icons (`iconFor`). Empty selection means all. |
+| `multi-filter-dropdown.tsx`: `MultiFilterDropdown` | Multi-select with optional fuzzy search (`searchable`) and per-option icons (`iconFor`). Empty selection means all. When the menu has less room than it needs, the option list shrinks and scrolls; the search box and Clear stay in view. |
 | `filter-panel-row.tsx`: `FilterPanelRow` | Label plus wrapping children inside a filter panel. |
-| `dropdown-menu.tsx` | Radix dropdown for any click-to-open menu of choices. A panel holding a slider or switch is a disclosure instead (Radix takes Tab and the arrow keys inside a menu); `PickBanSoundControl` is the model. |
+| `dropdown-menu.tsx` | Radix dropdown for any click-to-open menu of choices. A panel holding a slider or switch is a disclosure instead (Radix takes Tab and the arrow keys inside a menu); `PickBanSoundControl` is the model. The content stacks at `z-[1000]` ([Modal](#modal)), caps its height at the room Radix measures on its side and scrolls past it, and on touch devices holds the shell scroll lock while open, so the page behind stays still even with `modal={false}`. |
 | `tooltip.tsx`: `Tooltip` | Hover and focus tooltip, portalled to `document.body`. The trigger wraps `children` in an inline `<span>` so it stays valid inside a `<button>` or `<a>`: pass phrasing content only (`span`, `button`, `img`, icons), and use a `span` with a `block` / `flex` class where a block is needed. With no children it renders an info icon. Sides are in [styling.md](styling.md). |
 | `spinner.tsx`: `Spinner` | The loading spinner, in place of `<Loader2 className="animate-spin" />` (same props). It shows the season glyph while a season is active; `WebBootScreen` keeps a plain `Loader2`. |
 | `badge`, `button`, `switch`, `checkbox`, `input`, `slider` | shadcn-derived primitives. |
