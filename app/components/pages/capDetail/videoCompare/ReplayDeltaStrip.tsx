@@ -1,15 +1,17 @@
+import { useRef } from 'react'
 import { DELTA_COLORS } from '@/app/components/pages/capDetail/capStats'
 import type { DeltaTone } from '@/app/components/pages/capDetail/runDelta/deltaCurve'
 import type { VideoStrip } from '@/app/components/pages/capDetail/runDelta/videoStrip'
 import type { CapComparisonPoint } from '@/app/utils/api'
 import { usePointerScrub } from '@/app/hooks/usePointerScrub'
+import { useClockFrame, type CompareClock } from './compareClock'
 
 interface ReplayDeltaStripProps {
     strip: VideoStrip
     runnerName: string
     runnerOffset: number
     duration: number
-    master: number
+    clock: CompareClock
     onScrub: (t: number) => void
     onScrubStart?: () => void
     onScrubEnd?: () => void
@@ -28,9 +30,10 @@ const ZERO_STROKE = HAIRLINE(0.18)
 const TICK_STROKE = HAIRLINE(0.3)
 
 export function ReplayDeltaStrip({
-    strip, runnerName, runnerOffset, duration, master, onScrub, onScrubStart, onScrubEnd,
+    strip, runnerName, runnerOffset, duration, clock, onScrub, onScrubStart, onScrubEnd,
 }: ReplayDeltaStripProps) {
     const { trackRef, dur, pointerHandlers } = usePointerScrub(duration, { onScrub, onScrubStart, onScrubEnd })
+    const cursorRef = useRef<HTMLDivElement>(null)
 
     const [lo, hi] = strip.y.domainMs
     const px = (runnerMs: number) => ((runnerMs / 1000 + runnerOffset) / dur) * 100
@@ -38,8 +41,12 @@ export function ReplayDeltaStrip({
     const path = (points: CapComparisonPoint[]) =>
         points.map(([t, d], i) => `${i === 0 ? 'M' : 'L'} ${px(t).toFixed(3)},${py(d).toFixed(3)}`).join(' ')
     const zeroY = py(strip.zeroLineMs)
-    const cursorPct = Math.min(100, Math.max(0, (master / dur) * 100))
     const capPoint = strip.capPoint
+
+    useClockFrame(clock, master => {
+        trackRef.current?.setAttribute('aria-valuenow', String(Math.round(master)))
+        if (cursorRef.current) cursorRef.current.style.left = `${Math.min(100, Math.max(0, (master / dur) * 100))}%`
+    })
 
     return (
         <div className="select-none">
@@ -50,7 +57,6 @@ export function ReplayDeltaStrip({
                 aria-label={`Scrub both replays via ${runnerName}'s delta`}
                 aria-valuemin={0}
                 aria-valuemax={Math.round(dur)}
-                aria-valuenow={Math.round(master)}
                 {...pointerHandlers}
                 className="relative h-24 rounded-lg bg-hairline/[0.02] border border-hairline/5 overflow-hidden touch-none cursor-pointer focus:outline-none focus:border-accent-500/40"
             >
@@ -105,10 +111,7 @@ export function ReplayDeltaStrip({
                     />
                 )}
 
-                <div
-                    className="absolute top-0 bottom-0 w-px bg-hairline/80 pointer-events-none"
-                    style={{ left: `${cursorPct}%` }}
-                />
+                <div ref={cursorRef} className="absolute top-0 bottom-0 w-px bg-hairline/80 pointer-events-none" />
             </div>
 
             <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 pt-1.5 text-[10px] text-muted-foreground">

@@ -85,7 +85,8 @@ What a theme sets:
   `drop-shadow-[…rgb(var(--accent-glow-rgb)/<a>)]` (the sidebar logo, count bubbles).
 - **Nebula** `--nebula-1…4` (comma-separated RGB) are the gradient stops of the
   animated `.nebula-bg` backdrop in `shared.css`. A gradient theme sets all four, or
-  it inherits Classic's blue swirl.
+  it inherits Classic's blue swirl. Below `lg` and on touch screens (`hover: none`), in
+  either orientation, the swirl layer is hidden and the glow layer stands still.
 - **Hairline** `--hairline-rgb` backs `--color-hairline`: white on dark themes, dark
   in Light.
 - **Window chrome**: the titlebar's `--window-c-*` vars in `app/styles/window.css`

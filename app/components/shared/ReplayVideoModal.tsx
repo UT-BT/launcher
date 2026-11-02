@@ -48,6 +48,7 @@ export function ReplayVideoPlayer({ url, className }: { url: string; className?:
             src={url}
             controls
             autoPlay
+            playsInline
             className={className ?? 'w-full aspect-video bg-black rounded'}
         />
     )

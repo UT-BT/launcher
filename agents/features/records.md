@@ -274,8 +274,8 @@ around this one (found by `team_cap_id`, else by `member_key`, the same member c
 `capDetail/videoCompare/VideoCompareModal.tsx` plays N runs in sync (two from Cap Detail, the
 roster from Team Cap Detail; lane colours cycle after eight).
 
-- The master clock is the furthest video time plus that run's nudge. Nudges move in 0.1 s steps,
-  clamped to ± the larger of 60 s and the longest video.
+- The master clock is the furthest mounted video time plus that run's nudge. Nudges move in 0.1 s
+  steps, clamped to ± the larger of 60 s and the longest video.
 - Arrow keys step one frame at the lowest `fps` among the runs (30 when unknown); J and L skip
   5 s; keys typed into an input are ignored. Videos start muted; rates run 0.25×–2×.
 - The slowest run is the reference. For every other run **on the reference's side**
@@ -285,7 +285,25 @@ roster from Team Cap Detail; lane colours cycle after eight).
   (x = `t + delta`). A run on the other side or with an unknown side gets no ticks and no delta;
   a `null` read keeps that run's checkpoint ticks, aligned against the slowest run, and the
   checkpoint delta bar (exactly two runs with a matched checkpoint).
-- Play starts only once every video reports a finite duration and none has errored.
+- Play starts only once every mounted video has reported a finite duration and none has errored.
+- **Touch devices** (`useDeviceEnvironment(env => env.touch)`) mount at most two videos
+  (`TOUCH_PLAYING_LIMIT`). They start with the reference and the first other run on its side
+  (else the first other run); the rest show a **Watch** poster (`initialPlayingRuns`,
+  `compareView.ts`). Tapping a poster swaps that run in for the one that has played longest
+  (`swapIntoPlaying`): the replaced video pauses and releases its source (`src` removed,
+  `load()`), and a run swapped in during playback seeks to the clock and plays once its
+  metadata loads. A run swapped back in keeps the duration it reported before, so Play doesn't
+  wait for it to reload; it joins the same way. While a run is joining, the clock never moves
+  back. Posters keep their readouts. Desktop mounts and plays every run.
+- **The clock lives outside React state** (`compareClock.ts`). The playback loop writes the
+  master time to `createCompareClock()`. The scrubber, both delta strips and the time label
+  paint their cursor, text and `aria-valuenow` from it every frame (`useClockFrame`), with no
+  render. The pane readouts go through `useClockValue`: they re-render only when a readout
+  changes, and at most every 100 ms (`READOUT_INTERVAL_MS`, `subscribeThrottled`), so playback
+  commits at most 10 times a second whatever the frame rate.
+- Every `<video>` here, in `ReplayVideoPlayer` and in Admin's map video preview gets
+  `playsInline`, so an iPhone never forces native fullscreen; fullscreen happens only
+  through the replay player's own controls.
 - Credit the sources with `ReplaySourceCredit`; source rules are in [api.md](../api.md).
 
 ## World Records
@@ -355,7 +373,7 @@ the new-map highlight apply to either.
 
 | Modal | Opened from | Rules |
 |---|---|---|
-| `shared/ReplayVideoModal.tsx` + `useReplayWatch` | every Watch button | `openReplay` turns a `null` video into "Replay video not available yet" and a thrown read into "Could not load this replay"; render `replay.error` in a `Modal` titled "Replay not available" beside it. Volume persists in `utbt:replayVideoVolume:v1`; Share copies `view_url ?? mp4_url`. |
+| `shared/ReplayVideoModal.tsx` + `useReplayWatch` | every Watch button | `openReplay` turns a `null` video into "Replay video not available yet" and a thrown read into "Could not load this replay"; render `replay.error` in a `Modal` titled "Replay not available" beside it. Volume persists in `utbt:replayVideoVolume:v1`; Share copies `view_url ?? mp4_url`. The player plays inline (`playsInline`); fullscreen is its controls' button. |
 | `modals/ReplayPickerModal.tsx` | Maps row replay, Home Medal Hunt, Cap Detail Compare Run | Lists the map's verified solo runs, or its team runs on a team map outside `compareMode`. Resolves each row's video three at a time, visible page first. Caches every run per map for 5 minutes (`replayPickerCache.ts`), and drops `excludeCapId` (the cap being compared) after the read, so compare mode never offers the cap itself and a later normal open still lists it. |
 | `modals/WorldRecordProgressionModal.tsx` | the WR history trigger on Map Detail, World Records and the profile WR tab | `lazy()`-loaded; the caller fetches `fetchWorldRecordProgression` and passes `entries`. |
 | `modals/CapTimeDistributionModal.tsx` | Map Detail median tile | Certified caps only on solo maps, every team run on team maps; the x-axis ends at the tightest medal boundary that holds about 95 % of caps. |

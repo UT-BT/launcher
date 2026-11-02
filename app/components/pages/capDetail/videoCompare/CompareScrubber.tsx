@@ -1,7 +1,8 @@
-import { Fragment } from 'react'
+import { Fragment, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import { formatCapTime } from '@/app/utils/format'
 import { usePointerScrub } from '@/app/hooks/usePointerScrub'
+import { useClockFrame, type CompareClock } from './compareClock'
 
 export interface ScrubTick { t: number; isCap: boolean }
 
@@ -14,7 +15,7 @@ export interface ScrubLane {
 }
 
 interface CompareScrubberProps {
-    master: number
+    clock: CompareClock
     duration: number
     lanes: ScrubLane[]
     onScrub: (t: number) => void
@@ -23,13 +24,20 @@ interface CompareScrubberProps {
 }
 
 export function CompareScrubber({
-    master, duration, lanes, onScrub, onScrubStart, onScrubEnd,
+    clock, duration, lanes, onScrub, onScrubStart, onScrubEnd,
 }: CompareScrubberProps) {
     const { trackRef, dur, pointerHandlers } = usePointerScrub(duration, { onScrub, onScrubStart, onScrubEnd })
+    const cursorRef = useRef<HTMLDivElement>(null)
+    const timeRef = useRef<HTMLSpanElement>(null)
 
     const pct = (t: number) => Math.min(100, Math.max(0, (t / dur) * 100))
-    const cursorPct = pct(master)
     const laneCount = Math.max(1, lanes.length)
+
+    useClockFrame(clock, master => {
+        trackRef.current?.setAttribute('aria-valuenow', String(Math.round(master)))
+        if (cursorRef.current) cursorRef.current.style.left = `${pct(master)}%`
+        if (timeRef.current) timeRef.current.textContent = `${formatCapTime(Math.max(0, master))} / ${formatCapTime(dur)}`
+    })
 
     const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
         let next: number | null = null
@@ -53,9 +61,7 @@ export function CompareScrubber({
                         </span>
                     ))}
                 </div>
-                <span className="font-mono tabular-nums text-muted-foreground normal-case shrink-0">
-                    {formatCapTime(Math.max(0, master))} / {formatCapTime(dur)}
-                </span>
+                <span ref={timeRef} className="font-mono tabular-nums text-muted-foreground normal-case shrink-0" />
             </div>
 
             <div
@@ -65,7 +71,6 @@ export function CompareScrubber({
                 aria-label="Scrub all replays"
                 aria-valuemin={0}
                 aria-valuemax={Math.round(dur)}
-                aria-valuenow={Math.round(master)}
                 {...pointerHandlers}
                 onKeyDown={onKeyDown}
                 className="relative h-12 rounded-lg bg-hairline/[0.02] border border-hairline/5 overflow-hidden touch-none cursor-pointer focus:outline-none focus:border-accent-500/40"
@@ -91,10 +96,7 @@ export function CompareScrubber({
                     </Fragment>
                 ))}
 
-                <div
-                    className="absolute top-0 bottom-0 w-px bg-white pointer-events-none"
-                    style={{ left: `${cursorPct}%` }}
-                >
+                <div ref={cursorRef} className="absolute top-0 bottom-0 w-px bg-white pointer-events-none">
                     <div className="absolute -top-[3px] -left-[3px] size-[7px] rounded-full bg-white" />
                     <div className="absolute -bottom-[3px] -left-[3px] size-[7px] rounded-full bg-white" />
                 </div>

@@ -591,6 +591,7 @@
     "app/components/pages/capDetail/videoCompare/CompareScrubber.tsx",
     "app/components/pages/capDetail/videoCompare/ReplayDeltaStrip.tsx",
     "app/components/pages/capDetail/videoCompare/VideoCompareModal.tsx",
+    "app/components/pages/capDetail/videoCompare/compareClock.ts",
     "app/components/pages/capDetail/videoCompare/compareView.ts",
     "app/components/pages/capDetail/videoCompare/useRunComparisons.ts",
     "app/components/pages/mapDetail/LeaderboardCard.tsx",

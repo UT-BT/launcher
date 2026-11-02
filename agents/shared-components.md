@@ -197,7 +197,7 @@ whole thead through the `theadDataAttr` hook:
 | `shared/FavoriteStar.tsx` | Favourite toggle. The prop is `name`: pass whatever id you store (map name, server id). |
 | `shared/IconActionButton.tsx` | Icon button for table action cells, `variant` `review` / `replay` / `download`. Stops click propagation by default, so it works inside clickable rows. |
 | `shared/DemoDownloadStatusModal.tsx` + `hooks/useDemoDownload.ts` | Demo download progress, success and error. `MapDownloadStatusModal` + `useMapDownload` do the same for maps. |
-| `shared/ReplayVideoModal.tsx` + `hooks/useReplayWatch.ts` | Watch a cap's replay video: `openReplay({ capId, mapName, time?, alias? })`, then render the modal from `video`. |
+| `shared/ReplayVideoModal.tsx` + `hooks/useReplayWatch.ts` | Watch a cap's replay video: `openReplay({ capId, mapName, time?, alias? })`, then render the modal from `video`. `ReplayVideoPlayer` plays inline (`playsInline`), so iPhones don't force fullscreen. |
 | `shared/MarkdownBody.tsx` | Render markdown text with the app's typography. |
 | `shared/MapSearchInput.tsx` | Pick one map by searching (`accessToken`, `value`, `onChange`). |
 | `pages/teams/PlayerSearchInput.tsx` | Pick a UTBT player: `accessToken`, `onPick(player)`, `excludeIds?` (a `Set` of user ids to leave out, such as current members), `disabled?`, `placeholder?`. Searches by alias from 2 characters with a 300 ms debounce, shows up to 8 results through `PlayerInfo`, and clears after a pick. Used by Admin → Streamers, Roles and Events, event sign-up, team members and Stream tab casters. It takes no label, so wrap it in a labelled `role="group"`. |

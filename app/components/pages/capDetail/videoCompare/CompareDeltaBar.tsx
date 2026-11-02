@@ -1,30 +1,37 @@
+import { useRef } from 'react'
 import { segmentColor } from '@/app/components/pages/capDetail/capStats'
 import { usePointerScrub } from '@/app/hooks/usePointerScrub'
+import { useClockFrame, type CompareClock } from './compareClock'
 
 export interface DeltaPoint { x: number; delta: number }
 
 interface CompareDeltaBarProps {
     points: DeltaPoint[]
     duration: number
-    master: number
+    clock: CompareClock
     onScrub: (t: number) => void
     onScrubStart?: () => void
     onScrubEnd?: () => void
 }
 
-export function CompareDeltaBar({ points, duration, master, onScrub, onScrubStart, onScrubEnd }: CompareDeltaBarProps) {
+export function CompareDeltaBar({ points, duration, clock, onScrub, onScrubStart, onScrubEnd }: CompareDeltaBarProps) {
     const { trackRef, dur, pointerHandlers } = usePointerScrub(duration, { onScrub, onScrubStart, onScrubEnd })
+    const cursorRef = useRef<HTMLDivElement>(null)
 
     const maxAbs = Math.max(1e-3, ...points.map(p => Math.abs(p.delta)))
     const px = (x: number) => Math.min(100, Math.max(0, (x / dur) * 100))
     const py = (d: number) => 50 - (d / maxAbs) * 44
-    const cursorPct = Math.min(100, Math.max(0, (master / dur) * 100))
 
     const areaPath = points.length > 1
         ? `M ${px(points[0].x).toFixed(2)},50 `
             + points.map(p => `L ${px(p.x).toFixed(2)},${py(p.delta).toFixed(2)}`).join(' ')
             + ` L ${px(points[points.length - 1].x).toFixed(2)},50 Z`
         : ''
+
+    useClockFrame(clock, master => {
+        trackRef.current?.setAttribute('aria-valuenow', String(Math.round(master)))
+        if (cursorRef.current) cursorRef.current.style.left = `${Math.min(100, Math.max(0, (master / dur) * 100))}%`
+    })
 
     return (
         <div className="select-none">
@@ -35,7 +42,6 @@ export function CompareDeltaBar({ points, duration, master, onScrub, onScrubStar
                 aria-label="Scrub both replays via the delta"
                 aria-valuemin={0}
                 aria-valuemax={Math.round(dur)}
-                aria-valuenow={Math.round(master)}
                 {...pointerHandlers}
                 className="relative h-24 rounded-lg bg-hairline/[0.02] border border-hairline/5 overflow-hidden touch-none cursor-pointer focus:outline-none focus:border-accent-500/40"
             >
@@ -59,10 +65,7 @@ export function CompareDeltaBar({ points, duration, master, onScrub, onScrubStar
                     })}
                 </svg>
 
-                <div
-                    className="absolute top-0 bottom-0 w-px bg-hairline/80 pointer-events-none"
-                    style={{ left: `${cursorPct}%` }}
-                />
+                <div ref={cursorRef} className="absolute top-0 bottom-0 w-px bg-hairline/80 pointer-events-none" />
             </div>
 
             <div className="flex items-center justify-center gap-3 pt-1.5 text-[10px] text-muted-foreground">
