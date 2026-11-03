@@ -353,17 +353,16 @@ dropdown menus (an outside tap or Escape). A modal that needs data a recording m
 without a record history, opens through `opensWhenShown`, which leaves the page as it is when the
 trigger is not on screen. `watchesReplay` taps the visible replay buttons in turn, closing "Replay
 not available" until a replay video opens. When either leaves no modal open, the rules that measure
-the modal's root report `n/a`, but `rotation-recovers` fails with "the modal is not open": the
-portrait `rotation-recovers` entries on the profile's `watch-run` surfaces record a trigger phones
-don't show, not a rotation bug. On a tiered table the trigger sits in the card's expand panel: the
-shared `watchRun` and `wrHistory` modals open through `withCardsOpen`, which first opens every
-collapsed "Details" panel on screen, so World Records and the map page crawl both modals on
-phones. The Maps page's Demos and reviews (`maps/demos`, `maps/reviews`) open the same way, from
+the modal's root report `n/a`, but `rotation-recovers` fails with "the modal is not open". Portrait
+entries used to record that where phones showed no trigger, and none remain. On a tiered table the
+trigger sits in the card's expand panel: the shared `watchRun` and `wrHistory` modals open through
+`withCardsOpen`, which first opens every collapsed "Details" panel on screen, so World Records and
+the map page crawl both modals on phones, and the profile's All Caps and Personal Bests crawl the
+replay. The Maps page's Demos and reviews (`maps/demos`, `maps/reviews`) open the same way, from
 the first panel's Demos button and Community Review. The reviews modal lists the recorded public
 reviews; the replay picker shows "No runs found", because the `maps` recording has no leaderboard
-for it. Event tabs that
-show only while signups are open (`players`, `signup`) are not crawled on the public event; the
-staff-only `manage` and `stream` tabs are crawled by `event-detail:manager`.
+for it. Event tabs that show only while signups are open (`players`, `signup`) are not crawled on
+the public event; the staff-only `manage` and `stream` tabs are crawled by `event-detail:manager`.
 
 **Contract.** `routes.contract.test.ts` (Vitest) fails when a route-contract view has no entry,
 when an entry names a view the contract does not have, when one of the role-gated entries below is

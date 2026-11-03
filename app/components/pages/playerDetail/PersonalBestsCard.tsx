@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, lazy } from 'react'
+import { useCallback, useEffect, useState, lazy } from 'react'
 import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { Play, Download, MessageSquareOff, ShieldCheck, Search, Trophy, Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -20,7 +20,7 @@ import { Modal } from '@/app/components/ui/modal'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell,
     DataTableRow, DataTableCell, DataTableEmpty, DataTableSkeletonRow,
-    type SortDirection, type ResponsiveColumn,
+    type ColumnTier, type SortDirection, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { PaginationBar } from '@/app/components/ui/pagination'
 import { CAP_TYPE_I4GAMES, CAP_TYPE_UTBT_CERTIFIED } from '@/app/utils/capTypes'
@@ -63,6 +63,38 @@ const COLUMN_PRIORITY: Partial<Record<PbColumnId, number>> = {
 
 const REQUIRED_COLUMNS = new Set<PbColumnId>(['map', 'time'])
 
+const COLUMN_TIER: Record<PbColumnId, ColumnTier> = {
+    map: 'essential',
+    medal: 'essential',
+    time: 'essential',
+    status: 'essential',
+    added: 'essential',
+    actions: 'detail',
+}
+
+const COLUMN_LABEL: Record<PbColumnId, string> = {
+    map: 'Map',
+    medal: 'Medal',
+    time: 'PB Time',
+    status: 'Status',
+    added: 'Set',
+    actions: 'Actions',
+}
+
+const SORT_KEY: Partial<Record<PbColumnId, SortField>> = {
+    map: 'map',
+    time: 'time',
+    added: 'added',
+}
+
+const CELL_LAYOUT: Partial<Record<PbColumnId, { align: 'center' | 'right'; className?: string }>> = {
+    medal: { align: 'center' },
+    time: { align: 'right' },
+    status: { align: 'center' },
+    added: { align: 'right' },
+    actions: { align: 'center', className: 'px-2' },
+}
+
 function renderPbStatus(pb: UserPersonalBestRow) {
     if (pb.verified) {
         return (
@@ -104,15 +136,6 @@ export function PersonalBestsCard({
     const replay = useReplayWatch()
     const demoDownload = useDemoDownload()
 
-    const responsiveColumns = useMemo<ResponsiveColumn[]>(
-        () => PB_COLUMNS.map(id => ({
-            id,
-            width: COLUMN_WIDTH[id],
-            priority: COLUMN_PRIORITY[id],
-            required: REQUIRED_COLUMNS.has(id),
-        })),
-        [],
-    )
     const [resolved, setResolved] = useState<Set<PbColumnId> | null>(null)
     const handleResolve = useCallback((ids: Set<string>) => {
         setResolved(ids as Set<PbColumnId>)
@@ -156,37 +179,140 @@ export function PersonalBestsCard({
     }
     const dir = (field: SortField): SortDirection => sortField === field ? sortDir : null
 
-    const compactRows = loading ? (
-        Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} role="listitem" className="p-3 border-b border-hairline/5 last:border-0 animate-pulse">
-                <div className="h-10 rounded bg-hairline/5" />
-            </div>
-        ))
-    ) : items.length === 0 ? (
-        <div role="listitem" className="px-4 py-12 text-center text-sm text-muted-foreground">
-            {query || capFilter !== 'all' ? 'No personal bests match the filter.' : 'No personal bests yet.'}
-        </div>
-    ) : items.map(pb => {
+    const emptyMessage = query || capFilter !== 'all' ? 'No personal bests match the filter.' : 'No personal bests yet.'
+
+    const favoriteStar = (pb: UserPersonalBestRow) => onToggleFavorite && (
+        <FavoriteStar
+            name={pb.mapName}
+            isFavorited={favoriteMapNames.has(pb.mapName)}
+            onToggle={onToggleFavorite}
+            size="sm"
+            disabled={!canEditFavorites}
+        />
+    )
+
+    const mapLink = (pb: UserPersonalBestRow) => (
+        <MapNavLink mapName={pb.mapName} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate min-w-0">{displayMapName(pb.mapName)}</MapNavLink>
+    )
+
+    const teamBadge = (pb: UserPersonalBestRow) => pb.isTeam && (
+        <TeamRosterBadge members={pb.teamMembers} currentUserId={String(userId)} />
+    )
+
+    const timeLink = (pb: UserPersonalBestRow) => (
+        <CapTimeLink
+            capId={pb.isTeam ? undefined : pb.id}
+            teamCapId={pb.isTeam ? pb.teamCapId ?? undefined : undefined}
+            seconds={pb.time}
+            className={cn(
+                'text-sm font-mono tabular-nums font-bold',
+                pb.medal === 'World Record' ? 'text-blue-200' : 'text-foreground',
+            )}
+        />
+    )
+
+    const addedDate = (pb: UserPersonalBestRow) => (
+        <span className="text-xs text-muted-foreground tabular-nums">
+            {pb.added ? formatAddedDate(pb.added) : '—'}
+        </span>
+    )
+
+    const pbCell = (id: PbColumnId, pb: UserPersonalBestRow): React.ReactNode => {
+        switch (id) {
+            case 'map':
+                return (
+                    <div className="flex items-center gap-2 min-w-0">
+                        <MapThumbnail mapName={pb.mapName} className="size-8 shrink-0" />
+                        {favoriteStar(pb)}
+                        <div className="flex flex-col gap-1 min-w-0">
+                            <div className="flex items-center gap-2 min-w-0">
+                                {mapLink(pb)}
+                                {teamBadge(pb)}
+                            </div>
+                        </div>
+                    </div>
+                )
+            case 'medal': {
+                const medalIcon = getMedalIcon(pb.medal.toLowerCase())
+                return medalIcon && (
+                    <Tooltip content={pb.medal} side="top">
+                        <img src={medalIcon} alt={pb.medal} className="size-4 inline-block shrink-0 object-contain max-w-none" />
+                    </Tooltip>
+                )
+            }
+            case 'time':
+                return (
+                    <span className="inline-flex items-center gap-1.5">
+                        {pb.medal === 'World Record' && <Trophy className="size-3 text-blue-300" />}
+                        {timeLink(pb)}
+                    </span>
+                )
+            case 'status':
+                return renderPbStatus(pb)
+            case 'added': {
+                const exact = pb.added ? (() => {
+                    const d = new Date(pb.added)
+                    return isNaN(d.getTime()) ? pb.added : d.toLocaleString()
+                })() : '—'
+                return (
+                    <Tooltip content={exact} side="top">
+                        {addedDate(pb)}
+                    </Tooltip>
+                )
+            }
+            case 'actions': {
+                const canPlay = pb.verified
+                return (
+                    <div className="inline-flex items-center gap-1">
+                        <IconActionButton
+                            variant="replay"
+                            icon={canPlay ? Play : MessageSquareOff}
+                            iconFill={canPlay}
+                            tooltip={canPlay ? 'Watch run' : 'No replay — cap not verified'}
+                            disabled={!canPlay}
+                            loading={replay.loadingCapId === pb.id}
+                            onClick={() => replay.openReplay({
+                                capId: pb.id,
+                                mapName: pb.mapName,
+                                time: pb.time,
+                            })}
+                        />
+                        <IconActionButton
+                            variant="download"
+                            icon={Download}
+                            tooltip={canPlay ? 'Download demo' : 'No demo — cap not verified'}
+                            disabled={!canPlay}
+                            onClick={() => demoDownload.start(
+                                { id: pb.id, alias: undefined, cap_time_seconds: pb.time } as any,
+                                pb.mapName,
+                            )}
+                        />
+                    </div>
+                )
+            }
+        }
+    }
+
+    const responsiveColumns: ResponsiveColumn<UserPersonalBestRow>[] = PB_COLUMNS.map(id => ({
+        id,
+        width: COLUMN_WIDTH[id],
+        priority: COLUMN_PRIORITY[id],
+        required: REQUIRED_COLUMNS.has(id),
+        tier: COLUMN_TIER[id],
+        label: COLUMN_LABEL[id],
+        sortKey: SORT_KEY[id],
+        cell: pb => pbCell(id, pb),
+    }))
+
+    const pbFace = (pb: UserPersonalBestRow) => {
         const medalIcon = getMedalIcon(pb.medal.toLowerCase())
         return (
-            <div
-                key={pb.id}
-                role="listitem"
-                className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-3 border-b border-hairline/5 last:border-0 cursor-pointer"
-                onClick={() => onMapSelect?.(pb.mapName)}
-            >
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
                 <div className="min-w-0 space-y-1">
                     <div className="flex items-center gap-2 min-w-0">
-                        {onToggleFavorite && (
-                            <FavoriteStar
-                                name={pb.mapName}
-                                isFavorited={favoriteMapNames.has(pb.mapName)}
-                                onToggle={onToggleFavorite}
-                                size="sm"
-                                disabled={!canEditFavorites}
-                            />
-                        )}
-                        <MapNavLink mapName={pb.mapName} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate min-w-0">{displayMapName(pb.mapName)}</MapNavLink>
+                        {favoriteStar(pb)}
+                        {mapLink(pb)}
+                        {teamBadge(pb)}
                     </div>
                     <div className="flex items-center gap-2">{renderPbStatus(pb)}</div>
                 </div>
@@ -195,23 +321,25 @@ export function PersonalBestsCard({
                         {medalIcon && (
                             <img src={medalIcon} alt={pb.medal} className="size-4 inline-block shrink-0 object-contain max-w-none" />
                         )}
-                        <CapTimeLink
-                            capId={pb.isTeam ? undefined : pb.id}
-                            teamCapId={pb.isTeam ? pb.teamCapId ?? undefined : undefined}
-                            seconds={pb.time}
-                            className={cn(
-                                'text-sm font-mono tabular-nums font-bold',
-                                pb.medal === 'World Record' ? 'text-blue-200' : 'text-foreground',
-                            )}
-                        />
+                        {timeLink(pb)}
                     </span>
-                    <span className="text-xs text-muted-foreground tabular-nums">
-                        {pb.added ? formatAddedDate(pb.added) : '—'}
-                    </span>
+                    {addedDate(pb)}
                 </div>
             </div>
         )
-    })
+    }
+
+    const cardPlaceholder = loading ? (
+        Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="p-3 border-b border-hairline/5 last:border-0 animate-pulse">
+                <div className="h-10 rounded bg-hairline/5" />
+            </div>
+        ))
+    ) : items.length === 0 ? (
+        <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+            {emptyMessage}
+        </div>
+    ) : undefined
 
     return (
         <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col overflow-hidden">
@@ -271,8 +399,19 @@ export function PersonalBestsCard({
                     columns: responsiveColumns,
                     nameFloorRem: 14,
                     onResolve: handleResolve,
-                    compactContent: compactRows,
                     compactAriaLabel: 'Personal bests',
+                    cards: {
+                        rows: items,
+                        rowKey: pb => pb.id,
+                        face: pbFace,
+                        onOpen: pb => onMapSelect?.(pb.mapName),
+                        placeholder: cardPlaceholder,
+                        sort: {
+                            key: sortField,
+                            direction: sortDir,
+                            onSort: key => handleSort(key as SortField),
+                        },
+                    },
                 }}
             >
                 <DataTableHeaderRow>
@@ -289,116 +428,21 @@ export function PersonalBestsCard({
                             <DataTableSkeletonRow key={i} columnCount={visibleColumnCount} />
                         ))
                     ) : items.length === 0 ? (
-                        <DataTableEmpty colSpan={visibleColumnCount} message={query || capFilter !== 'all' ? 'No personal bests match the filter.' : 'No personal bests yet.'} />
+                        <DataTableEmpty colSpan={visibleColumnCount} message={emptyMessage} />
                     ) : (
-                        items.map(pb => {
-                            const medalIcon = getMedalIcon(pb.medal.toLowerCase())
-                            const exact = pb.added ? (() => {
-                                const d = new Date(pb.added)
-                                return isNaN(d.getTime()) ? pb.added : d.toLocaleString()
-                            })() : '—'
-                            const canPlay = pb.verified
-                            return (
-                                <DataTableRow
-                                    key={pb.id}
-                                    className="cursor-pointer"
-                                    onClick={() => onMapSelect?.(pb.mapName)}
-                                >
-                                    {isVisible('map') && (
-                                        <DataTableCell>
-                                            <div className="flex items-center gap-2 min-w-0">
-                                                <MapThumbnail mapName={pb.mapName} className="size-8 shrink-0" />
-                                                {onToggleFavorite && (
-                                                    <FavoriteStar
-                                                        name={pb.mapName}
-                                                        isFavorited={favoriteMapNames.has(pb.mapName)}
-                                                        onToggle={onToggleFavorite}
-                                                        size="sm"
-                                                        disabled={!canEditFavorites}
-                                                    />
-                                                )}
-                                                <div className="flex flex-col gap-1 min-w-0">
-                                                    <div className="flex items-center gap-2 min-w-0">
-                                                        <MapNavLink mapName={pb.mapName} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate min-w-0">{displayMapName(pb.mapName)}</MapNavLink>
-                                                        {pb.isTeam && (
-                                                            <TeamRosterBadge members={pb.teamMembers} currentUserId={String(userId)} />
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </DataTableCell>
-                                    )}
-                                    {isVisible('medal') && (
-                                        <DataTableCell align="center">
-                                            {medalIcon && (
-                                                <Tooltip content={pb.medal} side="top">
-                                                    <img src={medalIcon} alt={pb.medal} className="size-4 inline-block shrink-0 object-contain max-w-none" />
-                                                </Tooltip>
-                                            )}
-                                        </DataTableCell>
-                                    )}
-                                    {isVisible('time') && (
-                                        <DataTableCell align="right">
-                                            <span className="inline-flex items-center gap-1.5">
-                                                {pb.medal === 'World Record' && <Trophy className="size-3 text-blue-300" />}
-                                                <CapTimeLink
-                                                    capId={pb.isTeam ? undefined : pb.id}
-                                                    teamCapId={pb.isTeam ? pb.teamCapId ?? undefined : undefined}
-                                                    seconds={pb.time}
-                                                    className={cn(
-                                                        'text-sm font-mono tabular-nums font-bold',
-                                                        pb.medal === 'World Record' ? 'text-blue-200' : 'text-foreground',
-                                                    )}
-                                                />
-                                            </span>
-                                        </DataTableCell>
-                                    )}
-                                    {isVisible('status') && (
-                                        <DataTableCell align="center">
-                                            {renderPbStatus(pb)}
-                                        </DataTableCell>
-                                    )}
-                                    {isVisible('added') && (
-                                        <DataTableCell align="right">
-                                            <Tooltip content={exact} side="top">
-                                                <span className="text-xs text-muted-foreground tabular-nums">
-                                                    {pb.added ? formatAddedDate(pb.added) : '—'}
-                                                </span>
-                                            </Tooltip>
-                                        </DataTableCell>
-                                    )}
-                                    {isVisible('actions') && (
-                                        <DataTableCell align="center" className="px-2">
-                                            <div className="inline-flex items-center gap-1">
-                                                <IconActionButton
-                                                    variant="replay"
-                                                    icon={canPlay ? Play : MessageSquareOff}
-                                                    iconFill={canPlay}
-                                                    tooltip={canPlay ? 'Watch run' : 'No replay — cap not verified'}
-                                                    disabled={!canPlay}
-                                                    loading={replay.loadingCapId === pb.id}
-                                                    onClick={() => replay.openReplay({
-                                                        capId: pb.id,
-                                                        mapName: pb.mapName,
-                                                        time: pb.time,
-                                                    })}
-                                                />
-                                                <IconActionButton
-                                                    variant="download"
-                                                    icon={Download}
-                                                    tooltip={canPlay ? 'Download demo' : 'No demo — cap not verified'}
-                                                    disabled={!canPlay}
-                                                    onClick={() => demoDownload.start(
-                                                        { id: pb.id, alias: undefined, cap_time_seconds: pb.time } as any,
-                                                        pb.mapName,
-                                                    )}
-                                                />
-                                            </div>
-                                        </DataTableCell>
-                                    )}
-                                </DataTableRow>
-                            )
-                        })
+                        items.map(pb => (
+                            <DataTableRow
+                                key={pb.id}
+                                className="cursor-pointer"
+                                onClick={() => onMapSelect?.(pb.mapName)}
+                            >
+                                {PB_COLUMNS.filter(isVisible).map(id => (
+                                    <DataTableCell key={id} align={CELL_LAYOUT[id]?.align} className={CELL_LAYOUT[id]?.className}>
+                                        {pbCell(id, pb)}
+                                    </DataTableCell>
+                                ))}
+                            </DataTableRow>
+                        ))
                     )}
                 </tbody>
             </DataTableShell>

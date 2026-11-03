@@ -149,15 +149,26 @@ unlocks favourite toggling, Change Title and the screenshot actions on Maps Auth
 - **Fetch failures look empty.** The server-paged tab fetchers (caps, disallowed, PBs, WRs,
   playtime, uncapped) resolve `{ total: 0, items: [] }` (or `[]`) on a non-2xx, so a failing tab
   shows its empty state, not its error line.
-- **Phone card rows.** Every profile tab table passes `compactContent` with its own skeleton and
-  empty rows, and marks the map name and its core metric `required` at `nameFloorRem: 14`: time on
-  All Caps, Disallowed, Personal Bests and World Records, hours on Playtime, difficulty on
-  Uncapped and Maps Authored (plus the screenshot action on your own profile). At 390 px each tab
-  shows card rows: map name with time or chip on the right, then the second detail (disallow
-  reason, sessions, author, added date) below the name. World Records keeps its progression
-  button and your own Maps Authored keeps Add/Change in the card. Sorting is table-only.
-  `e2e/profile-tabs-responsive.spec.ts` checks the cards (populated, loading and empty) at 390 px and
-  the full tables at 1920 px.
+- **Phone cards.** Every profile tab table is a tiered table
+  ([shared-components.md](../shared-components.md), "Column tiers and phone cards"). Each card
+  builds its columns with `tier`, `label`, `sortKey` and a `cell` renderer that the table rows and
+  the card panel share, and passes `cards` with its own face, skeleton and empty placeholder.
+  The desktop `width`, `priority` and `required` settings are unchanged. Card faces and panels:
+
+  | Tab | Card face | Expand panel |
+  |---|---|---|
+  | All Caps, Personal Bests | map (favourite, Team badge), time with medal, date, status chip | watch and download |
+  | World Records | map (Team badge), time, set date, the progression button | none: every column is on the face, so there is no chevron |
+  | Playtime | map, time | sessions, last played |
+  | Uncapped | map, difficulty | author |
+  | Maps Authored | map, difficulty | added date, the screenshot Add/Change button (your own profile) |
+  | Disallowed | map (Team badge), time, reason | disallowed date |
+
+  All seven sort in card mode through the shared control, which drives the same `useNavState`
+  sort the headers use. On touch devices a tab shows its table only when every column fits, so
+  landscape phones get the table only where it fits whole. A card body tap opens the map, as a
+  row click does. `e2e/profile-tabs-responsive.spec.ts` checks the faces, panels, card sort,
+  skeleton and empty cards at 390 px, the full tables at 1920 px and the column drops at 1280 px.
 - **Tab state** lives in `useNavState` keys prefixed per card (`caps.*`, `disallowed.*`, `pbs.*`,
   `wrs.*`, `playtime.*`, `uncapped.*`, `achievements.*`, `authored.*`) and the active tab in
   `player.activeTab`, so Back restores tab, page, sort and search.
@@ -466,7 +477,7 @@ touch rule decides instead.
 ## Adding a profile tab
 
 Reference instance: the Disallowed tab (`DisallowedCapsCard.tsx`), the smallest server-paged tab,
-phone card rows included.
+phone cards included.
 
 1. **Fetcher** in `app/utils/api.ts` returning `{ total, items }` (skill: consume-api-data). If
    the tab shows a count, add the field to `UserSummaryCounts` and `normaliseUserSummaryCounts`.
@@ -475,7 +486,8 @@ phone card rows included.
    `accessToken`, `userId`, `onMapSelect`, `tabsSlot`; render `tabsSlot` first in the header; keep
    query, sort, page and page size in `useNavState('<prefix>.<field>')` with a prefix no other
    card uses; page through `usePaginatedQuery`; render `DataTableShell` with `responsive`
-   including `compactContent` and the core metric `required` (as `DisallowedCapsCard` does), then
+   columns that declare `tier`, `label`, `sortKey` and `cell`, the core metric `required`, and
+   `cards` with a face, placeholder and the header's sort (as `DisallowedCapsCard` does), then
    `PaginationBar`.
 4. **Wire it**: add `{ value, label, count, hidden }` to the tab list in
    `playerDetail/playerDetailTabs.ts` in display order; if the tab can hide, add its known-empty
@@ -485,7 +497,7 @@ phone card rows included.
    `tabsSlot={<MainSectionTabs tabs={tabs} active={activeTab} onChange={setActiveTab} />}`.
 5. **Verify**: `npm run typecheck:web` passes. In `npm run dev:web`, open `/players/<id>`, switch to
    the tab, change page, open a map and go Back: tab, page and search are restored; at 390 px the
-   compact rows render with no horizontal scroll. Add the tab to `TABS` in
-   `e2e/profile-tabs-responsive.spec.ts` with its empty message, and its list read to `serveApi` and
-   `emptyTabRead`; `npm run test:e2e -- responsive-accessibility`
+   cards render with no horizontal scroll. Add the tab to `TABS` in
+   `e2e/profile-tabs-responsive.spec.ts` with its headers, empty message, card face, panel and sort
+   field, and its list read to `serveApi` and `emptyTabRead`; `npm run test:e2e -- responsive-accessibility`
    still renders `/players/1` without the error boundary.

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Search, ShieldAlert } from 'lucide-react'
 import { fetchCapsForUser, type UserCapRow } from '@/app/utils/api'
 import { usePaginatedQuery } from '@/app/hooks/useAsync'
@@ -12,7 +12,7 @@ import { Tooltip } from '@/app/components/ui/tooltip'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell,
     DataTableRow, DataTableCell, DataTableEmpty, DataTableSkeletonRow,
-    type SortDirection, type ResponsiveColumn,
+    type ColumnTier, type SortDirection, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { PaginationBar } from '@/app/components/ui/pagination'
 
@@ -45,6 +45,32 @@ const COLUMN_PRIORITY: Partial<Record<CapColumnId, number>> = {
 
 const REQUIRED_COLUMNS = new Set<CapColumnId>(['map', 'time'])
 
+const COLUMN_TIER: Record<CapColumnId, ColumnTier> = {
+    map: 'essential',
+    time: 'essential',
+    reason: 'essential',
+    disallowed: 'detail',
+}
+
+const COLUMN_LABEL: Record<CapColumnId, string> = {
+    map: 'Map',
+    time: 'Time',
+    reason: 'Reason',
+    disallowed: 'Disallowed',
+}
+
+const SORT_KEY: Record<CapColumnId, SortField | undefined> = {
+    map: 'map',
+    time: 'time',
+    reason: undefined,
+    disallowed: 'disallowed_at',
+}
+
+const CELL_ALIGN: Partial<Record<CapColumnId, 'right'>> = {
+    time: 'right',
+    disallowed: 'right',
+}
+
 function exactTimestamp(iso: string | null | undefined): string {
     if (!iso) return '—'
     const d = new Date(iso)
@@ -59,15 +85,6 @@ export function DisallowedCapsCard({ accessToken, userId, onMapSelect, tabsSlot 
     const [capsPage, setCapsPage] = useNavState('disallowed.page', 1)
     const [capsPageSize, setCapsPageSize] = useNavState('disallowed.pageSize', 10)
 
-    const responsiveColumns = useMemo<ResponsiveColumn[]>(
-        () => CAP_COLUMNS.map(id => ({
-            id,
-            width: COLUMN_WIDTH[id],
-            priority: COLUMN_PRIORITY[id],
-            required: REQUIRED_COLUMNS.has(id),
-        })),
-        [],
-    )
     const [resolved, setResolved] = useState<Set<CapColumnId> | null>(null)
     const handleResolve = useCallback((ids: Set<string>) => {
         setResolved(ids as Set<CapColumnId>)
@@ -113,47 +130,91 @@ export function DisallowedCapsCard({ accessToken, userId, onMapSelect, tabsSlot 
 
     const emptyMessage = query ? 'No disallowed caps match that search.' : 'No disallowed caps.'
 
-    const compactRows = loading ? (
+    const mapLink = (cap: UserCapRow) => (
+        <MapNavLink mapName={cap.mapName} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate min-w-0">{displayMapName(cap.mapName)}</MapNavLink>
+    )
+
+    const teamBadge = (cap: UserCapRow) => cap.isTeam && (
+        <TeamRosterBadge members={cap.teamMembers} currentUserId={String(userId)} />
+    )
+
+    const timeLink = (cap: UserCapRow) => (
+        <CapTimeLink
+            capId={cap.isTeam ? undefined : cap.id}
+            teamCapId={cap.isTeam ? cap.teamCapId ?? undefined : undefined}
+            seconds={cap.time}
+            className="text-sm font-mono tabular-nums font-bold text-foreground"
+        />
+    )
+
+    const capCell = (id: CapColumnId, cap: UserCapRow): React.ReactNode => {
+        switch (id) {
+            case 'map':
+                return (
+                    <div className="flex items-center gap-2 min-w-0">
+                        <MapThumbnail mapName={cap.mapName} className="size-8 shrink-0" />
+                        <div className="flex flex-col gap-1 min-w-0">
+                            <div className="flex items-center gap-2 min-w-0">
+                                {mapLink(cap)}
+                                {teamBadge(cap)}
+                            </div>
+                        </div>
+                    </div>
+                )
+            case 'time':
+                return timeLink(cap)
+            case 'reason':
+                return cap.disallow_reason ? (
+                    <span className="text-xs text-muted-foreground line-clamp-2">{cap.disallow_reason}</span>
+                ) : (
+                    <span className="text-xs text-muted-foreground/60">—</span>
+                )
+            case 'disallowed':
+                return (
+                    <Tooltip content={exactTimestamp(cap.disallowed_at)} side="top">
+                        <span className="text-xs text-muted-foreground tabular-nums">
+                            {cap.disallowed_at ? formatAddedDate(cap.disallowed_at) : '—'}
+                        </span>
+                    </Tooltip>
+                )
+        }
+    }
+
+    const responsiveColumns: ResponsiveColumn<UserCapRow>[] = CAP_COLUMNS.map(id => ({
+        id,
+        width: COLUMN_WIDTH[id],
+        priority: COLUMN_PRIORITY[id],
+        required: REQUIRED_COLUMNS.has(id),
+        tier: COLUMN_TIER[id],
+        label: COLUMN_LABEL[id],
+        sortKey: SORT_KEY[id],
+        cell: cap => capCell(id, cap),
+    }))
+
+    const capFace = (cap: UserCapRow) => (
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+            <div className="min-w-0 space-y-1">
+                <div className="flex items-center gap-2 min-w-0">
+                    {mapLink(cap)}
+                    {teamBadge(cap)}
+                </div>
+                <p className="text-xs text-muted-foreground line-clamp-2 break-words">{cap.disallow_reason || '—'}</p>
+            </div>
+            {timeLink(cap)}
+        </div>
+    )
+
+    const cardPlaceholder = loading ? (
         Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} role="listitem" className="p-3 border-b border-hairline/5 last:border-0 animate-pulse">
+            <div key={i} className="p-3 border-b border-hairline/5 last:border-0 animate-pulse">
                 <div className="h-10 rounded bg-hairline/5" />
             </div>
         ))
     ) : items.length === 0 ? (
-        <div role="listitem" className="px-4 py-12 text-center text-sm text-muted-foreground">
+        <div className="px-4 py-12 text-center text-sm text-muted-foreground">
             {emptyMessage}
         </div>
-    ) : items.map(cap => (
-        <div
-            key={cap.id}
-            role="listitem"
-            className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 p-3 border-b border-hairline/5 last:border-0 cursor-pointer"
-            onClick={() => onMapSelect?.(cap.mapName)}
-        >
-            <div className="min-w-0 space-y-1">
-                <div className="flex items-center gap-2 min-w-0">
-                    <MapNavLink mapName={cap.mapName} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate min-w-0">{displayMapName(cap.mapName)}</MapNavLink>
-                    {cap.isTeam && (
-                        <TeamRosterBadge members={cap.teamMembers} currentUserId={String(userId)} />
-                    )}
-                </div>
-                {cap.disallow_reason && (
-                    <p className="text-xs text-muted-foreground line-clamp-2 break-words">{cap.disallow_reason}</p>
-                )}
-            </div>
-            <div className="flex flex-col items-end gap-0.5">
-                <CapTimeLink
-                    capId={cap.isTeam ? undefined : cap.id}
-                    teamCapId={cap.isTeam ? cap.teamCapId ?? undefined : undefined}
-                    seconds={cap.time}
-                    className="text-sm font-mono tabular-nums font-bold text-foreground"
-                />
-                <span className="text-xs text-muted-foreground tabular-nums">
-                    {cap.disallowed_at ? formatAddedDate(cap.disallowed_at) : '—'}
-                </span>
-            </div>
-        </div>
-    ))
+    ) : undefined
 
     return (
         <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col overflow-hidden">
@@ -194,8 +255,19 @@ export function DisallowedCapsCard({ accessToken, userId, onMapSelect, tabsSlot 
                     columns: responsiveColumns,
                     nameFloorRem: 14,
                     onResolve: handleResolve,
-                    compactContent: compactRows,
                     compactAriaLabel: 'Disallowed caps',
+                    cards: {
+                        rows: items,
+                        rowKey: cap => cap.id,
+                        face: capFace,
+                        onOpen: cap => onMapSelect?.(cap.mapName),
+                        placeholder: cardPlaceholder,
+                        sort: {
+                            key: sortField,
+                            direction: sortDir,
+                            onSort: key => handleSort(key as SortField),
+                        },
+                    },
                 }}
             >
                 <DataTableHeaderRow>
@@ -218,49 +290,11 @@ export function DisallowedCapsCard({ accessToken, userId, onMapSelect, tabsSlot 
                                 className="cursor-pointer"
                                 onClick={() => onMapSelect?.(cap.mapName)}
                             >
-                                {isVisible('map') && (
-                                    <DataTableCell>
-                                        <div className="flex items-center gap-2 min-w-0">
-                                            <MapThumbnail mapName={cap.mapName} className="size-8 shrink-0" />
-                                            <div className="flex flex-col gap-1 min-w-0">
-                                                <div className="flex items-center gap-2 min-w-0">
-                                                    <MapNavLink mapName={cap.mapName} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate min-w-0">{displayMapName(cap.mapName)}</MapNavLink>
-                                                    {cap.isTeam && (
-                                                        <TeamRosterBadge members={cap.teamMembers} currentUserId={String(userId)} />
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
+                                {CAP_COLUMNS.filter(isVisible).map(id => (
+                                    <DataTableCell key={id} align={CELL_ALIGN[id]}>
+                                        {capCell(id, cap)}
                                     </DataTableCell>
-                                )}
-                                {isVisible('time') && (
-                                    <DataTableCell align="right">
-                                        <CapTimeLink
-                                            capId={cap.isTeam ? undefined : cap.id}
-                                            teamCapId={cap.isTeam ? cap.teamCapId ?? undefined : undefined}
-                                            seconds={cap.time}
-                                            className="text-sm font-mono tabular-nums font-bold text-foreground"
-                                        />
-                                    </DataTableCell>
-                                )}
-                                {isVisible('reason') && (
-                                    <DataTableCell>
-                                        {cap.disallow_reason ? (
-                                            <span className="text-xs text-muted-foreground line-clamp-2">{cap.disallow_reason}</span>
-                                        ) : (
-                                            <span className="text-xs text-muted-foreground/60">—</span>
-                                        )}
-                                    </DataTableCell>
-                                )}
-                                {isVisible('disallowed') && (
-                                    <DataTableCell align="right">
-                                        <Tooltip content={exactTimestamp(cap.disallowed_at)} side="top">
-                                            <span className="text-xs text-muted-foreground tabular-nums">
-                                                {cap.disallowed_at ? formatAddedDate(cap.disallowed_at) : '—'}
-                                            </span>
-                                        </Tooltip>
-                                    </DataTableCell>
-                                )}
+                                ))}
                             </DataTableRow>
                         ))
                     )}

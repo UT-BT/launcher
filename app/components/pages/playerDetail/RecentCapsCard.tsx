@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, lazy } from 'react'
+import { useCallback, useEffect, useState, lazy } from 'react'
 import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { Play, Download, MessageSquareOff, ShieldCheck, Search, Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -20,7 +20,7 @@ import { Modal } from '@/app/components/ui/modal'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell,
     DataTableRow, DataTableCell, DataTableEmpty, DataTableSkeletonRow,
-    type SortDirection, type ResponsiveColumn,
+    type ColumnTier, type SortDirection, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { PaginationBar } from '@/app/components/ui/pagination'
 import { CAP_TYPE_I4GAMES, CAP_TYPE_UTBT_CERTIFIED } from '@/app/utils/capTypes'
@@ -63,6 +63,38 @@ const COLUMN_PRIORITY: Partial<Record<CapColumnId, number>> = {
 }
 
 const REQUIRED_COLUMNS = new Set<CapColumnId>(['map', 'time'])
+
+const COLUMN_TIER: Record<CapColumnId, ColumnTier> = {
+    map: 'essential',
+    medal: 'essential',
+    time: 'essential',
+    status: 'essential',
+    added: 'essential',
+    actions: 'detail',
+}
+
+const COLUMN_LABEL: Record<CapColumnId, string> = {
+    map: 'Map',
+    medal: 'Medal',
+    time: 'Time',
+    status: 'Status',
+    added: 'Date',
+    actions: 'Actions',
+}
+
+const SORT_KEY: Partial<Record<CapColumnId, SortField>> = {
+    map: 'map',
+    time: 'time',
+    added: 'added',
+}
+
+const CELL_LAYOUT: Partial<Record<CapColumnId, { align: 'center' | 'right'; className?: string }>> = {
+    medal: { align: 'center' },
+    time: { align: 'right' },
+    status: { align: 'center' },
+    added: { align: 'right' },
+    actions: { align: 'center', className: 'px-2' },
+}
 
 function renderCapStatus(cap: UserCapRow) {
     if (cap.disallowed) {
@@ -112,15 +144,6 @@ export function RecentCapsCard({
     const replay = useReplayWatch()
     const demoDownload = useDemoDownload()
 
-    const responsiveColumns = useMemo<ResponsiveColumn[]>(
-        () => CAP_COLUMNS.map(id => ({
-            id,
-            width: COLUMN_WIDTH[id],
-            priority: COLUMN_PRIORITY[id],
-            required: REQUIRED_COLUMNS.has(id),
-        })),
-        [],
-    )
     const [resolved, setResolved] = useState<Set<CapColumnId> | null>(null)
     const handleResolve = useCallback((ids: Set<string>) => {
         setResolved(ids as Set<CapColumnId>)
@@ -166,40 +189,132 @@ export function RecentCapsCard({
 
     const dir = (field: SortField): SortDirection => sortField === field ? sortDir : null
 
-    const compactRows = loading ? (
-        Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} role="listitem" className="p-3 border-b border-hairline/5 last:border-0 animate-pulse">
-                <div className="h-10 rounded bg-hairline/5" />
-            </div>
-        ))
-    ) : items.length === 0 ? (
-        <div role="listitem" className="px-4 py-12 text-center text-sm text-muted-foreground">
-            {query ? 'No caps match that search.' : 'No caps yet.'}
-        </div>
-    ) : items.map(cap => {
+    const emptyMessage = query ? 'No caps match that search.' : 'No caps yet.'
+
+    const favoriteStar = (cap: UserCapRow) => onToggleFavorite && (
+        <FavoriteStar
+            name={cap.mapName}
+            isFavorited={favoriteMapNames.has(cap.mapName)}
+            onToggle={onToggleFavorite}
+            size="sm"
+            disabled={!canEditFavorites}
+        />
+    )
+
+    const mapLink = (cap: UserCapRow) => (
+        <MapNavLink mapName={cap.mapName} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate min-w-0">{displayMapName(cap.mapName)}</MapNavLink>
+    )
+
+    const teamBadge = (cap: UserCapRow) => cap.isTeam && (
+        <TeamRosterBadge members={cap.teamMembers} currentUserId={String(userId)} />
+    )
+
+    const timeLink = (cap: UserCapRow) => (
+        <CapTimeLink
+            capId={cap.isTeam ? undefined : cap.id}
+            teamCapId={cap.isTeam ? cap.teamCapId ?? undefined : undefined}
+            seconds={cap.time}
+            className="text-sm font-mono tabular-nums font-bold text-foreground"
+        />
+    )
+
+    const addedDate = (cap: UserCapRow) => (
+        <span className="text-xs text-muted-foreground tabular-nums">
+            {cap.added ? formatAddedDate(cap.added) : '—'}
+        </span>
+    )
+
+    const capCell = (id: CapColumnId, cap: UserCapRow): React.ReactNode => {
+        switch (id) {
+            case 'map':
+                return (
+                    <div className="flex items-center gap-2 min-w-0">
+                        <MapThumbnail mapName={cap.mapName} className="size-8 shrink-0" />
+                        {favoriteStar(cap)}
+                        <div className="flex flex-col gap-1 min-w-0">
+                            <div className="flex items-center gap-2 min-w-0">
+                                {mapLink(cap)}
+                                {teamBadge(cap)}
+                            </div>
+                        </div>
+                    </div>
+                )
+            case 'medal': {
+                const medalIcon = getMedalIcon(cap.medal.toLowerCase())
+                return medalIcon && (
+                    <Tooltip content={cap.medal} side="top">
+                        <img src={medalIcon} alt={cap.medal} className="size-4 inline-block shrink-0 object-contain max-w-none" />
+                    </Tooltip>
+                )
+            }
+            case 'time':
+                return timeLink(cap)
+            case 'status':
+                return renderCapStatus(cap)
+            case 'added': {
+                const exactTimestamp = cap.added ? (() => {
+                    const d = new Date(cap.added)
+                    return isNaN(d.getTime()) ? cap.added : d.toLocaleString()
+                })() : '—'
+                return (
+                    <Tooltip content={exactTimestamp} side="top">
+                        {addedDate(cap)}
+                    </Tooltip>
+                )
+            }
+            case 'actions': {
+                const canPlay = cap.verified && !cap.disallowed
+                return (
+                    <div className="inline-flex items-center gap-1">
+                        <IconActionButton
+                            variant="replay"
+                            icon={canPlay ? Play : MessageSquareOff}
+                            iconFill={canPlay}
+                            tooltip={canPlay ? 'Watch run' : 'No replay — cap not verified'}
+                            disabled={!canPlay}
+                            loading={replay.loadingCapId === cap.id}
+                            onClick={() => replay.openReplay({
+                                capId: cap.id,
+                                mapName: cap.mapName,
+                                time: cap.time,
+                            })}
+                        />
+                        <IconActionButton
+                            variant="download"
+                            icon={Download}
+                            tooltip={canPlay ? 'Download demo' : 'No demo — cap not verified'}
+                            disabled={!canPlay}
+                            onClick={() => demoDownload.start(
+                                { id: cap.id, alias: undefined, cap_time_seconds: cap.time } as any,
+                                cap.mapName,
+                            )}
+                        />
+                    </div>
+                )
+            }
+        }
+    }
+
+    const responsiveColumns: ResponsiveColumn<UserCapRow>[] = CAP_COLUMNS.map(id => ({
+        id,
+        width: COLUMN_WIDTH[id],
+        priority: COLUMN_PRIORITY[id],
+        required: REQUIRED_COLUMNS.has(id),
+        tier: COLUMN_TIER[id],
+        label: COLUMN_LABEL[id],
+        sortKey: SORT_KEY[id],
+        cell: cap => capCell(id, cap),
+    }))
+
+    const capFace = (cap: UserCapRow) => {
         const medalIcon = getMedalIcon(cap.medal.toLowerCase())
         return (
-            <div
-                key={cap.id}
-                role="listitem"
-                className={cn(
-                    'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-3 border-b border-hairline/5 last:border-0 cursor-pointer',
-                    cap.disallowed && 'opacity-60',
-                )}
-                onClick={() => onMapSelect?.(cap.mapName)}
-            >
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
                 <div className="min-w-0 space-y-1">
                     <div className="flex items-center gap-2 min-w-0">
-                        {onToggleFavorite && (
-                            <FavoriteStar
-                                name={cap.mapName}
-                                isFavorited={favoriteMapNames.has(cap.mapName)}
-                                onToggle={onToggleFavorite}
-                                size="sm"
-                                disabled={!canEditFavorites}
-                            />
-                        )}
-                        <MapNavLink mapName={cap.mapName} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate min-w-0">{displayMapName(cap.mapName)}</MapNavLink>
+                        {favoriteStar(cap)}
+                        {mapLink(cap)}
+                        {teamBadge(cap)}
                     </div>
                     <div className="flex items-center gap-2">{renderCapStatus(cap)}</div>
                 </div>
@@ -208,20 +323,25 @@ export function RecentCapsCard({
                         {medalIcon && (
                             <img src={medalIcon} alt={cap.medal} className="size-4 inline-block shrink-0 object-contain max-w-none" />
                         )}
-                        <CapTimeLink
-                            capId={cap.isTeam ? undefined : cap.id}
-                            teamCapId={cap.isTeam ? cap.teamCapId ?? undefined : undefined}
-                            seconds={cap.time}
-                            className="text-sm font-mono tabular-nums font-bold text-foreground"
-                        />
+                        {timeLink(cap)}
                     </span>
-                    <span className="text-xs text-muted-foreground tabular-nums">
-                        {cap.added ? formatAddedDate(cap.added) : '—'}
-                    </span>
+                    {addedDate(cap)}
                 </div>
             </div>
         )
-    })
+    }
+
+    const cardPlaceholder = loading ? (
+        Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="p-3 border-b border-hairline/5 last:border-0 animate-pulse">
+                <div className="h-10 rounded bg-hairline/5" />
+            </div>
+        ))
+    ) : items.length === 0 ? (
+        <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+            {emptyMessage}
+        </div>
+    ) : undefined
 
     return (
         <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col overflow-hidden">
@@ -281,8 +401,20 @@ export function RecentCapsCard({
                     columns: responsiveColumns,
                     nameFloorRem: 14,
                     onResolve: handleResolve,
-                    compactContent: compactRows,
                     compactAriaLabel: 'Caps',
+                    cards: {
+                        rows: items,
+                        rowKey: cap => cap.id,
+                        face: capFace,
+                        onOpen: cap => onMapSelect?.(cap.mapName),
+                        rowClassName: cap => cap.disallowed ? 'opacity-60' : undefined,
+                        placeholder: cardPlaceholder,
+                        sort: {
+                            key: sortField,
+                            direction: sortDir,
+                            onSort: key => handleSort(key as SortField),
+                        },
+                    },
                 }}
             >
                 <DataTableHeaderRow>
@@ -299,110 +431,21 @@ export function RecentCapsCard({
                             <DataTableSkeletonRow key={i} columnCount={visibleColumnCount} />
                         ))
                     ) : items.length === 0 ? (
-                        <DataTableEmpty colSpan={visibleColumnCount} message={query ? 'No caps match that search.' : 'No caps yet.'} />
+                        <DataTableEmpty colSpan={visibleColumnCount} message={emptyMessage} />
                     ) : (
-                        items.map(cap => {
-                            const medalIcon = getMedalIcon(cap.medal.toLowerCase())
-                            const exactTimestamp = cap.added ? (() => {
-                                const d = new Date(cap.added)
-                                return isNaN(d.getTime()) ? cap.added : d.toLocaleString()
-                            })() : '—'
-                            const canPlay = cap.verified && !cap.disallowed
-                            return (
-                                <DataTableRow
-                                    key={cap.id}
-                                    className={cn('cursor-pointer', cap.disallowed && 'opacity-60')}
-                                    onClick={() => onMapSelect?.(cap.mapName)}
-                                >
-                                    {isVisible('map') && (
-                                        <DataTableCell>
-                                            <div className="flex items-center gap-2 min-w-0">
-                                                <MapThumbnail mapName={cap.mapName} className="size-8 shrink-0" />
-                                                {onToggleFavorite && (
-                                                    <FavoriteStar
-                                                        name={cap.mapName}
-                                                        isFavorited={favoriteMapNames.has(cap.mapName)}
-                                                        onToggle={onToggleFavorite}
-                                                        size="sm"
-                                                        disabled={!canEditFavorites}
-                                                    />
-                                                )}
-                                                <div className="flex flex-col gap-1 min-w-0">
-                                                    <div className="flex items-center gap-2 min-w-0">
-                                                        <MapNavLink mapName={cap.mapName} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate min-w-0">{displayMapName(cap.mapName)}</MapNavLink>
-                                                        {cap.isTeam && (
-                                                            <TeamRosterBadge members={cap.teamMembers} currentUserId={String(userId)} />
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </DataTableCell>
-                                    )}
-                                    {isVisible('medal') && (
-                                        <DataTableCell align="center">
-                                            {medalIcon && (
-                                                <Tooltip content={cap.medal} side="top">
-                                                    <img src={medalIcon} alt={cap.medal} className="size-4 inline-block shrink-0 object-contain max-w-none" />
-                                                </Tooltip>
-                                            )}
-                                        </DataTableCell>
-                                    )}
-                                    {isVisible('time') && (
-                                        <DataTableCell align="right">
-                                            <CapTimeLink
-                                                capId={cap.isTeam ? undefined : cap.id}
-                                                teamCapId={cap.isTeam ? cap.teamCapId ?? undefined : undefined}
-                                                seconds={cap.time}
-                                                className="text-sm font-mono tabular-nums font-bold text-foreground"
-                                            />
-                                        </DataTableCell>
-                                    )}
-                                    {isVisible('status') && (
-                                        <DataTableCell align="center">
-                                            {renderCapStatus(cap)}
-                                        </DataTableCell>
-                                    )}
-                                    {isVisible('added') && (
-                                        <DataTableCell align="right">
-                                            <Tooltip content={exactTimestamp} side="top">
-                                                <span className="text-xs text-muted-foreground tabular-nums">
-                                                    {cap.added ? formatAddedDate(cap.added) : '—'}
-                                                </span>
-                                            </Tooltip>
-                                        </DataTableCell>
-                                    )}
-                                    {isVisible('actions') && (
-                                        <DataTableCell align="center" className="px-2">
-                                            <div className="inline-flex items-center gap-1">
-                                                <IconActionButton
-                                                    variant="replay"
-                                                    icon={canPlay ? Play : MessageSquareOff}
-                                                    iconFill={canPlay}
-                                                    tooltip={canPlay ? 'Watch run' : 'No replay — cap not verified'}
-                                                    disabled={!canPlay}
-                                                    loading={replay.loadingCapId === cap.id}
-                                                    onClick={() => replay.openReplay({
-                                                        capId: cap.id,
-                                                        mapName: cap.mapName,
-                                                        time: cap.time,
-                                                    })}
-                                                />
-                                                <IconActionButton
-                                                    variant="download"
-                                                    icon={Download}
-                                                    tooltip={canPlay ? 'Download demo' : 'No demo — cap not verified'}
-                                                    disabled={!canPlay}
-                                                    onClick={() => demoDownload.start(
-                                                        { id: cap.id, alias: undefined, cap_time_seconds: cap.time } as any,
-                                                        cap.mapName,
-                                                    )}
-                                                />
-                                            </div>
-                                        </DataTableCell>
-                                    )}
-                                </DataTableRow>
-                            )
-                        })
+                        items.map(cap => (
+                            <DataTableRow
+                                key={cap.id}
+                                className={cn('cursor-pointer', cap.disallowed && 'opacity-60')}
+                                onClick={() => onMapSelect?.(cap.mapName)}
+                            >
+                                {CAP_COLUMNS.filter(isVisible).map(id => (
+                                    <DataTableCell key={id} align={CELL_LAYOUT[id]?.align} className={CELL_LAYOUT[id]?.className}>
+                                        {capCell(id, cap)}
+                                    </DataTableCell>
+                                ))}
+                            </DataTableRow>
+                        ))
                     )}
                 </tbody>
             </DataTableShell>

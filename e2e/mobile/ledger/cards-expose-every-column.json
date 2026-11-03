@@ -6,13 +6,5 @@
   { "surface": "event-team", "viewport": "360x780", "engine": "chromium" },
   { "surface": "event-team", "viewport": "390x844", "engine": "webkit" },
   { "surface": "event-team~long-text", "viewport": "360x780", "engine": "chromium" },
-  { "surface": "event-team~long-text", "viewport": "390x844", "engine": "webkit" },
-  { "surface": "player-detail", "viewport": "360x780", "engine": "chromium" },
-  { "surface": "player-detail", "viewport": "390x844", "engine": "webkit" },
-  { "surface": "player-detail/personal-bests", "viewport": "360x780", "engine": "chromium" },
-  { "surface": "player-detail/personal-bests", "viewport": "390x844", "engine": "webkit" },
-  { "surface": "player-detail/personal-bests~long-text", "viewport": "360x780", "engine": "chromium" },
-  { "surface": "player-detail/personal-bests~long-text", "viewport": "390x844", "engine": "webkit" },
-  { "surface": "player-detail~single-row", "viewport": "360x780", "engine": "chromium" },
-  { "surface": "player-detail~single-row", "viewport": "390x844", "engine": "webkit" }
+  { "surface": "event-team~long-text", "viewport": "390x844", "engine": "webkit" }
 ]
