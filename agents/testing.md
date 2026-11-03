@@ -358,8 +358,10 @@ portrait `rotation-recovers` entries on the profile's `watch-run` surfaces recor
 don't show, not a rotation bug. On a tiered table the trigger sits in the card's expand panel: the
 shared `watchRun` and `wrHistory` modals open through `withCardsOpen`, which first opens every
 collapsed "Details" panel on screen, so World Records and the map page crawl both modals on
-phones. A trigger that lives only in table rows phones show as cards is not crawled until the cards
-expose it: the Maps page's reviews and Demos (15). Event tabs that
+phones. The Maps page's Demos and reviews (`maps/demos`, `maps/reviews`) open the same way, from
+the first panel's Demos button and Community Review. The reviews modal lists the recorded public
+reviews; the replay picker shows "No runs found", because the `maps` recording has no leaderboard
+for it. Event tabs that
 show only while signups are open (`players`, `signup`) are not crawled on the public event; the
 staff-only `manage` and `stream` tabs are crawled by `event-detail:manager`.
 
@@ -379,6 +381,7 @@ both.
 |---|---|---|
 | `admin` | Admin, so every section shows | Overview, then one sub-view per section in `ADMIN_SECTIONS`, picked in the section `<select>` (or the side nav from `lg`), plus the Anti-Cheat High Cap Delta and Low FPS WRs tabs |
 | `home:signed-in` | a user | the signed-in Home, the Recent Caps History modal (See More) and Settings (drawer, user card menu) |
+| `maps:signed-in` | a user | the Maps page with the viewer's medals, PBs and reviews in the cards and table |
 | `event-detail:manager` | an event manager (`/tournaments/<slug>/me` with `can_manage`) | the Manage tab and its Signups, Format, Bracket, Matches (plus the match editor), Picks & Bans, Schedule and Predictions sub-tabs, and the Stream tab as a manager sees it |
 | `match-pickban:captain`, `match-pickban:manager` | the lobby's acting captain; a manager | the pick/ban page with the captain's dock, and with Match Control |
 
@@ -441,6 +444,7 @@ Role-gated entries never serve recorded data. Their sets are built in code in
 | `event-manager` | `event-manager.ts` | a managed event with three stages from the standings scene builders, teams, staff, queue, windows and audit |
 | `match-pickban-captain`, `match-pickban-manager` | `pickban.ts` | the lobby state from the pick/ban veto golden fixtures, seen by a captain and by a manager |
 | `home-signed-in` | `signed-in.ts` | the viewer's summary, caps history, medal hunt and reviews to write, over the recorded `home` set |
+| `maps-signed-in` | `maps-signed-in.ts` | the viewer's best caps on the first page's maps and two of their own reviews, over the recorded `maps` set |
 
 - Builders are typed with the app's API types, so a contract change breaks `typecheck:e2e`.
 - Identities are synthetic: long player ids start `9000000000` (`syntheticId`), the reused golden

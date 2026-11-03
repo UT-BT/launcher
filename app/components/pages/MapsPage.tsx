@@ -39,7 +39,7 @@ import { ColumnsMenu } from '@/app/components/shared/ColumnsMenu'
 import { ActiveFilterChip } from '@/app/components/shared/ActiveFilterChip'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow,
-    DataTableCell, DataTableEmpty, type ResponsiveColumn,
+    DataTableCell, DataTableEmpty, type ColumnTier, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { formatCapTime, formatAddedDate, isNew, displayMapName } from '@/app/utils/format'
 import { difficultyTextColor, difficultyBgColor, scoreTextColor, scoreBgColor } from '@/app/utils/scoreColors'
@@ -129,6 +129,34 @@ const DEFAULT_COLUMN_ORDER: ColumnId[] = [
 const NON_TABLE_COLUMNS: ReadonlySet<ColumnId> = new Set()
 const REQUIRED_COLUMNS: ReadonlySet<ColumnId> = new Set(['name'])
 const CORE_COLUMNS: ReadonlySet<ColumnId> = new Set(['difficulty', 'world_record', 'pb'])
+const SIGNED_IN_COLUMNS: readonly ColumnId[] = ['medal', 'pb', 'my_rating']
+
+const COLUMN_TIER: Record<ColumnId, ColumnTier> = {
+    thumbnail: 'decorative',
+    name: 'essential',
+    tags: 'detail',
+    medal: 'essential',
+    author: 'detail',
+    difficulty: 'essential',
+    added: 'detail',
+    world_record: 'essential',
+    pb: 'essential',
+    replay: 'detail',
+    community_rating: 'detail',
+    my_rating: 'detail',
+}
+
+const COLUMN_SORT_KEY: Partial<Record<ColumnId, SortField>> = {
+    name: 'name',
+    author: 'author',
+    difficulty: 'difficulty',
+    added: 'added',
+    world_record: 'world_record',
+    medal: 'medal',
+    pb: 'pb',
+    community_rating: 'rating',
+    my_rating: 'my_rating',
+}
 
 const COLUMN_WIDTH: Partial<Record<ColumnId, string>> = {
     thumbnail: '3.5rem',
@@ -451,6 +479,12 @@ const MedalIndicator = ({ tier, bestCap }: { tier: MedalTier; bestCap?: BestCap 
     )
 }
 
+const NEW_BADGE = (
+    <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded bg-accent-500/20 text-accent-300 border border-accent-500/30 uppercase tracking-wider">
+        New
+    </span>
+)
+
 const SKELETON_CELL: Partial<Record<ColumnId, React.ReactNode>> = {
     thumbnail: <td className="px-4 py-3"><div className="w-12 h-12 rounded bg-hairline/5 animate-pulse" /></td>,
     name: <td className="px-4 py-3"><div className="h-4 w-32 rounded bg-hairline/5 animate-pulse" /></td>,
@@ -638,6 +672,10 @@ export function MapsPage({
     const firstRowMyRatingRef = useRef<HTMLButtonElement | null>(null)
     const firstRowNameRef = useRef<HTMLElement | null>(null)
     const firstRowPbRef = useRef<HTMLElement | null>(null)
+    const tableShellRef = useRef<HTMLDivElement | null>(null)
+    const cardSortRef = useMemo<React.RefObject<HTMLElement | null>>(() => ({
+        get current() { return tableShellRef.current?.querySelector('select')?.parentElement ?? null },
+    }), [])
 
     const highlight = useNewItemHighlight('maps', () =>
         onStateChange(prev => ({ ...prev, sortBy: 'added', sortDir: 'desc', currentPage: 1 })),
@@ -694,19 +732,6 @@ export function MapsPage({
     const isColumnVisible = (id: ColumnId): boolean =>
         REQUIRED_COLUMNS.has(id) || columnVisibility[id]
 
-    const responsiveColumns = useMemo<ResponsiveColumn[]>(
-        () => columnOrder
-            .filter(id => !NON_TABLE_COLUMNS.has(id) && isColumnVisible(id))
-            .filter(id => !!accessToken || !(['medal', 'pb', 'my_rating'] as ColumnId[]).includes(id))
-            .map(id => ({
-                id,
-                width: COLUMN_WIDTH[id],
-                priority: COLUMN_PRIORITY[id],
-                required: REQUIRED_COLUMNS.has(id) || CORE_COLUMNS.has(id),
-            })),
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        [columnOrder, columnVisibility, accessToken],
-    )
     const [resolved, setResolved] = useState<Set<ColumnId> | null>(null)
     const handleResolve = useCallback((ids: Set<string>) => {
         setResolved(ids as Set<ColumnId>)
@@ -1368,6 +1393,15 @@ export function MapsPage({
         (mode === 'search' && searchLoading)
     useNavScrollRestore(!showSkeleton)
 
+    const firstMapName = pageItems[0]?.name
+    useEffect(() => {
+        if (!tutorialActive || !compactMode || showSkeleton) return
+        tableShellRef.current
+            ?.querySelector('[role="listitem"]')
+            ?.querySelector<HTMLButtonElement>('button[aria-label="Details"][aria-expanded="false"]')
+            ?.click()
+    }, [tutorialActive, compactMode, showSkeleton, firstMapName])
+
     const renderColumnHeader = (id: ColumnId): React.ReactNode => {
         if (!isEffectivelyVisible(id)) return null
         switch (id) {
@@ -1525,123 +1559,113 @@ export function MapsPage({
         hotRef?: (el: HTMLElement | null) => void
     }
 
-    const renderColumnCell = (id: ColumnId, ctx: RowCtx): React.ReactNode => {
-        if (!isEffectivelyVisible(id)) return null
+    const cellLayout = (id: ColumnId, ctx: RowCtx): Pick<React.ComponentProps<typeof DataTableCell>, 'align' | 'className'> => {
+        switch (id) {
+            case 'tags': return { align: 'center', className: 'align-middle' }
+            case 'author': return { className: 'text-muted-foreground *:mx-auto' }
+            case 'added': return { className: 'text-sm' }
+            case 'world_record': return ctx.wr != null && ctx.wr > 0
+                ? { align: 'center', className: 'font-mono text-sm text-muted-foreground' }
+                : { className: 'font-mono text-sm text-muted-foreground' }
+            case 'medal': return { align: 'center', className: 'px-2' }
+            case 'pb': return { align: 'center', className: 'font-mono text-sm text-muted-foreground' }
+            case 'replay': return { align: 'center', className: 'px-2' }
+            case 'community_rating': return { align: 'center' }
+            default: return {}
+        }
+    }
+
+    const mapCell = (id: ColumnId, ctx: RowCtx): React.ReactNode => {
         const { map, author, tags, ratings, myReview, mapNew, wr, bestCap, wrHolder, medalTier, isFirstRow } = ctx
         switch (id) {
             case 'thumbnail':
+                return <MapThumbnail mapName={map.name} version={map.screenshot_updated} className="w-12 h-12" />
+            case 'name':
                 return (
-                    <DataTableCell key={id}>
-                        <MapThumbnail mapName={map.name} version={map.screenshot_updated} className="w-12 h-12" />
-                    </DataTableCell>
-                )
-            case 'name': {
-                return (
-                    <DataTableCell key={id} ref={ctx.hotRef}>
-                        <div className="flex items-center gap-3 min-w-0">
-                            <div className="flex items-center gap-1 min-w-0">
-                                <span ref={isFirstRow ? firstRowFavRef : undefined} className="inline-flex shrink-0">
-                                    <FavoriteStar
-                                        name={map.name}
-                                        isFavorited={favoriteMapNames.has(map.name)}
-                                        onToggle={onToggleFavorite}
-                                        size="md"
-                                    />
-                                </span>
+                    <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex items-center gap-1 min-w-0">
+                            <span ref={isFirstRow ? firstRowFavRef : undefined} className="inline-flex shrink-0">
+                                <FavoriteStar
+                                    name={map.name}
+                                    isFavorited={favoriteMapNames.has(map.name)}
+                                    onToggle={onToggleFavorite}
+                                    size="md"
+                                />
+                            </span>
 
-                                <Tooltip content="Open map details" side="top" className="min-w-0">
-                                    <MapNavLink
-                                        mapName={map.name}
-                                        onMapSelect={onMapSelect}
-                                        elementRef={isFirstRow ? firstRowNameRef : undefined}
-                                        className="font-bold text-foreground hover:text-accent-300 underline-offset-4 transition-colors cursor-pointer text-left text-md truncate"
-                                    >
-                                        {displayMapName(map.name)}
-                                    </MapNavLink>
-                                </Tooltip>
+                            <Tooltip content="Open map details" side="top" className="min-w-0">
+                                <MapNavLink
+                                    mapName={map.name}
+                                    onMapSelect={onMapSelect}
+                                    elementRef={isFirstRow ? firstRowNameRef : undefined}
+                                    className="font-bold text-foreground hover:text-accent-300 underline-offset-4 transition-colors cursor-pointer text-left text-md truncate"
+                                >
+                                    {displayMapName(map.name)}
+                                </MapNavLink>
+                            </Tooltip>
 
-                                {mapNew && (
-                                    <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded bg-accent-500/20 text-accent-300 border border-accent-500/30 uppercase tracking-wider">
-                                        New
-                                    </span>
-                                )}
-                            </div>
+                            {mapNew && NEW_BADGE}
                         </div>
-                    </DataTableCell>
+                    </div>
                 )
-            }
             case 'tags': {
                 const visibleTagCount = 1
                 const expanded = expandedTagMaps.has(map.name)
                 const shown = expanded ? tags : tags.slice(0, visibleTagCount)
 
                 return (
-                    <DataTableCell key={id} align="center" className="align-middle">
-                        <div className="flex flex-col items-center gap-0.5">
-                            {shown.map(tag => (
-                                <span
-                                    key={tag}
-                                    style={tagColorStyle(tag)}
-                                    className="w-fit text-[10px] font-medium px-1.5 py-0.5 rounded border leading-tight"
-                                >
-                                    {tag}
-                                </span>
-                            ))}
+                    <div className="flex flex-col items-center gap-0.5">
+                        {shown.map(tag => (
+                            <span
+                                key={tag}
+                                style={tagColorStyle(tag)}
+                                className="w-fit text-[10px] font-medium px-1.5 py-0.5 rounded border leading-tight"
+                            >
+                                {tag}
+                            </span>
+                        ))}
 
-                            {tags.length > visibleTagCount && (
-                                <Tooltip content={expanded ? 'Collapse tags' : tags.slice(visibleTagCount).join(', ')} side="top">
-                                    <button
-                                        type="button"
-                                        onClick={e => {
-                                            e.stopPropagation()
-                                            toggleTagExpansion(map.name)
-                                        }}
-                                        className="w-fit text-[10px] px-1.5 py-0.5 rounded bg-hairline/5 border border-hairline/10 text-muted-foreground hover:bg-hairline/10 hover:text-foreground transition-colors cursor-pointer"
-                                    >
-                                        {expanded ? '- Show less' : `+${tags.length - visibleTagCount}`}
-                                    </button>
-                                </Tooltip>
-                            )}
-                        </div>
-                    </DataTableCell>
+                        {tags.length > visibleTagCount && (
+                            <Tooltip content={expanded ? 'Collapse tags' : tags.slice(visibleTagCount).join(', ')} side="top">
+                                <button
+                                    type="button"
+                                    onClick={e => {
+                                        e.stopPropagation()
+                                        toggleTagExpansion(map.name)
+                                    }}
+                                    className="w-fit text-[10px] px-1.5 py-0.5 rounded bg-hairline/5 border border-hairline/10 text-muted-foreground hover:bg-hairline/10 hover:text-foreground transition-colors cursor-pointer"
+                                >
+                                    {expanded ? '- Show less' : `+${tags.length - visibleTagCount}`}
+                                </button>
+                            </Tooltip>
+                        )}
+                    </div>
                 )
             }
             case 'author':
-                return (
-                    <DataTableCell key={id} className="text-muted-foreground">
-                        <PlayerInfo userId={map.author_ref} presentation="name" alias={author || '—'} size="md" className="mx-auto" />
-                    </DataTableCell>
-                )
+                return <PlayerInfo userId={map.author_ref} presentation="name" alias={author || '—'} size="md" />
             case 'difficulty':
                 return (
-                    <DataTableCell key={id}>
-                        <div className="flex items-center gap-2">
-                            <span className={cn("text-sm font-bold w-4 text-center", difficultyTextColor(map.difficulty))}>
-                                {map.difficulty}
-                            </span>
-                            <div className="w-16 h-1.5 bg-hairline/10 rounded-full overflow-hidden">
-                                <div
-                                    className={cn("h-full rounded-full", difficultyBgColor(map.difficulty))}
-                                    style={{ width: `${(map.difficulty / 10) * 100}%` }}
-                                />
-                            </div>
+                    <div className="flex items-center gap-2">
+                        <span className={cn("text-sm font-bold w-4 text-center", difficultyTextColor(map.difficulty))}>
+                            {map.difficulty}
+                        </span>
+                        <div className="w-16 h-1.5 bg-hairline/10 rounded-full overflow-hidden">
+                            <div
+                                className={cn("h-full rounded-full", difficultyBgColor(map.difficulty))}
+                                style={{ width: `${(map.difficulty / 10) * 100}%` }}
+                            />
                         </div>
-                    </DataTableCell>
+                    </div>
                 )
             case 'added':
                 return (
-                    <DataTableCell key={id} className="text-sm text-muted-foreground whitespace-nowrap">
+                    <span className="text-muted-foreground whitespace-nowrap">
                         {formatAddedDate(map.added)}
-                    </DataTableCell>
+                    </span>
                 )
             case 'world_record': {
-                if (!(wr != null && wr > 0)) {
-                    return (
-                        <DataTableCell key={id} className="font-mono text-sm text-muted-foreground">
-                            <span className="opacity-30">—</span>
-                        </DataTableCell>
-                    )
-                }
+                if (!(wr != null && wr > 0)) return <span className="opacity-30">—</span>
                 const capId = wrHolder?.cap_id
                 const clickable = !!capId
                 const isTeamMap = (map.required_players ?? 0) > 1
@@ -1673,29 +1697,19 @@ export function MapsPage({
                     <div ref={isFirstRow ? (firstRowWrRef as unknown as React.RefObject<HTMLDivElement | null>) : undefined} className="text-left">{timeNode}</div>
                 )
                 return (
-                    <DataTableCell key={id} align="center" className="font-mono text-sm text-muted-foreground">
-                        <div className="inline-flex flex-col items-center leading-tight">
-                            {timeButton}
-                        </div>
-                    </DataTableCell>
+                    <div className="inline-flex flex-col items-center leading-tight">
+                        {timeButton}
+                    </div>
                 )
             }
             case 'medal':
                 return (
-                    <DataTableCell key={id} align="center" className="px-2">
-                        <div className="inline-flex justify-center">
-                            <MedalIndicator tier={medalTier} bestCap={bestCap} />
-                        </div>
-                    </DataTableCell>
+                    <div className="inline-flex justify-center">
+                        <MedalIndicator tier={medalTier} bestCap={bestCap} />
+                    </div>
                 )
             case 'pb': {
-                if (!(bestCap && bestCap.cap_time_seconds > 0)) {
-                    return (
-                        <DataTableCell key={id} align="center" className="font-mono text-sm text-muted-foreground">
-                            <span className="opacity-30">—</span>
-                        </DataTableCell>
-                    )
-                }
+                if (!(bestCap && bestCap.cap_time_seconds > 0)) return <span className="opacity-30">—</span>
                 const isWR = wr != null && wr > 0 && bestCap.cap_time_seconds - wr <= 0.0005
                 const pbCapId = bestCap.cap_id ?? undefined
                 const clickable = !!pbCapId
@@ -1708,122 +1722,119 @@ export function MapsPage({
                         {formatCapTime(bestCap.cap_time_seconds)}
                     </span>
                 )
-                return (
-                    <DataTableCell key={id} align="center" className="font-mono text-sm text-muted-foreground">
-                        {clickable ? (
-                            <Tooltip content="View cap details" side="top">
-                                <NavLink
-                                    elementRef={isFirstRow ? firstRowPbRef : undefined}
-                                    view={isTeamMap ? 'team-cap-detail' : 'cap-detail'}
-                                    params={isTeamMap ? { teamCapId: pbCapId ?? '' } : { capId: pbCapId ?? '' }}
-                                    onActivate={() => {
-                                        if (!pbCapId) return
-                                        if (isTeamMap) openTeamCap(pbCapId)
-                                        else openCap(pbCapId)
-                                    }}
-                                    className="flex flex-col leading-tight text-center cursor-pointer group/pb"
-                                >
-                                    {timeText}
-                                </NavLink>
-                            </Tooltip>
-                        ) : (
-                            <div
-                                ref={isFirstRow ? (firstRowPbRef as React.RefObject<HTMLDivElement | null>) : undefined}
-                                className="flex flex-col leading-tight"
-                            >
-                                {timeText}
-                            </div>
-                        )}
-                    </DataTableCell>
+                return clickable ? (
+                    <Tooltip content="View cap details" side="top">
+                        <NavLink
+                            elementRef={isFirstRow ? firstRowPbRef : undefined}
+                            view={isTeamMap ? 'team-cap-detail' : 'cap-detail'}
+                            params={isTeamMap ? { teamCapId: pbCapId ?? '' } : { capId: pbCapId ?? '' }}
+                            onActivate={() => {
+                                if (!pbCapId) return
+                                if (isTeamMap) openTeamCap(pbCapId)
+                                else openCap(pbCapId)
+                            }}
+                            className="flex flex-col leading-tight text-center cursor-pointer group/pb"
+                        >
+                            {timeText}
+                        </NavLink>
+                    </Tooltip>
+                ) : (
+                    <div
+                        ref={isFirstRow ? (firstRowPbRef as React.RefObject<HTMLDivElement | null>) : undefined}
+                        className="flex flex-col leading-tight"
+                    >
+                        {timeText}
+                    </div>
                 )
             }
             case 'replay':
                 return (
-                    <DataTableCell key={id} align="center" className="px-2">
-                        <button
-                            ref={isFirstRow ? firstRowReplayRef : undefined}
-                            type="button"
-                            onClick={e => {
-                                e.stopPropagation()
-                                setReplayPickerMap(map.name)
-                            }}
-                            className="inline-flex items-center justify-center px-3 py-1 rounded-md text-xs font-medium border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/25 hover:text-rose-100 hover:border-rose-500/50 transition-colors cursor-pointer"
-                        >
-                            Demos
-                        </button>
-                    </DataTableCell>
+                    <button
+                        ref={isFirstRow ? firstRowReplayRef : undefined}
+                        type="button"
+                        onClick={e => {
+                            e.stopPropagation()
+                            setReplayPickerMap(map.name)
+                        }}
+                        className="inline-flex items-center justify-center px-3 py-1 rounded-md text-xs font-medium border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/25 hover:text-rose-100 hover:border-rose-500/50 transition-colors cursor-pointer"
+                    >
+                        Demos
+                    </button>
                 )
             case 'community_rating':
                 return (
-                    <DataTableCell key={id} align="center">
-                        <Tooltip content="View reviews" side="top">
-                            <button
-                                ref={isFirstRow ? firstRowRatingRef : undefined}
-                                onClick={e => { e.stopPropagation(); setReviewsModalMap(map.name) }}
-                                className="flex items-center gap-2 cursor-pointer group/rating"
-                            >
-                            {ratings ? (
-                                <>
-                                    <span className={cn(
-                                        "text-sm font-bold w-4 text-center transition-[text-shadow] duration-150",
-                                        scoreTextColor(ratings.overall),
-                                        "group-hover/rating:[text-shadow:0_0_6px_currentColor,0_0_12px_currentColor]",
-                                    )}>
-                                        {ratings.overall}
-                                    </span>
-                                    <span className="w-16 h-1.5 bg-hairline/10 rounded-full overflow-hidden">
-                                        <span
-                                            className={cn("block h-full rounded-full", scoreBgColor(ratings.overall))}
-                                            style={{ width: `${(ratings.overall / 10) * 100}%` }}
-                                        />
-                                    </span>
-                                </>
-                            ) : (
-                                <span className="opacity-50 text-muted-foreground text-xs underline-offset-2 group-hover/rating:underline group-hover/rating:text-foreground">
-                                    No reviews, add one?
+                    <Tooltip content="View reviews" side="top">
+                        <button
+                            ref={isFirstRow ? firstRowRatingRef : undefined}
+                            onClick={e => { e.stopPropagation(); setReviewsModalMap(map.name) }}
+                            className="flex items-center gap-2 cursor-pointer group/rating"
+                        >
+                        {ratings ? (
+                            <>
+                                <span className={cn(
+                                    "text-sm font-bold w-4 text-center transition-[text-shadow] duration-150",
+                                    scoreTextColor(ratings.overall),
+                                    "group-hover/rating:[text-shadow:0_0_6px_currentColor,0_0_12px_currentColor]",
+                                )}>
+                                    {ratings.overall}
                                 </span>
-                            )}
-                            </button>
-                        </Tooltip>
-                    </DataTableCell>
+                                <span className="w-16 h-1.5 bg-hairline/10 rounded-full overflow-hidden">
+                                    <span
+                                        className={cn("block h-full rounded-full", scoreBgColor(ratings.overall))}
+                                        style={{ width: `${(ratings.overall / 10) * 100}%` }}
+                                    />
+                                </span>
+                            </>
+                        ) : (
+                            <span className="opacity-50 text-muted-foreground text-xs underline-offset-2 group-hover/rating:underline group-hover/rating:text-foreground">
+                                No reviews, add one?
+                            </span>
+                        )}
+                        </button>
+                    </Tooltip>
                 )
             case 'my_rating':
                 return (
-                    <DataTableCell key={id}>
-                        <Tooltip content={myReview ? 'Update review' : 'Add review'} side="top">
-                            <button
-                                ref={isFirstRow ? firstRowMyRatingRef : undefined}
-                                onClick={e => { e.stopPropagation(); setReviewsModalMap(map.name) }}
-                                className="flex items-center gap-2 cursor-pointer group/myrating"
-                            >
-                            {myReview ? (
-                                <>
-                                    <span className={cn(
-                                        "text-sm font-bold w-4 text-center transition-[text-shadow] duration-150",
-                                        scoreTextColor(myReview.overall),
-                                        "group-hover/myrating:[text-shadow:0_0_6px_currentColor,0_0_12px_currentColor]",
-                                    )}>
-                                        {myReview.overall}
-                                    </span>
-                                    <span className="w-16 h-1.5 bg-hairline/10 rounded-full overflow-hidden">
-                                        <span
-                                            className={cn("block h-full rounded-full", scoreBgColor(myReview.overall))}
-                                            style={{ width: `${(myReview.overall / 10) * 100}%` }}
-                                        />
-                                    </span>
-                                </>
-                            ) : (
-                                <span className="opacity-50 text-muted-foreground text-xs underline-offset-2 group-hover/myrating:underline group-hover/myrating:text-foreground">
-                                    Review this map
+                    <Tooltip content={myReview ? 'Update review' : 'Add review'} side="top">
+                        <button
+                            ref={isFirstRow ? firstRowMyRatingRef : undefined}
+                            onClick={e => { e.stopPropagation(); setReviewsModalMap(map.name) }}
+                            className="flex items-center gap-2 cursor-pointer group/myrating"
+                        >
+                        {myReview ? (
+                            <>
+                                <span className={cn(
+                                    "text-sm font-bold w-4 text-center transition-[text-shadow] duration-150",
+                                    scoreTextColor(myReview.overall),
+                                    "group-hover/myrating:[text-shadow:0_0_6px_currentColor,0_0_12px_currentColor]",
+                                )}>
+                                    {myReview.overall}
                                 </span>
-                            )}
-                            </button>
-                        </Tooltip>
-                    </DataTableCell>
+                                <span className="w-16 h-1.5 bg-hairline/10 rounded-full overflow-hidden">
+                                    <span
+                                        className={cn("block h-full rounded-full", scoreBgColor(myReview.overall))}
+                                        style={{ width: `${(myReview.overall / 10) * 100}%` }}
+                                    />
+                                </span>
+                            </>
+                        ) : (
+                            <span className="opacity-50 text-muted-foreground text-xs underline-offset-2 group-hover/myrating:underline group-hover/myrating:text-foreground">
+                                Review this map
+                            </span>
+                        )}
+                        </button>
+                    </Tooltip>
                 )
-            default:
-                return null
         }
+    }
+
+    const renderColumnCell = (id: ColumnId, ctx: RowCtx): React.ReactNode => {
+        if (!isEffectivelyVisible(id)) return null
+        return (
+            <DataTableCell key={id} ref={id === 'name' ? ctx.hotRef : undefined} {...cellLayout(id, ctx)}>
+                {mapCell(id, ctx)}
+            </DataTableCell>
+        )
     }
 
     const rows: RowCtx[] = pageItems.map((map, index) => {
@@ -1855,8 +1866,8 @@ export function MapsPage({
         }
     })
 
-    const renderMapCard = (ctx: RowCtx): React.ReactNode => {
-        const { map, author, mapNew, wr, bestCap, wrHolder, medalTier, isFirstRow } = ctx
+    const mapFace = (ctx: RowCtx): React.ReactNode => {
+        const { map, mapNew, wr, bestCap, wrHolder, medalTier, isFirstRow } = ctx
         const isTeamMap = (map.required_players ?? 0) > 1
         const wrCapId = wrHolder?.cap_id
         const pbSeconds = bestCap && bestCap.cap_time_seconds > 0 ? bestCap.cap_time_seconds : null
@@ -1864,15 +1875,8 @@ export function MapsPage({
         const isWR = pbSeconds != null && wr != null && wr > 0 && pbSeconds - wr <= 0.0005
         const timeLabel = 'font-sans text-[9px] uppercase tracking-widest text-muted-foreground font-bold'
         return (
-            <div
-                key={map.name}
-                ref={ctx.hotRef}
-                role="listitem"
-                className={cn(
-                    'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-3 border-b border-hairline/5 last:border-0',
-                    ctx.hot && 'bg-accent-500/[0.07]',
-                )}
-            >
+            <div ref={ctx.hotRef} className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3">
+                <MapThumbnail mapName={map.name} version={map.screenshot_updated} className="size-10" />
                 <div className="min-w-0 space-y-1.5">
                     <div className="flex items-center gap-1 min-w-0">
                         <span ref={isFirstRow ? firstRowFavRef : undefined} className="inline-flex shrink-0">
@@ -1891,65 +1895,72 @@ export function MapsPage({
                         >
                             {displayMapName(map.name)}
                         </MapNavLink>
-                        {mapNew && (
-                            <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded bg-accent-500/20 text-accent-300 border border-accent-500/30 uppercase tracking-wider">
-                                New
-                            </span>
-                        )}
+                        {mapNew && NEW_BADGE}
                     </div>
-                    <div className="flex items-center gap-2 min-w-0 text-xs text-muted-foreground">
-                        <span className={cn('font-mono tabular-nums font-bold shrink-0', difficultyTextColor(map.difficulty))}>
-                            {map.difficulty}
-                        </span>
-                        <PlayerInfo userId={map.author_ref} presentation="name" alias={author} size="sm" className="min-w-0" />
-                    </div>
-                </div>
-                <div className="flex flex-col items-end gap-1 font-mono text-sm tabular-nums">
-                    <div className="flex items-center gap-1.5">
-                        <span className={timeLabel}>WR</span>
-                        {wr != null && wr > 0 ? (
-                            <span ref={isFirstRow ? (firstRowWrRef as React.RefObject<HTMLSpanElement | null>) : undefined}>
-                                <CapTimeLink
-                                    capId={isTeamMap ? undefined : wrCapId}
-                                    teamCapId={isTeamMap ? wrCapId : undefined}
-                                    seconds={wr}
-                                    className="text-amber-300"
-                                />
-                            </span>
-                        ) : (
-                            <span className="opacity-30">—</span>
-                        )}
-                    </div>
-                    {accessToken && (
-                        <div className="flex items-center gap-1.5">
-                            <MedalIndicator tier={medalTier} bestCap={bestCap} />
-                            <span className={timeLabel}>PB</span>
-                            {pbSeconds != null ? (
-                                <span ref={isFirstRow ? (firstRowPbRef as React.RefObject<HTMLSpanElement | null>) : undefined}>
-                                    <CapTimeLink
-                                        capId={isTeamMap ? undefined : pbCapId}
-                                        teamCapId={isTeamMap ? pbCapId : undefined}
-                                        seconds={pbSeconds}
-                                        className={pbTextColor(medalTier, isWR)}
-                                    />
-                                </span>
-                            ) : (
-                                <span className="opacity-30">—</span>
+                    <div className="flex items-start justify-between gap-3">
+                        {mapCell('difficulty', ctx)}
+                        <div className="flex flex-col items-end gap-1 font-mono text-sm tabular-nums">
+                            <div className="flex items-center gap-1.5">
+                                <span className={timeLabel}>WR</span>
+                                {wr != null && wr > 0 ? (
+                                    <span ref={isFirstRow ? (firstRowWrRef as React.RefObject<HTMLSpanElement | null>) : undefined}>
+                                        <CapTimeLink
+                                            capId={isTeamMap ? undefined : wrCapId}
+                                            teamCapId={isTeamMap ? wrCapId : undefined}
+                                            seconds={wr}
+                                            className="text-amber-300"
+                                        />
+                                    </span>
+                                ) : (
+                                    <span className="opacity-30">—</span>
+                                )}
+                            </div>
+                            {accessToken && (
+                                <div className="flex items-center gap-1.5">
+                                    <MedalIndicator tier={medalTier} bestCap={bestCap} />
+                                    <span className={timeLabel}>PB</span>
+                                    {pbSeconds != null ? (
+                                        <span ref={isFirstRow ? (firstRowPbRef as React.RefObject<HTMLSpanElement | null>) : undefined}>
+                                            <CapTimeLink
+                                                capId={isTeamMap ? undefined : pbCapId}
+                                                teamCapId={isTeamMap ? pbCapId : undefined}
+                                                seconds={pbSeconds}
+                                                className={pbTextColor(medalTier, isWR)}
+                                            />
+                                        </span>
+                                    ) : (
+                                        <span className="opacity-30">—</span>
+                                    )}
+                                </div>
                             )}
                         </div>
-                    )}
+                    </div>
                 </div>
             </div>
         )
     }
 
-    const compactContent = showSkeleton ? (
+    const responsiveColumns: ResponsiveColumn<RowCtx>[] = columnOrder
+        .filter(id => !NON_TABLE_COLUMNS.has(id) && isColumnVisible(id))
+        .filter(id => !!accessToken || !SIGNED_IN_COLUMNS.includes(id))
+        .map(id => ({
+            id,
+            width: COLUMN_WIDTH[id],
+            priority: COLUMN_PRIORITY[id],
+            required: REQUIRED_COLUMNS.has(id) || CORE_COLUMNS.has(id),
+            tier: COLUMN_TIER[id],
+            label: COLUMN_LABELS[id],
+            sortKey: COLUMN_SORT_KEY[id],
+            cell: ctx => mapCell(id, ctx),
+        }))
+
+    const cardPlaceholder = showSkeleton ? (
         Array.from({ length: SKELETON_ROW_COUNT }).map((_, i) => (
             <div key={i} data-utbt-map-card-skeleton className="h-16 mx-3 my-2 rounded-lg bg-hairline/5 animate-pulse" />
         ))
     ) : rows.length === 0 ? (
         <div className="px-4 py-16 text-center text-muted-foreground">No maps match your filters.</div>
-    ) : rows.map(renderMapCard)
+    ) : undefined
 
     return (
         <div className="space-y-4 flex flex-col overflow-hidden">
@@ -2300,12 +2311,25 @@ export function MapsPage({
             )}
 
             <DataTableShell
+                scrollRef={tableShellRef}
                 responsive={{
                     columns: responsiveColumns,
                     onResolve: handleResolve,
-                    compactContent,
                     compactAriaLabel: 'Maps',
                     onCompactChange: handleCompactChange,
+                    cards: {
+                        rows,
+                        rowKey: ctx => ctx.map.name,
+                        face: mapFace,
+                        onOpen: ctx => onMapSelect(ctx.map.name),
+                        rowClassName: ctx => ctx.hot ? 'bg-accent-500/[0.07]' : undefined,
+                        placeholder: cardPlaceholder,
+                        sort: {
+                            key: state.sortBy,
+                            direction: state.sortDir,
+                            onSort: key => handleSort(key as SortField),
+                        },
+                    },
                 }}
             >
                 <DataTableHeaderRow theadDataAttr="data-utbt-maps-thead">
@@ -2472,6 +2496,7 @@ export function MapsPage({
                             firstRowMyRatingRef,
                             firstRowNameRef,
                             firstRowPbRef,
+                            cardSortRef,
                         },
                         {
                             openFilterPanel: () => onStateChange(prev => ({ ...prev, filtersPanelOpen: true })),
@@ -2479,6 +2504,7 @@ export function MapsPage({
                             setPresetsMenuOpen,
                             setColumnsMenuOpen,
                         },
+                        { cards: compactMode },
                     )}
                     step={tutorialStep}
                     setStep={setTutorialStep}

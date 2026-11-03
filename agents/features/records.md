@@ -419,14 +419,34 @@ the capped filter run `computeMedalTier` on those best caps; the medal sort puts
 casual maps last in either direction. WR holders load lazily for the visible rows
 (`fetchWorldRecordsForMaps`) and accumulate in `caches.wrHolders`.
 
-Map, Difficulty, World Record and (signed in) Personal Best are the responsive table's
-`required` core columns (`CORE_COLUMNS` next to `REQUIRED_COLUMNS`), so mid widths drop the
-optional columns first; they stay hideable in Columns. When even those don't fit, the table
-becomes compact card rows (a list labelled "Maps"): favourite star, map name and New badge,
-difficulty and author on the left, WR and, signed in, medal and PB through `CapTimeLink` on the
-right, with their own skeleton and "No maps match your filters." empty state. Columns hides while
-cards show. Both views render from the same per-row context, so the tutorial's mock first row and
-the new-map highlight apply to either.
+The table is tiered ([shared-components.md](../shared-components.md#column-tiers-and-phone-cards)).
+Each column declares its tier, label and sort field (`COLUMN_TIER`, `COLUMN_LABELS`,
+`COLUMN_SORT_KEY`), and its content comes from `mapCell`, which both the table rows and the expand
+panel render. Map, Difficulty, World Record and (signed in) Personal Best are the desktop rule's
+`required` core columns (`CORE_COLUMNS` next to `REQUIRED_COLUMNS`), so mid widths drop the optional
+columns first and a window too narrow for them gets cards; they stay hideable in Columns. On touch the
+touch rule decides instead.
+
+- **Card face** (a list labelled "Maps"): a small thumbnail, the favourite star, map name and New
+  badge, difficulty, the WR and, signed in, the medal and PB through `CapTimeLink`. Tapping the
+  body opens the map.
+- **Expand panel**: Tags, Author, Added, Demos, Community Review and, signed in, Your Review.
+  Demos opens the replay picker and both reviews open the reviews modal, as from the table.
+- **Card sort**: the nine sortable columns (six signed out), on the same `sortBy` / `sortDir` as
+  the headers.
+- The thumbnail is the decorative column the touch rule may drop. Skeleton and "No maps match your
+  filters." are the card list's placeholder. Columns hides while cards show; a column hidden there
+  on a wide screen also stays off the card face, panel and sort.
+- **Tutorial**: in card view the first card's panel opens when the tutorial starts, and again
+  whenever another map becomes the first card, so the Demos and ratings steps spotlight the real
+  buttons. The sort step spotlights the card sort control,
+  found inside the table shell (`tableShellRef`), and the Columns step explains the table instead
+  of pointing at a hidden button.
+- Both views render from the same per-row context, so the tutorial's mock first row and the
+  new-map highlight apply to either. `e2e/maps-responsive.spec.ts` checks the cards, the panel's
+  modals, the card sort and the tutorial on a phone, and pins the desktop header lists at 1024,
+  1280 and 1920 px. The crawl reaches Demos and the reviews through the panel (`maps/demos`,
+  `maps/reviews`), and `maps:signed-in` crawls the signed-in cards.
 
 ## Shared modals
 

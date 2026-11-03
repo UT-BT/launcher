@@ -98,7 +98,7 @@ function entryId(entry: ManifestEntry): string {
     return entry.id ?? entry.view
 }
 
-const ROLE_GATED_ENTRIES = ['admin', 'home:signed-in', 'event-detail:manager', 'match-pickban:captain', 'match-pickban:manager']
+const ROLE_GATED_ENTRIES = ['admin', 'home:signed-in', 'maps:signed-in', 'event-detail:manager', 'match-pickban:captain', 'match-pickban:manager']
 
 describe('mobile route manifest', () => {
     const entries = new Map(MOBILE_MANIFEST.map(entry => [entryId(entry), entry]))

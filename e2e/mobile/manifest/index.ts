@@ -14,6 +14,7 @@ import { events } from './events'
 import { home } from './home'
 import { homeSignedIn } from './home-signed-in'
 import { maps } from './maps'
+import { mapsSignedIn } from './maps-signed-in'
 import { mapsDetail } from './maps-detail'
 import { matchPickban } from './match-pickban'
 import { matchPickbanCaptain, matchPickbanManager } from './match-pickban-roles'
@@ -49,6 +50,7 @@ export const MOBILE_MANIFEST: readonly MobileRouteEntry[] = [
     news,
     newsDetail,
     homeSignedIn,
+    mapsSignedIn,
     admin,
     eventDetailManager,
     matchPickbanCaptain,

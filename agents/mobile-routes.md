@@ -14,7 +14,7 @@ doesn't run on the surfaces it names.
 |---|---|---|---|---|---|---|
 | `home` | `home` | public | `/` | `home` | 0 | 2 |
 | `servers` | `servers` | public | `/servers` | `servers` | 0 | 1 |
-| `maps` | `maps` | public | `/maps` | `maps` | 1 | 1 |
+| `maps` | `maps` | public | `/maps` | `maps` | 1 | 3 |
 | `maps-detail` | `maps-detail` | public | `/maps/CTF-BT-HumanResources` | `maps-detail` | 3 | 7 |
 | `players` | `players` | public | `/players` | `players` | 0 | 1 |
 | `player-detail` | `player-detail` | public | `/players/778035658224697377` | `player-detail` | 7 | 5 |
@@ -32,6 +32,7 @@ doesn't run on the surfaces it names.
 | `news` | `news` | public | `/news` | `news` | 0 | 0 |
 | `news-detail` | `news-detail` | public | `/news/15` | `news-detail` | 0 | 0 |
 | `home:signed-in` | `home` | role-gated | `/` | `home-signed-in` | 0 | 2 |
+| `maps:signed-in` | `maps` | role-gated | `/maps` | `maps-signed-in` | 0 | 0 |
 | `admin` | `admin` | role-gated | `/admin` | `admin` | 17 | 0 |
 | `event-detail:manager` | `event-detail` | role-gated | `/events/test-cup-manage?tab=manage` | `event-manager` | 7 | 1 |
 | `match-pickban:captain` | `match-pickban` | role-gated | `/events/test-cup-pickban/matches/5d0c8e2a-7b41-5f93-a6d2-3e9f10b7c4a1` | `match-pickban-captain` | 0 | 0 |
@@ -104,6 +105,8 @@ No skipped rules.
 | Surface | Label | Opened from |
 |---|---|---|
 | `maps/tutorial` | Maps tutorial | `maps` |
+| `maps/demos` | Demos | `maps` |
+| `maps/reviews` | Map reviews | `maps` |
 
 ### Skipped rules
 
@@ -513,6 +516,27 @@ No sub-views.
 |---|---|---|
 | `home:signed-in/history` | Recent caps history | `home:signed-in` |
 | `home:signed-in/settings` | Settings | `home:signed-in` |
+
+### Skipped rules
+
+No skipped rules.
+
+## maps:signed-in
+
+- **View:** `maps`
+- **Tier:** role-gated
+- **Path:** `/maps`
+- **Fixture set:** `maps-signed-in`
+- **Stress variant (PR subset):** none
+- **Decorative columns:** `column 1`
+
+### Sub-views
+
+No sub-views.
+
+### Modals
+
+No modals.
 
 ### Skipped rules
 
