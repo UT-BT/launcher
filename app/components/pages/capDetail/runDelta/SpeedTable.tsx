@@ -9,6 +9,7 @@ import {
     DataTableCell,
     type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
+import { NUMERIC_CELL, NUMERIC_TABLE, NUMERIC_TEXT, NumericHeader } from '../numericTable'
 import { TONE_TEXT } from './deltaStyles'
 import type { SignedGap } from './deltaCurve'
 import { SPEED_SPLIT_NOTE } from './runDeltaCopy'
@@ -17,10 +18,10 @@ import type { RunSpeed, SpeedGap } from './runSpeed'
 type SpeedColumnId = 'sector' | 'speed' | 'fromSpeed' | 'fromLine'
 
 const SPEED_COLUMNS: ResponsiveColumn[] = [
-    { id: 'sector', width: '4.5rem', required: true },
-    { id: 'speed', width: '7rem', priority: 10 },
-    { id: 'fromSpeed', width: '6.5rem', priority: 30 },
-    { id: 'fromLine', width: '6.5rem', priority: 40 },
+    { id: 'sector', width: '4.5rem', required: true, tier: 'essential', label: 'Sector' },
+    { id: 'speed', width: '4.25rem', priority: 10, tier: 'essential', label: 'Avg speed' },
+    { id: 'fromSpeed', width: '4.25rem', priority: 30, tier: 'essential', label: 'Δ Speed' },
+    { id: 'fromLine', width: '4rem', priority: 40, tier: 'essential', label: 'Δ Line' },
 ]
 
 interface SpeedTableProps {
@@ -40,7 +41,7 @@ function distanceChange(runner: number, reference: number): string {
 
 function SpeedCell({ value, gap, strong }: { value: number; gap: SpeedGap; strong?: boolean }) {
     return (
-        <span className="inline-flex items-baseline justify-end gap-1.5 font-mono tabular-nums">
+        <span className={cn('inline-flex items-baseline justify-end gap-1.5 font-mono tabular-nums', NUMERIC_TEXT, '@max-md/numbers:gap-1')}>
             <span className={cn(strong ? 'text-sm text-foreground' : 'text-xs text-muted-foreground')}>{value}</span>
             <span className={cn('text-[10px]', TONE_TEXT[gap.tone])}>{gap.label}</span>
         </span>
@@ -49,7 +50,7 @@ function SpeedCell({ value, gap, strong }: { value: number; gap: SpeedGap; stron
 
 function GapCell({ gap, strong }: { gap: SignedGap; strong?: boolean }) {
     return (
-        <span className={cn('font-mono tabular-nums', strong ? 'text-sm' : 'text-xs', TONE_TEXT[gap.tone])}>
+        <span className={cn('font-mono tabular-nums', NUMERIC_TEXT, strong ? 'text-sm' : 'text-xs', TONE_TEXT[gap.tone])}>
             {gap.label}
         </span>
     )
@@ -66,14 +67,18 @@ export function SpeedTable({ speed, differentLineNote, selectedSector, onSelectS
     return (
         <>
             <DataTableShell
-                className="!bg-transparent !border-0 !rounded-none"
-                responsive={{ columns: SPEED_COLUMNS, onResolve: handleResolve }}
+                className={cn('!bg-transparent !border-0 !rounded-none', NUMERIC_TABLE)}
+                responsive={{ columns: SPEED_COLUMNS, onResolve: handleResolve, tableOnly: true }}
             >
                 <DataTableHeaderRow>
-                    <DataTableHeaderCell width="4.5rem" align="center">Sector</DataTableHeaderCell>
-                    {isVisible('speed') && <DataTableHeaderCell align="right">Avg speed</DataTableHeaderCell>}
-                    {isVisible('fromSpeed') && <DataTableHeaderCell align="right">Δ Speed</DataTableHeaderCell>}
-                    {isVisible('fromLine') && <DataTableHeaderCell align="right">Δ Line</DataTableHeaderCell>}
+                    <DataTableHeaderCell width="4.5rem" align="center" className={NUMERIC_CELL}>Sector</DataTableHeaderCell>
+                    {isVisible('speed') && (
+                        <DataTableHeaderCell align="right" className={NUMERIC_CELL}>
+                            <NumericHeader full="Avg speed" short="Speed" />
+                        </DataTableHeaderCell>
+                    )}
+                    {isVisible('fromSpeed') && <DataTableHeaderCell align="right" className={NUMERIC_CELL}>Δ Speed</DataTableHeaderCell>}
+                    {isVisible('fromLine') && <DataTableHeaderCell align="right" className={NUMERIC_CELL}>Δ Line</DataTableHeaderCell>}
                 </DataTableHeaderRow>
                 <tbody>
                     {rows.map(row => (
@@ -84,13 +89,16 @@ export function SpeedTable({ speed, differentLineNote, selectedSector, onSelectS
                                 selectedSector === row.index && 'bg-accent-500/10 hover:bg-accent-500/15',
                             )}
                         >
-                            <DataTableCell align="center">
+                            <DataTableCell align="center" className={NUMERIC_CELL}>
                                 <button
                                     type="button"
                                     aria-pressed={selectedSector === row.index}
                                     aria-label={`Zoom the speed chart to ${row.label}`}
                                     onClick={() => onSelectSector(row.index)}
-                                    className="inline-flex w-full items-center justify-center gap-1 rounded text-xs font-mono text-muted-foreground tabular-nums cursor-pointer hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/60"
+                                    className={cn(
+                                        'inline-flex w-full items-center justify-center gap-1 rounded text-xs font-mono text-muted-foreground tabular-nums cursor-pointer hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/60',
+                                        NUMERIC_TEXT,
+                                    )}
                                 >
                                     {row.label}
                                     {row.flagged && (
@@ -99,17 +107,17 @@ export function SpeedTable({ speed, differentLineNote, selectedSector, onSelectS
                                 </button>
                             </DataTableCell>
                             {isVisible('speed') && (
-                                <DataTableCell align="right">
+                                <DataTableCell align="right" className={NUMERIC_CELL}>
                                     <SpeedCell value={row.runnerSpeed} gap={row.speedGap} />
                                 </DataTableCell>
                             )}
                             {isVisible('fromSpeed') && (
-                                <DataTableCell align="right">
+                                <DataTableCell align="right" className={NUMERIC_CELL}>
                                     <GapCell gap={row.fromSpeed} />
                                 </DataTableCell>
                             )}
                             {isVisible('fromLine') && (
-                                <DataTableCell align="right">
+                                <DataTableCell align="right" className={NUMERIC_CELL}>
                                     <GapCell gap={row.fromLine} />
                                 </DataTableCell>
                             )}

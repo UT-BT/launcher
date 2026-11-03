@@ -221,6 +221,7 @@ export function MapScreenshotModal(props: MapScreenshotModalProps) {
         <Modal
             isOpen={open}
             onClose={onClose}
+            closeOnBackdrop={false}
             title={displayMapName(mapName)}
             offsetSidebar
             maxWidth="460px"

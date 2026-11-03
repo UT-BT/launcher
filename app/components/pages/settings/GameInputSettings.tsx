@@ -429,6 +429,7 @@ export function GameInputSettings() {
             <Modal
                 isOpen={!!conflictInfo}
                 onClose={() => setConflictInfo(null)}
+                closeOnBackdrop={false}
                 title="Bind Conflict"
                 portal
                 className="max-w-lg"
@@ -453,7 +454,7 @@ export function GameInputSettings() {
                 </div>
             </Modal>
 
-            <Modal isOpen={showImportModal} onClose={() => setShowImportModal(false)} title="Import Binds" footer={null} portal>
+            <Modal isOpen={showImportModal} onClose={() => setShowImportModal(false)} closeOnBackdrop={false} title="Import Binds" footer={null} portal>
                 <div className="space-y-4">
                     <p className="text-sm text-muted-foreground">
                         {importError ? <span className="text-red-500">{importError}</span> : "Are you sure you want to import these binds? exact existing binds will be wiped and replaced."}

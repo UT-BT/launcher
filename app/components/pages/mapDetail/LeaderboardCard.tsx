@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, lazy } from 'react'
+import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { Play, Download, MessageSquareOff, ShieldCheck, ShieldAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavState } from '@/app/components/navigation/useNavState'
@@ -6,12 +7,10 @@ import { formatAddedDate } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
 import { getTeamDisplay } from '@/app/utils/team'
 import { medalIconForInt, medalLabelForInt } from '@/app/components/pages/capDetail/capStats'
-import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
+import { CapTimeLink, openCap, openTeamCap } from '@/app/components/shared/CapTimeLink'
 import { computeMedalTier, TIER_LABELS, type MedalTier } from '@/app/components/pages/maps/medals'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
-import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
-import { DemoDownloadStatusModal } from '@/app/components/shared/DemoDownloadStatusModal'
 import { WorldRecordHistoryTrigger } from '@/app/components/shared/WorldRecordHistoryTrigger'
 import { useReplayWatch } from '@/app/hooks/useReplayWatch'
 import { useDemoDownload } from '@/app/hooks/useDemoDownload'
@@ -25,12 +24,16 @@ import {
     DataTableCell,
     DataTableEmpty,
     DataTableSkeletonRow,
+    type ColumnTier,
     type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { PaginationBar } from '@/app/components/ui/pagination'
 import type { LeaderboardEntry, TeamLeaderboardEntry, MapMetadata } from '@/app/utils/api'
 import { isCertifiedCap } from '@/app/utils/capTypes'
 import { teamRunStateLabel } from '@/app/utils/teamRunState'
+
+const ReplayVideoModal = lazy(() => import('@/app/components/shared/ReplayVideoModal').then(m => ({ default: m.ReplayVideoModal })))
+const DemoDownloadStatusModal = lazy(() => import('@/app/components/shared/DemoDownloadStatusModal').then(m => ({ default: m.DemoDownloadStatusModal })))
 
 type Tab = 'verified' | 'certified' | 'all'
 type SortField = 'rank' | 'player' | 'time' | 'date'
@@ -92,6 +95,91 @@ const COLUMN_PRIORITY: Partial<Record<LeaderboardColumnId, number>> = {
 
 const REQUIRED_COLUMNS = new Set<LeaderboardColumnId>(['player', 'rank', 'time'])
 
+const COLUMN_TIER: Record<LeaderboardColumnId, ColumnTier> = {
+    rank: 'essential',
+    player: 'essential',
+    medal: 'essential',
+    time: 'essential',
+    team: 'detail',
+    date: 'detail',
+    watch: 'detail',
+    download: 'detail',
+}
+
+const COLUMN_LABEL: Record<LeaderboardColumnId, string> = {
+    rank: 'Rank',
+    player: 'Player',
+    medal: 'Medal',
+    time: 'Time',
+    team: 'Team',
+    date: 'Date',
+    watch: 'Watch replay',
+    download: 'Download demo',
+}
+
+const SORT_FIELD: Partial<Record<LeaderboardColumnId, SortField>> = {
+    rank: 'rank',
+    player: 'player',
+    time: 'time',
+    date: 'date',
+}
+
+type CellLayout = { align?: 'left' | 'center' | 'right'; className?: string }
+
+const CELL_LAYOUT: Partial<Record<LeaderboardColumnId, CellLayout>> = {
+    rank: { align: 'right' },
+    medal: { align: 'center' },
+    time: { align: 'right' },
+    team: { align: 'center' },
+    date: { align: 'right' },
+    watch: { align: 'center', className: 'px-2' },
+    download: { align: 'center', className: 'px-2' },
+}
+
+interface SoloRow {
+    entry: LeaderboardEntry
+    rank: number
+}
+
+const MEDAL_ICON_KEY: Partial<Record<MedalTier, string>> = {
+    world_record: 'world record',
+    champion: 'champion medal',
+    gold: 'gold medal',
+    silver: 'silver medal',
+    bronze: 'bronze medal',
+    verified: 'certified',
+    casual: 'casual',
+}
+
+function exactTimestamp(added: string): string {
+    const d = new Date(added)
+    return isNaN(d.getTime()) ? added : d.toLocaleString()
+}
+
+function RankCell({ rank }: { rank: number }) {
+    return (
+        <span className="text-xs font-bold font-mono text-muted-foreground tabular-nums">
+            #{rank}
+        </span>
+    )
+}
+
+function AddedDateCell({ added }: { added: string }) {
+    return (
+        <Tooltip content={exactTimestamp(added)} side="top">
+            <span className="text-xs text-muted-foreground tabular-nums">
+                {formatAddedDate(added)}
+            </span>
+        </Tooltip>
+    )
+}
+
+function CardSkeleton({ height }: { height: string }) {
+    return Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className={cn('mx-3 my-2 rounded-lg bg-hairline/5 animate-pulse', height)} />
+    ))
+}
+
 function SoloLeaderboardTable({
     leaderboard, map, loading, currentUserId, wrCapId, onShowWrHistory,
 }: LeaderboardCardProps) {
@@ -104,15 +192,6 @@ function SoloLeaderboardTable({
     const replay = useReplayWatch()
     const demoDownload = useDemoDownload()
 
-    const responsiveColumns = useMemo<ResponsiveColumn[]>(
-        () => LEADERBOARD_COLUMNS.map(id => ({
-            id,
-            width: COLUMN_WIDTH[id],
-            priority: COLUMN_PRIORITY[id],
-            required: REQUIRED_COLUMNS.has(id),
-        })),
-        [],
-    )
     const [resolved, setResolved] = useState<Set<LeaderboardColumnId> | null>(null)
     const handleResolve = useCallback((ids: Set<string>) => {
         setResolved(ids as Set<LeaderboardColumnId>)
@@ -169,67 +248,118 @@ function SoloLeaderboardTable({
     }
 
     const dir = (field: SortField): 'asc' | 'desc' | null => (sortBy === field ? sortDir : null)
+    const isOwnEntry = (entry: LeaderboardEntry) => currentUserId != null && String(entry.user) === String(currentUserId)
 
-    const compactRows = loading ? (
-        Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} role="listitem" className="p-3 border-b border-hairline/5 last:border-0 animate-pulse">
-                <div className="h-10 rounded bg-hairline/5" />
-            </div>
-        ))
-    ) : pageRows.length === 0 ? (
-        <div role="listitem" className="px-4 py-12 text-center text-sm text-muted-foreground">No caps yet.</div>
-    ) : pageRows.map(({ entry, rank }) => {
-        const tier: MedalTier = computeMedalTier(
-            { map: entry.map, cap_time_seconds: entry.cap_time_seconds, cap_type: entry.cap_type, verified: entry.verified },
-            map ?? undefined,
-        )
-        const isOwn = currentUserId != null && String(entry.user) === String(currentUserId)
-        const medalIconKey = tier === 'world_record' ? 'world record' :
-            tier === 'champion' ? 'champion medal' :
-                tier === 'gold' ? 'gold medal' :
-                    tier === 'silver' ? 'silver medal' :
-                        tier === 'bronze' ? 'bronze medal' :
-                            tier === 'verified' ? 'certified' :
-                                tier === 'casual' ? 'casual' : ''
-        const medalIcon = medalIconKey ? getMedalIcon(medalIconKey) : null
-        return (
-            <div
-                key={entry.id}
-                role="listitem"
-                className={cn('grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 p-3 border-b border-hairline/5 last:border-0', isOwn && 'bg-emerald-500/[0.05]')}
-            >
-                <span className="text-xs font-bold font-mono text-muted-foreground tabular-nums w-8 text-right">
-                    #{rank}
-                </span>
-                <div className="min-w-0">
-                    <PlayerInfo
-                        userId={entry.user}
-                        alias={entry.alias}
-                        title={entry.active_title}
-                        size="sm"
-                        highlight={isOwn}
-                        showYouBadge={isOwn}
-                    />
-                </div>
-                <div className="flex flex-col items-end gap-0.5">
-                    <div className="flex items-center gap-1.5">
-                        {medalIcon && (
-                            <img src={medalIcon} alt={TIER_LABELS[tier]} className="size-4 inline-block shrink-0 object-contain max-w-none" />
-                        )}
-                        <CapTimeLink
-                            capId={entry.id}
-                            seconds={entry.cap_time_seconds}
-                            className={cn(
-                                'text-sm font-mono tabular-nums font-bold',
-                                rank === 1 ? 'text-red-300' : 'text-foreground',
-                            )}
+    const soloCell = (id: LeaderboardColumnId, { entry, rank }: SoloRow): React.ReactNode => {
+        switch (id) {
+            case 'rank':
+                return <RankCell rank={rank} />
+            case 'player':
+                return (
+                    <div className="flex items-center gap-1.5 min-w-0">
+                        <PlayerInfo
+                            userId={entry.user}
+                            alias={entry.alias}
+                            title={entry.active_title}
+                            size="sm"
+                            highlight={isOwnEntry(entry)}
+                            showYouBadge={isOwnEntry(entry)}
                         />
+                        {wrCapId && entry.id === wrCapId && onShowWrHistory && (
+                            <WorldRecordHistoryTrigger onClick={onShowWrHistory} />
+                        )}
                     </div>
-                    <span className="text-xs text-muted-foreground tabular-nums">{formatAddedDate(entry.added)}</span>
-                </div>
+                )
+            case 'medal': {
+                const tier: MedalTier = computeMedalTier(
+                    { map: entry.map, cap_time_seconds: entry.cap_time_seconds, cap_type: entry.cap_type, verified: entry.verified },
+                    map ?? undefined,
+                )
+                const medalIconKey = MEDAL_ICON_KEY[tier]
+                const medalIcon = medalIconKey ? getMedalIcon(medalIconKey) : null
+                return medalIcon && (
+                    <Tooltip content={TIER_LABELS[tier]} side="top">
+                        <img src={medalIcon} alt={TIER_LABELS[tier]} className="size-4 inline-block shrink-0 object-contain max-w-none" />
+                    </Tooltip>
+                )
+            }
+            case 'time':
+                return (
+                    <CapTimeLink
+                        capId={entry.id}
+                        seconds={entry.cap_time_seconds}
+                        className={cn(
+                            'text-sm font-mono tabular-nums font-bold',
+                            rank === 1 ? 'text-red-300' : 'text-foreground',
+                        )}
+                    />
+                )
+            case 'team':
+                return entry.team == null ? (
+                    <span className="text-xs text-muted-foreground">—</span>
+                ) : (
+                    <span className={cn('text-xs font-medium', getTeamDisplay(entry.team).accent)}>
+                        {getTeamDisplay(entry.team).name}
+                    </span>
+                )
+            case 'date':
+                return <AddedDateCell added={entry.added} />
+            case 'watch':
+                return (
+                    <IconActionButton
+                        variant="replay"
+                        icon={entry.verified ? Play : MessageSquareOff}
+                        iconFill={entry.verified}
+                        tooltip={entry.verified ? 'Watch run' : 'No replay — cap not verified'}
+                        disabled={!entry.verified}
+                        loading={replay.loadingCapId === entry.id}
+                        onClick={() => replay.openReplay({
+                            capId: entry.id,
+                            mapName: entry.map,
+                            time: entry.cap_time_seconds,
+                            alias: entry.alias ?? undefined,
+                        })}
+                    />
+                )
+            case 'download':
+                return (
+                    <IconActionButton
+                        variant="download"
+                        icon={Download}
+                        tooltip="Download demo"
+                        onClick={() => demoDownload.start(entry, entry.map)}
+                    />
+                )
+        }
+    }
+
+    const responsiveColumns: ResponsiveColumn<SoloRow>[] = LEADERBOARD_COLUMNS.map(id => ({
+        id,
+        width: COLUMN_WIDTH[id],
+        priority: COLUMN_PRIORITY[id],
+        required: REQUIRED_COLUMNS.has(id),
+        tier: COLUMN_TIER[id],
+        label: COLUMN_LABEL[id],
+        sortKey: SORT_FIELD[id],
+        cell: row => soloCell(id, row),
+    }))
+
+    const soloFace = (row: SoloRow) => (
+        <div className="grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-3">
+            <span className="text-right">{soloCell('rank', row)}</span>
+            {soloCell('player', row)}
+            <div className="flex items-center gap-1.5">
+                {soloCell('medal', row)}
+                {soloCell('time', row)}
             </div>
-        )
-    })
+        </div>
+    )
+
+    const soloPlaceholder = loading ? (
+        <CardSkeleton height="h-10" />
+    ) : pageRows.length === 0 ? (
+        <div className="px-4 py-12 text-center text-sm text-muted-foreground">No caps yet.</div>
+    ) : undefined
 
     return (
         <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col overflow-hidden">
@@ -262,8 +392,20 @@ function SoloLeaderboardTable({
                     responsive={{
                         columns: responsiveColumns,
                         onResolve: handleResolve,
-                        compactContent: compactRows,
                         compactAriaLabel: 'Map leaderboard',
+                        cards: {
+                            rows: pageRows,
+                            rowKey: row => row.entry.id,
+                            face: soloFace,
+                            onOpen: row => openCap(row.entry.id),
+                            rowClassName: row => isOwnEntry(row.entry) ? 'bg-emerald-500/[0.05]' : undefined,
+                            placeholder: soloPlaceholder,
+                            sort: {
+                                key: sortBy,
+                                direction: sortDir,
+                                onSort: key => handleSort(key as SortField),
+                            },
+                        },
                     }}
                 >
                     <DataTableHeaderRow>
@@ -330,122 +472,15 @@ function SoloLeaderboardTable({
                         ) : pageRows.length === 0 ? (
                             <DataTableEmpty colSpan={visibleColumnCount} message="No caps yet." />
                         ) : (
-                            pageRows.map(({ entry, rank }) => {
-                                const tier: MedalTier = computeMedalTier(
-                                    { map: entry.map, cap_time_seconds: entry.cap_time_seconds, cap_type: entry.cap_type, verified: entry.verified },
-                                    map ?? undefined,
-                                )
-                                const isOwn = currentUserId != null && String(entry.user) === String(currentUserId)
-                                const medalIconKey = tier === 'world_record' ? 'world record' :
-                                    tier === 'champion' ? 'champion medal' :
-                                        tier === 'gold' ? 'gold medal' :
-                                            tier === 'silver' ? 'silver medal' :
-                                                tier === 'bronze' ? 'bronze medal' :
-                                                    tier === 'verified' ? 'certified' :
-                                                        tier === 'casual' ? 'casual' : ''
-                                const medalIcon = medalIconKey ? getMedalIcon(medalIconKey) : null
-                                const exactTimestamp = (() => {
-                                    const d = new Date(entry.added)
-                                    return isNaN(d.getTime()) ? entry.added : d.toLocaleString()
-                                })()
-                                return (
-                                    <DataTableRow key={entry.id} className={cn(isOwn && 'bg-emerald-500/[0.05]')}>
-                                        {isVisible('rank') && (
-                                            <DataTableCell align="right">
-                                                <span className="text-xs font-bold font-mono text-muted-foreground tabular-nums">
-                                                    #{rank}
-                                                </span>
-                                            </DataTableCell>
-                                        )}
-                                        {isVisible('player') && (
-                                            <DataTableCell>
-                                                <div className="flex items-center gap-1.5 min-w-0">
-                                                    <PlayerInfo
-                                                        userId={entry.user}
-                                                        alias={entry.alias}
-                                                        title={entry.active_title}
-                                                        size="sm"
-                                                        highlight={isOwn}
-                                                        showYouBadge={isOwn}
-                                                    />
-                                                    {wrCapId && entry.id === wrCapId && onShowWrHistory && (
-                                                        <WorldRecordHistoryTrigger onClick={onShowWrHistory} />
-                                                    )}
-                                                </div>
-                                            </DataTableCell>
-                                        )}
-                                        {isVisible('medal') && (
-                                            <DataTableCell align="center">
-                                                {medalIcon && (
-                                                    <Tooltip content={TIER_LABELS[tier]} side="top">
-                                                        <img src={medalIcon} alt={TIER_LABELS[tier]} className="size-4 inline-block shrink-0 object-contain max-w-none" />
-                                                    </Tooltip>
-                                                )}
-                                            </DataTableCell>
-                                        )}
-                                        {isVisible('time') && (
-                                            <DataTableCell align="right">
-                                                <CapTimeLink
-                                                    capId={entry.id}
-                                                    seconds={entry.cap_time_seconds}
-                                                    className={cn(
-                                                        'text-sm font-mono tabular-nums font-bold',
-                                                        rank === 1 ? 'text-red-300' : 'text-foreground',
-                                                    )}
-                                                />
-                                            </DataTableCell>
-                                        )}
-                                        {isVisible('team') && (
-                                            <DataTableCell align="center">
-                                                {entry.team == null ? (
-                                                    <span className="text-xs text-muted-foreground">—</span>
-                                                ) : (
-                                                    <span className={cn('text-xs font-medium', getTeamDisplay(entry.team).accent)}>
-                                                        {getTeamDisplay(entry.team).name}
-                                                    </span>
-                                                )}
-                                            </DataTableCell>
-                                        )}
-                                        {isVisible('date') && (
-                                            <DataTableCell align="right">
-                                                <Tooltip content={exactTimestamp} side="top">
-                                                    <span className="text-xs text-muted-foreground tabular-nums">
-                                                        {formatAddedDate(entry.added)}
-                                                    </span>
-                                                </Tooltip>
-                                            </DataTableCell>
-                                        )}
-                                        {isVisible('watch') && (
-                                            <DataTableCell align="center" className="px-2">
-                                                <IconActionButton
-                                                    variant="replay"
-                                                    icon={entry.verified ? Play : MessageSquareOff}
-                                                    iconFill={entry.verified}
-                                                    tooltip={entry.verified ? 'Watch run' : 'No replay — cap not verified'}
-                                                    disabled={!entry.verified}
-                                                    loading={replay.loadingCapId === entry.id}
-                                                    onClick={() => replay.openReplay({
-                                                        capId: entry.id,
-                                                        mapName: entry.map,
-                                                        time: entry.cap_time_seconds,
-                                                        alias: entry.alias ?? undefined,
-                                                    })}
-                                                />
-                                            </DataTableCell>
-                                        )}
-                                        {isVisible('download') && (
-                                            <DataTableCell align="center" className="px-2">
-                                                <IconActionButton
-                                                    variant="download"
-                                                    icon={Download}
-                                                    tooltip="Download demo"
-                                                    onClick={() => demoDownload.start(entry, entry.map)}
-                                                />
-                                            </DataTableCell>
-                                        )}
-                                    </DataTableRow>
-                                )
-                            })
+                            pageRows.map(row => (
+                                <DataTableRow key={row.entry.id} className={cn(isOwnEntry(row.entry) && 'bg-emerald-500/[0.05]')}>
+                                    {LEADERBOARD_COLUMNS.filter(isVisible).map(id => (
+                                        <DataTableCell key={id} align={CELL_LAYOUT[id]?.align} className={CELL_LAYOUT[id]?.className}>
+                                            {soloCell(id, row)}
+                                        </DataTableCell>
+                                    ))}
+                                </DataTableRow>
+                            ))
                         )}
                     </tbody>
                 </DataTableShell>
@@ -466,7 +501,9 @@ function SoloLeaderboardTable({
                 )}
             </div>
 
-            <ReplayVideoModal state={replay.video} onClose={replay.clearVideo} />
+            <LazyModalGate open={replay.video !== null}>
+                <ReplayVideoModal state={replay.video} onClose={replay.clearVideo} />
+            </LazyModalGate>
 
             <Modal
                 isOpen={replay.error !== null}
@@ -478,10 +515,12 @@ function SoloLeaderboardTable({
                 <p className="text-sm text-muted-foreground">{replay.error}</p>
             </Modal>
 
-            <DemoDownloadStatusModal
-                state={demoDownload.download}
-                onClose={demoDownload.clear}
-            />
+            <LazyModalGate open={demoDownload.download !== null}>
+                <DemoDownloadStatusModal
+                    state={demoDownload.download}
+                    onClose={demoDownload.clear}
+                />
+            </LazyModalGate>
         </div>
     )
 }
@@ -494,14 +533,21 @@ const TEAM_TABS: { value: TeamTab; label: string }[] = [
     { value: 'all', label: 'All' },
 ]
 
-const TEAM_LEADERBOARD_COLUMNS: ResponsiveColumn[] = [
-    { id: 'rank', width: '4rem', required: true },
-    { id: 'team', width: '10rem', required: true },
-    { id: 'medal', width: '3rem', required: true },
-    { id: 'time', width: '8rem', required: true },
-    { id: 'status', width: '7rem', required: true },
-    { id: 'date', width: '8rem', required: true },
+type TeamColumnId = 'rank' | 'team' | 'medal' | 'time' | 'status' | 'date'
+
+const TEAM_LEADERBOARD_COLUMNS: (Omit<ResponsiveColumn, 'id'> & { id: TeamColumnId; align?: CellLayout['align'] })[] = [
+    { id: 'rank', width: '4rem', required: true, tier: 'essential', label: 'Rank', sortKey: 'rank', align: 'right' },
+    { id: 'team', width: '10rem', required: true, tier: 'essential', label: 'Team' },
+    { id: 'medal', width: '3rem', required: true, tier: 'essential', label: 'Medal', align: 'center' },
+    { id: 'time', width: '8rem', required: true, tier: 'essential', label: 'Team Time', sortKey: 'time', align: 'right' },
+    { id: 'status', width: '7rem', required: true, tier: 'detail', label: 'Status', align: 'center' },
+    { id: 'date', width: '8rem', required: true, tier: 'detail', label: 'Date', sortKey: 'date', align: 'right' },
 ]
+
+interface TeamRow {
+    entry: TeamLeaderboardEntry
+    rank: number
+}
 
 interface TeamLeaderboardTableProps {
     teamLeaderboard: TeamLeaderboardEntry[]
@@ -566,57 +612,99 @@ export function TeamLeaderboardTable({
     }
 
     const dir = (field: TeamSortField): 'asc' | 'desc' | null => (sortBy === field ? sortDir : null)
-    const compactRows = loading ? (
-        Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} role="listitem" className="p-3 border-b border-hairline/5 last:border-0 animate-pulse">
-                <div className="h-14 rounded bg-hairline/5" />
-            </div>
-        ))
-    ) : pageRows.length === 0 ? (
-        <div role="listitem" className="px-4 py-12 text-center text-sm text-muted-foreground">No team runs yet.</div>
-    ) : pageRows.map(({ entry, rank }) => {
-        const medalIcon = entry.verified ? medalIconForInt(entry.medal) : null
-        const medalLabel = medalLabelForInt(entry.medal)
-        const isOwn = currentUserId != null && (entry.members ?? []).some(m => String(m.user) === String(currentUserId))
-        const isCurrentRun =
-            (highlightTeamCapId != null && String(entry.id) === String(highlightTeamCapId)) ||
+
+    const isHighlighted = (entry: TeamLeaderboardEntry) => {
+        if (highlightTeamCapId == null && highlightMemberKey == null) {
+            return currentUserId != null && (entry.members ?? []).some(m => String(m.user) === String(currentUserId))
+        }
+        return (highlightTeamCapId != null && String(entry.id) === String(highlightTeamCapId)) ||
             (highlightMemberKey != null && String(entry.user) === String(highlightMemberKey))
-        const highlightRow = (highlightTeamCapId != null || highlightMemberKey != null) ? isCurrentRun : isOwn
-        return (
-            <div key={entry.id} role="listitem" className={cn('grid grid-cols-[auto_minmax(0,1fr)_auto] gap-3 p-3 border-b border-hairline/5 last:border-0', highlightRow && 'bg-emerald-500/[0.05]')}>
-                <span className="pt-0.5 text-xs font-bold font-mono text-muted-foreground tabular-nums">#{rank}</span>
-                <div className="min-w-0 space-y-1.5">
-                    {(entry.members ?? []).map(member => (
-                        <div key={member.cap_id} className="flex items-center gap-1.5 min-w-0">
-                            <PlayerInfo
-                                userId={member.user}
-                                alias={member.alias}
-                                size="sm"
-                                highlight={currentUserId != null && String(member.user) === String(currentUserId)}
-                            />
-                            {!member.verified && <span className="text-[9px] uppercase tracking-wider text-amber-300/80">pending</span>}
-                        </div>
-                    ))}
-                    <span className="block text-[10px] text-muted-foreground">{formatAddedDate(entry.added)}</span>
-                </div>
-                <div className="flex flex-col items-end justify-between gap-2">
-                    <div className="flex items-center gap-1.5">
-                        {medalIcon && <img src={medalIcon} alt={medalLabel} className="size-4 object-contain" />}
-                        <CapTimeLink teamCapId={entry.id} seconds={entry.cap_time_seconds} className="font-mono tabular-nums font-bold text-foreground" />
+    }
+
+    const teamCell = (id: TeamColumnId, { entry, rank }: TeamRow): React.ReactNode => {
+        switch (id) {
+            case 'rank':
+                return <RankCell rank={rank} />
+            case 'team':
+                return (
+                    <div className="flex flex-col gap-1.5 py-0.5 min-w-0">
+                        {(entry.members ?? []).map(member => (
+                            <div key={member.cap_id} className="flex items-center gap-1.5 min-w-0">
+                                <PlayerInfo
+                                    userId={member.user}
+                                    alias={member.alias}
+                                    size="sm"
+                                    highlight={currentUserId != null && String(member.user) === String(currentUserId)}
+                                />
+                                {!member.verified && (
+                                    <span className="text-[9px] uppercase tracking-wider text-amber-300/80">
+                                        pending demo
+                                    </span>
+                                )}
+                            </div>
+                        ))}
                     </div>
+                )
+            case 'medal': {
+                const medalIcon = entry.verified ? medalIconForInt(entry.medal) : null
+                const medalLabel = medalLabelForInt(entry.medal)
+                return medalIcon && (
+                    <Tooltip content={medalLabel} side="top">
+                        <img src={medalIcon} alt={medalLabel} className="size-4 inline-block shrink-0 object-contain max-w-none" />
+                    </Tooltip>
+                )
+            }
+            case 'time':
+                return (
+                    <CapTimeLink
+                        teamCapId={entry.id}
+                        seconds={entry.cap_time_seconds}
+                        className={cn(
+                            'text-sm font-mono tabular-nums font-bold',
+                            activeTab === 'verified' && rank === 1 ? 'text-red-300' : 'text-foreground',
+                        )}
+                    />
+                )
+            case 'status':
+                return (
                     <span className={cn(
-                        'inline-flex items-center gap-1 h-6 px-2 rounded-md border text-[10px] font-semibold',
+                        'inline-flex items-center gap-1 h-6 px-2 rounded-md border text-[11px] font-semibold',
                         entry.verified
                             ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
                             : 'bg-hairline/5 border-hairline/10 text-muted-foreground',
                     )}>
-                        {entry.verified ? <ShieldCheck className="size-3" /> : <ShieldAlert className="size-3" />}
+                        {entry.verified
+                            ? <ShieldCheck className="size-3" />
+                            : <ShieldAlert className="size-3" />}
                         {teamRunStateLabel(entry.state)}
                     </span>
-                </div>
+                )
+            case 'date':
+                return <AddedDateCell added={entry.added} />
+        }
+    }
+
+    const teamColumns: ResponsiveColumn<TeamRow>[] = TEAM_LEADERBOARD_COLUMNS.map(({ align: _align, ...column }) => ({
+        ...column,
+        cell: row => teamCell(column.id, row),
+    }))
+
+    const teamFace = (row: TeamRow) => (
+        <div className="grid grid-cols-[2rem_minmax(0,1fr)_auto] items-start gap-3">
+            <span className="pt-1 text-right">{teamCell('rank', row)}</span>
+            {teamCell('team', row)}
+            <div className="flex items-center gap-1.5 pt-0.5">
+                {teamCell('medal', row)}
+                {teamCell('time', row)}
             </div>
-        )
-    })
+        </div>
+    )
+
+    const teamPlaceholder = loading ? (
+        <CardSkeleton height="h-14" />
+    ) : pageRows.length === 0 ? (
+        <div className="px-4 py-12 text-center text-sm text-muted-foreground">No team runs yet.</div>
+    ) : undefined
 
     return (
         <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col overflow-hidden">
@@ -647,9 +735,21 @@ export function TeamLeaderboardTable({
                 <DataTableShell
                     className="!flex-none !min-h-0 !rounded-none !border-0"
                     responsive={{
-                        columns: TEAM_LEADERBOARD_COLUMNS,
-                        compactContent: compactRows,
+                        columns: teamColumns,
                         compactAriaLabel: 'Team leaderboard',
+                        cards: {
+                            rows: pageRows,
+                            rowKey: row => String(row.entry.id),
+                            face: teamFace,
+                            onOpen: row => openTeamCap(row.entry.id),
+                            rowClassName: row => isHighlighted(row.entry) ? 'bg-emerald-500/[0.05]' : undefined,
+                            placeholder: teamPlaceholder,
+                            sort: {
+                                key: sortBy,
+                                direction: sortDir,
+                                onSort: key => handleSort(key as TeamSortField),
+                            },
+                        },
                     }}
                 >
                     <DataTableHeaderRow>
@@ -692,84 +792,15 @@ export function TeamLeaderboardTable({
                         ) : pageRows.length === 0 ? (
                             <DataTableEmpty colSpan={6} message="No team runs yet." />
                         ) : (
-                            pageRows.map(({ entry, rank }) => {
-                                const medalIcon = entry.verified ? medalIconForInt(entry.medal) : null
-                                const medalLabel = medalLabelForInt(entry.medal)
-                                const isOwn = currentUserId != null && (entry.members ?? []).some(m => String(m.user) === String(currentUserId))
-                                const isCurrentRun =
-                                    (highlightTeamCapId != null && String(entry.id) === String(highlightTeamCapId)) ||
-                                    (highlightMemberKey != null && String(entry.user) === String(highlightMemberKey))
-                                const highlightRow = (highlightTeamCapId != null || highlightMemberKey != null) ? isCurrentRun : isOwn
-                                const exactTimestamp = (() => {
-                                    const d = new Date(entry.added)
-                                    return isNaN(d.getTime()) ? entry.added : d.toLocaleString()
-                                })()
-                                return (
-                                    <DataTableRow key={entry.id} className={cn(highlightRow && 'bg-emerald-500/[0.05]')}>
-                                        <DataTableCell align="right">
-                                            <span className="text-xs font-bold font-mono text-muted-foreground tabular-nums">
-                                                #{rank}
-                                            </span>
+                            pageRows.map(row => (
+                                <DataTableRow key={row.entry.id} className={cn(isHighlighted(row.entry) && 'bg-emerald-500/[0.05]')}>
+                                    {TEAM_LEADERBOARD_COLUMNS.map(column => (
+                                        <DataTableCell key={column.id} align={column.align}>
+                                            {teamCell(column.id, row)}
                                         </DataTableCell>
-                                        <DataTableCell>
-                                            <div className="flex flex-col gap-1.5 py-0.5 min-w-0">
-                                                {(entry.members ?? []).map(member => (
-                                                    <div key={member.cap_id} className="flex items-center gap-1.5 min-w-0">
-                                                        <PlayerInfo
-                                                            userId={member.user}
-                                                            alias={member.alias}
-                                                            size="sm"
-                                                            highlight={currentUserId != null && String(member.user) === String(currentUserId)}
-                                                        />
-                                                        {!member.verified && (
-                                                            <span className="text-[9px] uppercase tracking-wider text-amber-300/80">
-                                                                pending demo
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </DataTableCell>
-                                        <DataTableCell align="center">
-                                            {medalIcon && (
-                                                <Tooltip content={medalLabel} side="top">
-                                                    <img src={medalIcon} alt={medalLabel} className="size-4 inline-block shrink-0 object-contain max-w-none" />
-                                                </Tooltip>
-                                            )}
-                                        </DataTableCell>
-                                        <DataTableCell align="right">
-                                            <CapTimeLink
-                                                teamCapId={entry.id}
-                                                seconds={entry.cap_time_seconds}
-                                                className={cn(
-                                                    'text-sm font-mono tabular-nums font-bold',
-                                                    activeTab === 'verified' && rank === 1 ? 'text-red-300' : 'text-foreground',
-                                                )}
-                                            />
-                                        </DataTableCell>
-                                        <DataTableCell align="center">
-                                            <span className={cn(
-                                                'inline-flex items-center gap-1 h-6 px-2 rounded-md border text-[11px] font-semibold',
-                                                entry.verified
-                                                    ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
-                                                    : 'bg-hairline/5 border-hairline/10 text-muted-foreground',
-                                            )}>
-                                                {entry.verified
-                                                    ? <ShieldCheck className="size-3" />
-                                                    : <ShieldAlert className="size-3" />}
-                                                {teamRunStateLabel(entry.state)}
-                                            </span>
-                                        </DataTableCell>
-                                        <DataTableCell align="right">
-                                            <Tooltip content={exactTimestamp} side="top">
-                                                <span className="text-xs text-muted-foreground tabular-nums">
-                                                    {formatAddedDate(entry.added)}
-                                                </span>
-                                            </Tooltip>
-                                        </DataTableCell>
-                                    </DataTableRow>
-                                )
-                            })
+                                    ))}
+                                </DataTableRow>
+                            ))
                         )}
                     </tbody>
                 </DataTableShell>

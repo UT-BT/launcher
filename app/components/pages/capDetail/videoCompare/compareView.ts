@@ -74,6 +74,19 @@ export function comparisonRequests(runs: CompareRunTiming[]): ComparisonRequest[
         .map(i => ({ runnerCapId: runs[i].capId, referenceCapId }))
 }
 
+export function initialPlayingRuns(runs: CompareRunTiming[], limit: number): number[] {
+    if (runs.length <= limit) return runs.map((_, i) => i)
+    const referenceIndex = compareReferenceIndex(runs)
+    const partners = referenceSideIndices(runs, referenceIndex).filter(i => i !== referenceIndex)
+    const others = runs.map((_, i) => i).filter(i => i !== referenceIndex && !partners.includes(i))
+    return [...partners, ...others].slice(0, limit - 1).concat(referenceIndex)
+}
+
+export function swapIntoPlaying(playing: number[], index: number, limit: number): number[] {
+    if (playing.includes(index)) return playing
+    return [...playing, index].slice(-limit)
+}
+
 function seconds(ms: number[]): number[] {
     return ms.map(t => t / 1000)
 }
@@ -140,6 +153,10 @@ function checkpointReadout(checkpoints: SyncAnchor[], runTime: number): PaneRead
     if (passed < 0) return { label: 'SPAWN', greyed: false, gap: null }
     const anchor = checkpoints[passed]
     return { label: `CP${passed + 1}`, greyed: false, gap: gapSeconds(anchor.aTime - anchor.bTime) }
+}
+
+export function sameReadout(a: PaneReadout, b: PaneReadout): boolean {
+    return a.label === b.label && a.greyed === b.greyed && a.gap?.ms === b.gap?.ms && a.gap?.label === b.gap?.label
 }
 
 export function paneReadout(track: RunTrack, runTime: number): PaneReadout {

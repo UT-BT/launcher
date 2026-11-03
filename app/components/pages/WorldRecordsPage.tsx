@@ -1,4 +1,5 @@
-import { lazy, Suspense, useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { lazy, useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import {
     Search, X, Play, Download, SlidersHorizontal,
     Trophy, Crown, ListOrdered, type LucideIcon,
@@ -9,6 +10,7 @@ import { Modal } from '@/app/components/ui/modal'
 import { useAutoPageSize } from '@/app/hooks/useAutoPageSize'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
+import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import { useReplayWatch } from '@/app/hooks/useReplayWatch'
 import { useDemoDownload } from '@/app/hooks/useDemoDownload'
 import { useNewItemHighlight } from '@/app/hooks/useNewItemHighlight'
@@ -26,27 +28,24 @@ import {
     fetchWorldRecordFilterOptions,
     asStringArray,
 } from '@/app/utils/api'
-import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { PlayerInfo, openPlayer } from '@/app/components/shared/PlayerInfo'
 import { TeamHolders } from '@/app/components/shared/TeamHolders'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { MapNavLink } from '@/app/components/shared/MapNavLink'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
-import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
-import { DemoDownloadStatusModal } from '@/app/components/shared/DemoDownloadStatusModal'
 import { WorldRecordHistoryTrigger } from '@/app/components/shared/WorldRecordHistoryTrigger'
 import { PaginationBar } from '@/app/components/ui/pagination'
 import { ColumnsMenu } from '@/app/components/shared/ColumnsMenu'
 import { MultiFilterDropdown } from '@/app/components/ui/multi-filter-dropdown'
 import { FilterPanelRow } from '@/app/components/ui/filter-panel-row'
 import { ActiveFilterChip } from '@/app/components/shared/ActiveFilterChip'
-const WorldRecordProgressionModal = lazy(() => import('@/app/components/modals/WorldRecordProgressionModal').then(m => ({ default: m.WorldRecordProgressionModal })))
 import { FilterPresetsMenu, type FilterPreset } from '@/app/components/shared/FilterPresetsMenu'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow,
     DataTableCell, DataTableEmpty, DataTableSkeletonRow, type SortDirection,
-    type ResponsiveColumn,
+    type ColumnTier, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { formatCapTime, formatAddedDate, displayMapName } from '@/app/utils/format'
 import { difficultyTextColor } from '@/app/utils/scoreColors'
@@ -68,6 +67,10 @@ import {
     type WrTimeBucket,
     type WrTimeframe,
 } from './WorldRecordsPage.types'
+
+const WorldRecordProgressionModal = lazy(() => import('@/app/components/modals/WorldRecordProgressionModal').then(m => ({ default: m.WorldRecordProgressionModal })))
+const ReplayVideoModal = lazy(() => import('@/app/components/shared/ReplayVideoModal').then(m => ({ default: m.ReplayVideoModal })))
+const DemoDownloadStatusModal = lazy(() => import('@/app/components/shared/DemoDownloadStatusModal').then(m => ({ default: m.DemoDownloadStatusModal })))
 
 export type {
     WorldRecordsColumnId,
@@ -106,18 +109,37 @@ const COLUMN_PRIORITY: Partial<Record<WorldRecordsColumnId, number>> = {
     date: 30,
 }
 
+const COLUMN_TIER: Record<WorldRecordsColumnId, ColumnTier> = {
+    map: 'essential',
+    holder: 'essential',
+    time: 'essential',
+    difficulty: 'detail',
+    date: 'detail',
+    actions: 'detail',
+}
+
+const CELL_LAYOUT: Partial<Record<WorldRecordsColumnId, { align: 'center'; className?: string }>> = {
+    time: { align: 'center' },
+    difficulty: { align: 'center' },
+    date: { align: 'center', className: 'whitespace-nowrap' },
+    actions: { align: 'center', className: 'px-2' },
+}
+
 type RusherColumnId = 'rank' | 'rusher' | 'records' | 'share' | 'median' | 'average'
 
-const RUSHER_COLUMNS: ResponsiveColumn[] = [
-    { id: 'rank', width: '5rem', required: true },
-    { id: 'rusher', required: true },
-    { id: 'records', width: '20rem', required: true },
-    { id: 'share', width: '6rem', priority: 30 },
-    { id: 'median', width: '8rem', priority: 35 },
-    { id: 'average', width: '8rem', priority: 34 },
-]
+interface RusherEntry {
+    rusher: RusherRow
+    rank: number
+}
 
-const RUSHER_COLUMN_IDS: RusherColumnId[] = RUSHER_COLUMNS.map(c => c.id as RusherColumnId)
+const RUSHER_COLUMNS: (ResponsiveColumn & { id: RusherColumnId; align?: 'center' })[] = [
+    { id: 'rank', width: '5rem', required: true, tier: 'essential', label: 'Rank', align: 'center' },
+    { id: 'rusher', required: true, tier: 'essential', label: 'Rusher' },
+    { id: 'records', width: '20rem', required: true, tier: 'essential', label: 'World Records' },
+    { id: 'share', width: '6rem', priority: 30, tier: 'essential', label: 'Share', align: 'center' },
+    { id: 'median', width: '8rem', priority: 35, tier: 'detail', label: 'Median WR', align: 'center' },
+    { id: 'average', width: '8rem', priority: 34, tier: 'detail', label: 'Average WR', align: 'center' },
+]
 
 const MODES: { value: WorldRecordsMode; label: string; icon: LucideIcon }[] = [
     { value: 'records', label: 'Records', icon: ListOrdered },
@@ -236,6 +258,14 @@ interface Globals {
     maxRusherCount: number
 }
 
+function NewBadge() {
+    return (
+        <span className="shrink-0 inline-flex items-center h-4 px-1.5 rounded-full bg-accent-500 text-white text-[9px] font-black uppercase tracking-wider">
+            New
+        </span>
+    )
+}
+
 function medalText(rank: number): string {
     if (rank === 1) return 'text-yellow-300'
     if (rank === 2) return 'text-slate-200'
@@ -282,7 +312,6 @@ export function WorldRecordsPage({
     const [pageLoading, setPageLoading] = useState(currentRows.length === 0)
     const [error, setError] = useState<string | null>(null)
     const refreshCooldown = useRefreshCooldown()
-    const scrollContainerRef = useRef<HTMLDivElement | null>(null)
 
     const replay = useReplayWatch()
     const demoDownload = useDemoDownload()
@@ -491,17 +520,6 @@ export function WorldRecordsPage({
         return () => { cancelled = true }
     }, [loadPage])
 
-    useEffect(() => {
-        if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = state.scrollTop
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
-
-    const onScrollContainerScroll = useCallback(() => {
-        if (!scrollContainerRef.current) return
-        const top = scrollContainerRef.current.scrollTop
-        onStateChange(prev => Math.abs(prev.scrollTop - top) > 24 ? { ...prev, scrollTop: top } : prev)
-    }, [onStateChange])
-
     const refresh = () => {
         refreshCooldown.trigger(() => {
             pageCacheRef.current = {}
@@ -547,7 +565,7 @@ export function WorldRecordsPage({
 
     const handleLoadPreset = (p: WorldRecordsPreset) => {
         setActivePresetId(p.id)
-        onStateChange(prev => ({ ...prev, ...pickPresetFilters(p.filters ?? {}), currentPage: 1, scrollTop: 0 }))
+        onStateChange(prev => ({ ...prev, ...pickPresetFilters(p.filters ?? {}), currentPage: 1 }))
     }
 
     const handleDeletePreset = (p: WorldRecordsPreset) => {
@@ -606,16 +624,6 @@ export function WorldRecordsPage({
         [state.columnOrder, state.columnVisibility],
     )
 
-    const responsiveColumns = useMemo<ResponsiveColumn[]>(
-        () => visibleColumns.map(id => ({
-            id,
-            width: COLUMN_WIDTH[id],
-            priority: COLUMN_PRIORITY[id],
-            required: REQUIRED_COLUMNS.has(id),
-        })),
-        [visibleColumns],
-    )
-
     const [compactMode, setCompactMode] = useState(false)
     const handleCompactChange = useCallback((compact: boolean) => setCompactMode(compact), [])
 
@@ -636,10 +644,8 @@ export function WorldRecordsPage({
     }, [])
     const isRusherColumnVisible = (id: RusherColumnId): boolean =>
         !rushersResolved || rushersResolved.has(id)
-    const rusherColumnCount = RUSHER_COLUMN_IDS.reduce(
-        (n, id) => n + (isRusherColumnVisible(id) ? 1 : 0),
-        0,
-    )
+    const visibleRusherColumns = RUSHER_COLUMNS.filter(c => isRusherColumnVisible(c.id))
+    const rusherColumnCount = visibleRusherColumns.length
 
     const totalRecords = caches.totalRecords
     const maxRusherCount = caches.maxRusherCount
@@ -659,6 +665,7 @@ export function WorldRecordsPage({
     }, [cacheFresh, totalCount, totalPages, state.currentPage, onStateChange])
 
     const showSkeleton = !error && (!cacheFresh || (pageLoading && currentRows.length === 0))
+    useNavScrollRestore(!showSkeleton)
 
     const activeFilterCount = [
         state.difficultyFilters.length > 0,
@@ -720,134 +727,144 @@ export function WorldRecordsPage({
         }
     }
 
-    const renderCell = (
-        id: WorldRecordsColumnId,
-        r: WorldRecord,
-        isNew: boolean,
-        cellRef?: (el: HTMLTableCellElement | null) => void,
-    ) => {
+    const recordHolder = (r: WorldRecord) => {
         const isSelf = selfId != null && r.user_id === String(selfId)
+        return r.members && r.members.length > 0 ? (
+            <TeamHolders
+                members={r.members.map(m => ({
+                    userId: m.user,
+                    alias: m.alias,
+                    activeTitle: m.active_title,
+                }))}
+                currentUserId={selfId != null ? String(selfId) : undefined}
+            />
+        ) : (
+            <PlayerInfo
+                userId={r.user_id}
+                alias={r.alias}
+                title={r.active_title}
+                size="sm"
+                highlight={isSelf}
+                showYouBadge={isSelf}
+            />
+        )
+    }
+
+    const recordTime = (r: WorldRecord) => {
+        const isTeamRow = !!(r.members && r.members.length > 0)
+        return (
+            <CapTimeLink
+                capId={isTeamRow ? undefined : r.cap_id}
+                teamCapId={isTeamRow ? r.cap_id : undefined}
+                seconds={r.cap_time_seconds}
+                className="font-mono font-black tabular-nums text-blue-300 tracking-tight"
+            />
+        )
+    }
+
+    const recordMapLink = (r: WorldRecord) => (
+        <>
+            <FavoriteStar
+                name={r.map}
+                isFavorited={favoriteMapNames.has(r.map)}
+                onToggle={onToggleFavorite}
+                size="sm"
+                className="shrink-0"
+            />
+            <MapNavLink
+                mapName={r.map}
+                onMapSelect={onMapSelect}
+                className="font-bold text-foreground/90 truncate hover:text-foreground hover:underline underline-offset-2 cursor-pointer text-left"
+            >
+                {displayMapName(r.map)}
+            </MapNavLink>
+            {highlight.isNew(r.added) && <NewBadge />}
+        </>
+    )
+
+    const recordCell = (id: WorldRecordsColumnId, r: WorldRecord): React.ReactNode => {
         switch (id) {
             case 'map':
                 return (
-                    <DataTableCell key={id} ref={cellRef}>
-                        <div className="flex items-center gap-3 min-w-0">
-                            <MapThumbnail mapName={r.map} className="w-12 h-12" />
-                            <div className="flex items-center gap-2 min-w-0">
-                                <FavoriteStar
-                                    name={r.map}
-                                    isFavorited={favoriteMapNames.has(r.map)}
-                                    onToggle={onToggleFavorite}
-                                    size="sm"
-                                    className="shrink-0"
-                                />
-                                <MapNavLink
-                                    mapName={r.map}
-                                    onMapSelect={onMapSelect}
-                                    className="font-bold text-foreground/90 truncate hover:text-foreground hover:underline underline-offset-2 cursor-pointer text-left"
-                                >
-                                    {displayMapName(r.map)}
-                                </MapNavLink>
-                                {isNew && (
-                                    <span className="shrink-0 inline-flex items-center h-4 px-1.5 rounded-full bg-accent-500 text-white text-[9px] font-black uppercase tracking-wider">
-                                        New
-                                    </span>
-                                )}
-                            </div>
+                    <div className="flex items-center gap-3 min-w-0">
+                        <MapThumbnail mapName={r.map} className="w-12 h-12" />
+                        <div className="flex items-center gap-2 min-w-0">
+                            {recordMapLink(r)}
                         </div>
-                    </DataTableCell>
+                    </div>
                 )
             case 'holder':
-                return (
-                    <DataTableCell key={id}>
-                        {r.members && r.members.length > 0 ? (
-                            <TeamHolders
-                                members={r.members.map(m => ({
-                                    userId: m.user,
-                                    alias: m.alias,
-                                    activeTitle: m.active_title,
-                                }))}
-                                currentUserId={selfId != null ? String(selfId) : undefined}
-                            />
-                        ) : (
-                            <PlayerInfo
-                                userId={r.user_id}
-                                alias={r.alias}
-                                title={r.active_title}
-                                size="sm"
-                                highlight={isSelf}
-                                showYouBadge={isSelf}
-                            />
-                        )}
-                    </DataTableCell>
-                )
-            case 'time': {
-                const isTeamRow = !!(r.members && r.members.length > 0)
-                return (
-                    <DataTableCell key={id} align="center">
-                        <CapTimeLink
-                            capId={isTeamRow ? undefined : r.cap_id}
-                            teamCapId={isTeamRow ? r.cap_id : undefined}
-                            seconds={r.cap_time_seconds}
-                            className="font-mono font-black tabular-nums text-blue-300 tracking-tight"
-                        />
-                    </DataTableCell>
-                )
-            }
+                return recordHolder(r)
+            case 'time':
+                return recordTime(r)
             case 'difficulty':
-                return (
-                    <DataTableCell key={id} align="center">
-                        {r.difficulty != null ? (
-                            <span className={cn('font-mono tabular-nums text-sm font-bold', difficultyTextColor(r.difficulty))}>
-                                {r.difficulty}
-                            </span>
-                        ) : (
-                            <span className="text-muted-foreground/50">—</span>
-                        )}
-                    </DataTableCell>
+                return r.difficulty != null ? (
+                    <span className={cn('font-mono tabular-nums text-sm font-bold', difficultyTextColor(r.difficulty))}>
+                        {r.difficulty}
+                    </span>
+                ) : (
+                    <span className="text-muted-foreground/50">—</span>
                 )
             case 'date':
                 return (
-                    <DataTableCell key={id} align="center" className="whitespace-nowrap">
-                        <Tooltip content={new Date(r.added).toLocaleString()} side="top">
-                            <span className="text-xs text-muted-foreground tabular-nums">
-                                {formatAddedDate(r.added)}
-                            </span>
-                        </Tooltip>
-                    </DataTableCell>
+                    <Tooltip content={new Date(r.added).toLocaleString()} side="top">
+                        <span className="text-xs text-muted-foreground tabular-nums">
+                            {formatAddedDate(r.added)}
+                        </span>
+                    </Tooltip>
                 )
             case 'actions':
                 return (
-                    <DataTableCell key={id} align="center" className="px-2">
-                        <div className="flex items-center justify-center gap-1">
-                            <IconActionButton
-                                variant="replay"
-                                icon={Play}
-                                iconFill
-                                tooltip="Watch run"
-                                loading={replay.loadingCapId === r.cap_id}
-                                onClick={() => replay.openReplay({
-                                    capId: r.cap_id,
-                                    mapName: r.map,
-                                    time: r.cap_time_seconds,
-                                    alias: r.alias ?? undefined,
-                                })}
-                            />
-                            <IconActionButton
-                                variant="download"
-                                icon={Download}
-                                tooltip="Download demo"
-                                onClick={() => demoDownload.start(
-                                    { id: r.cap_id, alias: r.alias, cap_time_seconds: r.cap_time_seconds } as unknown as LeaderboardEntry,
-                                    r.map,
-                                )}
-                            />
-                            <WorldRecordHistoryTrigger onClick={() => openHistory(r.map)} />
-                        </div>
-                    </DataTableCell>
+                    <div className="flex items-center justify-center gap-1">
+                        <IconActionButton
+                            variant="replay"
+                            icon={Play}
+                            iconFill
+                            tooltip="Watch run"
+                            loading={replay.loadingCapId === r.cap_id}
+                            onClick={() => replay.openReplay({
+                                capId: r.cap_id,
+                                mapName: r.map,
+                                time: r.cap_time_seconds,
+                                alias: r.alias ?? undefined,
+                            })}
+                        />
+                        <IconActionButton
+                            variant="download"
+                            icon={Download}
+                            tooltip="Download demo"
+                            onClick={() => demoDownload.start(
+                                { id: r.cap_id, alias: r.alias, cap_time_seconds: r.cap_time_seconds } as unknown as LeaderboardEntry,
+                                r.map,
+                            )}
+                        />
+                        <WorldRecordHistoryTrigger onClick={() => openHistory(r.map)} />
+                    </div>
                 )
         }
     }
+
+    const recordColumns: ResponsiveColumn<WorldRecord>[] = state.columnOrder.map(id => ({
+        id,
+        hiddenByUser: !visibleColumns.includes(id),
+        width: COLUMN_WIDTH[id],
+        priority: COLUMN_PRIORITY[id],
+        required: REQUIRED_COLUMNS.has(id),
+        tier: COLUMN_TIER[id],
+        label: WORLD_RECORDS_COLUMN_LABELS[id],
+        sortKey: SORTABLE_FIELDS.has(id) ? id : undefined,
+        cell: r => recordCell(id, r),
+    }))
+
+    const renderCell = (
+        id: WorldRecordsColumnId,
+        r: WorldRecord,
+        cellRef?: (el: HTMLTableCellElement | null) => void,
+    ) => (
+        <DataTableCell key={id} ref={cellRef} align={CELL_LAYOUT[id]?.align} className={CELL_LAYOUT[id]?.className}>
+            {recordCell(id, r)}
+        </DataTableCell>
+    )
 
     const recordWord = totalCount === 1 ? 'record' : 'records'
 
@@ -855,90 +872,97 @@ export function WorldRecordsPage({
         <div key={i} className="h-14 mx-3 my-2 rounded-lg bg-hairline/5 animate-pulse" />
     ))
 
-    const compactRecordContent = showSkeleton ? compactSkeleton : recordPageRows.length === 0 ? (
+    const recordCardPlaceholder = showSkeleton ? compactSkeleton : recordPageRows.length === 0 ? (
         <div className="px-4 py-16 text-center text-muted-foreground">
             {recordsHaveFilter ? 'No world records match your filters.' : 'No world records found.'}
         </div>
-    ) : recordPageRows.map(r => {
-        const isTeamRow = !!(r.members && r.members.length > 0)
-        const isSelf = selfId != null && r.user_id === String(selfId)
-        const isNew = highlight.isNew(r.added)
-        return (
-            <div
-                key={r.cap_id}
-                role="listitem"
-                className={cn(
-                    'grid grid-cols-[minmax(0,1fr)_auto] gap-3 p-3 border-b border-hairline/5 last:border-0',
-                    isNew && 'bg-accent-500/[0.07]',
-                )}
-            >
-                <div className="min-w-0 space-y-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                        <FavoriteStar
-                            name={r.map}
-                            isFavorited={favoriteMapNames.has(r.map)}
-                            onToggle={onToggleFavorite}
-                            size="sm"
-                            className="shrink-0"
-                        />
-                        <MapNavLink
-                            mapName={r.map}
-                            onMapSelect={onMapSelect}
-                            className="font-bold text-foreground/90 truncate hover:text-foreground hover:underline underline-offset-2 cursor-pointer text-left"
-                        >
-                            {displayMapName(r.map)}
-                        </MapNavLink>
-                    </div>
-                    {isTeamRow ? (
-                        <TeamHolders
-                            members={(r.members ?? []).map(m => ({
-                                userId: m.user,
-                                alias: m.alias,
-                                activeTitle: m.active_title,
-                            }))}
-                            currentUserId={selfId != null ? String(selfId) : undefined}
-                        />
-                    ) : (
-                        <PlayerInfo
-                            userId={r.user_id}
-                            alias={r.alias}
-                            title={r.active_title}
-                            size="sm"
-                            highlight={isSelf}
-                            showYouBadge={isSelf}
-                        />
-                    )}
-                </div>
-                <div className="flex flex-col items-end justify-between gap-2">
-                    <CapTimeLink
-                        capId={isTeamRow ? undefined : r.cap_id}
-                        teamCapId={isTeamRow ? r.cap_id : undefined}
-                        seconds={r.cap_time_seconds}
-                        className="font-mono font-black tabular-nums text-blue-300 tracking-tight"
-                    />
-                    <div className="flex items-center gap-2">
-                        {r.difficulty != null && (
-                            <span className={cn('font-mono tabular-nums text-xs font-bold', difficultyTextColor(r.difficulty))}>
-                                {r.difficulty}
-                            </span>
-                        )}
-                        <span className="text-xs text-muted-foreground tabular-nums">{formatAddedDate(r.added)}</span>
-                    </div>
-                </div>
-            </div>
-        )
-    })
+    ) : undefined
 
-    const compactRusherContent = showSkeleton ? compactSkeleton : rusherPageRows.length === 0 ? (
+    const recordFace = (r: WorldRecord) => (
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+            <div className="min-w-0 space-y-2">
+                <div className="flex items-center gap-2 min-w-0">
+                    {recordMapLink(r)}
+                </div>
+                {recordHolder(r)}
+            </div>
+            {recordTime(r)}
+        </div>
+    )
+
+    const rusherShare = (r: RusherRow) => totalRecords > 0 ? (r.count / totalRecords) * 100 : 0
+
+    const rusherEntries: RusherEntry[] = rusherPageRows.map((rusher, i) => ({ rusher, rank: sliceStart + i + 1 }))
+
+    const rusherCell = (id: RusherColumnId, { rusher: r, rank }: RusherEntry): React.ReactNode => {
+        const isSelf = selfId != null && r.user_id === String(selfId)
+        switch (id) {
+            case 'rank':
+                return (
+                    <span className={cn('font-mono font-bold tabular-nums', medalText(rank))}>
+                        #{rank}
+                    </span>
+                )
+            case 'rusher':
+                return (
+                    <PlayerInfo
+                        userId={r.user_id}
+                        alias={r.alias}
+                        title={r.active_title}
+                        size="md"
+                        highlight={isSelf}
+                        showYouBadge={isSelf}
+                    />
+                )
+            case 'records': {
+                const barPct = maxRusherCount > 0 ? Math.max(4, (r.count / maxRusherCount) * 100) : 0
+                return (
+                    <div className="flex items-center gap-2.5">
+                        <div className="flex-1 h-1.5 rounded-full bg-hairline/10 overflow-hidden min-w-16">
+                            <div className="h-full rounded-full bg-accent-500/70" style={{ width: `${barPct}%` }} />
+                        </div>
+                        <span className="font-mono tabular-nums text-foreground font-bold w-10 text-right">
+                            {r.count}
+                        </span>
+                    </div>
+                )
+            }
+            case 'share':
+                return (
+                    <span className="font-mono tabular-nums text-xs text-muted-foreground">
+                        {rusherShare(r).toFixed(1)}%
+                    </span>
+                )
+            case 'median':
+                return (
+                    <span className="font-mono tabular-nums text-xs text-foreground/80">
+                        {r.median != null ? formatCapTime(r.median) : '—'}
+                    </span>
+                )
+            case 'average':
+                return (
+                    <span className="font-mono tabular-nums text-xs text-muted-foreground">
+                        {r.average != null ? formatCapTime(r.average) : '—'}
+                    </span>
+                )
+        }
+    }
+
+    const rusherColumns: ResponsiveColumn<RusherEntry>[] = RUSHER_COLUMNS.map(({ align: _align, ...column }) => ({
+        ...column,
+        cell: entry => rusherCell(column.id, entry),
+    }))
+
+    const rusherCardPlaceholder = showSkeleton ? compactSkeleton : rusherPageRows.length === 0 ? (
         <div className="px-4 py-16 text-center text-muted-foreground">
             {debouncedSearch ? 'No rushers match your search.' : 'No rushers found.'}
         </div>
-    ) : rusherPageRows.map((r, i) => {
-        const rank = sliceStart + i + 1
+    ) : undefined
+
+    const rusherFace = ({ rusher: r, rank }: RusherEntry) => {
         const isSelf = selfId != null && r.user_id === String(selfId)
-        const share = totalRecords > 0 ? (r.count / totalRecords) * 100 : 0
         return (
-            <div key={r.user_id} role="listitem" className="flex items-center gap-3 p-3 border-b border-hairline/5 last:border-0">
+            <div className="flex items-center gap-3">
                 <span className={cn('font-mono font-bold tabular-nums w-9 shrink-0 text-right', medalText(rank))}>
                     #{rank}
                 </span>
@@ -957,14 +981,14 @@ export function WorldRecordsPage({
                         {r.count}
                         <span className="ml-1 text-[9px] uppercase tracking-widest text-muted-foreground font-bold">WRs</span>
                     </span>
-                    <span className="font-mono tabular-nums text-xs text-muted-foreground">{share.toFixed(1)}%</span>
+                    <span className="font-mono tabular-nums text-xs text-muted-foreground">{rusherShare(r).toFixed(1)}%</span>
                 </div>
             </div>
         )
-    })
+    }
 
     return (
-        <div className="space-y-4 h-full flex flex-col overflow-hidden">
+        <div className="space-y-4 flex flex-col overflow-hidden">
             <div className="flex items-end justify-between shrink-0">
                 <div>
                     <h1 className="text-2xl font-bold text-foreground leading-tight">World Records</h1>
@@ -1247,13 +1271,18 @@ export function WorldRecordsPage({
 
             {isRushers ? (
                 <DataTableShell
-                    scrollRef={scrollContainerRef}
-                    onScroll={onScrollContainerScroll}
+                    key="rushers"
                     responsive={{
-                        columns: RUSHER_COLUMNS,
+                        columns: rusherColumns,
                         onResolve: handleRushersResolve,
-                        compactContent: compactRusherContent,
                         compactAriaLabel: 'Top rushers',
+                        cards: {
+                            rows: rusherEntries,
+                            rowKey: entry => entry.rusher.user_id,
+                            face: rusherFace,
+                            onOpen: entry => openPlayer(entry.rusher.user_id),
+                            placeholder: rusherCardPlaceholder,
+                        },
                     }}
                 >
                     <DataTableHeaderRow theadDataAttr="data-utbt-rushers-thead">
@@ -1282,81 +1311,39 @@ export function WorldRecordsPage({
                                 message={debouncedSearch ? 'No rushers match your search.' : 'No rushers found.'}
                             />
                         ) : (
-                            rusherPageRows.map((r, i) => {
-                                const rank = sliceStart + i + 1
-                                const isSelf = selfId != null && r.user_id === String(selfId)
-                                const share = totalRecords > 0 ? (r.count / totalRecords) * 100 : 0
-                                const barPct = maxRusherCount > 0 ? Math.max(4, (r.count / maxRusherCount) * 100) : 0
-                                return (
-                                    <DataTableRow key={r.user_id}>
-                                        {isRusherColumnVisible('rank') && (
-                                            <DataTableCell align="center">
-                                                <span className={cn('font-mono font-bold tabular-nums', medalText(rank))}>
-                                                    #{rank}
-                                                </span>
-                                            </DataTableCell>
-                                        )}
-                                        {isRusherColumnVisible('rusher') && (
-                                            <DataTableCell>
-                                                <PlayerInfo
-                                                    userId={r.user_id}
-                                                    alias={r.alias}
-                                                    title={r.active_title}
-                                                    size="md"
-                                                    highlight={isSelf}
-                                                    showYouBadge={isSelf}
-                                                />
-                                            </DataTableCell>
-                                        )}
-                                        {isRusherColumnVisible('records') && (
-                                            <DataTableCell>
-                                                <div className="flex items-center gap-2.5">
-                                                    <div className="flex-1 h-1.5 rounded-full bg-hairline/10 overflow-hidden min-w-16">
-                                                        <div className="h-full rounded-full bg-accent-500/70" style={{ width: `${barPct}%` }} />
-                                                    </div>
-                                                    <span className="font-mono tabular-nums text-foreground font-bold w-10 text-right">
-                                                        {r.count}
-                                                    </span>
-                                                </div>
-                                            </DataTableCell>
-                                        )}
-                                        {isRusherColumnVisible('share') && (
-                                            <DataTableCell align="center">
-                                                <span className="font-mono tabular-nums text-xs text-muted-foreground">
-                                                    {share.toFixed(1)}%
-                                                </span>
-                                            </DataTableCell>
-                                        )}
-                                        {isRusherColumnVisible('median') && (
-                                            <DataTableCell align="center">
-                                                <span className="font-mono tabular-nums text-xs text-foreground/80">
-                                                    {r.median != null ? formatCapTime(r.median) : '—'}
-                                                </span>
-                                            </DataTableCell>
-                                        )}
-                                        {isRusherColumnVisible('average') && (
-                                            <DataTableCell align="center">
-                                                <span className="font-mono tabular-nums text-xs text-muted-foreground">
-                                                    {r.average != null ? formatCapTime(r.average) : '—'}
-                                                </span>
-                                            </DataTableCell>
-                                        )}
-                                    </DataTableRow>
-                                )
-                            })
+                            rusherEntries.map(entry => (
+                                <DataTableRow key={entry.rusher.user_id}>
+                                    {visibleRusherColumns.map(column => (
+                                        <DataTableCell key={column.id} align={column.align}>
+                                            {rusherCell(column.id, entry)}
+                                        </DataTableCell>
+                                    ))}
+                                </DataTableRow>
+                            ))
                         )}
                     </tbody>
                 </DataTableShell>
             ) : (
                 <DataTableShell
-                    scrollRef={scrollContainerRef}
-                    onScroll={onScrollContainerScroll}
+                    key="records"
                     responsive={{
-                        columns: responsiveColumns,
+                        columns: recordColumns,
                         onResolve: handleRecordsResolve,
-                        compactContent: compactRecordContent,
                         compactAriaLabel: 'World records',
                         onCompactChange: handleCompactChange,
+                        cards: {
+                            rows: recordPageRows,
+                            rowKey: r => r.cap_id,
+                            face: recordFace,
+                            onOpen: r => onMapSelect(r.map),
+                            rowClassName: r => highlight.isNew(r.added) ? 'bg-accent-500/[0.07]' : undefined,
+                            placeholder: recordCardPlaceholder,
+                            sort: {
+                                key: state.sortBy,
+                                direction: state.sortDir,
+                                onSort: key => handleSort(key as WorldRecordsSortField),
+                            },
+                        },
                     }}
                 >
                     <DataTableHeaderRow theadDataAttr="data-utbt-worldrecords-thead">
@@ -1382,7 +1369,7 @@ export function WorldRecordsPage({
                                         className={isNew ? 'bg-accent-500/[0.07] ring-1 ring-inset ring-accent-500/40' : undefined}
                                     >
                                         {effectiveColumns.map(id => renderCell(
-                                            id, r, isNew,
+                                            id, r,
                                             id === 'map' && isFirstNew ? highlight.registerFirstNew : undefined,
                                         ))}
                                     </DataTableRow>
@@ -1407,7 +1394,7 @@ export function WorldRecordsPage({
                 />
             )}
 
-            <Suspense fallback={null}>
+            <LazyModalGate open={wrHistory !== null}>
                 <WorldRecordProgressionModal
                     isOpen={wrHistory !== null}
                     onClose={() => setWrHistory(null)}
@@ -1415,9 +1402,11 @@ export function WorldRecordsPage({
                     entries={wrHistory?.entries ?? []}
                     currentUserId={selfId}
                 />
-            </Suspense>
+            </LazyModalGate>
 
-            <ReplayVideoModal state={replay.video} onClose={replay.clearVideo} />
+            <LazyModalGate open={replay.video !== null}>
+                <ReplayVideoModal state={replay.video} onClose={replay.clearVideo} />
+            </LazyModalGate>
 
             <Modal
                 isOpen={replay.error !== null}
@@ -1429,10 +1418,12 @@ export function WorldRecordsPage({
                 <p className="text-sm text-muted-foreground">{replay.error}</p>
             </Modal>
 
-            <DemoDownloadStatusModal
-                state={demoDownload.download}
-                onClose={demoDownload.clear}
-            />
+            <LazyModalGate open={demoDownload.download !== null}>
+                <DemoDownloadStatusModal
+                    state={demoDownload.download}
+                    onClose={demoDownload.clear}
+                />
+            </LazyModalGate>
         </div>
     )
 }

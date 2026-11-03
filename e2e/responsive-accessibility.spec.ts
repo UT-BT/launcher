@@ -13,6 +13,9 @@ async function expectCupLink(navigation: Locator) {
 test.beforeEach(async ({ page }) => {
   page.on('pageerror', error => console.error('BROWSER PAGE ERROR:', error.message))
   page.on('console', message => { if (message.type() === 'error') console.error('BROWSER CONSOLE:', message.text()) })
+  await page.addInitScript(() => {
+    localStorage.setItem('utbt:mapsPageTutorial:v1', JSON.stringify({ seen: true, version: 1 }))
+  })
   if (mockApi) {
     await page.route(/https:\/\/(api|gateway)\.utbt\.net\/.*/, async route => {
       const url = route.request().url()

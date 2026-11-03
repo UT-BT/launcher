@@ -6,7 +6,6 @@ import {
 } from '@/app/components/shared/DataTable'
 
 export interface TeamTableHeader<K extends string = string> {
-    label: string
     align: 'left' | 'center' | 'right'
     required?: boolean
     hiddenLabel?: boolean
@@ -23,8 +22,9 @@ interface TeamTableProps<T, K extends string> {
     rows: readonly T[]
     rowKey: (row: T) => string
     cell: (id: string, row: T) => ReactNode
-    compactRows: ReactNode
-    compactTop?: ReactNode
+    face: (row: T) => ReactNode
+    onOpen?: (row: T) => void
+    cardRows?: readonly T[]
     compactBottom?: ReactNode
     sort?: { key: K; dir: 'asc' | 'desc' }
     onSort?: (key: K) => void
@@ -40,17 +40,19 @@ export function MapName({ row }: { row: { map: string; displayName: string } }) 
 }
 
 export function TeamTable<T, K extends string = string>({
-    id, title, caption, emptyText, columns, headers, rows, rowKey, cell, compactRows, compactTop, compactBottom, sort, onSort,
+    id, title, caption, emptyText, columns, headers, rows, rowKey, cell, face, onOpen, cardRows = rows, compactBottom, sort, onSort,
 }: TeamTableProps<T, K>) {
     const [shown, setShown] = useState<Set<string> | null>(null)
     const [compact, setCompact] = useState(false)
     const responsiveColumns = useMemo(
-        () => columns.map(column => ({
+        (): ResponsiveColumn<T>[] => columns.map(column => ({
             ...column,
             width: column.id === 'map' ? undefined : column.width,
             required: column.required || headers[column.id].required,
+            sortKey: onSort ? headers[column.id].sort : undefined,
+            cell: row => cell(column.id, row),
         })),
-        [columns, headers],
+        [columns, headers, cell, onSort],
     )
     const visible = responsiveColumns.filter(column => !shown || shown.has(column.id))
 
@@ -66,14 +68,19 @@ export function TeamTable<T, K extends string = string>({
                 </div>
             ) : (
                 <>
-                    {compact && compactTop}
                     <DataTableShell
                         responsive={{
                             columns: responsiveColumns,
                             onResolve: setShown,
-                            compactContent: compactRows,
                             compactAriaLabel: title,
                             onCompactChange: setCompact,
+                            cards: {
+                                rows: cardRows,
+                                rowKey,
+                                face,
+                                onOpen,
+                                sort: sort && onSort && { key: sort.key, direction: sort.dir, onSort: key => onSort(key as K) },
+                            },
                         }}
                     >
                         <DataTableHeaderRow>
@@ -89,7 +96,7 @@ export function TeamTable<T, K extends string = string>({
                                         sortDirection={sortKey && sort?.key === sortKey ? sort.dir : null}
                                         onSort={sortKey ? () => onSort(sortKey) : undefined}
                                     >
-                                        {header.hiddenLabel ? <span className="sr-only">{header.label}</span> : header.label}
+                                        {header.hiddenLabel ? <span className="sr-only">{column.label}</span> : column.label}
                                     </DataTableHeaderCell>
                                 )
                             })}
@@ -99,7 +106,7 @@ export function TeamTable<T, K extends string = string>({
                                 <DataTableRow key={rowKey(row)}>
                                     {visible.map(column => (
                                         <DataTableCell key={column.id} align={headers[column.id].align}>
-                                            {cell(column.id, row)}
+                                            {column.cell?.(row)}
                                         </DataTableCell>
                                     ))}
                                 </DataTableRow>

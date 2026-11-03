@@ -166,9 +166,10 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
             <Modal
                 isOpen
                 onClose={dismiss}
+                closeOnBackdrop={false}
                 title="Game Profiles"
                 maxWidth="42rem"
-                maxHeight="80vh"
+                maxHeight="80dvh"
                 offsetSidebar
             >
                 <div className="space-y-4">

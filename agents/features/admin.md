@@ -13,12 +13,13 @@ Paths starting `admin/` are under `app/components/pages/`.
 | `admin/AdminPage.tsx` | the page (lazy in `Main.tsx`): resolves the open section, falls back to the first visible one, guards it |
 | `admin/registry.tsx`, `admin/types.ts` | `ADMIN_GROUPS`, `ADMIN_SECTIONS`, the `AdminSectionId` union and `AdminSectionProps`; `registry.test.ts` pins groups, order and roles |
 | `admin/AdminLayout.tsx`, `admin/AdminGuard.tsx` | the grouped section nav (a `<select>` below `lg`); the Restricted card |
-| `admin/components/` | the kit every section is built from: `SectionShell`, `TableControls` + `useAdminTable`, `controls.tsx`, `useAdminFilterPresets`, `AuthorPicker`, `TagEditor` |
+| `admin/components/` | the kit every section is built from: `SectionShell`, `TableControls` + `useAdminTable`, `AdminCardFace`, `controls.tsx`, `useAdminFilterPresets`, `AuthorPicker`, `TagEditor` |
 | `admin/sections/` | one `<Name>Section.tsx` per section, its modals, and pure helpers with tests (`streamerRoster.ts`, `mapVideoFile.ts`) |
 | `admin/sections/mapUploads/` | Map Uploads ([map-uploads.md](map-uploads.md)) |
 | `app/utils/roles.ts` | `ROLE`, `isStaff` and the role allow-lists |
 | `app/utils/api.ts`, `app/utils/chartBuckets.ts` | the admin fetchers, each next to its domain; the Overview chart's ranges and buckets |
 | `e2e/admin-streamers.spec.ts`, `e2e/admin-maps-video.spec.ts` | Playwright with a mocked staff session |
+| `e2e/mobile/admin-cards.spec.ts` | the phone cards of the tiered admin tables ([Tables on phones](#tables-on-phones)) |
 
 ## Access
 
@@ -77,6 +78,68 @@ inclusive UTC days (`YYYY-MM-DD`); that is the only shape the Overview section s
   aggregate queries. Preset buttons apply at once.
 - A single-bucket range (`Today` just after UTC midnight) draws nothing as a line;
   `needsPointMarkers` turns on dots for it.
+
+## Tables on phones
+
+Admin tables are tiered DataTables ([shared-components.md](../shared-components.md#column-tiers-and-phone-cards)):
+on a phone they render cards, never a table that scrolls sideways. The card face holds the
+table's required columns plus its main action; every other column is in the expand panel.
+
+- **Tiers live with the columns.** An `AdminColumn` must declare `tier` next to its `label` and
+  `required` flag. `tbl.responsiveColumns(id => ({ width, priority, sortKey, cell }))` builds
+  every `ResponsiveColumn` in the user's order, flags hidden ones `hiddenByUser`, and takes `required`, `tier` and
+  `label` from the admin columns (`adminResponsiveColumns`, unit-tested in
+  `useAdminTable.test.ts`). Each `cell(row)` is the cell content: the table rows render it
+  inside their `DataTableCell`, and the panel renders it beside its label.
+- **The face** is `AdminCardFace`: the essential cells in column order, the last one (the
+  action) pushed right, plus an optional `lead` (Caps' selection checkbox).
+  `adminCardsPlaceholder(loading, empty, message)` is the skeleton or empty card.
+- **Card mode.** Pass `tbl.onCompactChange` as the shell's `onCompactChange`; `TableControls`
+  then hides the Columns menu while cards show. Sortable tables pass the header's state and
+  toggle as `cards.sort`, so the card sort and the header share one sort.
+- **Body taps** open the detail page where a row has one: the player (User Management, Usage &
+  Health's recent users), the cap (Caps Management, and the Anti-Cheat shared-identifier detail,
+  which closes on the way), the article (News), the draft (Map Uploads drafts), the publish
+  (Recent publishes), the map (Maps Management). Anti-Cheat cards open what today's row click
+  opens: the identifier's detail (Shared HWID / IP) or the cap stats (High Cap Delta, Low FPS
+  WRs). The other tables have no body action.
+- **Row selection on cards.** Tables with a selection column lead each card face with the row
+  checkbox in a 44 px `<label>` hit area, and show a select-all checkbox above the cards while
+  they show (Caps Management, High Cap Delta, Low FPS WRs, Difficulty Sync, Map Authors'
+  review list). The bulk bar and the selected tint work as on the table. High Cap Delta and
+  Low FPS WRs have the selection column in the Flagged view only, on cards as on the table.
+- **Tables outside `useAdminTable`** (Difficulty Sync, Map Authors) declare
+  `ResponsiveColumn`s with `label`, `tier` and `cell` directly. The ones that had no responsive
+  config pass `density: false`, so their desktop rows keep today's padding.
+
+| Table | Card face | Notes |
+|---|---|---|
+| User Management | player, Manage | sortable |
+| Title Management | title, actions | sortable |
+| Patch Releases | channel, tag, status, actions | sortable |
+| News | title, actions | |
+| Caps Management | selection, player, actions | sortable; "Select all on this page" sits above the cards, and the bulk bar works as on the table |
+| Usage & Health, recent signed-in users | player | |
+| Map Uploads: drafts, recent publishes, drift | [map-uploads.md](map-uploads.md) | |
+| Audit Logs | summary | the panel adds the entry's details below time, actor and action |
+| Maps Management | map, Edit | sortable |
+| Difficulty Sync preview | selection, map, difficulty change | |
+| Map Authors: unlinked names, linked players | name, map count, Review / Unlink | |
+| Map Authors: review maps, re-credit preview | (selection,) map, status | no panel; they stay tables wherever both columns fit, as on a 390 px phone |
+| Anti-Cheat: Shared HWID / IP | type, identifier | |
+| Anti-Cheat: shared-identifier detail | player | |
+| Anti-Cheat: High Cap Delta | selection, player, actions | sortable (Delta, Added; descending only, as the header) |
+| Anti-Cheat: Low FPS WRs | selection, player, actions | |
+| Anti-Cheat: cap stats percentiles | percentile, FPS, ping | every column on the face, labelled; no panel |
+
+**Audit Logs details.** On the table a row click opens the details in a `DataTableExpandRow`
+(the full-width row under it); on cards they open in the card's panel through
+`cards.panel`, which skips the actor and action fields because the panel's grid above it
+always lists them. Both render `ExpandedDetail`, with Roll back.
+
+Hidden columns: `tbl.responsiveColumns` returns every column, and marks the ones a user hid
+through the Columns menu `hiddenByUser`. The table skips them; the card panel and the card sort
+still list them, since the Columns menu is hidden on cards.
 
 ## Map authors
 
@@ -157,7 +220,8 @@ Admin-only example.
 1. **Id.** Add the kebab-case id to `AdminSectionId` in `admin/types.ts`.
 2. **Component.** `admin/sections/<Name>Section.tsx` exports `<Name>Section` taking
    `AdminSectionProps` (`userProfile`, `onNavigate`, `onMapSelect`), built on `SectionShell`
-   and the admin kit ([shared-components.md](../shared-components.md)). Several files go in
+   and the admin kit ([shared-components.md](../shared-components.md)). A table declares its
+   tiers and renders phone cards ([Tables on phones](#tables-on-phones)). Several files go in
    `sections/<name>/`, as `mapUploads/` does.
 3. **Registry row** in `ADMIN_SECTIONS` (`admin/registry.tsx`):
    `{ id, label, icon, group, roles, Component }`. `icon` is a `lucide-react` icon. `group` is
@@ -183,5 +247,8 @@ Admin-only example.
    `{ activeSection: '<id>' }` under `utbt:adminState:v1` and a staff session under
    `utbt:webAuth:v1`, `page.route` answers `/users/me` with the role and the section's
    reads; it covers the role gate and fits 390 px and 1920 px (`horizontalOverflow` ≤ 1).
+   A sub-view for the section in the `admin` mobile manifest entry (`e2e/mobile/manifest/admin.ts`),
+   with the section's reads in the synthetic `admin` set (`e2e/mobile/fixtures/synthetic/admin.ts`):
+   `routes.contract.test.ts` fails until it exists ([testing.md](../testing.md#role-gated-entries)).
 7. **Verify.** `npm run typecheck:web`, `npm test` and the new spec pass; `npm run build:web`
    then `npm run check:bundle` passes (every section sits in the one lazy admin chunk).

@@ -446,12 +446,18 @@ describe('teamMatchView', () => {
 describe('mapTableView', () => {
     it('gives the desktop columns, with the map and fastest run always shown', () => {
         const view = mapTableView(eventStatsFixture('overviewAll').maps)
-        expect(view.hasDeciders).toBe(false)
         expect(view.columns.map(column => column.id)).toEqual(['map', 'played', 'picks', 'bans', 'firstBans', 'picker', 'fastest'])
         expect(view.columns.filter(column => column.required).map(column => column.id)).toEqual(['map', 'fastest'])
     })
 
-    it('gives each row its desktop cells and its phone stat cells', () => {
+    it('puts map, played, picks and bans on the phone card face and the rest in its panel', () => {
+        const view = mapTableView(eventStatsFixture('overviewAll').maps)
+        expect(view.columns.filter(column => column.tier === 'essential').map(column => column.id)).toEqual(['map', 'played', 'picks', 'bans'])
+        expect(view.columns.filter(column => column.tier === 'detail').map(column => column.label)).toEqual(['1st bans', 'Picker wins', 'Fastest cup run'])
+        expect(view.columns.every(column => column.tier && column.label)).toBe(true)
+    })
+
+    it('gives each row its desktop cells', () => {
         const aztec = mapTableView(eventStatsFixture('overviewAll').maps).rows[0]
         expect(aztec).toMatchObject({
             map: 'CTF-BT-II-AztecCE',
@@ -466,23 +472,15 @@ describe('mapTableView', () => {
         expect(aztec.bans.share).toBeCloseTo(14 / 24)
         expect(aztec.fastest?.run.time).toBe('02:09.016')
         expect(aztec.fastest?.teamId).toBe(overviewTeam('Sandbagging').id)
-        expect(aztec.compact).toEqual([
-            { label: 'Played', value: '20' },
-            { label: 'Picks', value: '27' },
-            { label: 'Bans', value: '14' },
-            { label: '1st bans', value: '5' },
-            { label: 'Picker wins', value: '55%' },
-        ])
     })
 
-    it('adds the deciders column and phone cell only when the event has deciders', () => {
+    it('adds the deciders column, a panel field on phones, only when the event has deciders', () => {
         const maps = eventStatsFixture('overviewAll').maps
         maps[1].deciders = 2
         const view = mapTableView(maps)
-        expect(view.hasDeciders).toBe(true)
-        expect(view.columns.map(column => column.id)).toContain('deciders')
-        expect(view.rows[1].compact.at(-1)).toEqual({ label: 'Deciders', value: '2' })
-        expect(view.rows[0].compact.at(-1)).toEqual({ label: 'Deciders', value: '0' })
+        expect(view.columns.find(column => column.id === 'deciders')).toMatchObject({ tier: 'detail', label: 'Deciders' })
+        expect(view.rows[1].deciders).toBe('2')
+        expect(view.rows[0].deciders).toBe('0')
     })
 
     it('shows a dash for a map without a picker rate or a fastest run', () => {
@@ -503,7 +501,14 @@ describe('mapProfileView', () => {
         expect(view.columns.filter(column => column.required).map(column => column.id)).toEqual(['map', 'best', 'rank'])
     })
 
-    it('gives each row its desktop cells and its phone stat cells', () => {
+    it('puts map, W-D-L, best time and rank on the phone card face and the rest in its panel', () => {
+        const view = mapProfileView(teamPage().map_profile)
+        expect(view.columns.filter(column => column.tier === 'essential').map(column => column.id)).toEqual(['map', 'wdl', 'best', 'rank'])
+        expect(view.columns.filter(column => column.tier === 'detail').map(column => column.label)).toEqual(['Picked', 'Banned', 'Banned vs', 'Played', 'Caps'])
+        expect(view.columns.every(column => column.tier && column.label)).toBe(true)
+    })
+
+    it('gives each row its desktop cells', () => {
         const faith = mapProfileView(teamPage().map_profile).rows[0]
         expect(faith).toMatchObject({
             displayName: 'II-FaithCB',
@@ -517,21 +522,12 @@ describe('mapProfileView', () => {
         expect(faith.wdlShares.w).toBeCloseTo(2 / 3)
         expect(faith.wdlShares.l).toBeCloseTo(1 / 3)
         expect(faith.bestRun?.time).toBe('01:59.932')
-        expect(faith.compact).toEqual([
-            { label: 'Picked', value: '2' },
-            { label: 'Banned', value: '0' },
-            { label: 'Banned vs', value: '1' },
-            { label: 'Played', value: '3' },
-            { label: 'W-D-L', value: '2-0-1' },
-            { label: 'Caps', value: '4–2' },
-        ])
     })
 
     it('shows dashes for a map that was only banned', () => {
         const extant = mapProfileView(teamPage().map_profile).rows.find(row => row.displayName === 'II-Extant')!
         expect(extant).toMatchObject({ played: '0', wdl: null, caps: '—', bestRun: null, rank: null })
         expect(extant.wdlShares).toEqual({ w: 0, d: 0, l: 0 })
-        expect(extant.compact.find(cell => cell.label === 'W-D-L')).toEqual({ label: 'W-D-L', value: '—' })
     })
 })
 
@@ -542,7 +538,14 @@ describe('teamRunsView', () => {
         expect(view.columns.filter(column => column.required).map(column => column.id)).toEqual(['map', 'time'])
     })
 
-    it('gives each run its opponent and stage, and a one-line phone subtitle', () => {
+    it('puts map, time and opponent on the phone card face and the rest in its panel', () => {
+        const view = teamRunsView(teamPage())
+        expect(view.columns.filter(column => column.tier === 'essential').map(column => column.id)).toEqual(['map', 'time', 'opponent'])
+        expect(view.columns.filter(column => column.tier === 'detail').map(column => column.label)).toEqual(['Run', 'Stage', 'Date', 'Replay'])
+        expect(view.columns.every(column => column.tier && column.label)).toBe(true)
+    })
+
+    it('gives each run its opponent and stage', () => {
         const view = teamRunsView(teamPage())
         expect(view.rows).toHaveLength(18)
         expect(view.rows[0]).toMatchObject({
@@ -550,7 +553,6 @@ describe('teamRunsView', () => {
             opponentLabel: 'KNRK',
             stageName: 'Group Stage',
             completedAt: '2026-10-04T19:12:20.085119+00:00',
-            compactSubtitle: 'vs KNRK',
         })
         expect(view.rows[0].run.time).toBe('01:59.932')
     })

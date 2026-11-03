@@ -17,6 +17,7 @@ interface NavLinkProps {
     disabled?: boolean
     stopPropagation?: boolean
     ariaLabel?: string
+    ariaCurrent?: 'page'
     title?: string
     tabIndex?: number
     elementRef?: Ref<HTMLElement>
@@ -34,6 +35,7 @@ export function NavLink({
     disabled = false,
     stopPropagation = true,
     ariaLabel,
+    ariaCurrent,
     title,
     tabIndex,
     elementRef,
@@ -53,6 +55,7 @@ export function NavLink({
         onPointerEnter,
         onFocus,
         'aria-label': ariaLabel,
+        'aria-current': ariaCurrent,
     }
 
     if (disabled) {

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
+import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import { useAutoPageSize } from '@/app/hooks/useAutoPageSize'
 import { Search, X, HelpCircle, ShieldAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -11,7 +12,7 @@ import {
     UserProfile, PlayerListRow, PlayerSortField,
     fetchPlayers, fetchPlayersCount,
 } from '@/app/utils/api'
-import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { PlayerInfo, openPlayer } from '@/app/components/shared/PlayerInfo'
 import { Tutorial } from '@/app/components/shared/Tutorial'
 import { useTutorialState } from '@/app/components/shared/useTutorialState'
 import { buildSteps } from '@/app/components/pages/players/playersTutorialSteps'
@@ -20,7 +21,7 @@ import { ColumnsMenu } from '@/app/components/shared/ColumnsMenu'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow,
     DataTableCell, DataTableEmpty, DataTableSkeletonRow, type SortDirection,
-    type ResponsiveColumn,
+    type ColumnTier, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { formatAddedDate } from '@/app/utils/format'
 import { ROLE_LABELS } from '@/app/utils/roles'
@@ -75,6 +76,19 @@ const COLUMN_PRIORITY: Partial<Record<PlayerColumnId, number>> = {
     silver_medals: 44,
     bronze_medals: 43,
     registered_at: 30,
+}
+
+const COLUMN_TIER: Record<PlayerColumnId, ColumnTier> = {
+    rank: 'essential',
+    player: 'essential',
+    points: 'essential',
+    world_records: 'essential',
+    role: 'detail',
+    champion_medals: 'detail',
+    gold_medals: 'detail',
+    silver_medals: 'detail',
+    bronze_medals: 'detail',
+    registered_at: 'detail',
 }
 
 const COLUMN_SORT_FIELD: Partial<Record<PlayerColumnId, PlayerSortField>> = {
@@ -158,8 +172,6 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
         setTutorialStep(0)
         setColumnsMenuOpen(false)
     }, [])
-
-    const scrollContainerRef = useRef<HTMLDivElement | null>(null)
 
     const serverParams = useMemo(() => ({
         search: debouncedSearch || undefined,
@@ -265,18 +277,6 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
         return () => { cancelled = true }
     }, [loadPage])
 
-    // Restore scroll once on mount.
-    useEffect(() => {
-        if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = state.scrollTop
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
-
-    const onScrollContainerScroll = useCallback(() => {
-        if (!scrollContainerRef.current) return
-        const top = scrollContainerRef.current.scrollTop
-        onStateChange(prev => Math.abs(prev.scrollTop - top) > 24 ? { ...prev, scrollTop: top } : prev)
-    }, [onStateChange])
-
     const totalCount = caches.totalCount
     const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
     const page = Math.min(state.currentPage, totalPages)
@@ -345,16 +345,6 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
         [state.columnOrder, state.columnVisibility],
     )
 
-    const responsiveColumns = useMemo<ResponsiveColumn[]>(
-        () => visibleColumns.map(id => ({
-            id,
-            width: COLUMN_WIDTH[id],
-            priority: COLUMN_PRIORITY[id],
-            required: REQUIRED_COLUMNS.has(id) || id === 'rank' || id === 'points',
-        })),
-        [visibleColumns],
-    )
-
     const [resolved, setResolved] = useState<Set<PlayerColumnId> | null>(null)
     const handleResolve = useCallback((ids: Set<string>) => {
         setResolved(ids as Set<PlayerColumnId>)
@@ -370,6 +360,7 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
 
     const players = caches.players
     const showSkeleton = !error && (!cacheFresh || (pageLoading && players.length === 0))
+    useNavScrollRestore(!showSkeleton)
 
     const renderHeaderCell = (id: PlayerColumnId) => {
         const sortField = COLUMN_SORT_FIELD[id]
@@ -395,96 +386,83 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
         )
     }
 
-    const renderCell = (id: PlayerColumnId, p: PlayerListRow, isFirst: boolean) => {
+    const playerCell = (id: PlayerColumnId, p: PlayerListRow, isFirst = false): React.ReactNode => {
         switch (id) {
             case 'player': {
                 const isSelf = selfId != null && String(p.id) === String(selfId)
                 return (
-                    <DataTableCell key={id}>
-                        <div className="flex items-center gap-2 min-w-0">
-                            <span ref={isFirst ? firstRowPlayerRef : undefined} className="inline-flex min-w-0">
-                                <PlayerInfo
-                                    userId={p.id}
-                                    alias={p.alias}
-                                    title={p.active_title}
-                                    size="md"
-                                    highlight={isSelf}
-                                    showYouBadge={isSelf}
-                                />
-                            </span>
-                            {p.banned && <BannedBadge reason={p.ban_reason} expires={p.ban_expires} />}
-                        </div>
-                    </DataTableCell>
+                    <div className="flex items-center gap-2 min-w-0">
+                        <span ref={isFirst ? firstRowPlayerRef : undefined} className="inline-flex min-w-0">
+                            <PlayerInfo
+                                userId={p.id}
+                                alias={p.alias}
+                                title={p.active_title}
+                                size="md"
+                                highlight={isSelf}
+                                showYouBadge={isSelf}
+                            />
+                        </span>
+                        {p.banned && <BannedBadge reason={p.ban_reason} expires={p.ban_expires} />}
+                    </div>
                 )
             }
             case 'role': {
                 const role = ROLE_LABELS[p.utbt_role]
-                return (
-                    <DataTableCell key={id} align="center">
-                        {role ? (
-                            <span className={cn(
-                                'inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase tracking-wider',
-                                role.className,
-                            )}>
-                                {role.label}
-                            </span>
-                        ) : (
-                            <span className="text-muted-foreground/40">—</span>
-                        )}
-                    </DataTableCell>
+                return role ? (
+                    <span className={cn(
+                        'inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase tracking-wider',
+                        role.className,
+                    )}>
+                        {role.label}
+                    </span>
+                ) : (
+                    <span className="text-muted-foreground/40">—</span>
                 )
             }
             case 'rank':
-                return (
-                    <DataTableCell key={id} align="center">
-                        {p.rank > 0
-                            ? <span className="font-mono tabular-nums text-foreground">#{p.rank.toLocaleString()}</span>
-                            : <span className="text-muted-foreground/40">—</span>}
-                    </DataTableCell>
-                )
+                return p.rank > 0
+                    ? <span className="font-mono tabular-nums text-foreground">#{p.rank.toLocaleString()}</span>
+                    : <span className="text-muted-foreground/40">—</span>
             case 'points':
                 return (
-                    <DataTableCell key={id} align="center">
-                        <span className={cn('font-mono tabular-nums', p.points > 0 ? 'text-foreground' : 'text-muted-foreground/40')}>
-                            {p.points.toLocaleString()}
-                        </span>
-                    </DataTableCell>
+                    <span className={cn('font-mono tabular-nums', p.points > 0 ? 'text-foreground' : 'text-muted-foreground/40')}>
+                        {p.points.toLocaleString()}
+                    </span>
                 )
             case 'registered_at':
                 return (
-                    <DataTableCell key={id} align="center" className="whitespace-nowrap">
-                        <span className="text-muted-foreground">
-                            {p.registered_at ? formatAddedDate(p.registered_at) : '—'}
-                        </span>
-                    </DataTableCell>
+                    <span className="text-muted-foreground">
+                        {p.registered_at ? formatAddedDate(p.registered_at) : '—'}
+                    </span>
                 )
-            default: {
-                const icon = MEDAL_ICON[id]
-                const value = (p[id as keyof PlayerListRow] as number) ?? 0
-                return (
-                    <DataTableCell key={id} align="center">
-                        <span className={cn(
-                            'inline-flex items-center gap-1.5 font-mono tabular-nums',
-                            value > 0 ? 'text-foreground' : 'text-muted-foreground/40',
-                        )}>
-                            {icon && (
-                                <img
-                                    src={icon}
-                                    alt=""
-                                    width={16}
-                                    height={16}
-                                    className={cn('size-4 object-contain', value === 0 && 'opacity-40 grayscale')}
-                                />
-                            )}
-                            {value.toLocaleString()}
-                        </span>
-                    </DataTableCell>
-                )
-            }
+            default:
+                return <MedalCount icon={MEDAL_ICON[id]} value={(p[id as keyof PlayerListRow] as number) ?? 0} />
         }
     }
 
-    const compactContent = showSkeleton ? (
+    const renderCell = (id: PlayerColumnId, p: PlayerListRow, isFirst: boolean) => (
+        <DataTableCell
+            key={id}
+            align={id === 'player' ? undefined : 'center'}
+            className={id === 'registered_at' ? 'whitespace-nowrap' : undefined}
+        >
+            {playerCell(id, p, isFirst)}
+        </DataTableCell>
+    )
+
+    const playerColumns: ResponsiveColumn<PlayerListRow>[] = state.columnOrder.map(id => ({
+        id,
+        hiddenByUser: !visibleColumns.includes(id),
+        width: COLUMN_WIDTH[id],
+        priority: COLUMN_PRIORITY[id],
+        required: REQUIRED_COLUMNS.has(id) || id === 'rank' || id === 'points',
+        tier: COLUMN_TIER[id],
+        label: COLUMN_LABELS[id],
+        sortKey: COLUMN_SORT_FIELD[id],
+        cell: p => playerCell(id, p),
+    }))
+
+    const cardPlaceholder = showSkeleton ? (
         Array.from({ length: Math.min(pageSize, AUTO_PAGE_SIZE_MAX_ROWS) }).map((_, i) => (
             <div key={i} className="h-14 mx-3 my-2 rounded-lg bg-hairline/5 animate-pulse" />
         ))
@@ -492,10 +470,12 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
         <div className="px-4 py-16 text-center text-muted-foreground">
             {debouncedSearch ? 'No players match your search.' : 'No players found.'}
         </div>
-    ) : players.map(p => {
+    ) : undefined
+
+    const playerFace = (p: PlayerListRow) => {
         const isSelf = selfId != null && String(p.id) === String(selfId)
         return (
-            <div key={p.id} role="listitem" className="flex items-center gap-3 p-3 border-b border-hairline/5 last:border-0">
+            <div className="flex items-center gap-3">
                 <span className="font-mono tabular-nums w-10 shrink-0 text-right text-muted-foreground">
                     {p.rank > 0 ? `#${p.rank.toLocaleString()}` : '—'}
                 </span>
@@ -510,18 +490,24 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
                     />
                     {p.banned && <BannedBadge reason={p.ban_reason} expires={p.ban_expires} />}
                 </div>
-                <div className="flex flex-col items-end shrink-0">
-                    <span className={cn('font-mono tabular-nums font-bold', p.points > 0 ? 'text-foreground' : 'text-muted-foreground/40')}>
-                        {p.points.toLocaleString()}
+                <div className="flex flex-col items-end gap-0.5 shrink-0">
+                    <span className="whitespace-nowrap">
+                        <span className={cn('font-mono tabular-nums font-bold', p.points > 0 ? 'text-foreground' : 'text-muted-foreground/40')}>
+                            {p.points.toLocaleString()}
+                        </span>
+                        <span className="ml-1 text-[9px] uppercase tracking-widest text-muted-foreground font-bold">pts</span>
                     </span>
-                    <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold">pts</span>
+                    <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                        <MedalCount icon={worldRecordIcon} value={p.world_records} />
+                        <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold">WRs</span>
+                    </span>
                 </div>
             </div>
         )
-    })
+    }
 
     return (
-        <div className="space-y-4 h-full flex flex-col overflow-hidden">
+        <div className="space-y-4 flex flex-col overflow-hidden">
             <div className="flex items-end justify-between shrink-0">
                 <div>
                     <h1 className="text-2xl font-bold text-foreground leading-tight">Players</h1>
@@ -589,14 +575,23 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
             )}
 
             <DataTableShell
-                scrollRef={scrollContainerRef}
-                onScroll={onScrollContainerScroll}
                 responsive={{
-                    columns: responsiveColumns,
+                    columns: playerColumns,
                     onResolve: handleResolve,
-                    compactContent,
                     compactAriaLabel: 'Players',
                     onCompactChange: handleCompactChange,
+                    cards: {
+                        rows: players,
+                        rowKey: p => String(p.id),
+                        face: playerFace,
+                        onOpen: p => openPlayer(p.id),
+                        placeholder: cardPlaceholder,
+                        sort: {
+                            key: state.sortBy,
+                            direction: state.sortDir,
+                            onSort: key => handleSort(key as PlayerSortField),
+                        },
+                    },
                 }}
             >
                 <DataTableHeaderRow theadDataAttr="data-utbt-players-thead">
@@ -677,6 +672,26 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
                 />
             )}
         </div>
+    )
+}
+
+function MedalCount({ icon, value }: { icon?: string; value: number }) {
+    return (
+        <span className={cn(
+            'inline-flex items-center gap-1.5 font-mono tabular-nums',
+            value > 0 ? 'text-foreground' : 'text-muted-foreground/40',
+        )}>
+            {icon && (
+                <img
+                    src={icon}
+                    alt=""
+                    width={16}
+                    height={16}
+                    className={cn('size-4 object-contain', value === 0 && 'opacity-40 grayscale')}
+                />
+            )}
+            {value.toLocaleString()}
+        </span>
     )
 }
 

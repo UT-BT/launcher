@@ -172,7 +172,11 @@ test('the match-queue streamer picker points at the roster when it is empty', as
     await page.goto(`/events/${SLUG}?tab=manage`)
 
     await page.getByRole('button', { name: 'Picks & Bans', exact: true }).click()
-    await page.getByRole('button', { name: 'Streamer: none' }).first().click()
+    const queue = page.getByRole('region', { name: 'Match queue' })
+    await expect(queue.getByText(/ vs /).first()).toBeVisible()
+    const details = queue.getByRole('button', { name: 'Details', expanded: false })
+    if (await details.count()) await details.first().click()
+    await queue.getByRole('button', { name: 'Streamer: none' }).first().click()
 
     const menu = page.getByRole('menu')
     await expect(menu.getByText(ROSTER_EMPTY)).toBeVisible()

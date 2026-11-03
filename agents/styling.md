@@ -85,7 +85,8 @@ What a theme sets:
   `drop-shadow-[…rgb(var(--accent-glow-rgb)/<a>)]` (the sidebar logo, count bubbles).
 - **Nebula** `--nebula-1…4` (comma-separated RGB) are the gradient stops of the
   animated `.nebula-bg` backdrop in `shared.css`. A gradient theme sets all four, or
-  it inherits Classic's blue swirl.
+  it inherits Classic's blue swirl. Below `lg` and on touch screens (`hover: none`), in
+  either orientation, the swirl layer is hidden and the glow layer stands still.
 - **Hairline** `--hairline-rgb` backs `--color-hairline`: white on dark themes, dark
   in Light.
 - **Window chrome**: the titlebar's `--window-c-*` vars in `app/styles/window.css`
@@ -278,16 +279,20 @@ ship: 600 and 700 upright, 800 and 900 italic.
 ## Page layout
 
 ```tsx
-<div className="space-y-4 h-full flex flex-col overflow-hidden">
+<div className="space-y-4 flex flex-col overflow-hidden">
   <header />          {/* title block, shrink-0 */}
   <toolbar />         {/* search / Filters / Columns, shrink-0 */}
   <filterPanel />     {/* collapsible, shrink-0 */}
   <error />           {/* conditional banner */}
-  <DataTableShell />  {/* flex-1 min-h-0 */}
+  <DataTableShell />  {/* the table's own sideways scroller */}
   <PaginationBar />   {/* optional, shrink-0 */}
   <modals />
 </div>
 ```
+
+A page grows with its content; the shell's main element is the only vertical scroller. Don't
+give a page or a section `h-full` / `flex-1 min-h-0` with `overflow-y-auto` to make it scroll
+on its own ([navigation.md](navigation.md#scroll-position-and-the-shell-scroller)).
 
 Title block:
 
@@ -329,7 +334,8 @@ leave `whitespace-nowrap` off it.
 
 The sidebar's width is one property, `--sidebar-width`, which `AppLayout` sets on
 `document.documentElement` in a layout effect before first paint: `16rem` expanded,
-`5rem` collapsed, `0px` below `lg` (where the sidebar is a drawer, `max-lg:w-72`). It
+`5rem` collapsed, `0px` below `lg` (where the sidebar is a drawer, 18rem plus the left
+safe-area inset, set by `.shell-drawer` in `app/styles/shell.css`). It
 is removed on unmount, so an overlay rendered before the layout falls back to `0px`.
 
 Anything beside the rail reads `var(--sidebar-width,0px)`, always with the fallback,
@@ -337,7 +343,8 @@ instead of `16rem`, `lg:pl-64` or `256px`:
 
 - a modal passes `offsetSidebar`, which pads the backdrop
   `pl-[calc(var(--sidebar-width,0px)_+_1rem)]`, centring the dialog on the content
-  area in both rail modes and on the viewport on phones;
+  area in both rail modes (on phones the modal is a full-screen sheet instead,
+  [shared-components.md](shared-components.md#modal));
 - a full-height overlay starts at `left-[var(--sidebar-width,0px)]` (`ErrorModal`'s
   non-fullscreen backdrop, the Game Input key-capture overlay and bind-conflict
   dialog);
@@ -350,7 +357,8 @@ instead of `16rem`, `lg:pl-64` or `256px`:
 `"right"`. Top and bottom flip when there is no room. `right` sits 10px right of the
 trigger, vertically centred, clamped 8px inside the titlebar's bottom and the viewport
 bottom, with the arrow on the trigger's middle. Use `right` for everything in the
-collapsed rail, so tooltips open over the page instead of the rail.
+collapsed rail, so tooltips open over the page instead of the rail. On touch devices a tap opens
+the tooltip instead of hover ([shared-components.md](shared-components.md)).
 
 ## Tables
 
@@ -396,18 +404,21 @@ Every tabular surface passes `responsive` to `DataTableShell` so it fits any wid
 from a 360px phone up, never by horizontal scroll:
 
 ```tsx
-responsive={{ columns, onResolve, compactContent, compactAriaLabel, onCompactChange, nameFloorRem?, extraRem? }}
+responsive={{ columns, onResolve, compactAriaLabel, onCompactChange, cards, nameFloorRem?, extraRem? }}
 ```
 
-- `columns: ResponsiveColumn[]` (`{ id, width?, priority?, required? }`) lists the
-  currently visible columns in display order. Each `width` is the same literal as its
-  header cell; `rem` and `px` are measured, `%` or no width counts as the flex column
-  at `nameFloorRem` (default 12).
+- `columns: ResponsiveColumn[]` (`{ id, tier, label, width?, priority?, required?,
+  hiddenByUser?, sortKey?, cell? }`) lists every column in display order. `tier` and
+  `label` are required, so a column without them doesn't compile. A column the user hid
+  through `ColumnsMenu` stays in the list with `hiddenByUser: true`: the table skips it
+  and the cards still list it. Each `width` is the same literal as its header cell; `rem`
+  and `px` are measured, `%` or no width counts as the flex column at `nameFloorRem`
+  (default 12).
 - The shell measures itself (`useElementWidth`) and then, in order: condenses
   padding below 58rem; hides optional columns that don't fit, lowest `priority` first
   (default 50; `required` columns always stay); sizes the table's `minWidth` from the
-  surviving columns; and, when even the required columns don't fit, renders
-  `compactContent` (a `role="list"` labelled `compactAriaLabel`) instead of the table.
+  surviving columns; and, when even the required columns don't fit, renders the cards
+  instead of the table.
 - Mark the flex (name) column and the page's core metric (time, count, points)
   `required`, so mid widths never drop them before cards engage; a leaderboard
   showing only rank and name is a bug. Mark any tutorial-spotlighted column
@@ -417,22 +428,33 @@ responsive={{ columns, onResolve, compactContent, compactAriaLabel, onCompactCha
   `userVisible && resolved.has(id)` on both the header and the body (a one-sided gate
   desyncs `table-fixed` tracks). The result is render-time only: keep it out of
   persisted state and `columnVisibility`, or it overwrites the user's column prefs.
-  Wrap `onResolve` in `useCallback` and `columns` in `useMemo`.
+  Wrap `onResolve` in `useCallback`. The columns carry `cell` renderers that read the
+  page's render state, so most pages build them on each render.
 - `onCompactChange(compact)` reports the switch to cards. Hide `ColumnsMenu` and any
   sort-header control while `compact` is true.
+- On a touch device the table renders only when every non-decorative column fits, and
+  DataTable draws the cards, their expand panel and the card sort control
+  ([shared-components.md](shared-components.md#column-tiers-and-phone-cards)).
+- The only exception is `tableOnly: true` instead of `cards`: the cap page's checkpoint
+  split, sector and speed tables stay tables on every device and drop columns by
+  priority, with widths tuned to fit 360 px ([records.md](features/records.md)).
 - Header `width` literals and `ResponsiveColumn.width` values must match. A header
   forcing a width on the flex column makes the real table wider than the computed
   `minWidth` and brings back horizontal scroll.
 
-Compact card rows show the core metric, render identity through `PlayerInfo` and
-times through `CapTimeLink`, and handle skeleton and empty states themselves, since
-`compactContent` replaces the whole table including `DataTableSkeletonRow` and
-`DataTableEmpty`.
+The card face shows the essential fields, renders identity through `PlayerInfo` and
+times through `CapTimeLink`. Skeleton and empty states go in `cards.placeholder`, since
+the cards replace the whole table including `DataTableSkeletonRow` and `DataTableEmpty`.
 
-Reference pages: `PlayersPage.tsx`, `WorldRecordsPage.tsx`, `ServerBrowserPage.tsx`
-(with ColumnsMenu and `onCompactChange`), `CapItAllPage.tsx`,
-`home/LatestRecordsCard.tsx`, `mapDetail/LeaderboardCard.tsx`,
-`teams/TeamActivityPanel.tsx`.
+References: the five event tables
+([events.md](features/events.md#phone-cards), standings with `cards.panel`), `WorldRecordsPage.tsx`,
+`PlayersPage.tsx` and `ServerBrowserPage.tsx` (with ColumnsMenu, `hiddenByUser`, `onCompactChange`
+and the card sort), `CapItAllPage.tsx`, `mapDetail/LeaderboardCard.tsx` (a panel with actions),
+`home/LatestRecordsCard.tsx` (every column essential, no panel), `teams/TeamActivityPanel.tsx`
+(card sort over a client-sorted feed), the seven profile tabs in `playerDetail/`
+(`RecentCapsCard.tsx` with a panel of actions, `WorldRecordsCard.tsx` with no panel), the admin
+tables through `useAdminTable` and `AdminCardFace` (`admin/sections/AuditLogsSection.tsx`: extra
+panel content and a `DataTableExpandRow` on the table; [admin.md](features/admin.md#tables-on-phones)).
 
 ## Buttons and chips
 
@@ -507,6 +529,14 @@ Checkbox: `accent-[var(--accent-500)] cursor-pointer` (favourites:
 
 Native `<select>`: always `style={{ colorScheme: 'dark' }}`, so Chromium draws dark form
 chrome on Windows (Light overrides it in `themes.css`).
+
+**16px on touch.** iOS zooms the page when a focused control's text is below 16px. One
+unlayered rule in `app/styles/shell.css` sets every text input, `select`, `textarea` and
+contenteditable to `max(16px, 1em)` under `(hover: none)`, at any width. Being unlayered,
+it beats every Tailwind font-size utility, so the `text-xs` / `text-sm` classes above stay
+as the desktop sizes and nothing per control is needed. Keep it that way: no `!text-*`
+or inline `fontSize` on a control, which would beat the rule. The mobile suite's
+`form-controls-16px` rule checks it.
 
 ## Sidebar
 
@@ -636,6 +666,14 @@ an explicit `animate` flag, sets `reducedMotion="never"`, and marks its wrapper
 `data-motion="on"` while animating (details in
 [pick-ban-ui.md](features/pick-ban-ui.md)).
 
+## Touch variant
+
+`touch:` (`@custom-variant` in `app/styles/shell.css`) is `@media (hover: none)`, the SPEC's
+"any touch device" tier, at any width. Use it for touch-only styling in markup
+(`touch:backdrop-filter-none`, which compiles far smaller than `touch:backdrop-blur-none`);
+code reads the same fact from the device environment
+([web-target.md](web-target.md)).
+
 ## CSS runtime cost
 
 The renderer runs on phones and in Electron beside the game, so styles have a
@@ -644,7 +682,9 @@ compositor cost:
 - `backdrop-blur` is the most expensive effect. The budget is the existing chrome:
   sidebar, top bar, sticky theads, modals, tooltips and popover menus, and the
   pick/ban stage's paused overlay (present only while paused). Blur one surface, never each row or card of a
-  list.
+  list. On touch the top bar (`touch:bg-card`), the drawer (`bg-card`), the drawer
+  backdrop and the modal backdrop (`bg-black/80`) swap the blur for a solid tint, and
+  the modal panel and the tutorial dim drop their blur.
 - Infinite animations (`animate-pulse`, `animate-ping`, the legendary pulses) keep the
   compositor awake. Use them on singletons (a badge, one hero), never per row.
   Skeleton `animate-pulse` is fine because it exists only while loading.

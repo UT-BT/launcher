@@ -1,30 +1,29 @@
-import { Fragment, useId, useMemo } from 'react'
+import { Fragment, useMemo } from 'react'
 import { Clapperboard } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { NavLink } from '@/app/components/navigation/NavLink'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { CapTimeLink, openCap, openTeamCap } from '@/app/components/shared/CapTimeLink'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
-import { Segmented } from '@/app/components/shared/Segmented'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { teamRunsView, type RunView, type TeamRunRowView } from '@/app/components/pages/events/stats/statsView'
 import { useDisplayTimezone } from '@/app/utils/timezone'
 import type { EventTeamStats } from '@/app/utils/api'
 import {
-    COMPACT_RUN_SORTS, DEFAULT_TEAM_RUN_SORT, nextTeamRunSort, runDateText, sortTeamRuns, teamRunsPage,
+    DEFAULT_TEAM_RUN_SORT, nextTeamRunSort, runDateText, sortTeamRuns, teamRunsPage,
     type TeamRunSort, type TeamRunSortKey,
 } from './teamTablesView'
 import { TeamLink, useTeamPage } from './teamShared'
 import { MapName, TeamTable, type TeamTableHeader } from './TeamTable'
 
 const HEADERS: Record<string, TeamTableHeader<TeamRunSortKey>> = {
-    map: { label: 'Map', align: 'left', sort: 'map' },
-    time: { label: 'Time', align: 'right', sort: 'time' },
-    players: { label: 'Run', align: 'left', required: true },
-    opponent: { label: 'Opponent', align: 'left', sort: 'opponent' },
-    stage: { label: 'Stage', align: 'left', sort: 'stage' },
-    date: { label: 'Date', align: 'left', sort: 'date' },
-    replay: { label: 'Replay', align: 'center', hiddenLabel: true },
+    map: { align: 'left', sort: 'map' },
+    time: { align: 'right', sort: 'time' },
+    players: { align: 'left', required: true },
+    opponent: { align: 'left', sort: 'opponent' },
+    stage: { align: 'left', sort: 'stage' },
+    date: { align: 'left', sort: 'date' },
+    replay: { align: 'center', hiddenLabel: true },
 }
 
 interface RunEntry {
@@ -103,42 +102,29 @@ function cellContent(id: string, entry: RunEntry) {
     }
 }
 
-function CompactSortSwitch({ sort, onChange }: { sort: TeamRunSort; onChange: (sort: TeamRunSort) => void }) {
-    const labelId = useId()
-    return (
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <span id={labelId}>Sort</span>
-            <div role="group" aria-labelledby={labelId} className="flex flex-wrap gap-2">
-                {COMPACT_RUN_SORTS.map(option => (
-                    <Segmented
-                        key={option.key}
-                        active={sort.key === option.key}
-                        label={option.label}
-                        onClick={() => onChange({ key: option.key, dir: 'asc' })}
-                    />
-                ))}
-            </div>
-        </div>
-    )
-}
-
-function CompactRun({ entry }: { entry: RunEntry }) {
+function RunFace({ entry }: { entry: RunEntry }) {
     const { row } = entry
     return (
-        <div role="listitem" className="flex items-center gap-3 border-b border-hairline/5 p-3 last:border-0">
+        <div className="flex items-center gap-3">
             <MapThumbnail mapName={row.map} alt="" className="size-10 shrink-0 rounded-md" />
             <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-semibold text-foreground">{row.displayName}</div>
                 <div className="truncate text-xs text-muted-foreground">
-                    vs <Opponent row={row} /> · {entry.date}
+                    vs <Opponent row={row} />
                 </div>
             </div>
-            <span className="flex shrink-0 items-center gap-2">
+            <span className="shrink-0">
                 <RunTime entry={entry} />
-                <ReplayLink run={row.run} />
             </span>
         </div>
     )
+}
+
+function openRun({ row }: RunEntry) {
+    const { teamCapId } = row.run
+    const capId = row.run.members[0]?.capId
+    if (teamCapId) openTeamCap(teamCapId)
+    else if (capId) openCap(capId)
 }
 
 export function TeamRunsTable({ stats }: { stats: EventTeamStats }) {
@@ -173,8 +159,9 @@ export function TeamRunsTable({ stats }: { stats: EventTeamStats }) {
             rows={entries}
             rowKey={entry => entry.key}
             cell={cellContent}
-            compactRows={page.rows.map(entry => <CompactRun key={entry.key} entry={entry} />)}
-            compactTop={<CompactSortSwitch sort={sort} onChange={setSort} />}
+            face={entry => <RunFace entry={entry} />}
+            onOpen={openRun}
+            cardRows={page.rows}
             compactBottom={page.showAllLabel && (
                 <Button variant="secondary" size="sm" className="w-fit" onClick={() => setShowAll(true)}>{page.showAllLabel}</Button>
             )}

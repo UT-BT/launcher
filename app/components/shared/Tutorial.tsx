@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
-import { cn } from '@/lib/utils'
+import { useModalBehaviour } from '@/app/components/ui/useModalBehaviour'
+import { useDeviceEnvironment } from '@/app/device/useDeviceEnvironment'
 
 const HIGHLIGHT_ATTR = 'data-tutorial-highlight'
 
@@ -32,6 +33,10 @@ export function Tutorial({ steps, step, setStep, onClose, ariaLabel }: TutorialP
 
     const stepsRef = useRef(steps)
     stepsRef.current = steps
+
+    const touch = useDeviceEnvironment(env => env.touch)
+    const panelRef = useRef<HTMLDivElement>(null)
+    useModalBehaviour(panelRef, !!current, onClose, touch)
 
     useEffect(() => {
         const main = document.querySelector('main') as HTMLElement | null
@@ -121,7 +126,7 @@ export function Tutorial({ steps, step, setStep, onClose, ariaLabel }: TutorialP
         <>
             <div
                 aria-hidden
-                className="fixed inset-0 bg-black/65 backdrop-blur-[2px] z-[5] pointer-events-none"
+                className="fixed inset-0 bg-black/65 backdrop-blur-[2px] touch:backdrop-filter-none z-[5] pointer-events-none"
             />
             {rects.map((r, i) => (
                 <div
@@ -140,58 +145,64 @@ export function Tutorial({ steps, step, setStep, onClose, ariaLabel }: TutorialP
             <div
                 role="dialog"
                 aria-label={ariaLabel}
-                className={cn(
-                    'fixed bottom-6 right-6 z-[80] w-80 max-w-[calc(100vw-3rem)]',
-                    'bg-card border border-accent-500/40 rounded-xl shadow-2xl',
-                )}
+                data-modal-backdrop
+                className="fixed right-[calc(1.5rem_+_var(--safe-area-right))] z-[80] w-80 max-w-[calc(100vw-3rem)]"
+                style={{ bottom: 'calc(1.5rem + max(var(--safe-area-bottom), var(--tab-bar-offset)))' }}
             >
-                <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-hairline/10">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-accent-300">
-                        Tutorial · {step + 1} / {total}
-                    </span>
-                    <button
-                        type="button"
-                        onClick={handleSkip}
-                        aria-label="Close tutorial"
-                        className="p-1 rounded hover:bg-hairline/10 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                    >
-                        <X className="size-3.5" />
-                    </button>
-                </div>
+                <div
+                    ref={panelRef}
+                    tabIndex={-1}
+                    className="flex flex-col bg-card border border-accent-500/40 rounded-xl shadow-2xl"
+                    style={{ maxHeight: 'calc(100dvh - var(--top-bar-offset) - 3rem - max(var(--safe-area-bottom), var(--tab-bar-offset)))' }}
+                >
+                    <div className="flex shrink-0 items-center justify-between px-4 pt-3 pb-2 border-b border-hairline/10">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-accent-300">
+                            Tutorial · {step + 1} / {total}
+                        </span>
+                        <button
+                            type="button"
+                            onClick={handleSkip}
+                            aria-label="Close tutorial"
+                            className="modal-close p-1 rounded hover:bg-hairline/10 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                        >
+                            <X className="size-3.5" />
+                        </button>
+                    </div>
 
-                <div className="px-4 py-3 space-y-2">
-                    <h3 className="text-sm font-bold text-foreground">{current.title}</h3>
-                    <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line">{current.body}</p>
-                </div>
+                    <div className="min-h-0 overflow-y-auto overscroll-contain px-4 py-3 space-y-2">
+                        <h3 className="text-sm font-bold text-foreground">{current.title}</h3>
+                        <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line">{current.body}</p>
+                    </div>
 
-                <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-hairline/10 bg-muted/30">
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleSkip}
-                        className="text-muted-foreground hover:text-foreground"
-                    >
-                        Skip
-                    </Button>
-                    <div className="flex items-center gap-1">
+                    <div className="flex shrink-0 items-center justify-between gap-2 px-3 py-2 border-t border-hairline/10 bg-muted/30">
                         <Button
                             variant="ghost"
                             size="sm"
-                            onClick={handlePrev}
-                            disabled={isFirst}
-                            className="text-muted-foreground hover:text-foreground disabled:opacity-40"
+                            onClick={handleSkip}
+                            className="touch:h-11 text-muted-foreground hover:text-foreground"
                         >
-                            <ChevronLeft className="size-4" />
-                            Prev
+                            Skip
                         </Button>
-                        <Button size="sm" onClick={handleNext}>
-                            {isLast ? 'Done' : (
-                                <>
-                                    Next
-                                    <ChevronRight className="size-4" />
-                                </>
-                            )}
-                        </Button>
+                        <div className="flex items-center gap-1">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handlePrev}
+                                disabled={isFirst}
+                                className="touch:h-11 text-muted-foreground hover:text-foreground disabled:opacity-40"
+                            >
+                                <ChevronLeft className="size-4" />
+                                Prev
+                            </Button>
+                            <Button size="sm" onClick={handleNext} className="touch:h-11">
+                                {isLast ? 'Done' : (
+                                    <>
+                                        Next
+                                        <ChevronRight className="size-4" />
+                                    </>
+                                )}
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -24,12 +24,14 @@ export function SidebarBrand({ logo, season, collapsed, toggle }: SidebarBrandPr
             <img
                 src={logo}
                 alt="UTBT Logo"
+                data-diagnostic-trigger
+                style={{ WebkitTouchCallout: 'none' }}
                 onClick={season ? event => {
                     const rect = event.currentTarget.getBoundingClientRect()
                     fireSeasonalBurst(season, rect.left + rect.width / 2, rect.top + rect.height / 2)
                 } : undefined}
                 className={cn(
-                    "object-contain drop-shadow-[0_0_15px_rgb(var(--accent-glow-rgb)/0.3)] transition hover:scale-105 duration-300",
+                    "object-contain select-none drop-shadow-[0_0_15px_rgb(var(--accent-glow-rgb)/0.3)] transition hover:scale-105 duration-300",
                     collapsed
                         ? "size-10"
                         : "w-24 h-24 [@media(max-height:800px)]:w-14 [@media(max-height:800px)]:h-14 mb-4 [@media(max-height:800px)]:mb-0"

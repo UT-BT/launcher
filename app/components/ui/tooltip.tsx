@@ -1,6 +1,7 @@
-import { useState, useRef, useLayoutEffect, ReactNode } from 'react'
+import { useState, useRef, useLayoutEffect, useEffect, ReactNode, MouseEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Info } from 'lucide-react'
+import { useDeviceEnvironment } from '@/app/device/useDeviceEnvironment'
 import { cn } from '@/lib/utils'
 
 type TooltipSide = 'top' | 'bottom' | 'right'
@@ -14,6 +15,7 @@ interface TooltipProps {
 
 const EDGE_PAD = 8
 const GAP = 10
+const CONTROLS = 'a, button, input, select, textarea, label, summary, [role="button"], [role="link"]'
 
 const ARROW_CLASS: Record<TooltipSide, string> = {
     top: 'top-full -translate-x-1/2 -mt-[5px] border-t-popover/95',
@@ -28,11 +30,43 @@ export function Tooltip({ content, children, className, side = 'top' }: TooltipP
     const [resolvedSide, setResolvedSide] = useState<TooltipSide>(side)
     const triggerRef = useRef<HTMLSpanElement>(null)
     const tooltipRef = useRef<HTMLDivElement>(null)
+    const touch = useDeviceEnvironment(env => env.touch)
 
     const hide = () => {
         setIsVisible(false)
         setPlaced(false)
     }
+
+    useEffect(() => {
+        if (!touch || !isVisible) return
+        const closeOutside = (event: Event) => {
+            if (!(event.target instanceof Node) || !triggerRef.current?.contains(event.target)) hide()
+        }
+        const close = () => hide()
+        document.addEventListener('pointerdown', closeOutside, true)
+        document.addEventListener('focusin', closeOutside, true)
+        document.addEventListener('scroll', close, { capture: true, passive: true })
+        return () => {
+            document.removeEventListener('pointerdown', closeOutside, true)
+            document.removeEventListener('focusin', closeOutside, true)
+            document.removeEventListener('scroll', close, { capture: true })
+        }
+    }, [touch, isVisible])
+
+    const toggleOnTap = (event: MouseEvent<HTMLSpanElement>) => {
+        if (!(event.target instanceof Element) || !event.target.closest(CONTROLS)) event.stopPropagation()
+        if (isVisible) hide()
+        else setIsVisible(true)
+    }
+
+    const handlers = touch
+        ? { onClick: toggleOnTap }
+        : {
+            onMouseEnter: () => setIsVisible(true),
+            onMouseLeave: hide,
+            onFocus: () => setIsVisible(true),
+            onBlur: hide,
+        }
 
     // Position by the tooltip's own top-left edge (no positioning transform):
     // the `animate-in` enter keyframe interpolates `transform`, so any inline
@@ -83,10 +117,8 @@ export function Tooltip({ content, children, className, side = 'top' }: TooltipP
             <span
                 ref={triggerRef}
                 className={cn("relative inline-flex items-center", className)}
-                onMouseEnter={() => setIsVisible(true)}
-                onMouseLeave={hide}
-                onFocus={() => setIsVisible(true)}
-                onBlur={hide}
+                data-tooltip-trigger={touch ? '' : undefined}
+                {...handlers}
             >
                 {children || <Info className="size-4 text-muted-foreground hover:text-foreground transition-colors cursor-help" />}
             </span>

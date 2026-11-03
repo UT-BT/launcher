@@ -1,3 +1,4 @@
+import { lazy, useState } from 'react'
 import { Download, Calendar, Star, Sparkles, User, Users, ImagePlus } from 'lucide-react'
 import { Spinner } from '@/app/components/ui/spinner'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
@@ -9,7 +10,11 @@ import { displayMapName, formatAddedDate, isNew } from '@/app/utils/format'
 import { difficultyBgColor } from '@/app/utils/scoreColors'
 import type { MapMetadata } from '@/app/utils/api'
 import { mapAuthorName } from '@/app/utils/mapAuthor'
+import { useDeviceEnvironment } from '@/app/device/useDeviceEnvironment'
+import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { MapVersionsBar } from './MapVersionsCard'
+
+const MapScreenshotViewer = lazy(() => import('@/app/components/modals/MapScreenshotViewer').then(m => ({ default: m.MapScreenshotViewer })))
 
 interface HeroSectionProps {
     mapName: string
@@ -39,20 +44,35 @@ export function HeroSection({
     const added = map?.added
     const showNew = added ? isNew(added) : false
     const showTopRated = avgOverall !== null && reviewCount >= 3 && avgOverall >= 8
+    const touch = useDeviceEnvironment(environment => environment.touch)
+    const [viewerOpen, setViewerOpen] = useState(false)
+    const canView = touch && map !== null && map.has_screenshot !== false
+    const thumbnail = (
+        <MapThumbnail
+            mapName={mapName}
+            version={map?.screenshot_updated}
+            fit="blend"
+            size="card"
+            priority
+            className="w-full h-full aspect-video lg:aspect-square rounded-lg border border-hairline/10"
+        />
+    )
 
     return (
         <div className="bg-card/30 border border-hairline/5 rounded-xl overflow-hidden shrink-0">
             <div className="flex flex-col lg:flex-row">
                 <div className="lg:w-64 lg:h-64 shrink-0 p-2">
                     <div className="relative w-full h-full">
-                        <MapThumbnail
-                            mapName={mapName}
-                            version={map?.screenshot_updated}
-                            fit="blend"
-                            size="card"
-                            priority
-                            className="w-full h-full aspect-video lg:aspect-square rounded-lg border border-hairline/10"
-                        />
+                        {canView ? (
+                            <button
+                                type="button"
+                                onClick={() => setViewerOpen(true)}
+                                aria-label="View screenshot"
+                                className="block w-full h-full rounded-lg cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/60"
+                            >
+                                {thumbnail}
+                            </button>
+                        ) : thumbnail}
                         {canEditScreenshot && (
                             <button
                                 type="button"
@@ -147,6 +167,14 @@ export function HeroSection({
                     {chart && <div className="flex-1 min-h-0">{chart}</div>}
                 </div>
             </div>
+            <LazyModalGate open={viewerOpen}>
+                <MapScreenshotViewer
+                    isOpen={viewerOpen}
+                    onClose={() => setViewerOpen(false)}
+                    mapName={mapName}
+                    version={map?.screenshot_updated}
+                />
+            </LazyModalGate>
         </div>
     )
 }

@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useMemo, useState } from 'react'
+import { Fragment, useCallback, useMemo, useState, type ReactNode } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
@@ -8,17 +8,20 @@ import {
 import type {
     EventBracketGroup, EventBracketStage, EventGroupsConfig, EventMatch, EventStageSpec, EventStandingRow,
 } from '@/app/utils/api'
+import { useNavigation } from '@/app/components/navigation/NavigationContext'
 import { MatchCard, matchOrder, schedulerEligible } from './bracketShared'
 import { TeamName } from '../TeamRoster'
 
-const COLUMNS: ResponsiveColumn[] = [
-    { id: 'rank', width: '3rem', required: true },
-    { id: 'team', width: '12rem', required: true },
-    { id: 'points', width: '4rem', required: true },
-    { id: 'record', width: '5rem', priority: 90 },
-    { id: 'maps', width: '5.5rem', priority: 80 },
-    { id: 'diff', width: '4rem', priority: 70 },
-    { id: 'caps', width: '5.5rem', priority: 60 },
+type StandingColumnId = 'rank' | 'team' | 'points' | 'record' | 'maps' | 'diff' | 'caps'
+
+const COLUMNS: (ResponsiveColumn & { id: StandingColumnId })[] = [
+    { id: 'rank', width: '3rem', required: true, tier: 'essential', label: 'Rank' },
+    { id: 'team', width: '12rem', required: true, tier: 'essential', label: 'Team' },
+    { id: 'points', width: '4rem', required: true, tier: 'essential', label: 'Points' },
+    { id: 'record', width: '5rem', priority: 90, tier: 'essential', label: 'Record' },
+    { id: 'maps', width: '5.5rem', priority: 80, tier: 'detail', label: 'Maps' },
+    { id: 'diff', width: '4rem', priority: 70, tier: 'detail', label: 'Diff' },
+    { id: 'caps', width: '5.5rem', priority: 60, tier: 'detail', label: 'Caps' },
 ]
 
 function advancementBands(specStage: EventStageSpec | null): Map<number, string> {
@@ -33,6 +36,10 @@ function advancementBands(specStage: EventStageSpec | null): Map<number, string>
     }
 
     return bands
+}
+
+function recordLabel(drawsPossible: boolean): string {
+    return drawsPossible ? 'W–D–L' : 'W–L'
 }
 
 function recordOf(row: EventStandingRow, drawsPossible: boolean): string {
@@ -87,63 +94,99 @@ function StandingsTable({ rows, matches, bands, drawsPossible, now, onMapSelect,
         return next
     })
 
-    const compact = (
-        <div className="divide-y divide-hairline/5">
-            {rows.map(row => {
+    const { navigate } = useNavigation()
+
+    const cell = (id: StandingColumnId, row: EventStandingRow): ReactNode => {
+        const band = bands.get(row.rank)
+        switch (id) {
+            case 'rank': return <span className={cn(band && 'text-accent-300 font-medium')}>{row.rank}</span>
+            case 'team': {
                 const open = expanded.has(row.team_id)
                 return (
-                    <div key={row.team_id} role="listitem" className="px-3 py-2">
-                        {/* A div, not a button: TeamName's tooltip wraps its child in a
-                            div, which a button may not contain. */}
-                        <div
-                            role="button"
-                            tabIndex={0}
-                            aria-expanded={open}
-                            onClick={() => toggle(row.team_id)}
-                            onKeyDown={event => {
-                                if (event.key !== 'Enter' && event.key !== ' ') return
-                                event.preventDefault()
-                                toggle(row.team_id)
-                            }}
-                            className="w-full flex items-center gap-3 text-left cursor-pointer rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/60"
-                        >
-                            <span className="w-5 shrink-0 tabular-nums text-muted-foreground text-sm">{row.rank}</span>
-                            <div className="min-w-0 flex-1">
-                                <TeamName teamId={row.team_id} className="block truncate text-sm text-foreground">
-                                    {row.team?.name ?? '—'}
-                                </TeamName>
-                                <div className="text-[11px] text-muted-foreground tabular-nums">
-                                    {recordOf(row, drawsPossible)} · maps {row.maps_won}–{row.maps_lost} · caps {row.caps_for}
-                                </div>
-                            </div>
-                            <span className="shrink-0 tabular-nums text-sm font-semibold text-foreground">{row.points}</span>
-                            {open
-                                ? <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
-                                : <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />}
+                    <div className="min-w-0 flex items-center gap-1.5">
+                        {open
+                            ? <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+                            : <ChevronRight className="size-3.5 shrink-0 text-muted-foreground/50 group-hover:text-muted-foreground" />}
+                        <div className="min-w-0">
+                            <TeamName teamId={row.team_id} className="block truncate text-foreground">
+                                {row.team?.name ?? '—'}
+                            </TeamName>
+                            {band && <div className="text-[10px] text-accent-300/80 truncate">{band}</div>}
                         </div>
-                        {open && (
-                            <div className="pt-2">
-                                <TeamMatches matches={matchesFor(matches, row.team_id)} now={now} onMapSelect={onMapSelect} onScheduleMatch={onScheduleMatch} eventSlug={eventSlug} myTeamId={myTeamId} />
-                            </div>
-                        )}
                     </div>
                 )
-            })}
+            }
+            case 'points': return row.points
+            case 'record': return recordOf(row, drawsPossible)
+            case 'maps': return <>{row.maps_won}–{row.maps_lost}</>
+            case 'diff': return row.map_diff > 0 ? `+${row.map_diff}` : row.map_diff
+            case 'caps': return <>{row.caps_for}–{row.caps_against}</>
+        }
+    }
+
+    const teamMatches = (row: EventStandingRow) => (
+        <TeamMatches matches={matchesFor(matches, row.team_id)} now={now} onMapSelect={onMapSelect} onScheduleMatch={onScheduleMatch} eventSlug={eventSlug} myTeamId={myTeamId} />
+    )
+
+    const matchesPanel = (row: EventStandingRow) => (
+        <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">Matches</p>
+            {teamMatches(row)}
         </div>
     )
+
+    const columns: ResponsiveColumn<EventStandingRow>[] = COLUMNS.map(column => ({
+        ...column,
+        label: column.id === 'record' ? recordLabel(drawsPossible) : column.label,
+        cell: row => cell(column.id, row),
+    }))
+
+    const face = (row: EventStandingRow) => {
+        const band = bands.get(row.rank)
+        return (
+            <div className="flex items-center gap-3">
+                <span className={cn('w-5 shrink-0 tabular-nums text-sm', band ? 'text-accent-300 font-medium' : 'text-muted-foreground')}>{row.rank}</span>
+                <div className="min-w-0 flex-1">
+                    <TeamName teamId={row.team_id} className="block truncate text-sm text-foreground">
+                        {row.team?.name ?? '—'}
+                    </TeamName>
+                    {band && <div className="text-[10px] text-accent-300/80 truncate">{band}</div>}
+                </div>
+                <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{recordOf(row, drawsPossible)}</span>
+                <span className="shrink-0 tabular-nums text-sm font-semibold text-foreground">
+                    {row.points}<span className="text-[11px] font-normal text-muted-foreground"> pts</span>
+                </span>
+            </div>
+        )
+    }
 
     const columnCount = 3 + ['record', 'maps', 'diff', 'caps'].filter(shows).length
 
     return (
         <DataTableShell
             className="flex-none"
-            responsive={{ columns: COLUMNS, nameFloorRem: 12, compactContent: compact, compactAriaLabel: 'Group standings', onResolve }}
+            responsive={{
+                columns,
+                nameFloorRem: 12,
+                compactAriaLabel: 'Group standings',
+                onResolve,
+                cards: {
+                    rows,
+                    rowKey: row => row.team_id,
+                    face,
+                    onOpen: eventSlug ? row => navigate('event-team', { eventSlug, eventTeamId: row.team_id }) : undefined,
+                    panel: matchesPanel,
+                    placeholder: rows.length === 0 && (
+                        <p className="px-4 py-8 text-center text-sm text-muted-foreground">No teams in this group yet.</p>
+                    ),
+                },
+            }}
         >
             <DataTableHeaderRow>
                 <DataTableHeaderCell width="3rem" align="right">#</DataTableHeaderCell>
                 <DataTableHeaderCell width="12rem">Team</DataTableHeaderCell>
                 <DataTableHeaderCell width="4rem" align="right">Pts</DataTableHeaderCell>
-                {shows('record') && <DataTableHeaderCell width="5rem" align="right">{drawsPossible ? 'W–D–L' : 'W–L'}</DataTableHeaderCell>}
+                {shows('record') && <DataTableHeaderCell width="5rem" align="right">{recordLabel(drawsPossible)}</DataTableHeaderCell>}
                 {shows('maps') && <DataTableHeaderCell width="5.5rem" align="right">Maps</DataTableHeaderCell>}
                 {shows('diff') && <DataTableHeaderCell width="4rem" align="right">Diff</DataTableHeaderCell>}
                 {shows('caps') && <DataTableHeaderCell width="5.5rem" align="right">Caps</DataTableHeaderCell>}
@@ -152,7 +195,6 @@ function StandingsTable({ rows, matches, bands, drawsPossible, now, onMapSelect,
                 {rows.length === 0 ? (
                     <DataTableEmpty colSpan={columnCount} message="No teams in this group yet." />
                 ) : rows.map(row => {
-                    const band = bands.get(row.rank)
                     const open = expanded.has(row.team_id)
 
                     return (
@@ -162,39 +204,25 @@ function StandingsTable({ rows, matches, bands, drawsPossible, now, onMapSelect,
                                 aria-expanded={open}
                                 className="cursor-pointer"
                             >
-                                <DataTableCell align="right" className="tabular-nums text-muted-foreground">
-                                    <span className={cn(band && 'text-accent-300 font-medium')}>{row.rank}</span>
-                                </DataTableCell>
-                                <DataTableCell>
-                                    <div className="min-w-0 flex items-center gap-1.5">
-                                        {open
-                                            ? <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
-                                            : <ChevronRight className="size-3.5 shrink-0 text-muted-foreground/50 group-hover:text-muted-foreground" />}
-                                        <div className="min-w-0">
-                                            <TeamName teamId={row.team_id} className="block truncate text-foreground">
-                                                {row.team?.name ?? '—'}
-                                            </TeamName>
-                                            {band && <div className="text-[10px] text-accent-300/80 truncate">{band}</div>}
-                                        </div>
-                                    </div>
-                                </DataTableCell>
-                                <DataTableCell align="right" className="tabular-nums font-semibold text-foreground">{row.points}</DataTableCell>
-                                {shows('record') && <DataTableCell align="right" className="tabular-nums text-muted-foreground">{recordOf(row, drawsPossible)}</DataTableCell>}
-                                {shows('maps') && <DataTableCell align="right" className="tabular-nums text-muted-foreground">{row.maps_won}–{row.maps_lost}</DataTableCell>}
+                                <DataTableCell align="right" className="tabular-nums text-muted-foreground">{cell('rank', row)}</DataTableCell>
+                                <DataTableCell>{cell('team', row)}</DataTableCell>
+                                <DataTableCell align="right" className="tabular-nums font-semibold text-foreground">{cell('points', row)}</DataTableCell>
+                                {shows('record') && <DataTableCell align="right" className="tabular-nums text-muted-foreground">{cell('record', row)}</DataTableCell>}
+                                {shows('maps') && <DataTableCell align="right" className="tabular-nums text-muted-foreground">{cell('maps', row)}</DataTableCell>}
                                 {shows('diff') && (
                                     <DataTableCell align="right" className={cn(
                                         'tabular-nums',
                                         row.map_diff > 0 ? 'text-emerald-300' : row.map_diff < 0 ? 'text-red-300' : 'text-muted-foreground',
                                     )}>
-                                        {row.map_diff > 0 ? `+${row.map_diff}` : row.map_diff}
+                                        {cell('diff', row)}
                                     </DataTableCell>
                                 )}
-                                {shows('caps') && <DataTableCell align="right" className="tabular-nums text-muted-foreground">{row.caps_for}–{row.caps_against}</DataTableCell>}
+                                {shows('caps') && <DataTableCell align="right" className="tabular-nums text-muted-foreground">{cell('caps', row)}</DataTableCell>}
                             </DataTableRow>
                             {open && (
                                 <tr className="border-b border-hairline/5">
                                     <td colSpan={columnCount} className="px-4 py-3 bg-hairline/[0.02]">
-                                        <TeamMatches matches={matchesFor(matches, row.team_id)} now={now} onMapSelect={onMapSelect} onScheduleMatch={onScheduleMatch} eventSlug={eventSlug} myTeamId={myTeamId} />
+                                        {teamMatches(row)}
                                     </td>
                                 </tr>
                             )}

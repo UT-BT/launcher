@@ -1,8 +1,9 @@
 import { useMemo, useState, type CSSProperties, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import {
-    DataTableCell, DataTableHeaderCell, DataTableHeaderRow, DataTableRow, DataTableShell,
+    DataTableCell, DataTableHeaderCell, DataTableHeaderRow, DataTableRow, DataTableShell, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
+import { useNavigation } from '@/app/components/navigation/NavigationContext'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
@@ -37,6 +38,13 @@ export function mapStatsView(
 }
 
 const NUMBER = 'font-mono tabular-nums text-foreground'
+
+const CELL_LAYOUT: Partial<Record<string, { align: 'right'; className: string }>> = {
+    played: { align: 'right', className: NUMBER },
+    firstBans: { align: 'right', className: NUMBER },
+    deciders: { align: 'right', className: NUMBER },
+    picker: { align: 'right', className: 'whitespace-nowrap' },
+}
 
 function CountBar({ cell, pick }: { cell: BarCell; pick?: boolean }) {
     return (
@@ -90,6 +98,38 @@ function FastestRun({ row, eventSlug }: { row: MapStatsRowView; eventSlug: strin
     )
 }
 
+function mapStatsCell(id: string, row: MapStatsRowView, eventSlug: string): ReactNode {
+    switch (id) {
+        case 'map': return <MapName map={row.map} name={row.displayName} />
+        case 'played': return row.played
+        case 'picks': return <CountBar cell={row.picks} pick />
+        case 'bans': return <CountBar cell={row.bans} />
+        case 'firstBans': return row.firstBans
+        case 'deciders': return row.deciders
+        case 'picker': return (
+            <span>
+                <span className={NUMBER}>{row.pickerRate}</span>{' '}
+                <span className="text-xs text-muted-foreground">{row.pickerRecord}</span>
+            </span>
+        )
+        case 'fastest': return <FastestRun row={row} eventSlug={eventSlug} />
+        default: return null
+    }
+}
+
+function MapStatsFace({ row }: { row: MapStatsRowView }) {
+    return (
+        <div className="flex flex-col gap-2">
+            <MapName map={row.map} name={row.displayName} />
+            <div className="grid grid-cols-3 gap-x-3">
+                <CompactStat label="Played">{row.played}</CompactStat>
+                <CompactStat label="Picks"><CountBar cell={row.picks} pick /></CompactStat>
+                <CompactStat label="Bans"><CountBar cell={row.bans} /></CompactStat>
+            </div>
+        </div>
+    )
+}
+
 export function MapStatsTable({ maps, teams, eventSlug }: {
     maps: readonly EventStatsMap[]
     teams: Record<string, OverviewTeam>
@@ -97,9 +137,13 @@ export function MapStatsTable({ maps, teams, eventSlug }: {
 }) {
     const table = useMemo(() => mapTableView(maps), [maps])
     const view = mapStatsView(maps, teams, table)
+    const { navigate } = useNavigation()
     const [resolved, setResolved] = useState<Set<string> | null>(null)
-    const shows = (id: string) => resolved?.has(id) ?? true
-    const widths = Object.fromEntries(view.columns.map(column => [column.id, column.width]))
+    const columns: ResponsiveColumn<MapStatsRowView>[] = view.columns.map(column => ({
+        ...column,
+        cell: row => mapStatsCell(column.id, row, eventSlug),
+    }))
+    const visible = columns.filter(column => resolved?.has(column.id) ?? true)
 
     if (view.rows.length === 0) {
         return (
@@ -109,56 +153,35 @@ export function MapStatsTable({ maps, teams, eventSlug }: {
         )
     }
 
-    const compact = view.rows.map(row => (
-        <div key={row.map} role="listitem" className="flex flex-col gap-2 border-b border-hairline/5 px-3 py-3 last:border-b-0">
-            <MapName map={row.map} name={row.displayName} />
-            <FastestRun row={row} eventSlug={eventSlug} />
-            <div className="grid grid-cols-3 gap-x-3 gap-y-1.5">
-                <CompactStat label="Played">{row.played}</CompactStat>
-                <CompactStat label="Picks"><CountBar cell={row.picks} pick /></CompactStat>
-                <CompactStat label="Bans"><CountBar cell={row.bans} /></CompactStat>
-                <CompactStat label="1st bans">{row.firstBans}</CompactStat>
-                <CompactStat label="Picker wins">{row.pickerRate}</CompactStat>
-                {view.hasDeciders && <CompactStat label="Deciders">{row.deciders}</CompactStat>}
-            </div>
-        </div>
-    ))
-    const header = (id: string, label: string, right?: boolean) => shows(id) && (
-        <DataTableHeaderCell width={widths[id]} align={right ? 'right' : undefined}>{label}</DataTableHeaderCell>
-    )
-    const number = (id: string, value: string) => shows(id) && <DataTableCell align="right" className={NUMBER}>{value}</DataTableCell>
-
     return (
         <DataTableShell
             className="flex-none"
-            responsive={{ columns: view.columns, nameFloorRem: 12, compactContent: compact, compactAriaLabel: 'Maps', onResolve: setResolved }}
+            responsive={{
+                columns,
+                nameFloorRem: 12,
+                compactAriaLabel: 'Maps',
+                onResolve: setResolved,
+                cards: {
+                    rows: view.rows,
+                    rowKey: row => row.map,
+                    face: row => <MapStatsFace row={row} />,
+                    onOpen: row => navigate('maps-detail', { mapName: row.map }),
+                },
+            }}
         >
             <DataTableHeaderRow>
-                {header('map', 'Map')}
-                {header('played', 'Played', true)}
-                {header('picks', 'Picks')}
-                {header('bans', 'Bans')}
-                {header('firstBans', '1st bans', true)}
-                {view.hasDeciders && header('deciders', 'Deciders', true)}
-                {header('picker', 'Picker wins', true)}
-                {header('fastest', 'Fastest cup run')}
+                {visible.map(column => (
+                    <DataTableHeaderCell key={column.id} width={column.width} align={CELL_LAYOUT[column.id]?.align}>{column.label}</DataTableHeaderCell>
+                ))}
             </DataTableHeaderRow>
             <tbody>
                 {view.rows.map(row => (
                     <DataTableRow key={row.map}>
-                        <DataTableCell><MapName map={row.map} name={row.displayName} /></DataTableCell>
-                        {number('played', row.played)}
-                        {shows('picks') && <DataTableCell><CountBar cell={row.picks} pick /></DataTableCell>}
-                        {shows('bans') && <DataTableCell><CountBar cell={row.bans} /></DataTableCell>}
-                        {number('firstBans', row.firstBans)}
-                        {view.hasDeciders && number('deciders', row.deciders)}
-                        {shows('picker') && (
-                            <DataTableCell align="right" className="whitespace-nowrap">
-                                <span className={NUMBER}>{row.pickerRate}</span>{' '}
-                                <span className="text-xs text-muted-foreground">{row.pickerRecord}</span>
+                        {visible.map(column => (
+                            <DataTableCell key={column.id} align={CELL_LAYOUT[column.id]?.align} className={CELL_LAYOUT[column.id]?.className}>
+                                {column.cell?.(row)}
                             </DataTableCell>
-                        )}
-                        <DataTableCell><FastestRun row={row} eventSlug={eventSlug} /></DataTableCell>
+                        ))}
                     </DataTableRow>
                 ))}
             </tbody>

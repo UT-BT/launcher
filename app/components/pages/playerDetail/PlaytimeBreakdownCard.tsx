@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Search, Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Tooltip } from '@/app/components/ui/tooltip'
@@ -11,7 +11,7 @@ import { MapNavLink } from '@/app/components/shared/MapNavLink'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell,
     DataTableRow, DataTableCell, DataTableEmpty, DataTableSkeletonRow,
-    type SortDirection, type ResponsiveColumn,
+    type ColumnTier, type SortDirection, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { PaginationBar } from '@/app/components/ui/pagination'
 
@@ -32,6 +32,10 @@ const COLUMNS: ColumnId[] = ['map', 'hours', 'sessions', 'last_played']
 const COLUMN_WIDTH: Partial<Record<ColumnId, string>> = { hours: '7rem', sessions: '6rem', last_played: '8rem' }
 const COLUMN_PRIORITY: Partial<Record<ColumnId, number>> = { hours: 80, sessions: 40, last_played: 30 }
 const REQUIRED_COLUMNS = new Set<ColumnId>(['map', 'hours'])
+const COLUMN_TIER: Record<ColumnId, ColumnTier> = { map: 'essential', hours: 'essential', sessions: 'detail', last_played: 'detail' }
+const COLUMN_LABEL: Record<ColumnId, string> = { map: 'Map', hours: 'Time', sessions: 'Sessions', last_played: 'Last Played' }
+const SORT_KEY: Record<ColumnId, SortField> = { map: 'map', hours: 'hours', sessions: 'sessions', last_played: 'last_played' }
+const CELL_ALIGN: Partial<Record<ColumnId, 'right'>> = { hours: 'right', sessions: 'right', last_played: 'right' }
 
 function formatHours(seconds: number): string {
     const hours = seconds / 3600
@@ -86,15 +90,6 @@ export function PlaytimeBreakdownCard({ accessToken, userId, onMapSelect, tabsSl
     }
     const dir = (field: SortField): SortDirection => sortField === field ? sortDir : null
 
-    const responsiveColumns = useMemo<ResponsiveColumn[]>(
-        () => COLUMNS.map(id => ({
-            id,
-            width: COLUMN_WIDTH[id],
-            priority: COLUMN_PRIORITY[id],
-            required: REQUIRED_COLUMNS.has(id),
-        })),
-        [],
-    )
     const [resolved, setResolved] = useState<Set<ColumnId> | null>(null)
     const handleResolve = useCallback((ids: Set<string>) => {
         setResolved(ids as Set<ColumnId>)
@@ -104,41 +99,69 @@ export function PlaytimeBreakdownCard({ accessToken, userId, onMapSelect, tabsSl
 
     const emptyMessage = query ? 'No playtime matches that search.' : 'No playtime recorded.'
 
-    const compactRows = loading ? (
+    const hours = (row: PlaytimeByMapRow) => (
+        <span className="text-sm font-mono tabular-nums font-bold text-amber-200">
+            {formatHours(row.total_seconds)}
+        </span>
+    )
+
+    const playtimeCell = (id: ColumnId, row: PlaytimeByMapRow): React.ReactNode => {
+        switch (id) {
+            case 'map':
+                return (
+                    <div className="flex items-center gap-2 min-w-0">
+                        <MapThumbnail mapName={row.map} className="size-8 shrink-0" />
+                        <MapNavLink mapName={row.map} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate">{displayMapName(row.map)}</MapNavLink>
+                    </div>
+                )
+            case 'hours':
+                return hours(row)
+            case 'sessions':
+                return (
+                    <span className="text-xs font-mono tabular-nums text-muted-foreground">
+                        {(row.sessions ?? 0).toLocaleString()}
+                    </span>
+                )
+            case 'last_played':
+                return (
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                        {row.last_played ? formatAddedDate(row.last_played) : '—'}
+                    </span>
+                )
+        }
+    }
+
+    const responsiveColumns: ResponsiveColumn<PlaytimeByMapRow>[] = COLUMNS.map(id => ({
+        id,
+        width: COLUMN_WIDTH[id],
+        priority: COLUMN_PRIORITY[id],
+        required: REQUIRED_COLUMNS.has(id),
+        tier: COLUMN_TIER[id],
+        label: COLUMN_LABEL[id],
+        sortKey: SORT_KEY[id],
+        cell: row => playtimeCell(id, row),
+    }))
+
+    const playtimeFace = (row: PlaytimeByMapRow) => (
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+            <div className="flex items-center min-w-0">
+                <MapNavLink mapName={row.map} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate min-w-0">{displayMapName(row.map)}</MapNavLink>
+            </div>
+            {hours(row)}
+        </div>
+    )
+
+    const cardPlaceholder = loading ? (
         Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} role="listitem" className="p-3 border-b border-hairline/5 last:border-0 animate-pulse">
+            <div key={i} className="p-3 border-b border-hairline/5 last:border-0 animate-pulse">
                 <div className="h-10 rounded bg-hairline/5" />
             </div>
         ))
     ) : items.length === 0 ? (
-        <div role="listitem" className="px-4 py-12 text-center text-sm text-muted-foreground">
+        <div className="px-4 py-12 text-center text-sm text-muted-foreground">
             {emptyMessage}
         </div>
-    ) : items.map(row => (
-        <div
-            key={row.map}
-            role="listitem"
-            className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-3 border-b border-hairline/5 last:border-0 cursor-pointer"
-            onClick={() => onMapSelect?.(row.map)}
-        >
-            <div className="min-w-0 space-y-1">
-                <div className="flex items-center min-w-0">
-                    <MapNavLink mapName={row.map} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate min-w-0">{displayMapName(row.map)}</MapNavLink>
-                </div>
-                <div className="text-xs text-muted-foreground tabular-nums">
-                    {(row.sessions ?? 0).toLocaleString()} {row.sessions === 1 ? 'session' : 'sessions'}
-                </div>
-            </div>
-            <div className="flex flex-col items-end gap-0.5">
-                <span className="text-sm font-mono tabular-nums font-bold text-amber-200">
-                    {formatHours(row.total_seconds)}
-                </span>
-                <span className="text-xs text-muted-foreground tabular-nums">
-                    {row.last_played ? formatAddedDate(row.last_played) : '—'}
-                </span>
-            </div>
-        </div>
-    ))
+    ) : undefined
 
     return (
         <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col overflow-hidden">
@@ -187,8 +210,19 @@ export function PlaytimeBreakdownCard({ accessToken, userId, onMapSelect, tabsSl
                     columns: responsiveColumns,
                     nameFloorRem: 14,
                     onResolve: handleResolve,
-                    compactContent: compactRows,
                     compactAriaLabel: 'Playtime by map',
+                    cards: {
+                        rows: items,
+                        rowKey: row => row.map,
+                        face: playtimeFace,
+                        onOpen: row => onMapSelect?.(row.map),
+                        placeholder: cardPlaceholder,
+                        sort: {
+                            key: sortField,
+                            direction: sortDir,
+                            onSort: key => handleSort(key as SortField),
+                        },
+                    },
                 }}
             >
                 <DataTableHeaderRow>
@@ -211,35 +245,11 @@ export function PlaytimeBreakdownCard({ accessToken, userId, onMapSelect, tabsSl
                                 className="cursor-pointer"
                                 onClick={() => onMapSelect?.(row.map)}
                             >
-                                {isVisible('map') && (
-                                    <DataTableCell>
-                                        <div className="flex items-center gap-2 min-w-0">
-                                            <MapThumbnail mapName={row.map} className="size-8 shrink-0" />
-                                            <MapNavLink mapName={row.map} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate">{displayMapName(row.map)}</MapNavLink>
-                                        </div>
+                                {COLUMNS.filter(isVisible).map(id => (
+                                    <DataTableCell key={id} align={CELL_ALIGN[id]}>
+                                        {playtimeCell(id, row)}
                                     </DataTableCell>
-                                )}
-                                {isVisible('hours') && (
-                                    <DataTableCell align="right">
-                                        <span className="text-sm font-mono tabular-nums font-bold text-amber-200">
-                                            {formatHours(row.total_seconds)}
-                                        </span>
-                                    </DataTableCell>
-                                )}
-                                {isVisible('sessions') && (
-                                    <DataTableCell align="right">
-                                        <span className="text-xs font-mono tabular-nums text-muted-foreground">
-                                            {(row.sessions ?? 0).toLocaleString()}
-                                        </span>
-                                    </DataTableCell>
-                                )}
-                                {isVisible('last_played') && (
-                                    <DataTableCell align="right">
-                                        <span className="text-xs text-muted-foreground tabular-nums">
-                                            {row.last_played ? formatAddedDate(row.last_played) : '—'}
-                                        </span>
-                                    </DataTableCell>
-                                )}
+                                ))}
                             </DataTableRow>
                         ))
                     )}

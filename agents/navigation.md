@@ -78,7 +78,8 @@ useUnsavedChanges(dirty, 'The tournament format has edits you have not saved yet
 through `registerLeaveGuard` and arms `beforeunload` while `dirty`. The guard covers in-app
 moves and, on web, the browser's own Back/Forward, which arrive as `popstate` and pass the
 same check ([URL sync](#routes-and-url-sync-web-build)); `beforeunload` covers a reload, a
-closed tab and a hard navigation.
+closed tab and a hard navigation. On web, a Back that only closes an open overlay stays on
+the page and asks nothing; the next Back asks ([Overlay history](#overlay-history-web-build)).
 
 When a guard returns a message, `Main` parks the move in `pendingLeave` and shows a
 "Leave without saving?" confirm; confirming calls `commitNavigate` (or the parked
@@ -100,9 +101,11 @@ Forward and a multi-entry jump with and without unsaved work.
 ## renderView: page-views and detail pages
 
 `renderView()` switches on `currentView` and returns exactly one element, inside a
-per-view `ErrorBoundary` (`variant="view"`, keyed on `entry.id`) around `Suspense`. A page
-crash shows an inline error card with the shell intact, and any navigation resets the
-boundary. Unknown views render `Home`.
+per-view `ErrorBoundary` (`variant="view"`, keyed on `entry.id` and the view's re-mount
+count) around `Suspense`. A page crash shows an inline error card with the shell intact, and
+any navigation resets the boundary. The count rises when pull-to-refresh hits a page with no
+refresh handler ([Page refresh registry](#page-refresh-registry-and-freshness)). Unknown views
+render `Home`.
 
 | Kind | Views | Keyed | Why |
 |---|---|---|---|
@@ -120,6 +123,44 @@ live in `<Page>.types.ts`. `pageLoaders.test.ts` enforces both and pins the load
 To make a page-view refetch after a mutation made elsewhere, clear its cache slice before
 navigating to it, as `exitTeamsToGallery` does for `teams`.
 
+## Scroll position and the shell scroller
+
+The main element in `AppLayout` (`main.shell-main`) is the only vertical scroller for page
+content, on both targets. A page never fills the shell's height with a scroller of its own: a
+page root may clip sideways (`overflow-hidden`) and an inner wrapper may scroll sideways
+(`overflow-x-auto`, as a wide table does), but the page grows with its content and `main`
+scrolls it. Anything that follows page scrolling attaches to `main`: the modal scroll lock
+([shared-components.md](shared-components.md#modal)), pull-to-refresh
+([below](#page-refresh-registry-and-freshness)), and the hide-on-scroll bars
+([web-target.md](web-target.md#responsive-layout)).
+Both of those wrappers are still scroll containers, so a
+`sticky` element inside one sticks to it rather than to `main`. Where a page has a sticky
+element below `lg`, its wrappers clip with `max-lg:overflow-x-clip max-lg:overflow-y-visible`
+instead. The event page does this for the bracket's round headings
+([events.md](features/events.md#elimination-stage-on-phones)).
+
+The shell keeps each history entry's scroll position:
+
+- **Saving.** `useShellScroller` (`app/components/navigation/useNavScrollRestore.ts`) listens
+  to `main`'s scroll events, and `ShellScrollRestore` (mounted after the page content inside
+  `main`) reads `main.scrollTop` in `getSnapshotBeforeUpdate` when `entry.id` changes, before
+  React swaps the page. Positions live in a map keyed by entry id, not in the entry's state
+  bag: writing the bag re-renders the app on every scroll. The map lives as long as the
+  in-memory stack.
+- **New navigation** (a fresh entry, a `pushExternal`, a reload) starts at the top.
+- **Back/Forward** to an entry restores its position once the page is ready, and keeps
+  re-applying it as the content grows until it is reached. While it holds a restored position
+  it turns scroll anchoring off on `main`, so content loading in above can't shift it. The
+  restore ends when the user scrolls (wheel, touch, pointer or key on `main`), when a scroll
+  the shell didn't make moves a reached position, or on the next navigation. A page that
+  starts loading again before anyone scrolled gets the restored position back.
+- **Pages say when they are ready.** A page whose first render isn't its final content calls
+  `useNavScrollRestore(ready)`; while `ready` is false it holds the restore (the page stays at
+  the top). Detail pages pass their loading flag (`!loading && !!detail`), list pages
+  `!showSkeleton` or `!loading`, and the pick/ban page `!session.loading`. A page that never
+  turns ready (an error, or a highlight that must not be scrolled away) is never restored. The
+  pure logic is `createScrollRestore` in `scrollRestore.ts`.
+
 ## Routes and URL sync (web build)
 
 `app/components/navigation/routes.ts` maps both ways: `viewToPath(view, params)` and
@@ -129,19 +170,24 @@ segments as a route needs and checks exact segment counts, so
 segments and anything else under `/events/:slug` stays on `event-detail`.
 
 On web (`useUrlSync.ts`; on desktop `useUrlSync` returns `null` and `pushUrlForEntry`
-no-ops) the in-memory stack is master and browser history mirrors it. Each history entry's
+no-ops) the in-memory stack is master and browser history mirrors it. The bookkeeping lives in
+`createHistorySync` (`historySync.ts`), which `useUrlSync` creates once over
+`window.history` and attaches to the stack in `Main`. Each history entry's
 state is `{ navId, position }`: the stack entry's `id` and the entry's place in the tab's
-history, one more than the entry it was pushed from.
+history, one more than the entry it was pushed from. Overlay entries add `overlay`
+([below](#overlay-history-web-build)).
 
-- The boot effect reads `position` from `history.state` (0 when there is none, so a reload
-  keeps it) and `replaceState`s the canonical path of the seeded entry.
+- The first attach reads `position` from `history.state` (0 when there is none, so a reload
+  keeps it) and `replaceState`s the canonical path of the seeded entry. Later attaches (a
+  re-run effect, StrictMode) don't boot again.
 - `commitNavigate` calls `pushUrlForEntry(entry)` (`pushState({ navId, position }, …)` with
   the next position). A push also drops a confirmed position that never got its `popstate`
   (a `go` past either end of history), so it can't wave through a later move.
 - In-app Back/Forward (already past `Main`'s guard check) mark the neighbouring position as
   confirmed and call `history.go(-1)` / `go(1)`.
 - The `popstate` handler ignores a `position` equal to the current one, then runs the
-  [leave guards](#leave-guards) unless the move was confirmed. When a guard blocks, it calls
+  [leave guards](#leave-guards) unless the move was confirmed or lands on the active stack
+  entry (an overlay entry of the page on screen). When a guard blocks, it calls
   `history.go(current - target)`, so the URL returns to the current entry with forward
   history intact and the cursor never moves, and hands the move to `Main` through
   `onBlocked({ message, move })`. `Main` shows the same confirm; Leave runs `move`, which
@@ -176,8 +222,57 @@ fallback, and `routes.contract.test.ts` pins that. Mechanism:
 entry.params)`, which sets `document.title` from `titleForRoute` and the canonical link on
 every navigation. A detail page refines the title with `useDocumentTitle(name)` once its
 data is in; React runs child effects before the parent's, so the generic title lands first
-and the specific one replaces it. Don't move this into `useUrlSync`'s effect: its deps are
-refs and setters, so it doesn't re-run on navigation.
+and the specific one replaces it. Don't move this into `useUrlSync`'s attach effect: its
+deps are refs and setters, so it doesn't re-run on navigation.
+
+## Overlay history (web build)
+
+On web, an open overlay owns a browser history entry, so the system back gesture (the iOS
+edge swipe, Android back) and the browser's Back close the top-most overlay instead of
+leaving the page. Desktop has no URL history: `capabilities.overlayHistory` is off there, no
+entry is written and its nav stack is untouched (`useUrlSync.test.ts`). There is still one
+page-navigation mechanism, the nav stack; overlay entries never move it.
+
+- **Which overlays.** Every shared `Modal` while `isOpen`; overlays on `useModalBehaviour`
+  that take an Escape handler (the sign-out confirm, the tutorial card, a closable
+  `ErrorModal`; the boot connection error has no close and takes no entry); and the drawer
+  while it is open below `lg`. Each calls `useOverlayHistory(open, close)` from
+  `useUrlSync.ts`. The legacy `shared/Modal` (`ConfirmModal`, including the "Leave without
+  saving?" confirm), popovers and card expand panels (inline) take none.
+- **Opening** pushes an entry with the page's URL and state `{ navId, position, overlay }`:
+  the page's `navId`, the next position and `overlay`, the entry's depth above the page
+  entry. It takes a position like any entry, so the leave guards' put-back arithmetic holds.
+  Stacked overlays push one entry each.
+- **Back** onto a lower entry closes every overlay whose entry is above it, top-most first,
+  through the overlay's own close handler. The page and URL stay, and a move that stays on
+  the active stack entry runs no leave guard: a guarded page with an open overlay closes it
+  first and asks on the next Back. An overlay whose close handler refuses (a busy modal)
+  loses its entry anyway, so the next Back leaves the page.
+- **Closing through the overlay's own UI** (close, backdrop, Escape, the drawer swipe) goes
+  back over its entry once the close commits, so the next Back leaves the page and
+  Back/Forward keep no dead step. An overlay that replaces another in the same commit (the
+  Settings loading placeholder and Settings; the drawer and the modal a drawer user-menu
+  item opens, which closes the drawer) takes over its entry.
+- **A page navigation from an open overlay** (a link in a modal, a drawer link) replaces the
+  top overlay entry with the new page instead of pushing, so Back from the new page returns
+  to the page under the overlay. An overlay still open after the navigation (an app-level
+  modal) gets a fresh entry on the new page once it commits: `useUrlSync` settles when the
+  active entry changes. A navigation that arrives while the history is still going back over
+  a closed overlay's entry waits for that move to land, and the landing leaves the new page
+  on screen.
+- **Forward never reopens an overlay.** An overlay entry whose overlay is gone is passed in
+  the direction of travel: Back always passes it; Forward passes it when a page was pushed
+  after it (`through`, set on an overlay entry when anything is pushed from it), and
+  otherwise returns to where it started. Forward after closing a modal therefore does
+  nothing, and nothing reopens.
+- **A reload** drops open overlays, and the entry it reloaded on becomes a page entry, as
+  before. Entries from before a reload carry that document's `navId`s, which the new stack
+  reuses from 0: a known gap of the URL sync, not of overlays.
+- **Tests.** `historySync.test.ts` drives `createHistorySync` against a fake history.
+  `e2e/overlay-history.spec.ts` (desktop and phone projects) covers a modal, stacked modals,
+  a close button then Back and Forward, and a link inside a modal; `history-leave-guards.spec.ts`
+  the guarded page with Settings open; `e2e/mobile/overlay-history.spec.ts` the drawer and a
+  sheet on both engines.
 
 ## Event detail tabs
 
@@ -308,10 +403,11 @@ Title, the collapsed choice) and passes it down:
 
 | Part | Renders |
 |---|---|
-| `SidebarBrand` | logo (with its seasonal-burst click) and, at `lg`+, the collapse toggle in its top-left corner |
+| `SidebarBrand` | logo (with its seasonal-burst click and the diagnostic-overlay long-press, [mobile.md](mobile.md)) and, at `lg`+, the collapse toggle in its top-left corner |
 | `SidebarActions` | Join Server and Launch Game; returns nothing without `capabilities.game` |
 | `SidebarNavItem` | one nav row or rail tile: icon, badge marks, label or caption, Live chip or dot, tooltip |
 | `SidebarCollapseToggle` | the icon-only collapse toggle |
+| `SidebarReloadApp` | the drawer-only "Reload app" button (`location.reload()`); `AppLayout` mounts it only below `lg` |
 | `SidebarUserCard` | the signed-in profile menu, or the Discord login and its error |
 
 `SidebarActions` and `SidebarUserCard` read capabilities through `usePlatform()` themselves
@@ -357,11 +453,42 @@ prevents the default; a held key (`repeat`) toggles once.
   portalled to `document.body` (`role="alert"`, linked by `aria-describedby`) and clears on
   the next login click.
 
-**Mobile drawer.** Below `lg` (`AppLayout` matches `(max-width: 1023px)`, the same boundary
-as the `lg` classes) the same `aside` is an off-canvas drawer behind a top bar. Closed, it
-is `inert`; open, it traps focus, closes on Escape and returns focus to the menu button.
-Keep `inert` and the breakpoint in step when changing the shell
-([web-target.md](web-target.md)).
+**Mobile drawer.** Below `lg` (`AppLayout` reads `belowLg` from the device environment, the
+same boundary as the `lg` classes) the same `aside` is an off-canvas drawer behind a top bar. Closed, it
+is `inert`; open, it traps focus, closes on Escape and returns focus to what opened it (the
+menu button, or the tab bar's Menu tab while it is still on screen). On web, Back closes it
+([Overlay history](#overlay-history-web-build)), and a user-menu item that opens a modal
+(Settings, Change title, Sign out) closes it. It opens only from those
+two controls and closes with a swipe to the left (`useDrawerSwipe`, with the pure thresholds
+in `app/components/layout/drawerSwipe.ts`). Keep `inert` and the breakpoint in step when
+changing the shell ([web-target.md](web-target.md)).
+
+## Bottom tab bar
+
+On touch below `lg` in portrait, `AppLayout` mounts `BottomTabBar`
+(`app/components/layout/BottomTabBar.tsx`) under the content
+([web-target.md](web-target.md)). Its data is the pure module
+`app/components/navigation/bottomTabs.ts`, tested in `bottomTabs.test.ts`:
+
+- `BOTTOM_TABS` is Home, Maps, World Records and Events, taken from the sidebar registry's
+  items, so labels, captions (`navItemCaption`) and icons match the sidebar. Menu is the fifth
+  slot and opens the drawer.
+- `activeBottomTab(view)` picks the highlighted tab:
+
+  | View | Highlights |
+  |---|---|
+  | `home` | Home |
+  | `maps`, `maps-detail` | Maps |
+  | `world-records` | World Records |
+  | `events`, `event-detail`, `match-pickban`, `event-team` | Events |
+  | anything else | none |
+
+  The highlighted tab is a link with `aria-current="page"`. Add a view to this table when it
+  belongs to one of the four sections.
+- `showsBottomTabs(environment)` is the gate: touch, below `lg`, portrait.
+
+Every tab is a `NavLink` that calls `changeView` (close the drawer, then `navigate`), the same
+path as a sidebar item, so leave guards, URL sync and scroll restore behave as they do there.
 
 ## Sidebar badges and the new-item highlight
 
@@ -423,19 +550,31 @@ consumes either, rings the items newer than `since` and scrolls the first into v
 ring drops 7 s after `itemsReady` turns true (Events and News pass it so a slow fetch
 doesn't burn the window on a spinner). `onActivate` makes the new items reachable: Maps
 sorts by `added` desc, World Records switches to records by date desc, News clears its
-category filter and skips scroll restore, Events skips scroll restore (it must not rewrite
-the entry's `scrollTop`, which Back would apply). Compared timestamps: `map.added`,
+category filter and skips scroll restore, Events skips scroll restore (both keep
+[`useNavScrollRestore`](#scroll-position-and-the-shell-scroller) holding, so Back can't pull
+the page away from the highlighted item). Compared timestamps: `map.added`,
 `record.added`, `article.publishedAt`, `event.published_at ?? event.created_at` (Events
 skips `draft` rows, which the count excludes). The hook parses naive
 `YYYY-MM-DD HH:MM:SS` timestamps as UTC; a raw `Date.parse` would read them as local time.
 
 ## Page refresh registry and freshness
 
-`PageRefreshContext` (`app/components/navigation/PageRefreshContext.tsx`) is a registry for
-the one shared Refresh button. A page calls
-`useRegisterPageRefresh({ onRefresh, refreshing, disabled, tooltip })` and
-`NavHistoryBar` renders the button beside Back/Forward. That bar is desktop-only, so on web
-freshness comes from the mount rule below plus the browser's reload.
+`PageRefreshContext` (`app/components/navigation/PageRefreshContext.tsx`) is the registry
+for a page's refresh. A page calls
+`useRegisterPageRefresh({ onRefresh, refreshing, disabled, tooltip })`, and two controls
+call it through the registry's `trigger()`:
+
+- `NavHistoryBar` renders the Refresh button beside Back/Forward, on desktop only.
+- **Pull-to-refresh**, on any touch device: a pull past about 70 px at the top of the shell
+  scroller ([web-target.md](web-target.md), the gesture). Its spinner stays while the page
+  reports `refreshing`, and for at least 600 ms. A page in its `disabled` cooldown spins
+  without being called.
+
+`trigger()` on a page that registered no handler dispatches `REMOUNT_VIEW_EVENT`. `Main`
+counts it into the view's `ErrorBoundary` key, so the current view re-mounts in place and
+fetches again. What survives a re-mount is in
+[state-patterns.md](state-patterns.md#refresh-handlers-and-pull-to-refresh). On web without
+a touch screen, freshness comes from the mount rule below plus the browser's reload.
 
 **Every page-view revalidates on mount**, on both targets. The `caches` singleton is a
 render cache for instant revisits, not an authority: render the cached data, fetch anyway,

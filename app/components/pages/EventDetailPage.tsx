@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { useUnsavedChanges } from '@/app/components/navigation/useUnsavedChanges'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
+import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import { MarkdownBody } from '@/app/components/shared/MarkdownBody'
 import { ErrorBanner } from '@/app/components/pages/teams/teamsShared'
 import { formatSlotTime, useDisplayTimezone } from '@/app/utils/timezone'
@@ -328,6 +329,8 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
         if (locked.length > 0) refreshPredictions()
     }, [lockSignals, refreshPredictions])
 
+    useNavScrollRestore(!loading)
+
     if (loading && !event) {
         return <div className="h-full flex items-center justify-center text-sm text-muted-foreground">Loading event…</div>
     }
@@ -373,7 +376,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
     if (statsTab.isNew && activeTab === 'teams') setStatsSeen(true)
 
     return (
-        <div className="h-full flex flex-col overflow-hidden space-y-4 animate-in fade-in slide-in-from-bottom-0 duration-500">
+        <div className="flex flex-col overflow-hidden max-lg:overflow-x-clip max-lg:overflow-y-visible space-y-4 animate-in fade-in slide-in-from-bottom-0 duration-500">
             <div className="shrink-0 space-y-3">
                 <button
                     onClick={onBack}
@@ -405,7 +408,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                 />
                 {nextMatch && myTeamId && <NextMatchBanner match={nextMatch} myTeamId={myTeamId} now={now} />}
 
-                <div className="flex items-center gap-1 border-b border-white/10 overflow-x-auto">
+                <div className="flex items-center gap-1 border-b border-white/10 overflow-x-auto overflow-y-hidden">
                     {visibleTabs.map(t => {
                         const inviteCount = t.id === 'signup' ? todoCounts.invitations : 0
                         const scheduleCount = t.id === 'schedule' ? scheduleTodo.count : 0
@@ -416,7 +419,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                                 key={t.id}
                                 onClick={() => setTab(t.id)}
                                 className={cn(
-                                    'flex items-center gap-1.5 px-3 py-2 text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors cursor-pointer',
+                                    'flex items-center gap-1.5 px-3 py-2 text-sm font-medium whitespace-nowrap border-b transition-colors cursor-pointer',
                                     activeTab === t.id
                                         ? 'border-accent-400 text-white'
                                         : signupCallout
@@ -451,7 +454,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                 </div>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-auto px-0.5 pb-2">
+            <div className="overflow-x-auto max-lg:overflow-x-clip max-lg:overflow-y-visible px-0.5 pb-2">
                 <EventRosterProvider teams={teams}>
                 <PredictionOddsProvider markets={lockedPredictions?.markets ?? []}>
                 {activeTab === 'info' && (

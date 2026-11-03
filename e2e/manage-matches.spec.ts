@@ -236,6 +236,9 @@ async function openMatches(page: Page) {
     await page.getByRole('button', { name: 'Matches', exact: true }).click()
     const section = page.getByRole('region', { name: 'Matches' })
     await expect(section.getByRole('heading', { name: 'Matches' })).toBeVisible()
+    await expect(section.getByText(/ vs /).first()).toBeVisible()
+    const closed = section.getByRole('button', { name: 'Details', expanded: false })
+    while (await closed.count()) await closed.first().click()
     return section
 }
 

@@ -17,7 +17,6 @@ export interface ServerBrowserState {
     filtersPanelOpen: boolean
     columnVisibility: Record<ServerColumnId, boolean>
     columnOrder: ServerColumnId[]
-    scrollTop: number
 }
 
 export interface ServerBrowserCaches {
@@ -49,7 +48,6 @@ export const DEFAULT_SERVERS_STATE: ServerBrowserState = {
     filtersPanelOpen: false,
     columnVisibility: DEFAULT_COLUMN_VISIBILITY,
     columnOrder: DEFAULT_COLUMN_ORDER,
-    scrollTop: 0,
 }
 
 export const DEFAULT_SERVERS_CACHES: ServerBrowserCaches = {

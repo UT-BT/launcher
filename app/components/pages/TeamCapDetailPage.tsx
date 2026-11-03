@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState, lazy } from 'react'
+import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import {
     ShieldAlert, ShieldCheck, Play, Download, Calendar,
     Users,
@@ -9,8 +10,6 @@ import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRes
 import { useDocumentTitle } from '@/app/components/navigation/useDocumentMeta'
 import { SITE_NAME } from '@/app/components/navigation/titles'
 import { Modal } from '@/app/components/ui/modal'
-import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
-import { DemoDownloadStatusModal } from '@/app/components/shared/DemoDownloadStatusModal'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { TeamHolders } from '@/app/components/shared/TeamHolders'
@@ -38,6 +37,10 @@ import {
     type UserProfile,
 } from '@/app/utils/api'
 import { teamRunStateLabel } from '@/app/utils/teamRunState'
+import { useDeviceEnvironment } from '@/app/device/useDeviceEnvironment'
+
+const ReplayVideoModal = lazy(() => import('@/app/components/shared/ReplayVideoModal').then(m => ({ default: m.ReplayVideoModal })))
+const DemoDownloadStatusModal = lazy(() => import('@/app/components/shared/DemoDownloadStatusModal').then(m => ({ default: m.DemoDownloadStatusModal })))
 
 interface TeamCapDetailPageProps {
     teamCapId: string
@@ -73,6 +76,26 @@ function rosterColumnCount(n: number): number {
     if (n <= 1) return 1
     if (n <= 3) return n
     return Math.ceil(Math.sqrt(n))
+}
+
+const MEMBER_RUN_STATUS = {
+    disallowed: { label: 'Disallowed', tone: 'text-red-300', Icon: ShieldAlert },
+    verified: { label: 'Verified', tone: 'text-emerald-300', Icon: ShieldCheck },
+    pending: { label: 'Pending demo', tone: 'text-amber-300', Icon: ShieldAlert },
+}
+
+function MemberRunStatus({ disallowed, verified }: { disallowed: boolean; verified: boolean }) {
+    const touch = useDeviceEnvironment(env => env.touch)
+    const { label, tone, Icon } = MEMBER_RUN_STATUS[disallowed ? 'disallowed' : verified ? 'verified' : 'pending']
+    const icon = <Icon className={cn('size-3.5 shrink-0', tone)} />
+
+    if (!touch) return <Tooltip content={label} side="top">{icon}</Tooltip>
+    return (
+        <span className={cn('ml-auto inline-flex items-center gap-1 shrink-0 text-[10px] font-semibold uppercase tracking-wider', tone)}>
+            {icon}
+            {label}
+        </span>
+    )
 }
 
 interface TeamRankContextRow {
@@ -279,8 +302,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
         setCompareRuns(null)
     }
 
-    const scrollRef = useRef<HTMLDivElement>(null)
-    const onScroll = useNavScrollRestore(scrollRef, !loading && !!detail)
+    useNavScrollRestore(!loading && !!detail)
 
     const showMedal = detail != null && detail.medal >= 1
     const medalIcon = detail ? medalIconForInt(detail.medal) : null
@@ -299,7 +321,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
     const rosterColsClass = ROSTER_GRID_COLS[rosterColumnCount(members.length)] ?? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'
 
     return (
-        <div className="space-y-4 h-full flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
+        <div className="space-y-4 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
 
             {loading && !detail ? (
                 <div className="bg-card/30 border border-hairline/5 rounded-xl h-56 animate-pulse shrink-0" />
@@ -473,7 +495,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                         </div>
                     )}
 
-                    <div ref={scrollRef} onScroll={onScroll} className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-4">
+                    <div className="overflow-x-auto pr-1 space-y-4">
                         {members.length > 0 && (
                             <div className="bg-card/30 border border-hairline/5 rounded-xl">
                                 <div className="px-4 py-3 border-b border-hairline/5 text-[10px] uppercase tracking-wider text-muted-foreground font-medium text-center">
@@ -511,17 +533,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                                             title={member.active_title}
                                                             size="sm"
                                                         />
-                                                        {member.disallowed ? (
-                                                            <Tooltip content="Disallowed" side="top">
-                                                                <ShieldAlert className="size-3.5 text-red-300 shrink-0" />
-                                                            </Tooltip>
-                                                        ) : (
-                                                            <Tooltip content={member.verified ? 'Verified' : 'Pending demo'} side="top">
-                                                                {member.verified
-                                                                    ? <ShieldCheck className="size-3.5 text-emerald-300 shrink-0" />
-                                                                    : <ShieldAlert className="size-3.5 text-amber-300 shrink-0" />}
-                                                            </Tooltip>
-                                                        )}
+                                                        <MemberRunStatus disallowed={member.disallowed} verified={member.verified} />
                                                     </div>
 
                                                     <div className="flex items-center justify-between gap-2">
@@ -627,7 +639,9 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                 </>
             )}
 
-            <ReplayVideoModal state={replay.video} onClose={replay.clearVideo} />
+            <LazyModalGate open={replay.video !== null}>
+                <ReplayVideoModal state={replay.video} onClose={replay.clearVideo} />
+            </LazyModalGate>
 
             <Modal
                 isOpen={compareState === 'resolving' || compareState === 'insufficient'}
@@ -667,10 +681,12 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                 <p className="text-sm text-muted-foreground">{replay.error}</p>
             </Modal>
 
-            <DemoDownloadStatusModal
-                state={demoDownload.download}
-                onClose={demoDownload.clear}
-            />
+            <LazyModalGate open={demoDownload.download !== null}>
+                <DemoDownloadStatusModal
+                    state={demoDownload.download}
+                    onClose={demoDownload.clear}
+                />
+            </LazyModalGate>
         </div>
     )
 }

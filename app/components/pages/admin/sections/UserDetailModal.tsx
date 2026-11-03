@@ -126,7 +126,7 @@ export function UserDetailModal({ open, onClose, token, userId, actorRole, onCha
 
   return (
     <>
-      <Modal isOpen={open} onClose={onClose} title={detail ? (detail.alias || detail.id) : 'User'} offsetSidebar maxWidth="68rem">
+      <Modal isOpen={open} onClose={onClose} closeOnBackdrop={false} title={detail ? (detail.alias || detail.id) : 'User'} offsetSidebar maxWidth="68rem">
         <div className="space-y-5">
           <Feedback message={error} tone="red" onDismiss={() => setError(null)} />
 

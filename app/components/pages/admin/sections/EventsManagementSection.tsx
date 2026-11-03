@@ -158,6 +158,7 @@ function EventFormModal({ open, onClose, token, editing, onSaved }: {
     <Modal
       isOpen={open}
       onClose={onClose}
+      closeOnBackdrop={false}
       title={editing ? `Edit ${editing.name}` : 'Create event'}
       offsetSidebar
       maxWidth="42rem"

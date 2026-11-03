@@ -56,6 +56,17 @@ async function expectTable(region: Locator, name: string, compact: boolean) {
     await expect(compact ? region.getByRole('list', { name }) : region.getByRole('table')).toBeVisible()
 }
 
+async function expectTouchLayout(region: Locator, name: string, columns: number) {
+    const table = region.getByRole('table')
+    await expect(table.or(region.getByRole('list', { name }))).toBeVisible()
+    if (await table.count()) await expect(table.getByRole('columnheader')).toHaveCount(columns)
+}
+
+async function expectLayout(region: Locator, name: string, options: { compact: boolean; touch: boolean; columns: number }) {
+    if (options.touch && !options.compact) await expectTouchLayout(region, name, options.columns)
+    else await expectTable(region, name, options.compact)
+}
+
 async function mockApi(page: Page, options: { bracketPublished: boolean }) {
     const overview = options.bracketPublished ? publishedOverview : unpublishedOverview
     const roster = publishedOverview.teams.map((entry, index) => rosterTeam(entry.id, entry.name, index))
@@ -93,7 +104,7 @@ for (const viewport of VIEWPORTS) {
     test.describe(`${viewport.name} (${viewport.width}px)`, () => {
         test.use({ viewport: { width: viewport.width, height: viewport.height } })
 
-        test('overview with a published bracket shows the glance strip, team cards and map table', async ({ page }) => {
+        test('overview with a published bracket shows the glance strip, team cards and map table', async ({ page, hasTouch }) => {
             await mockApi(page, { bracketPublished: true })
             await page.goto(`/events/${SLUG}?tab=teams`)
 
@@ -103,12 +114,12 @@ for (const viewport of VIEWPORTS) {
             await expect(cards.filter({ hasText: "Hop n' Twerk" })).toBeVisible()
 
             const maps = page.getByRole('region', { name: 'Maps' })
-            await expectTable(maps, 'Maps', viewport.compact)
+            await expectLayout(maps, 'Maps', { compact: viewport.compact, touch: hasTouch, columns: 7 })
             await expect(maps).toContainText('AztecCE')
             expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1)
         })
 
-        test('team page shows the tiles, timeline, map profile and runs table', async ({ page }) => {
+        test('team page shows the tiles, timeline, map profile and runs table', async ({ page, hasTouch }) => {
             await mockApi(page, { bracketPublished: true })
             await page.goto(TEAM_PATH)
 
@@ -122,9 +133,9 @@ for (const viewport of VIEWPORTS) {
             await expect(expandedMatch.getByRole('list', { name: 'Pick and ban steps' })).toBeVisible()
             await expect(expandedMatch.getByText(/^\d{2}:\d{2}\.\d{3}$/).first()).toBeVisible()
 
-            await expectTable(page.getByRole('region', { name: 'Map profile' }), 'Map profile', viewport.compact)
+            await expectLayout(page.getByRole('region', { name: 'Map profile' }), 'Map profile', { compact: viewport.compact, touch: hasTouch, columns: 9 })
             const runs = page.getByRole('region', { name: 'All runs' })
-            await expectTable(runs, 'All runs', viewport.compact)
+            await expectLayout(runs, 'All runs', { compact: viewport.compact, touch: hasTouch, columns: 7 })
             await expect(runs.getByText(`${teamStats.runs.length} linked runs`)).toBeVisible()
             expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1)
         })

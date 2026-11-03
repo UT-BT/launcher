@@ -1,4 +1,5 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { lazy, useCallback, useEffect, useState } from 'react'
+import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { History, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { fetchUserWorldRecords, fetchWorldRecordProgression, type Record, type WorldRecordProgressionEntry } from '@/app/utils/api'
@@ -13,7 +14,7 @@ import { Tooltip } from '@/app/components/ui/tooltip'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell,
     DataTableRow, DataTableCell, DataTableEmpty, DataTableSkeletonRow,
-    type SortDirection, type ResponsiveColumn,
+    type ColumnTier, type SortDirection, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { PaginationBar } from '@/app/components/ui/pagination'
 
@@ -36,6 +37,10 @@ const COLUMNS: ColumnId[] = ['map', 'time', 'added', 'history']
 const COLUMN_WIDTH: { [k in ColumnId]?: string } = { time: '8rem', added: '8rem', history: '4rem' }
 const COLUMN_PRIORITY: { [k in ColumnId]?: number } = { time: 80, added: 40, history: 20 }
 const REQUIRED_COLUMNS = new Set<ColumnId>(['map', 'time'])
+const COLUMN_TIER: { [k in ColumnId]: ColumnTier } = { map: 'essential', time: 'essential', added: 'essential', history: 'essential' }
+const COLUMN_LABEL: { [k in ColumnId]: string } = { map: 'Map', time: 'Time', added: 'Set', history: 'History' }
+const SORT_KEY: { [k in ColumnId]?: SortField } = { map: 'map', time: 'time', added: 'added' }
+const CELL_ALIGN: { [k in ColumnId]?: 'center' | 'right' } = { time: 'right', added: 'right', history: 'center' }
 
 function recordTeamMembers(r: Record) {
     if (r.members == null || r.members.length === 0) return null
@@ -98,15 +103,6 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
     }
     const dir = (field: SortField): SortDirection => sortField === field ? sortDir : null
 
-    const responsiveColumns = useMemo<ResponsiveColumn[]>(
-        () => COLUMNS.map(id => ({
-            id,
-            width: COLUMN_WIDTH[id],
-            priority: COLUMN_PRIORITY[id],
-            required: REQUIRED_COLUMNS.has(id),
-        })),
-        [],
-    )
     const [resolved, setResolved] = useState<Set<ColumnId> | null>(null)
     const handleResolve = useCallback((ids: Set<string>) => {
         setResolved(ids as Set<ColumnId>)
@@ -141,44 +137,99 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
         </Tooltip>
     )
 
-    const compactRows = loading ? (
-        Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} role="listitem" className="p-3 border-b border-hairline/5 last:border-0 animate-pulse">
-                <div className="h-10 rounded bg-hairline/5" />
-            </div>
-        ))
-    ) : items.length === 0 ? (
-        <div role="listitem" className="px-4 py-12 text-center text-sm text-muted-foreground">
-            {emptyMessage}
-        </div>
-    ) : items.map(r => {
+    const timeLink = (r: Record) => {
         const teamMembers = recordTeamMembers(r)
         return (
-            <div
-                key={`${r.map}-${r.cap_id}`}
-                role="listitem"
-                className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 p-3 border-b border-hairline/5 last:border-0 cursor-pointer"
-                onClick={() => onMapSelect?.(r.map)}
-            >
+            <CapTimeLink
+                capId={teamMembers ? undefined : r.cap_id}
+                teamCapId={teamMembers ? r.cap_id : undefined}
+                seconds={r.cap_time_seconds}
+                className="text-sm font-mono tabular-nums font-bold text-blue-200"
+            />
+        )
+    }
+
+    const setDate = (r: Record) => (
+        <span className="text-xs text-muted-foreground tabular-nums">
+            {r.added ? formatAddedDate(r.added) : '—'}
+        </span>
+    )
+
+    const recordCell = (id: ColumnId, r: Record): React.ReactNode => {
+        switch (id) {
+            case 'map': {
+                const teamMembers = recordTeamMembers(r)
+                return (
+                    <div className="flex items-center gap-2 min-w-0">
+                        <MapThumbnail mapName={r.map} className="size-8 shrink-0" />
+                        <div className="flex flex-col gap-1 min-w-0">
+                            <div className="flex items-center gap-2 min-w-0">
+                                <MapNavLink mapName={r.map} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate">{displayMapName(r.map)}</MapNavLink>
+                                {teamMembers && (
+                                    <TeamRosterBadge members={teamMembers} currentUserId={String(userId)} />
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+            case 'time':
+                return timeLink(r)
+            case 'added': {
+                const exact = r.added ? (() => {
+                    const d = new Date(r.added)
+                    return isNaN(d.getTime()) ? r.added : d.toLocaleString()
+                })() : '—'
+                return (
+                    <Tooltip content={exact} side="top">
+                        {setDate(r)}
+                    </Tooltip>
+                )
+            }
+            case 'history':
+                return historyButton(r.map)
+        }
+    }
+
+    const responsiveColumns: ResponsiveColumn<Record>[] = COLUMNS.map(id => ({
+        id,
+        width: COLUMN_WIDTH[id],
+        priority: COLUMN_PRIORITY[id],
+        required: REQUIRED_COLUMNS.has(id),
+        tier: COLUMN_TIER[id],
+        label: COLUMN_LABEL[id],
+        sortKey: SORT_KEY[id],
+        cell: r => recordCell(id, r),
+    }))
+
+    const recordFace = (r: Record) => {
+        const teamMembers = recordTeamMembers(r)
+        return (
+            <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                     <MapNavLink mapName={r.map} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate min-w-0">{displayMapName(r.map)}</MapNavLink>
                     {teamMembers && <TeamRosterBadge members={teamMembers} currentUserId={String(userId)} />}
                 </div>
                 <div className="flex flex-col items-end gap-0.5">
-                    <CapTimeLink
-                        capId={teamMembers ? undefined : r.cap_id}
-                        teamCapId={teamMembers ? r.cap_id : undefined}
-                        seconds={r.cap_time_seconds}
-                        className="text-sm font-mono tabular-nums font-bold text-blue-200"
-                    />
-                    <span className="text-xs text-muted-foreground tabular-nums">
-                        {r.added ? formatAddedDate(r.added) : '—'}
-                    </span>
+                    {timeLink(r)}
+                    {setDate(r)}
                 </div>
-                {historyButton(r.map, 'inline-flex items-center justify-center size-9 p-0')}
+                {historyButton(r.map, 'inline-flex items-center justify-center size-11 p-0')}
             </div>
         )
-    })
+    }
+
+    const cardPlaceholder = loading ? (
+        Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="p-3 border-b border-hairline/5 last:border-0 animate-pulse">
+                <div className="h-10 rounded bg-hairline/5" />
+            </div>
+        ))
+    ) : items.length === 0 ? (
+        <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+            {emptyMessage}
+        </div>
+    ) : undefined
 
     return (
         <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col overflow-hidden">
@@ -212,8 +263,19 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
                     columns: responsiveColumns,
                     nameFloorRem: 14,
                     onResolve: handleResolve,
-                    compactContent: compactRows,
                     compactAriaLabel: 'World records',
+                    cards: {
+                        rows: items,
+                        rowKey: r => `${r.map}-${r.cap_id}`,
+                        face: recordFace,
+                        onOpen: r => onMapSelect?.(r.map),
+                        placeholder: cardPlaceholder,
+                        sort: {
+                            key: sortField,
+                            direction: sortDir,
+                            onSort: key => handleSort(key as SortField),
+                        },
+                    },
                 }}
             >
                 <DataTableHeaderRow>
@@ -230,60 +292,19 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
                     ) : items.length === 0 ? (
                         <DataTableEmpty colSpan={visibleColumnCount} message={emptyMessage} />
                     ) : (
-                        items.map(r => {
-                            const exact = r.added ? (() => {
-                                const d = new Date(r.added)
-                                return isNaN(d.getTime()) ? r.added : d.toLocaleString()
-                            })() : '—'
-                            const teamMembers = recordTeamMembers(r)
-                            return (
-                                <DataTableRow
-                                    key={`${r.map}-${r.cap_id}`}
-                                    className="cursor-pointer"
-                                    onClick={() => onMapSelect?.(r.map)}
-                                >
-                                    {isVisible('map') && (
-                                        <DataTableCell>
-                                            <div className="flex items-center gap-2 min-w-0">
-                                                <MapThumbnail mapName={r.map} className="size-8 shrink-0" />
-                                                <div className="flex flex-col gap-1 min-w-0">
-                                                    <div className="flex items-center gap-2 min-w-0">
-                                                        <MapNavLink mapName={r.map} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate">{displayMapName(r.map)}</MapNavLink>
-                                                        {teamMembers && (
-                                                            <TeamRosterBadge members={teamMembers} currentUserId={String(userId)} />
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </DataTableCell>
-                                    )}
-                                    {isVisible('time') && (
-                                        <DataTableCell align="right">
-                                            <CapTimeLink
-                                                capId={teamMembers ? undefined : r.cap_id}
-                                                teamCapId={teamMembers ? r.cap_id : undefined}
-                                                seconds={r.cap_time_seconds}
-                                                className="text-sm font-mono tabular-nums font-bold text-blue-200"
-                                            />
-                                        </DataTableCell>
-                                    )}
-                                    {isVisible('added') && (
-                                        <DataTableCell align="right">
-                                            <Tooltip content={exact} side="top">
-                                                <span className="text-xs text-muted-foreground tabular-nums">
-                                                    {r.added ? formatAddedDate(r.added) : '—'}
-                                                </span>
-                                            </Tooltip>
-                                        </DataTableCell>
-                                    )}
-                                    {isVisible('history') && (
-                                        <DataTableCell align="center">
-                                            {historyButton(r.map)}
-                                        </DataTableCell>
-                                    )}
-                                </DataTableRow>
-                            )
-                        })
+                        items.map(r => (
+                            <DataTableRow
+                                key={`${r.map}-${r.cap_id}`}
+                                className="cursor-pointer"
+                                onClick={() => onMapSelect?.(r.map)}
+                            >
+                                {COLUMNS.filter(isVisible).map(id => (
+                                    <DataTableCell key={id} align={CELL_ALIGN[id]}>
+                                        {recordCell(id, r)}
+                                    </DataTableCell>
+                                ))}
+                            </DataTableRow>
+                        ))
                     )}
                 </tbody>
             </DataTableShell>
@@ -303,7 +324,7 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
                 </div>
             )}
 
-            <Suspense fallback={null}>
+            <LazyModalGate open={progressionMap !== null && !progressionLoading}>
                 <WorldRecordProgressionModal
                     isOpen={progressionMap !== null && !progressionLoading}
                     onClose={() => { setProgressionMap(null); setProgressionEntries([]) }}
@@ -311,7 +332,7 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
                     entries={progressionEntries}
                     currentUserId={userId}
                 />
-            </Suspense>
+            </LazyModalGate>
         </div>
     )
 }

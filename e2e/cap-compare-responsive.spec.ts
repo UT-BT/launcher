@@ -12,7 +12,7 @@ import { defaultCompareCandidate } from '../app/components/pages/capDetail/runDe
 import { horizontalOverflow } from './layout'
 
 const VIEWPORTS = [
-    { name: 'phone', width: 390, height: 844, replayColumns: 3, zoneColumns: 3 },
+    { name: 'phone', width: 390, height: 844, replayColumns: 4, zoneColumns: 5 },
     { name: 'desktop', width: 1366, height: 900, replayColumns: 4, zoneColumns: 5 },
 ]
 

@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, lazy } from 'react'
+import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { Check, Clock, Globe, Pencil, Trash2, UserMinus, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
-import { ConfirmModal } from '@/app/components/shared/ConfirmModal'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { AdminSelect } from '@/app/components/pages/admin/components/controls'
 import { ErrorBanner, SectionCard, teamInputClass } from '@/app/components/pages/teams/teamsShared'
@@ -13,6 +13,8 @@ import {
     type EventAuditEntry, type EventDetail, type EventLfpEntry, type EventTeam,
     type EventTeamMember, type EventTeamStatus, type EventVolunteerRow,
 } from '@/app/utils/api'
+
+const ConfirmModal = lazy(() => import('@/app/components/shared/ConfirmModal').then(m => ({ default: m.ConfirmModal })))
 
 const TEAM_STATUS_STYLES: Record<EventTeamStatus, string> = {
     pending: 'bg-amber-500/15 border-amber-500/40 text-amber-300',
@@ -322,50 +324,56 @@ export function SignupsPanel({ accessToken, slug, event, lfp, teams, onReloadTea
             )}
             </div>
 
-            <ConfirmModal
-                isOpen={!!deleteTarget}
-                onClose={() => setDeleteTarget(null)}
-                onConfirm={() => {
-                    if (!deleteTarget) return
-                    const team = deleteTarget
-                    setDeleteTarget(null)
-                    void run(() => deleteEventAdminTeam(accessToken, slug, team.id))
-                }}
-                title="Delete team"
-                message={`Delete "${deleteTarget?.name}" from ${event.name}?`}
-                detail="The team and all its members are removed permanently."
-                confirmText="Delete team"
-                variant="error"
-            />
-            <ConfirmModal
-                isOpen={!!kickTarget}
-                onClose={() => setKickTarget(null)}
-                onConfirm={() => {
-                    if (!kickTarget) return
-                    const { team, member } = kickTarget
-                    setKickTarget(null)
-                    void run(() => kickEventTeamMember(accessToken, slug, team.id, member.user))
-                }}
-                title="Kick member"
-                message={`Kick ${kickTarget?.member.alias ?? kickTarget?.member.user} from "${kickTarget?.team.name}"?`}
-                detail="A registered team dropping below the required size goes back to pending."
-                confirmText="Kick"
-                variant="error"
-            />
-            <ConfirmModal
-                isOpen={!!lfpRemoveTarget}
-                onClose={() => setLfpRemoveTarget(null)}
-                onConfirm={() => {
-                    if (!lfpRemoveTarget) return
-                    const entry = lfpRemoveTarget
-                    setLfpRemoveTarget(null)
-                    void run(() => removeEventLfp(accessToken, slug, entry.user))
-                }}
-                title="Remove from LFP"
-                message={`Remove ${lfpRemoveTarget?.alias ?? lfpRemoveTarget?.user} from the looking-for-partner list?`}
-                confirmText="Remove"
-                variant="error"
-            />
+            <LazyModalGate open={!!deleteTarget}>
+                <ConfirmModal
+                    isOpen={!!deleteTarget}
+                    onClose={() => setDeleteTarget(null)}
+                    onConfirm={() => {
+                        if (!deleteTarget) return
+                        const team = deleteTarget
+                        setDeleteTarget(null)
+                        void run(() => deleteEventAdminTeam(accessToken, slug, team.id))
+                    }}
+                    title="Delete team"
+                    message={`Delete "${deleteTarget?.name}" from ${event.name}?`}
+                    detail="The team and all its members are removed permanently."
+                    confirmText="Delete team"
+                    variant="error"
+                />
+            </LazyModalGate>
+            <LazyModalGate open={!!kickTarget}>
+                <ConfirmModal
+                    isOpen={!!kickTarget}
+                    onClose={() => setKickTarget(null)}
+                    onConfirm={() => {
+                        if (!kickTarget) return
+                        const { team, member } = kickTarget
+                        setKickTarget(null)
+                        void run(() => kickEventTeamMember(accessToken, slug, team.id, member.user))
+                    }}
+                    title="Kick member"
+                    message={`Kick ${kickTarget?.member.alias ?? kickTarget?.member.user} from "${kickTarget?.team.name}"?`}
+                    detail="A registered team dropping below the required size goes back to pending."
+                    confirmText="Kick"
+                    variant="error"
+                />
+            </LazyModalGate>
+            <LazyModalGate open={!!lfpRemoveTarget}>
+                <ConfirmModal
+                    isOpen={!!lfpRemoveTarget}
+                    onClose={() => setLfpRemoveTarget(null)}
+                    onConfirm={() => {
+                        if (!lfpRemoveTarget) return
+                        const entry = lfpRemoveTarget
+                        setLfpRemoveTarget(null)
+                        void run(() => removeEventLfp(accessToken, slug, entry.user))
+                    }}
+                    title="Remove from LFP"
+                    message={`Remove ${lfpRemoveTarget?.alias ?? lfpRemoveTarget?.user} from the looking-for-partner list?`}
+                    confirmText="Remove"
+                    variant="error"
+                />
+            </LazyModalGate>
         </div>
     )
 }

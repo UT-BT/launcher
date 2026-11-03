@@ -1,0 +1,483 @@
+{
+  "set": "cap-it-all",
+  "responses": [
+    {
+      "host": "api",
+      "path": "/v2/leaderboards/cap_it_all",
+      "query": "limit=10&offset=0",
+      "status": 200,
+      "body": {
+        "data": {
+          "items": [
+            {
+              "active_title": {
+                "color": "200,150,248",
+                "color_b": 248,
+                "color_g": 150,
+                "color_r": 200,
+                "id": "1448458783238918144",
+                "name": "Puzzle Master",
+                "rarity": 4
+              },
+              "alias": "Arturek ;)",
+              "certified_caps": 2986,
+              "certified_percentage": 97.14,
+              "non_certified_caps": 2,
+              "non_certified_percentage": 0.07,
+              "rank": 1,
+              "team_caps": 72,
+              "team_percentage": 2.34,
+              "total_caps": 3060,
+              "total_percentage": 99.54,
+              "user_id": "265561225428074496"
+            },
+            {
+              "active_title": {
+                "color": "255,138,108",
+                "color_b": 108,
+                "color_g": 138,
+                "color_r": 255,
+                "id": "1000000000000000118",
+                "name": "Evergreen",
+                "rarity": 5
+              },
+              "alias": "Bun` #OF",
+              "certified_caps": 2965,
+              "certified_percentage": 96.45,
+              "non_certified_caps": 11,
+              "non_certified_percentage": 0.36,
+              "rank": 2,
+              "team_caps": 68,
+              "team_percentage": 2.21,
+              "total_caps": 3044,
+              "total_percentage": 99.02,
+              "user_id": "778035658224697377"
+            },
+            {
+              "active_title": {
+                "color": "255,215,0",
+                "color_b": 0,
+                "color_g": 215,
+                "color_r": 255,
+                "id": "1166428122414063696",
+                "name": "Capped 'em All",
+                "rarity": 5
+              },
+              "alias": "ch3kz",
+              "certified_caps": 2942,
+              "certified_percentage": 95.71,
+              "non_certified_caps": 1,
+              "non_certified_percentage": 0.03,
+              "rank": 3,
+              "team_caps": 1,
+              "team_percentage": 0.03,
+              "total_caps": 2944,
+              "total_percentage": 95.77,
+              "user_id": "223422402950987777"
+            },
+            {
+              "active_title": {
+                "color": "160,153,189",
+                "color_b": 189,
+                "color_g": 153,
+                "color_r": 160,
+                "id": "1508462332689387565",
+                "name": "OnlyCUp! | Cloudwalker",
+                "rarity": 2
+              },
+              "alias": "[AoB] Riddick",
+              "certified_caps": 2868,
+              "certified_percentage": 93.3,
+              "non_certified_caps": 8,
+              "non_certified_percentage": 0.26,
+              "rank": 4,
+              "team_caps": 35,
+              "team_percentage": 1.14,
+              "total_caps": 2911,
+              "total_percentage": 94.7,
+              "user_id": "596462369698349176"
+            },
+            {
+              "active_title": {
+                "color": "235,200,25",
+                "color_b": 25,
+                "color_g": 200,
+                "color_r": 235,
+                "id": "1000000000000000009",
+                "name": "Master Cartographer",
+                "rarity": 4
+              },
+              "alias": "PatriK.pX3",
+              "certified_caps": 2867,
+              "certified_percentage": 93.27,
+              "non_certified_caps": 17,
+              "non_certified_percentage": 0.55,
+              "rank": 5,
+              "team_caps": 44,
+              "team_percentage": 1.43,
+              "total_caps": 2928,
+              "total_percentage": 95.25,
+              "user_id": "668134009682919460"
+            },
+            {
+              "active_title": {
+                "color": "155,89,182",
+                "color_b": 182,
+                "color_g": 89,
+                "color_r": 155,
+                "id": "1000000000000000053",
+                "name": "Can't Stop",
+                "rarity": 3
+              },
+              "alias": "vadim",
+              "certified_caps": 2302,
+              "certified_percentage": 74.89,
+              "non_certified_caps": 11,
+              "non_certified_percentage": 0.36,
+              "rank": 6,
+              "team_caps": 0,
+              "team_percentage": 0,
+              "total_caps": 2313,
+              "total_percentage": 75.24,
+              "user_id": "726127523032989718"
+            },
+            {
+              "active_title": {
+                "color": "255,215,0",
+                "color_b": 0,
+                "color_g": 215,
+                "color_r": 255,
+                "id": "846334094051770378",
+                "name": "2021 World Champion",
+                "rarity": 5
+              },
+              "alias": "Nightwolf`",
+              "certified_caps": 1800,
+              "certified_percentage": 58.56,
+              "non_certified_caps": 14,
+              "non_certified_percentage": 0.46,
+              "rank": 7,
+              "team_caps": 0,
+              "team_percentage": 0,
+              "total_caps": 1814,
+              "total_percentage": 59.01,
+              "user_id": "290456398251425792"
+            },
+            {
+              "active_title": {
+                "color": "200,150,248",
+                "color_b": 248,
+                "color_g": 150,
+                "color_r": 200,
+                "id": "1448458783238918144",
+                "name": "Puzzle Master",
+                "rarity": 4
+              },
+              "alias": "Xclusive",
+              "certified_caps": 1747,
+              "certified_percentage": 56.83,
+              "non_certified_caps": 54,
+              "non_certified_percentage": 1.76,
+              "rank": 8,
+              "team_caps": 39,
+              "team_percentage": 1.27,
+              "total_caps": 1840,
+              "total_percentage": 59.86,
+              "user_id": "260007417478250497"
+            },
+            {
+              "active_title": {
+                "color": "60,170,255",
+                "color_b": 255,
+                "color_g": 170,
+                "color_r": 60,
+                "id": "1000000000000000005",
+                "name": "The Devotee",
+                "rarity": 5
+              },
+              "alias": "NO_Limits",
+              "certified_caps": 1727,
+              "certified_percentage": 56.18,
+              "non_certified_caps": 310,
+              "non_certified_percentage": 10.08,
+              "rank": 9,
+              "team_caps": 4,
+              "team_percentage": 0.13,
+              "total_caps": 2041,
+              "total_percentage": 66.4,
+              "user_id": "310927973714886658"
+            },
+            {
+              "active_title": {
+                "color": "220,235,250",
+                "color_b": 250,
+                "color_g": 235,
+                "color_r": 220,
+                "id": "1000000000000000050",
+                "name": "Made of Smoke",
+                "rarity": 5
+              },
+              "alias": "dEviL^-",
+              "certified_caps": 1727,
+              "certified_percentage": 56.18,
+              "non_certified_caps": 152,
+              "non_certified_percentage": 4.94,
+              "rank": 9,
+              "team_caps": 0,
+              "team_percentage": 0,
+              "total_caps": 1879,
+              "total_percentage": 61.13,
+              "user_id": "185318594270330880"
+            }
+          ],
+          "map_count": 3074,
+          "total": 1879
+        },
+        "success": true
+      }
+    },
+    {
+      "host": "api",
+      "path": "/v2/leaderboards/cap_it_all",
+      "query": "limit=10&offset=10",
+      "status": 200,
+      "body": {
+        "data": {
+          "items": [
+            {
+              "active_title": {
+                "color": "150,235,255",
+                "color_b": 255,
+                "color_g": 235,
+                "color_r": 150,
+                "id": "1000000000000000015",
+                "name": "Faster Than Light",
+                "rarity": 5
+              },
+              "alias": "gxls",
+              "certified_caps": 1719,
+              "certified_percentage": 55.92,
+              "non_certified_caps": 15,
+              "non_certified_percentage": 0.49,
+              "rank": 11,
+              "team_caps": 1,
+              "team_percentage": 0.03,
+              "total_caps": 1735,
+              "total_percentage": 56.44,
+              "user_id": "414164967999406090"
+            },
+            {
+              "active_title": null,
+              "alias": "haunting / christ",
+              "certified_caps": 1660,
+              "certified_percentage": 54,
+              "non_certified_caps": 1075,
+              "non_certified_percentage": 34.97,
+              "rank": 12,
+              "team_caps": 0,
+              "team_percentage": 0,
+              "total_caps": 2735,
+              "total_percentage": 88.97,
+              "user_id": "648880957524541441"
+            },
+            {
+              "active_title": {
+                "color": "180,184,194",
+                "color_b": 194,
+                "color_g": 184,
+                "color_r": 180,
+                "id": "1000000000000000023",
+                "name": "Solid Silver",
+                "rarity": 3
+              },
+              "alias": "Patrick",
+              "certified_caps": 1484,
+              "certified_percentage": 48.28,
+              "non_certified_caps": 4,
+              "non_certified_percentage": 0.13,
+              "rank": 13,
+              "team_caps": 5,
+              "team_percentage": 0.16,
+              "total_caps": 1493,
+              "total_percentage": 48.57,
+              "user_id": "1480215433406714059"
+            },
+            {
+              "active_title": {
+                "color": "230,45,45",
+                "color_b": 45,
+                "color_g": 45,
+                "color_r": 230,
+                "id": "1000000000000000034",
+                "name": "Grand Champion",
+                "rarity": 4
+              },
+              "alias": "fierd_2",
+              "certified_caps": 1379,
+              "certified_percentage": 44.86,
+              "non_certified_caps": 70,
+              "non_certified_percentage": 2.28,
+              "rank": 14,
+              "team_caps": 16,
+              "team_percentage": 0.52,
+              "total_caps": 1465,
+              "total_percentage": 47.66,
+              "user_id": "290449564887023617"
+            },
+            {
+              "active_title": {
+                "color": "205,170,55",
+                "color_b": 55,
+                "color_g": 170,
+                "color_r": 205,
+                "id": "1000000000000000008",
+                "name": "Map Hopper",
+                "rarity": 3
+              },
+              "alias": "Fov",
+              "certified_caps": 1305,
+              "certified_percentage": 42.45,
+              "non_certified_caps": 97,
+              "non_certified_percentage": 3.16,
+              "rank": 15,
+              "team_caps": 0,
+              "team_percentage": 0,
+              "total_caps": 1402,
+              "total_percentage": 45.61,
+              "user_id": "937662251010228245"
+            },
+            {
+              "active_title": {
+                "color": "92,235,158",
+                "color_b": 158,
+                "color_g": 235,
+                "color_r": 92,
+                "id": "1000000000000000096",
+                "name": "World Builder",
+                "rarity": 5
+              },
+              "alias": "GiorgiO.pX5",
+              "certified_caps": 1277,
+              "certified_percentage": 41.54,
+              "non_certified_caps": 72,
+              "non_certified_percentage": 2.34,
+              "rank": 16,
+              "team_caps": 59,
+              "team_percentage": 1.92,
+              "total_caps": 1408,
+              "total_percentage": 45.8,
+              "user_id": "648734832783785995"
+            },
+            {
+              "active_title": {
+                "color": "196,56,56",
+                "color_b": 56,
+                "color_g": 56,
+                "color_r": 196,
+                "id": "1000000000000000033",
+                "name": "Reigning Champion",
+                "rarity": 3
+              },
+              "alias": "ASG.noaction",
+              "certified_caps": 1245,
+              "certified_percentage": 40.5,
+              "non_certified_caps": 0,
+              "non_certified_percentage": 0,
+              "rank": 17,
+              "team_caps": 0,
+              "team_percentage": 0,
+              "total_caps": 1245,
+              "total_percentage": 40.5,
+              "user_id": "149146615020519424"
+            },
+            {
+              "active_title": {
+                "color": "205,170,55",
+                "color_b": 55,
+                "color_g": 170,
+                "color_r": 205,
+                "id": "1000000000000000008",
+                "name": "Map Hopper",
+                "rarity": 3
+              },
+              "alias": "Heartlexx",
+              "certified_caps": 1207,
+              "certified_percentage": 39.26,
+              "non_certified_caps": 1,
+              "non_certified_percentage": 0.03,
+              "rank": 18,
+              "team_caps": 0,
+              "team_percentage": 0,
+              "total_caps": 1208,
+              "total_percentage": 39.3,
+              "user_id": "719182028309921823"
+            },
+            {
+              "active_title": {
+                "color": "150,235,255",
+                "color_b": 255,
+                "color_g": 235,
+                "color_r": 150,
+                "id": "1000000000000000015",
+                "name": "Faster Than Light",
+                "rarity": 5
+              },
+              "alias": "fierd_6",
+              "certified_caps": 1154,
+              "certified_percentage": 37.54,
+              "non_certified_caps": 54,
+              "non_certified_percentage": 1.76,
+              "rank": 19,
+              "team_caps": 0,
+              "team_percentage": 0,
+              "total_caps": 1208,
+              "total_percentage": 39.3,
+              "user_id": "404713576947908618"
+            },
+            {
+              "active_title": null,
+              "alias": "IncredibleBusinessMan",
+              "certified_caps": 1111,
+              "certified_percentage": 36.14,
+              "non_certified_caps": 323,
+              "non_certified_percentage": 10.51,
+              "rank": 20,
+              "team_caps": 0,
+              "team_percentage": 0,
+              "total_caps": 1434,
+              "total_percentage": 46.65,
+              "user_id": "399429269337407488"
+            }
+          ],
+          "map_count": 3074,
+          "total": 1434
+        },
+        "success": true
+      }
+    },
+    {
+      "host": "gateway",
+      "path": "/patreon",
+      "query": "",
+      "status": 200,
+      "body": {
+        "tier1": [
+          "790880165097504768",
+          "414164967999406090",
+          "270897034796466176",
+          "238598150888095744",
+          "290449564887023617"
+        ],
+        "tier2": [
+          "260007417478250497",
+          "242091482541064192",
+          "318842484446724106"
+        ],
+        "tier3": [
+          "185318594270330880",
+          "265561225428074496"
+        ]
+      }
+    }
+  ]
+}

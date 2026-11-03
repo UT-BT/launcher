@@ -9,10 +9,20 @@ import { ReplaySourceCredit } from '@/app/components/shared/ReplayVideoModal'
 import { cn } from '@/lib/utils'
 import type { ActiveTitle, ReplayVideo } from '@/app/utils/api'
 import { formatSignedDelta, deltaClass } from '@/app/components/pages/capDetail/capStats'
+import { useDeviceEnvironment } from '@/app/device/useDeviceEnvironment'
 import { CompareScrubber, type ScrubTick, type ScrubLane } from './CompareScrubber'
 import { CompareDeltaBar } from './CompareDeltaBar'
 import { ReplayDeltaStrip } from './ReplayDeltaStrip'
-import { buildCompareView, paneReadout, type CompareRunTiming, type PaneReadout } from './compareView'
+import {
+    buildCompareView,
+    initialPlayingRuns,
+    paneReadout,
+    sameReadout,
+    swapIntoPlaying,
+    type CompareRunTiming,
+    type PaneReadout,
+} from './compareView'
+import { createCompareClock, useClockValue } from './compareClock'
 import { useRunComparisons } from './useRunComparisons'
 
 export interface CompareRun extends CompareRunTiming {
@@ -34,6 +44,8 @@ const END_EPS = 0.06
 const FALLBACK_FPS = 30
 const SKIP_SECONDS = 5
 const RATES = [0.25, 0.5, 1, 1.5, 2] as const
+const TOUCH_PLAYING_LIMIT = 2
+const READOUT_INTERVAL_MS = 100
 
 interface RunColor {
     tickColor: string
@@ -53,8 +65,23 @@ const RUN_COLORS: RunColor[] = [
     { tickColor: 'bg-lime-400/40', capColor: 'bg-lime-300', textColor: 'text-lime-300/80', dot: 'bg-lime-300' },
 ]
 
+interface PaneMoment {
+    readout: PaneReadout
+    ended: boolean
+}
+
 function isFiniteDuration(d: number | undefined | null): d is number {
     return d != null && Number.isFinite(d) && d > 0
+}
+
+function samePaneMoments(a: PaneMoment[], b: PaneMoment[]): boolean {
+    return a.length === b.length && a.every((p, i) => p.ended === b[i].ended && sameReadout(p.readout, b[i].readout))
+}
+
+function releaseVideo(video: HTMLVideoElement) {
+    video.pause()
+    video.removeAttribute('src')
+    video.load()
 }
 
 function gridColsClass(count: number): string {
@@ -76,11 +103,13 @@ export function VideoCompareModal({ open, onClose, mapName, runs }: VideoCompare
 
     const videoRefs = useRef<(HTMLVideoElement | null)[]>([])
     const nudgeRefs = useRef<number[]>(runs.map(() => 0))
-    const masterRef = useRef(0)
+    const joiningRef = useRef(new Set<number>())
     const rafRef = useRef<number | null>(null)
+    const [clock] = useState(createCompareClock)
+    const touch = useDeviceEnvironment(env => env.touch)
 
     const [playing, setPlaying] = useState(false)
-    const [master, setMasterState] = useState(0)
+    const [touchSlots, setTouchSlots] = useState(() => initialPlayingRuns(runs, TOUCH_PLAYING_LIMIT))
     const [nudges, setNudges] = useState<number[]>(() => runs.map(() => 0))
     const [errors, setErrors] = useState<boolean[]>(() => runs.map(() => false))
     const [bufferings, setBufferings] = useState<boolean[]>(() => runs.map(() => false))
@@ -88,9 +117,9 @@ export function VideoCompareModal({ open, onClose, mapName, runs }: VideoCompare
     const [muteds, setMuteds] = useState<boolean[]>(() => runs.map(() => true))
     const [rate, setRate] = useState(1)
 
-    const setMaster = (t: number) => { masterRef.current = t; setMasterState(t) }
-
+    const slotted = touch ? touchSlots : runs.map((_, i) => i)
     const tMax = durations.reduce<number>((m, d) => Math.max(m, d ?? 0), 0)
+    const canPlay = !slotted.some(i => errors[i]) && slotted.every(i => isFiniteDuration(durations[i]))
     const frameStep = 1 / Math.min(...runs.map(r => r.video.fps ?? FALLBACK_FPS))
 
     const comparisons = useRunComparisons(runs, open)
@@ -117,7 +146,11 @@ export function VideoCompareModal({ open, onClose, mapName, runs }: VideoCompare
             return next
         })
         video.playbackRate = rate
-        if (!playing) seekToMaster(masterRef.current)
+        if (!playing) seekToMaster(clock.now())
+        else if (joiningRef.current.delete(i)) {
+            seekVideo(video, nudgeRefs.current[i] ?? 0, clock.now())
+            video.play().catch(() => {})
+        }
     }
 
     const setBuffering = (i: number, b: boolean) => {
@@ -141,22 +174,24 @@ export function VideoCompareModal({ open, onClose, mapName, runs }: VideoCompare
     const stopPlay = () => {
         if (rafRef.current != null) cancelAnimationFrame(rafRef.current)
         rafRef.current = null
+        joiningRef.current.clear()
         videoRefs.current.forEach(v => v?.pause())
         setPlaying(false)
     }
 
     const startPlay = () => {
+        if (!canPlay) return
         const vids = videoRefs.current
-        if (vids.length === 0 || errors.some(Boolean)) return
-        if (!runs.every((_, i) => isFiniteDuration(vids[i]?.duration))) return
-        seekToMaster(masterRef.current)
+        slotted.filter(i => !isFiniteDuration(vids[i]?.duration)).forEach(i => joiningRef.current.add(i))
+        seekToMaster(clock.now())
         vids.forEach(v => { if (v) v.playbackRate = rate })
         setPlaying(true)
         vids.forEach(v => v?.play().catch(() => {}))
         const loop = () => {
-            const vs = videoRefs.current
+            const vs = runs.map((_, i) => videoRefs.current[i] ?? null)
             const times = vs.map((v, i) => (v ? v.currentTime + (nudgeRefs.current[i] ?? 0) : -Infinity))
-            setMaster(Math.max(0, ...times))
+            const floor = joiningRef.current.size > 0 ? clock.now() : 0
+            clock.set(Math.max(floor, ...times))
             const allEnded = vs.every(v =>
                 !v || v.ended || (isFiniteDuration(v.duration) && v.currentTime >= v.duration - END_EPS),
             )
@@ -167,14 +202,27 @@ export function VideoCompareModal({ open, onClose, mapName, runs }: VideoCompare
     }
 
     const handleScrubStart = () => { if (playing) stopPlay() }
-    const handleScrub = (t: number) => { setMaster(t); seekToMaster(t) }
-    const handleScrubEnd = () => { seekToMaster(masterRef.current) }
+    const handleScrub = (t: number) => { clock.set(t); seekToMaster(t) }
+    const handleScrubEnd = () => { seekToMaster(clock.now()) }
 
     const skip = (sec: number) => {
         if (tMax <= 0) return
-        const next = Math.min(tMax, Math.max(0, masterRef.current + sec))
-        setMaster(next)
+        const next = Math.min(tMax, Math.max(0, clock.now() + sec))
+        clock.set(next)
         seekToMaster(next)
+    }
+
+    const swapIn = (i: number) => {
+        const next = swapIntoPlaying(touchSlots, i, TOUCH_PLAYING_LIMIT)
+        touchSlots.filter(j => !next.includes(j)).forEach(j => {
+            const video = videoRefs.current[j]
+            if (video) releaseVideo(video)
+            videoRefs.current[j] = null
+            joiningRef.current.delete(j)
+            setBuffering(j, false)
+        })
+        if (playing) joiningRef.current.add(i)
+        setTouchSlots(next)
     }
 
     const setNudge = (i: number, v: number) => {
@@ -188,14 +236,16 @@ export function VideoCompareModal({ open, onClose, mapName, runs }: VideoCompare
             next[i] = clamped
             return next
         })
-        if (!playing) seekToMaster(masterRef.current)
+        if (!playing) seekToMaster(clock.now())
     }
     const stepNudge = (i: number, dir: number) => setNudge(i, (nudgeRefs.current[i] ?? 0) + dir * NUDGE_STEP)
 
     useEffect(() => {
         if (!open) return
         setPlaying(false)
-        setMaster(0)
+        clock.set(0)
+        joiningRef.current.clear()
+        setTouchSlots(initialPlayingRuns(runs, TOUCH_PLAYING_LIMIT))
         nudgeRefs.current = runs.map(() => 0)
         setNudges(runs.map(() => 0))
         setErrors(runs.map(() => false))
@@ -229,8 +279,8 @@ export function VideoCompareModal({ open, onClose, mapName, runs }: VideoCompare
                 e.preventDefault()
                 if (rafRef.current != null) stopPlay()
                 const dir = k === 'ArrowRight' ? 1 : -1
-                const next = Math.min(tMax, Math.max(0, masterRef.current + dir * frameStep))
-                setMaster(next)
+                const next = Math.min(tMax, Math.max(0, clock.now() + dir * frameStep))
+                clock.set(next)
                 seekToMaster(next)
             } else if (k === 'j' || k === 'J') {
                 e.preventDefault()
@@ -256,13 +306,14 @@ export function VideoCompareModal({ open, onClose, mapName, runs }: VideoCompare
         [view, nudges],
     )
 
-    const panes = runs.map((r, i) => {
+    const moments = useClockValue(clock, READOUT_INTERVAL_MS, master => runs.map((_, i): PaneMoment => {
         const vt = master - (nudges[i] ?? 0)
         const dur = durations[i] ?? null
-        const ended = dur != null && vt >= dur - END_EPS
-        const track = view.tracks[i]
-        const compared = track.role === 'replay' || track.role === 'zones'
-        return { readout: paneReadout(track, vt), ended, capDelta: compared ? r.capTime - refRun.capTime : null }
+        return { readout: paneReadout(view.tracks[i], vt), ended: dur != null && vt >= dur - END_EPS }
+    }), samePaneMoments)
+    const capDeltas = runs.map((r, i) => {
+        const role = view.tracks[i].role
+        return role === 'replay' || role === 'zones' ? r.capTime - refRun.capTime : null
     })
 
     const lanes = useMemo<ScrubLane[]>(
@@ -286,8 +337,6 @@ export function VideoCompareModal({ open, onClose, mapName, runs }: VideoCompare
         return strip.points.map(p => ({ x: p.t + nudge, delta: p.delta }))
     }, [strip, nudges])
 
-    const durationsReady = runs.every((_, i) => isFiniteDuration(durations[i]))
-    const canPlay = !errors.some(Boolean) && durationsReady
     const maxHeight = paneMaxHeight(n)
 
     return (
@@ -311,9 +360,10 @@ export function VideoCompareModal({ open, onClose, mapName, runs }: VideoCompare
                             key={run.capId}
                             run={run}
                             color={RUN_COLORS[i % RUN_COLORS.length]}
-                            capDelta={panes[i].capDelta}
-                            readout={panes[i].readout}
-                            ended={panes[i].ended}
+                            capDelta={capDeltas[i]}
+                            readout={moments[i].readout}
+                            ended={moments[i].ended}
+                            slotted={slotted.includes(i)}
                             error={errors[i] ?? false}
                             buffering={bufferings[i] ?? false}
                             muted={muteds[i] ?? true}
@@ -323,6 +373,7 @@ export function VideoCompareModal({ open, onClose, mapName, runs }: VideoCompare
                             onDurationKnown={() => onDurationKnown(i)}
                             onBufferingChange={b => setBuffering(i, b)}
                             onError={() => setError(i)}
+                            onWatch={() => swapIn(i)}
                             onToggleMute={() => setMuteds(prev => {
                                 const next = [...prev]
                                 next[i] = !(next[i] ?? true)
@@ -359,7 +410,7 @@ export function VideoCompareModal({ open, onClose, mapName, runs }: VideoCompare
                 </div>
 
                 <CompareScrubber
-                    master={master}
+                    clock={clock}
                     duration={tMax}
                     lanes={lanes}
                     onScrub={handleScrub}
@@ -373,7 +424,7 @@ export function VideoCompareModal({ open, onClose, mapName, runs }: VideoCompare
                         runnerName={lanes[strip.runnerIndex]?.alias ?? 'Run'}
                         runnerOffset={nudges[strip.runnerIndex] ?? 0}
                         duration={tMax}
-                        master={master}
+                        clock={clock}
                         onScrub={handleScrub}
                         onScrubStart={handleScrubStart}
                         onScrubEnd={handleScrubEnd}
@@ -384,7 +435,7 @@ export function VideoCompareModal({ open, onClose, mapName, runs }: VideoCompare
                     <CompareDeltaBar
                         points={checkpointPoints}
                         duration={tMax}
-                        master={master}
+                        clock={clock}
                         onScrub={handleScrub}
                         onScrubStart={handleScrubStart}
                         onScrubEnd={handleScrubEnd}
@@ -401,6 +452,7 @@ interface VideoPaneProps {
     capDelta: number | null
     readout: PaneReadout
     ended: boolean
+    slotted: boolean
     error: boolean
     buffering: boolean
     muted: boolean
@@ -410,6 +462,7 @@ interface VideoPaneProps {
     onDurationKnown: () => void
     onBufferingChange: (b: boolean) => void
     onError: () => void
+    onWatch: () => void
     onToggleMute: () => void
     onStepNudge: (dir: number) => void
     onSetNudge: (v: number) => void
@@ -417,8 +470,8 @@ interface VideoPaneProps {
 }
 
 function VideoPane({
-    run, color, capDelta, readout, ended, error, buffering, muted, nudge, maxHeight,
-    videoRefCb, onDurationKnown, onBufferingChange, onError, onToggleMute, onStepNudge, onSetNudge, onResetNudge,
+    run, color, capDelta, readout, ended, slotted, error, buffering, muted, nudge, maxHeight,
+    videoRefCb, onDurationKnown, onBufferingChange, onError, onWatch, onToggleMute, onStepNudge, onSetNudge, onResetNudge,
 }: VideoPaneProps) {
     return (
         <div className="flex flex-col gap-2 min-w-0">
@@ -442,6 +495,17 @@ function VideoPane({
                     <div className="w-full aspect-video flex items-center justify-center text-center px-4 text-xs text-muted-foreground">
                         Couldn't load this replay. The video may still be processing. Try again later.
                     </div>
+                ) : !slotted ? (
+                    <button
+                        type="button"
+                        onClick={onWatch}
+                        aria-label={`Watch ${run.alias ?? 'this run'}`}
+                        style={{ maxHeight }}
+                        className="w-full aspect-video flex flex-col items-center justify-center gap-1.5 bg-black text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                    >
+                        <Play className="size-6" />
+                        <span className="text-xs">Watch</span>
+                    </button>
                 ) : (
                     <>
                         <video

@@ -82,9 +82,9 @@ const TeamCapDetailPage = lazy(() => import('@/app/components/pages/TeamCapDetai
 const NewsDetailPage = lazy(() => import('@/app/components/pages/NewsDetailPage').then(m => ({ default: m.NewsDetailPage })))
 const AdminPage = lazy(() => import('@/app/components/pages/admin/AdminPage').then(m => ({ default: m.AdminPage })))
 const ConfirmModal = lazy(() => import('@/app/components/shared/ConfirmModal').then(m => ({ default: m.ConfirmModal })))
+const FavoritesSyncModal = lazy(() => import('@/app/components/shared/FavoritesSyncModal').then(m => ({ default: m.FavoritesSyncModal })))
 import { InstallationBanner } from '@/app/components/InstallationBanner'
 import { UpdateBanner } from '@/app/components/updater/UpdateBanner'
-import { FavoritesSyncModal } from '@/app/components/shared/FavoritesSyncModal'
 import { AuthRequiredModal, LOGIN_REQUIRED_EVENT, type LoginRequest } from '@/app/components/shared/AuthRequiredModal'
 import { PatreonModal } from '@/app/components/modals/PatreonModal'
 import { DevImpersonateModal, DevImpersonationBanner } from '@/app/components/modals/DevImpersonateModal'
@@ -104,6 +104,7 @@ import { isStaff } from '@/app/utils/roles'
 import { capabilities, IS_WEB } from '@/app/platform'
 import { pushUrlForEntry, seedEntriesFromUrl, useUrlSync } from '@/app/components/navigation/useUrlSync'
 import { useDocumentMeta } from '@/app/components/navigation/useDocumentMeta'
+import { REMOUNT_VIEW_EVENT } from '@/app/components/navigation/PageRefreshContext'
 import { createPoller } from '@/app/utils/poller'
 
 
@@ -240,6 +241,13 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   const [serverPresets, setServerPresets] = useState<ServerPreset[]>(loadPersistedServerPresets)
   const achievementsInFlightRef = useRef<Promise<void> | null>(null)
   const [loginRequest, setLoginRequest] = useState<LoginRequest | null>(null)
+  const [viewMounts, setViewMounts] = useState(0)
+
+  useEffect(() => {
+    const onRemountView = () => setViewMounts(count => count + 1)
+    window.addEventListener(REMOUNT_VIEW_EVENT, onRemountView)
+    return () => window.removeEventListener(REMOUNT_VIEW_EVENT, onRemountView)
+  }, [])
 
   useEffect(() => {
     const onLoginRequired = (event: Event) => setLoginRequest((event as CustomEvent<LoginRequest>).detail)
@@ -947,7 +955,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
             userProfile={userProfile}
             installationStatus={installationStatus}
           >
-            <ErrorBoundary key={entry.id} variant="view" context={currentView} onNavigateHome={currentView === 'home' ? undefined : () => navigate('home')}>
+            <ErrorBoundary key={`${entry.id}:${viewMounts}`} variant="view" context={currentView} onNavigateHome={currentView === 'home' ? undefined : () => navigate('home')}>
               <Suspense fallback={
                 <div className="space-y-4 pt-2">
                   <div className="h-10 w-64 bg-hairline/5 rounded-lg animate-pulse" />
@@ -960,13 +968,17 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           </AppLayout>
         </NavigationContext.Provider>
       </div>
-      <FavoritesSyncModal
-        open={syncModal.open}
-        dbFavorites={syncModal.db}
-        iniFavorites={syncModal.ini}
-        onResolve={resolveSync}
-        onDismiss={dismissSync}
-      />
+      {capabilities.ini && (
+        <Suspense fallback={null}>
+          <FavoritesSyncModal
+            open={syncModal.open}
+            dbFavorites={syncModal.db}
+            iniFavorites={syncModal.ini}
+            onResolve={resolveSync}
+            onDismiss={dismissSync}
+          />
+        </Suspense>
+      )}
       <PatreonModal />
       <AuthRequiredModal request={loginRequest} onClose={() => setLoginRequest(null)} />
       {import.meta.env.DEV && <DevImpersonateModal />}

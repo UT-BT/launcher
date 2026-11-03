@@ -188,6 +188,7 @@ export function SlotPickerModal({
         <Modal
             isOpen={isOpen}
             onClose={onClose}
+            closeOnBackdrop={false}
             offsetSidebar
             maxWidth="40rem"
             title={title}

@@ -1,8 +1,8 @@
-import { useId, useMemo, useState } from 'react'
+import { useId, useMemo, useState, lazy } from 'react'
+import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { ChevronDown, ChevronUp, Trash2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AdminSelect } from '@/app/components/pages/admin/components/controls'
-import { ConfirmModal } from '@/app/components/shared/ConfirmModal'
 import { MapNavLink } from '@/app/components/shared/MapNavLink'
 import { MapSearchInput } from '@/app/components/shared/MapSearchInput'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
@@ -13,6 +13,8 @@ import {
     addPoolMap, movePoolMap, poolError, poolHasMap, removePoolMap, withPoolTag, withoutPoolTag,
     type PickBanStageDraft,
 } from './pickBanEditor'
+
+const ConfirmModal = lazy(() => import('@/app/components/shared/ConfirmModal').then(m => ({ default: m.ConfirmModal })))
 
 export interface PoolProblem {
     map: string | null
@@ -257,21 +259,23 @@ export function PickBanPoolEditor({
                 {knownTags.map(tag => <option key={tagKey(tag)} value={tag} />)}
             </datalist>
 
-            <ConfirmModal
-                isOpen={!!copySource}
-                onClose={() => setCopySource(null)}
-                onConfirm={() => {
-                    const source = copySource
-                    setCopySource(null)
-                    if (source) void copy(source)
-                }}
-                title="Copy a map pool"
-                message={`Replace the ${stage.name} pool with the ${copySource?.pool.length ?? 0} saved maps and tags of ${copySource?.name ?? 'that stage'}?`}
-                detail={poolDirty
-                    ? 'This saves straight away and replaces the unsaved pool edits on this stage.'
-                    : 'This saves straight away. Unsaved edits on the source stage are not copied.'}
-                confirmText="Copy Pool"
-            />
+            <LazyModalGate open={!!copySource}>
+                <ConfirmModal
+                    isOpen={!!copySource}
+                    onClose={() => setCopySource(null)}
+                    onConfirm={() => {
+                        const source = copySource
+                        setCopySource(null)
+                        if (source) void copy(source)
+                    }}
+                    title="Copy a map pool"
+                    message={`Replace the ${stage.name} pool with the ${copySource?.pool.length ?? 0} saved maps and tags of ${copySource?.name ?? 'that stage'}?`}
+                    detail={poolDirty
+                        ? 'This saves straight away and replaces the unsaved pool edits on this stage.'
+                        : 'This saves straight away. Unsaved edits on the source stage are not copied.'}
+                    confirmText="Copy Pool"
+                />
+            </LazyModalGate>
         </SubCard>
     )
 }

@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, lazy } from 'react'
+import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { ExternalLink, Pencil, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow, DataTableCell,
-    DataTableEmpty, type ResponsiveColumn,
+    DataTableEmpty, type ColumnTier, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { Button } from '@/app/components/ui/button'
 import { NavLink } from '@/app/components/navigation/NavLink'
@@ -20,7 +21,6 @@ import {
 import { Chip, MatchStatusChip } from '../../bracket/bracketShared'
 import { matchAdminName, streamerName } from '../../eventsShared'
 import { streamerListNote } from '../../streamerRoster'
-import { MatchEditorModal } from '../MatchEditorModal'
 import { StaffPicker } from '../StaffPicker'
 import { CapsNeedLinking } from './CapsNeedLinking'
 import {
@@ -28,16 +28,20 @@ import {
     type MatchRow, type MatchStaffFilter, type MatchStatusFilter, type MatchesFilter,
 } from './matchesTable'
 
+const MatchEditorModal = lazy(() => import('../MatchEditorModal').then(m => ({ default: m.MatchEditorModal })))
+
 type StaffKind = 'streamer' | 'match_admin'
 
-const COLUMNS: ResponsiveColumn[] = [
-    { id: 'match', width: '14rem', priority: 70, required: true },
-    { id: 'stage', width: '10rem', priority: 40 },
-    { id: 'scheduled', width: '9rem', priority: 50 },
-    { id: 'status', width: '7rem', priority: 65, required: true },
-    { id: 'admin', width: '11rem', priority: 60 },
-    { id: 'streamer', width: '11rem', priority: 55 },
-    { id: 'actions', width: '12rem', priority: 62, required: true },
+type MatchColumnId = 'match' | 'stage' | 'scheduled' | 'status' | 'admin' | 'streamer' | 'actions'
+
+const COLUMNS: (ResponsiveColumn & { id: MatchColumnId; tier: ColumnTier; label: string })[] = [
+    { id: 'match', width: '14rem', priority: 70, required: true, tier: 'essential', label: 'Match' },
+    { id: 'stage', width: '10rem', priority: 40, tier: 'detail', label: 'Stage / Round' },
+    { id: 'scheduled', width: '9rem', priority: 50, tier: 'detail', label: 'Scheduled' },
+    { id: 'status', width: '7rem', priority: 65, required: true, tier: 'essential', label: 'Status' },
+    { id: 'admin', width: '11rem', priority: 60, tier: 'detail', label: 'Match Admin' },
+    { id: 'streamer', width: '11rem', priority: 55, tier: 'detail', label: 'Streamer' },
+    { id: 'actions', width: '12rem', priority: 62, required: true, tier: 'essential', label: 'Actions' },
 ]
 
 const STATUS_OPTIONS: SelectOption[] = [
@@ -181,6 +185,8 @@ export function MatchesPanel({ accessToken, slug, bracket, onBracketChange }: Ma
 
     const scheduledLabel = (row: MatchRow) => (row.match.scheduled_at ? formatSlotTime(row.match.scheduled_at, timezone) : 'Unscheduled')
 
+    const openMatchPage = (row: MatchRow) => navigate('match-pickban', { eventSlug: slug, matchId: row.match.id })
+
     const actions = (row: MatchRow) => (
         <div className="flex flex-wrap items-center justify-end gap-1.5">
             <Button size="sm" variant="outline" onClick={() => setEditing(row)}>
@@ -190,7 +196,7 @@ export function MatchesPanel({ accessToken, slug, bracket, onBracketChange }: Ma
                 <NavLink
                     view="match-pickban"
                     params={{ eventSlug: slug, matchId: row.match.id }}
-                    onActivate={() => navigate('match-pickban', { eventSlug: slug, matchId: row.match.id })}
+                    onActivate={() => openMatchPage(row)}
                 >
                     <ExternalLink /> Picks & Bans
                 </NavLink>
@@ -200,24 +206,48 @@ export function MatchesPanel({ accessToken, slug, bracket, onBracketChange }: Ma
 
     const emptyMessage = allRows.length === 0 ? 'No matches drawn yet. Draw a stage on the Bracket tab.' : 'No matches fit these filters.'
 
-    const compactRows = rows.length === 0 ? (
-        <div role="listitem" className="px-4 py-12 text-center text-sm text-muted-foreground">{emptyMessage}</div>
-    ) : rows.map(row => (
-        <div key={row.match.id} role="listitem" className="p-3 border-b border-hairline/5 last:border-0 flex flex-col gap-2">
+    const matchCell = (id: MatchColumnId, row: MatchRow): React.ReactNode => {
+        switch (id) {
+            case 'match':
+                return <MatchTitle row={row} />
+            case 'stage':
+                return (
+                    <>
+                        <span className="text-foreground truncate block">{row.stageName}</span>
+                        <span className="text-xs text-muted-foreground truncate block">{row.roundLabel}</span>
+                    </>
+                )
+            case 'scheduled':
+                return <span className="text-xs text-muted-foreground">{scheduledLabel(row)}</span>
+            case 'status':
+                return <MatchStatusChip match={row.match} />
+            case 'admin':
+                return adminPicker(row)
+            case 'streamer':
+                return streamerPicker(row)
+            case 'actions':
+                return actions(row)
+        }
+    }
+
+    const columns: ResponsiveColumn<MatchRow>[] = COLUMNS.map(column => ({
+        ...column,
+        cell: row => <div className="min-w-0 flex-1">{matchCell(column.id, row)}</div>,
+    }))
+
+    const matchFace = (row: MatchRow) => (
+        <div className="flex flex-col gap-2">
             <div className="flex items-start justify-between gap-2">
-                <MatchTitle row={row} />
-                <MatchStatusChip match={row.match} />
+                {matchCell('match', row)}
+                {matchCell('status', row)}
             </div>
-            <div className="text-xs text-muted-foreground">{row.stageName} · {row.roundLabel} · {scheduledLabel(row)}</div>
-            <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-1.5 text-xs text-muted-foreground">
-                <span>Match admin</span>
-                <span className="min-w-0">{adminPicker(row)}</span>
-                <span>Streamer</span>
-                <span className="min-w-0">{streamerPicker(row)}</span>
-            </div>
-            {actions(row)}
+            {matchCell('actions', row)}
         </div>
-    ))
+    )
+
+    const cardPlaceholder = rows.length === 0
+        ? <div className="px-4 py-12 text-center text-sm text-muted-foreground">{emptyMessage}</div>
+        : undefined
 
     const editingStage = editing ? bracket?.stages.find(stage => stage.key === editing.stageKey) : undefined
 
@@ -266,10 +296,16 @@ export function MatchesPanel({ accessToken, slug, bracket, onBracketChange }: Ma
             <DataTableShell
                 className="!flex-none"
                 responsive={{
-                    columns: COLUMNS,
+                    columns,
                     onResolve: handleResolve,
-                    compactContent: compactRows,
                     compactAriaLabel: 'Matches',
+                    cards: {
+                        rows,
+                        rowKey: row => row.match.id,
+                        face: matchFace,
+                        onOpen: openMatchPage,
+                        placeholder: cardPlaceholder,
+                    },
                 }}
             >
                 <DataTableHeaderRow>
@@ -286,35 +322,26 @@ export function MatchesPanel({ accessToken, slug, bracket, onBracketChange }: Ma
                         <DataTableEmpty colSpan={visibleCount} message={emptyMessage} />
                     ) : rows.map(row => (
                         <DataTableRow key={row.match.id}>
-                            <DataTableCell><MatchTitle row={row} /></DataTableCell>
-                            {isVisible('stage') && (
-                                <DataTableCell>
-                                    <span className="text-foreground truncate block">{row.stageName}</span>
-                                    <span className="text-xs text-muted-foreground truncate block">{row.roundLabel}</span>
-                                </DataTableCell>
-                            )}
-                            {isVisible('scheduled') && (
-                                <DataTableCell><span className="text-xs text-muted-foreground">{scheduledLabel(row)}</span></DataTableCell>
-                            )}
-                            <DataTableCell><MatchStatusChip match={row.match} /></DataTableCell>
-                            {isVisible('admin') && <DataTableCell>{adminPicker(row)}</DataTableCell>}
-                            {isVisible('streamer') && <DataTableCell>{streamerPicker(row)}</DataTableCell>}
-                            <DataTableCell align="right">{actions(row)}</DataTableCell>
+                            {COLUMNS.filter(column => isVisible(column.id)).map(column => (
+                                <DataTableCell key={column.id} align={column.id === 'actions' ? 'right' : undefined}>{matchCell(column.id, row)}</DataTableCell>
+                            ))}
                         </DataTableRow>
                     ))}
                 </tbody>
             </DataTableShell>
 
             {editing && (
-                <MatchEditorModal
-                    accessToken={accessToken}
-                    slug={slug}
-                    match={editing.match}
-                    entrants={editingStage?.entrants ?? editing.entrants}
-                    drawsAllowed={editing.drawsAllowed}
-                    onClose={() => setEditing(null)}
-                    onSaved={() => void refresh()}
-                />
+                <LazyModalGate open>
+                    <MatchEditorModal
+                        accessToken={accessToken}
+                        slug={slug}
+                        match={editing.match}
+                        entrants={editingStage?.entrants ?? editing.entrants}
+                        drawsAllowed={editing.drawsAllowed}
+                        onClose={() => setEditing(null)}
+                        onSaved={() => void refresh()}
+                    />
+                </LazyModalGate>
             )}
         </section>
     )

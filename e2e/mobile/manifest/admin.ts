@@ -1,0 +1,110 @@
+import type { Page } from '@playwright/test'
+import { signedInStorage } from '../fixtures/synthetic/session'
+import { fakeHwid, person, syntheticMap } from '../fixtures/synthetic/people'
+import { heading, modalHeading, opens, shows, steps, tap } from './steps'
+import { MODAL_ROOT, type MobileModal, type MobileRouteEntry, type MobileSubView, type PageStep } from './types'
+
+function shown(text: string | RegExp): PageStep {
+    return async page => {
+        await page.getByText(text).filter({ visible: true }).first().waitFor()
+    }
+}
+
+function picksSection(id: string, label: string): PageStep {
+    return async (page: Page) => {
+        const picker = page.locator(`select:has(option[value="${id}"])`)
+        if (await picker.isVisible()) await picker.selectOption(id)
+        else await page.getByRole('button', { name: label, exact: true }).click()
+    }
+}
+
+function section(id: string, label: string, title: string, data: string | RegExp): MobileSubView {
+    return { id, label, open: picksSection(id, label), ready: steps(heading(title), shown(data)) }
+}
+
+function antiCheatTab(id: string, label: string, data: string | RegExp): MobileSubView {
+    return {
+        id: `anti-cheat-${id}`,
+        label: `Anti-Cheat › ${label}`,
+        open: steps(picksSection('anti-cheat', 'Anti-Cheat'), heading('Anti-Cheat'), tap(page => page.getByRole('button', { name: new RegExp(`^${label}`) }))),
+        ready: steps(heading('Anti-Cheat'), shown(data)),
+    }
+}
+
+function inModal(text: string): PageStep {
+    return shows(page => page.locator(MODAL_ROOT).getByText(text, { exact: true }).first())
+}
+
+const MAPS_MANAGEMENT_MODALS: MobileModal[] = [
+    {
+        id: 'difficulty-sync',
+        label: 'Difficulty Sync',
+        open: steps(opens(page => page.getByRole('button', { name: 'Sync Difficulties' }), 'Sync map difficulties'), inModal(syntheticMap(0))),
+    },
+    {
+        id: 'map-authors',
+        label: 'Map authors',
+        open: steps(opens(page => page.getByRole('button', { name: 'Authors', exact: true }), 'Map authors'), inModal('Test Mapper 1')),
+    },
+    {
+        id: 'map-authors-linked',
+        label: 'Map authors › Linked players',
+        open: steps(
+            opens(page => page.getByRole('button', { name: 'Authors', exact: true }), 'Map authors'),
+            tap(page => page.locator(MODAL_ROOT).getByRole('button', { name: 'Linked players' })),
+            inModal(person(70).alias),
+        ),
+    },
+]
+
+const ANTI_CHEAT_MODALS: MobileModal[] = [
+    {
+        id: 'shared-detail',
+        label: 'Shared identifier detail',
+        open: steps(
+            tap(page => page.getByRole('main').getByText(fakeHwid(0), { exact: true }).first()),
+            async page => { await modalHeading(page, 'HWID detail').waitFor() },
+            inModal(person(0).alias),
+        ),
+    },
+]
+
+function mapUploadsTab(id: string, label: string, data: string | RegExp): MobileSubView {
+    return {
+        id: `map-uploads-${id}`,
+        label: `Map Uploads › ${label}`,
+        open: steps(picksSection('map-uploads', 'Map Uploads'), heading('Map Uploads'), tap(page => page.getByRole('button', { name: label, exact: true }))),
+        ready: steps(heading('Map Uploads'), shown(data)),
+    }
+}
+
+export const admin: MobileRouteEntry = {
+    view: 'admin',
+    tier: 'role-gated',
+    path: '/admin',
+    fixtures: 'admin',
+    decorative: [],
+    storage: signedInStorage(),
+    ready: steps(heading('Overview'), shown('Active bans')),
+    subViews: [
+        section('usage-health', 'Usage & Health', 'Usage & Health', 'Signed-in users'),
+        section('user-management', 'User Management', 'User Management', person(1).alias),
+        section('title-management', 'Title Management', 'Title Management', 'Test Title 2'),
+        section('news-management', 'News', 'News', /^Test announcement 1:/),
+        section('events-management', 'Events', 'Events', /^Test Cup 2026 Autumn Edition$/),
+        section('formats-management', 'Tournament Formats', 'Templates', 'Groups then double elimination'),
+        section('streamers', 'Streamers', 'Streamers', person(40).alias),
+        section('caps-management', 'Caps Management', 'Caps Management', person(1).alias),
+        { ...section('maps-management', 'Maps Management', 'Maps Management', syntheticMap(1).replace(/^CTF-BT-/, '')), modals: MAPS_MANAGEMENT_MODALS },
+        section('map-uploads', 'Map Uploads', 'Map Uploads', /Baz/),
+        mapUploadsTab('publishing', 'Publishing / Recent', 'CTF-BT-Foo'),
+        mapUploadsTab('drift', 'Drift', 'FooTex.utx'),
+        section('patches-management', 'Patch Releases', 'Patch Releases', 'v4.8.0'),
+        { ...section('anti-cheat', 'Anti-Cheat', 'Anti-Cheat', fakeHwid(0)), modals: ANTI_CHEAT_MODALS },
+        antiCheatTab('cap-delta', 'High Cap Delta', person(6).alias),
+        antiCheatTab('low-fps', 'Low FPS WRs', person(10).alias),
+        section('audit-logs', 'Audit Logs', 'Audit Logs', person(12).alias),
+        section('role-management', 'Staff Roles', 'Staff Roles', person(31).alias),
+        section('hosts-management', 'Game Hosts', 'Game Hosts', 'test-host-eu'),
+    ],
+}

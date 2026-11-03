@@ -155,6 +155,7 @@ export function BetModal({ slug, accessToken, market, config, wallet, onClose, o
         <Modal
             isOpen
             onClose={onClose}
+            closeOnBackdrop={false}
             offsetSidebar
             maxWidth="30rem"
             title={`${teamA} vs ${teamB}`}

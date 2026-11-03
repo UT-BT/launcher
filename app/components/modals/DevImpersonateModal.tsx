@@ -31,6 +31,7 @@ export function DevImpersonateModal() {
         <Modal
             isOpen={isOpen}
             onClose={() => setIsOpen(false)}
+            closeOnBackdrop={false}
             title="Impersonate user (dev only)"
             maxWidth="28rem"
             footer={

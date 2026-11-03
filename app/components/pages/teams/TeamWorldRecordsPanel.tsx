@@ -5,7 +5,7 @@ import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { CapTimeLink, openCap } from '@/app/components/shared/CapTimeLink'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow, DataTableCell,
-    DataTableEmpty, DataTableSkeletonRow, type ResponsiveColumn, type SortDirection,
+    DataTableEmpty, DataTableSkeletonRow, type ColumnTier, type ResponsiveColumn, type SortDirection,
 } from '@/app/components/shared/DataTable'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { cn } from '@/lib/utils'
@@ -18,13 +18,15 @@ const PAGE_SIZE = 8
 
 type WrSortField = 'holder' | 'map' | 'difficulty' | 'time' | 'date'
 
-const COLUMNS: ResponsiveColumn[] = [
-    { id: 'holder', width: '15rem', priority: 55, required: true },
-    { id: 'map', width: '10rem', priority: 60, required: true },
-    { id: 'difficulty', width: '5rem', priority: 40 },
-    { id: 'time', width: '6rem', priority: 70 },
-    { id: 'date', width: '6.5rem', priority: 30 },
+const COLUMNS: (ResponsiveColumn & { id: WrSortField; tier: ColumnTier; label: string })[] = [
+    { id: 'holder', width: '15rem', priority: 55, required: true, tier: 'essential', label: 'Holder' },
+    { id: 'map', width: '10rem', priority: 60, required: true, tier: 'essential', label: 'Map' },
+    { id: 'difficulty', width: '5rem', priority: 40, tier: 'detail', label: 'Difficulty' },
+    { id: 'time', width: '6rem', priority: 70, tier: 'essential', label: 'Time' },
+    { id: 'date', width: '6.5rem', priority: 30, tier: 'detail', label: 'Date' },
 ]
+
+const CELL_ALIGN: Partial<Record<WrSortField, 'center' | 'right'>> = { difficulty: 'center', time: 'right', date: 'right' }
 
 const DEFAULT_DIR: Record<WrSortField, 'asc' | 'desc'> = { holder: 'asc', map: 'asc', difficulty: 'desc', time: 'asc', date: 'desc' }
 
@@ -80,35 +82,54 @@ export function TeamWorldRecordsPanel({ accessToken, teamId, memberIds, selfUser
     const dirFor = (field: WrSortField): SortDirection => (sort.by === field ? sort.dir : null)
 
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
-    const compactRows = loading ? (
-        Array.from({ length: PAGE_SIZE }).map((_, i) => (
-            <div key={i} role="listitem" className="p-3 border-b border-hairline/5 last:border-0 animate-pulse">
-                <div className="h-10 rounded bg-hairline/5" />
+    const isOwnRecord = (r: WorldRecordRow) => selfUserId != null && String(r.user_id) === String(selfUserId)
+
+    const recordCell = (id: WrSortField, r: WorldRecordRow): React.ReactNode => {
+        switch (id) {
+            case 'holder': {
+                const isOwn = isOwnRecord(r)
+                return <PlayerInfo userId={r.user_id} alias={r.alias} title={r.active_title} size="sm" highlight={isOwn} showYouBadge={isOwn} />
+            }
+            case 'map':
+                return <span className="text-foreground truncate block">{displayMapName(r.map)}</span>
+            case 'difficulty':
+                return r.difficulty != null ? (
+                    <span className={cn('font-mono tabular-nums text-sm font-bold', difficultyTextColor(r.difficulty))}>{r.difficulty}</span>
+                ) : (
+                    <span className="text-muted-foreground/50">—</span>
+                )
+            case 'time':
+                return <CapTimeLink capId={r.cap_id} seconds={r.cap_time_seconds} className="font-mono tabular-nums font-bold text-blue-300" />
+            case 'date':
+                return <span className="text-xs text-muted-foreground tabular-nums">{r.added ? formatAddedDate(r.added) : '—'}</span>
+        }
+    }
+
+    const columns: ResponsiveColumn<WorldRecordRow>[] = COLUMNS.map(column => ({
+        ...column,
+        sortKey: column.id,
+        cell: r => recordCell(column.id, r),
+    }))
+
+    const recordFace = (r: WorldRecordRow) => (
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3">
+            <div className="min-w-0 space-y-1.5">
+                {recordCell('holder', r)}
+                <span className="text-sm text-foreground truncate block">{displayMapName(r.map)}</span>
             </div>
+            <div className="flex items-center">{recordCell('time', r)}</div>
+        </div>
+    )
+
+    const cardPlaceholder = loading ? (
+        Array.from({ length: PAGE_SIZE }).map((_, i) => (
+            <div key={i} className="h-14 mx-3 my-2 rounded-lg bg-hairline/5 animate-pulse" />
         ))
     ) : records.length === 0 ? (
-        <div role="listitem" className="px-4 py-12 text-center text-sm text-muted-foreground">
+        <div className="px-4 py-12 text-center text-sm text-muted-foreground">
             This team holds no world records yet.
         </div>
-    ) : records.map(r => {
-        const isOwn = selfUserId != null && String(r.user_id) === String(selfUserId)
-        return (
-            <div
-                key={r.cap_id}
-                role="listitem"
-                className={cn('grid grid-cols-[minmax(0,1fr)_auto] gap-3 p-3 border-b border-hairline/5 last:border-0', isOwn && 'bg-emerald-500/[0.05]')}
-            >
-                <div className="min-w-0 space-y-1.5">
-                    <PlayerInfo userId={r.user_id} alias={r.alias} title={r.active_title} size="sm" highlight={isOwn} showYouBadge={isOwn} />
-                    <span className="text-sm text-foreground truncate block">{displayMapName(r.map)}</span>
-                </div>
-                <div className="flex flex-col items-end justify-between gap-1.5">
-                    <CapTimeLink capId={r.cap_id} seconds={r.cap_time_seconds} className="font-mono tabular-nums font-bold text-blue-300" />
-                    <span className="text-xs text-muted-foreground tabular-nums">{r.added ? formatAddedDate(r.added) : '—'}</span>
-                </div>
-            </div>
-        )
-    })
+    ) : undefined
 
     return (
         <section>
@@ -123,10 +144,18 @@ export function TeamWorldRecordsPanel({ accessToken, teamId, memberIds, selfUser
             <DataTableShell
                 className="!flex-none"
                 responsive={{
-                    columns: COLUMNS,
+                    columns,
                     onResolve: handleResolve,
-                    compactContent: compactRows,
                     compactAriaLabel: 'Team world records',
+                    cards: {
+                        rows: records,
+                        rowKey: r => String(r.cap_id),
+                        face: recordFace,
+                        onOpen: r => openCap(r.cap_id),
+                        rowClassName: r => (isOwnRecord(r) ? 'bg-emerald-500/[0.05]' : undefined),
+                        placeholder: cardPlaceholder,
+                        sort: { key: sort.by, direction: sort.dir, onSort: key => handleSort(key as WrSortField) },
+                    },
                 }}
             >
                 <DataTableHeaderRow>
@@ -142,38 +171,13 @@ export function TeamWorldRecordsPanel({ accessToken, teamId, memberIds, selfUser
                     ) : records.length === 0 ? (
                         <DataTableEmpty colSpan={visibleCount} message="This team holds no world records yet." />
                     ) : (
-                        records.map(r => {
-                            const isOwn = selfUserId != null && String(r.user_id) === String(selfUserId)
-                            return (
-                                <DataTableRow key={r.cap_id} className={cn('cursor-pointer', isOwn && 'bg-emerald-500/[0.05]')} onClick={() => openCap(r.cap_id)}>
-                                    <DataTableCell>
-                                        <PlayerInfo userId={r.user_id} alias={r.alias} title={r.active_title} size="sm" highlight={isOwn} showYouBadge={isOwn} />
-                                    </DataTableCell>
-                                    <DataTableCell>
-                                        <span className="text-foreground truncate block">{displayMapName(r.map)}</span>
-                                    </DataTableCell>
-                                    {isVisible('difficulty') && (
-                                        <DataTableCell align="center">
-                                            {r.difficulty != null ? (
-                                                <span className={cn('font-mono tabular-nums text-sm font-bold', difficultyTextColor(r.difficulty))}>{r.difficulty}</span>
-                                            ) : (
-                                                <span className="text-muted-foreground/50">—</span>
-                                            )}
-                                        </DataTableCell>
-                                    )}
-                                    {isVisible('time') && (
-                                        <DataTableCell align="right">
-                                            <CapTimeLink capId={r.cap_id} seconds={r.cap_time_seconds} className="font-mono tabular-nums font-bold text-blue-300" />
-                                        </DataTableCell>
-                                    )}
-                                    {isVisible('date') && (
-                                        <DataTableCell align="right">
-                                            <span className="text-xs text-muted-foreground tabular-nums">{r.added ? formatAddedDate(r.added) : '—'}</span>
-                                        </DataTableCell>
-                                    )}
-                                </DataTableRow>
-                            )
-                        })
+                        records.map(r => (
+                            <DataTableRow key={r.cap_id} className={cn('cursor-pointer', isOwnRecord(r) && 'bg-emerald-500/[0.05]')} onClick={() => openCap(r.cap_id)}>
+                                {COLUMNS.filter(column => isVisible(column.id)).map(column => (
+                                    <DataTableCell key={column.id} align={CELL_ALIGN[column.id]}>{recordCell(column.id, r)}</DataTableCell>
+                                ))}
+                            </DataTableRow>
+                        ))
                     )}
                 </tbody>
             </DataTableShell>

@@ -4,11 +4,12 @@ import { cn } from '@/lib/utils'
 import { useAutoPageSize } from '@/app/hooks/useAutoPageSize'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
+import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import {
-    UserProfile, CapItAllLeaderboardPage,
+    UserProfile, CapItAllLeaderboardPage, CapItAllRow,
     fetchCapItAllLeaderboard,
 } from '@/app/utils/api'
-import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { PlayerInfo, openPlayer } from '@/app/components/shared/PlayerInfo'
 import { PaginationBar } from '@/app/components/ui/pagination'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow,
@@ -23,13 +24,13 @@ const COLUMN_LABELS: Record<CapItAllColumnId, string> = {
     noncertified: 'Non-certified', teammaps: 'Team Maps', total: 'Total',
 }
 
-const CAP_IT_ALL_COLUMNS: ResponsiveColumn[] = [
-    { id: 'rank', width: '72px', priority: 30, required: true },
-    { id: 'player', required: true },
-    { id: 'certified', width: '10rem', priority: 60 },
-    { id: 'noncertified', width: '10rem', priority: 50 },
-    { id: 'teammaps', width: '10rem', priority: 40 },
-    { id: 'total', width: '10rem', required: true },
+const CAP_IT_ALL_COLUMNS: (Omit<ResponsiveColumn, 'label'> & { id: CapItAllColumnId })[] = [
+    { id: 'rank', width: '72px', priority: 30, required: true, tier: 'essential' },
+    { id: 'player', required: true, tier: 'essential' },
+    { id: 'certified', width: '10rem', priority: 60, tier: 'detail' },
+    { id: 'noncertified', width: '10rem', priority: 50, tier: 'detail' },
+    { id: 'teammaps', width: '10rem', priority: 40, tier: 'detail' },
+    { id: 'total', width: '10rem', required: true, tier: 'essential' },
 ]
 
 // Matches the table body's h-16 rows, including loading placeholders.
@@ -67,7 +68,6 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
     const [pageLoading, setPageLoading] = useState(caches.items.length === 0)
     const [error, setError] = useState<string | null>(null)
     const refreshCooldown = useRefreshCooldown()
-    const scrollContainerRef = useRef<HTMLDivElement | null>(null)
 
     const [debouncedSearch, setDebouncedSearch] = useState(state.search.trim())
     useEffect(() => {
@@ -152,18 +152,6 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
 
     useEffect(() => { loadPage() }, [loadPage])
 
-    // Restore scroll once on mount.
-    useEffect(() => {
-        if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = state.scrollTop
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
-
-    const onScrollContainerScroll = useCallback(() => {
-        if (!scrollContainerRef.current) return
-        const top = scrollContainerRef.current.scrollTop
-        onStateChange(prev => Math.abs(prev.scrollTop - top) > 24 ? { ...prev, scrollTop: top } : prev)
-    }, [onStateChange])
-
     const refresh = () => {
         refreshCooldown.trigger(() => {
             pageCacheRef.current = {}
@@ -193,6 +181,7 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
 
     const items = caches.items
     const showSkeleton = !error && (!cacheFresh || (pageLoading && items.length === 0))
+    useNavScrollRestore(!showSkeleton)
 
     const [resolved, setResolved] = useState<Set<CapItAllColumnId> | null>(null)
     const handleResolve = useCallback((ids: Set<string>) => {
@@ -204,7 +193,48 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
     )
     const visibleColumnCount = resolved ? resolved.size : CAP_IT_ALL_COLUMNS.length
 
-    const compactContent = showSkeleton ? (
+    const capItAllCell = (id: CapItAllColumnId, row: CapItAllRow, align: MetricAlign = 'center'): React.ReactNode => {
+        switch (id) {
+            case 'rank':
+                return (
+                    <span className={cn(
+                        'font-mono tabular-nums',
+                        row.rank <= 3 ? 'text-foreground font-bold' : 'text-muted-foreground',
+                    )}>
+                        #{row.rank.toLocaleString()}
+                    </span>
+                )
+            case 'player': {
+                const isSelf = selfId != null && row.user_id === String(selfId)
+                return (
+                    <PlayerInfo
+                        userId={row.user_id}
+                        alias={row.alias}
+                        title={row.active_title}
+                        size="md"
+                        highlight={isSelf}
+                        showYouBadge={isSelf}
+                    />
+                )
+            }
+            case 'certified':
+                return <MetricCell caps={row.certified_caps} pct={row.certified_percentage} colorClass="bg-emerald-500/70" align={align} />
+            case 'noncertified':
+                return <MetricCell caps={row.non_certified_caps} pct={row.non_certified_percentage} indicator="dot" colorClass="bg-amber-400" align={align} />
+            case 'teammaps':
+                return <MetricCell caps={row.team_caps} pct={row.team_percentage} indicator="dot" colorClass="bg-sky-400" align={align} />
+            case 'total':
+                return <MetricCell caps={row.total_caps} pct={row.total_percentage} colorClass="bg-violet-400/60" align={align} />
+        }
+    }
+
+    const capItAllColumns: ResponsiveColumn<CapItAllRow>[] = CAP_IT_ALL_COLUMNS.map(column => ({
+        ...column,
+        label: COLUMN_LABELS[column.id],
+        cell: row => capItAllCell(column.id, row, 'start'),
+    }))
+
+    const cardPlaceholder = showSkeleton ? (
         Array.from({ length: Math.min(pageSize, AUTO_PAGE_SIZE_MAX_ROWS) }).map((_, i) => (
             <div key={i} className="h-14 mx-3 my-2 rounded-lg bg-hairline/5 animate-pulse" />
         ))
@@ -212,10 +242,12 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
         <div className="px-4 py-16 text-center text-muted-foreground">
             {debouncedSearch ? 'No players match your search.' : 'No players on this leaderboard yet.'}
         </div>
-    ) : items.map(row => {
+    ) : undefined
+
+    const capItAllFace = (row: CapItAllRow) => {
         const isSelf = selfId != null && row.user_id === String(selfId)
         return (
-            <div key={row.user_id} role="listitem" className="flex items-center gap-3 p-3 border-b border-hairline/5 last:border-0">
+            <div className="flex items-center gap-3">
                 <span className={cn(
                     'font-mono tabular-nums w-10 shrink-0 text-right',
                     row.rank <= 3 ? 'text-foreground font-bold' : 'text-muted-foreground',
@@ -233,15 +265,21 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
                     />
                 </div>
                 <div className="flex flex-col items-end shrink-0">
-                    <span className="font-mono tabular-nums text-foreground font-bold">{row.certified_caps.toLocaleString()}</span>
-                    <span className="font-mono tabular-nums text-[11px] text-muted-foreground">{row.certified_percentage.toFixed(2)}%</span>
+                    <span className="whitespace-nowrap">
+                        <span className="font-mono tabular-nums text-foreground font-bold">{row.total_caps.toLocaleString()}</span>
+                        {' '}
+                        <span className="ml-1 font-mono tabular-nums text-[11px] text-muted-foreground">{`${row.total_percentage.toFixed(2)}%`}</span>
+                    </span>
+                    <span className="whitespace-nowrap text-[11px] text-muted-foreground">
+                        Certified <span className="font-mono tabular-nums">{`${row.certified_percentage.toFixed(2)}%`}</span>
+                    </span>
                 </div>
             </div>
         )
-    })
+    }
 
     return (
-        <div className="space-y-4 h-full flex flex-col overflow-hidden">
+        <div className="space-y-4 flex flex-col overflow-hidden">
             <div className="flex items-end justify-between shrink-0">
                 <div>
                     <div className="flex items-center gap-2">
@@ -287,17 +325,21 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
             )}
 
             <DataTableShell
-                scrollRef={scrollContainerRef}
-                onScroll={onScrollContainerScroll}
                 responsive={{
-                    columns: CAP_IT_ALL_COLUMNS,
+                    columns: capItAllColumns,
                     onResolve: handleResolve,
-                    compactContent,
                     compactAriaLabel: 'Cap It All leaderboard',
+                    cards: {
+                        rows: items,
+                        rowKey: row => row.user_id,
+                        face: capItAllFace,
+                        onOpen: row => openPlayer(row.user_id),
+                        placeholder: cardPlaceholder,
+                    },
                 }}
             >
                 <DataTableHeaderRow theadDataAttr="data-utbt-capitall-thead">
-                    {CAP_IT_ALL_COLUMNS.filter(column => isVisible(column.id as CapItAllColumnId)).map(column => (
+                    {CAP_IT_ALL_COLUMNS.filter(column => isVisible(column.id)).map(column => (
                         <DataTableHeaderCell
                             key={column.id}
                             align={column.id === 'player' ? 'left' : 'center'}
@@ -305,7 +347,7 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
                             className="normal-case tracking-normal whitespace-nowrap"
                         >
                             <span className={column.id === 'player' ? 'ml-[calc(2rem+0.625rem)]' : undefined}>
-                                {COLUMN_LABELS[column.id as CapItAllColumnId]}
+                                {COLUMN_LABELS[column.id]}
                             </span>
                         </DataTableHeaderCell>
                     ))}
@@ -321,55 +363,15 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
                             message={debouncedSearch ? 'No players match your search.' : 'No players on this leaderboard yet.'}
                         />
                     ) : (
-                        items.map(row => {
-                            const isSelf = selfId != null && row.user_id === String(selfId)
-                            return (
-                                <DataTableRow key={row.user_id}>
-                                    {isVisible('rank') && (
-                                        <DataTableCell align="center">
-                                            <span className={cn(
-                                                'font-mono tabular-nums',
-                                                row.rank <= 3 ? 'text-foreground font-bold' : 'text-muted-foreground',
-                                            )}>
-                                                #{row.rank.toLocaleString()}
-                                            </span>
-                                        </DataTableCell>
-                                    )}
-                                    {isVisible('player') && (
-                                        <DataTableCell>
-                                            <PlayerInfo
-                                                userId={row.user_id}
-                                                alias={row.alias}
-                                                title={row.active_title}
-                                                size="md"
-                                                highlight={isSelf}
-                                                showYouBadge={isSelf}
-                                            />
-                                        </DataTableCell>
-                                    )}
-                                    {isVisible('certified') && (
-                                        <DataTableCell align="center">
-                                            <MetricCell caps={row.certified_caps} pct={row.certified_percentage} colorClass="bg-emerald-500/70" />
-                                        </DataTableCell>
-                                    )}
-                                    {isVisible('noncertified') && (
-                                        <DataTableCell align="center">
-                                            <MetricCell caps={row.non_certified_caps} pct={row.non_certified_percentage} indicator="dot" colorClass="bg-amber-400" />
-                                        </DataTableCell>
-                                    )}
-                                    {isVisible('teammaps') && (
-                                        <DataTableCell align="center">
-                                            <MetricCell caps={row.team_caps} pct={row.team_percentage} indicator="dot" colorClass="bg-sky-400" />
-                                        </DataTableCell>
-                                    )}
-                                    {isVisible('total') && (
-                                        <DataTableCell align="center">
-                                            <MetricCell caps={row.total_caps} pct={row.total_percentage} colorClass="bg-violet-400/60" />
-                                        </DataTableCell>
-                                    )}
-                                </DataTableRow>
-                            )
-                        })
+                        items.map(row => (
+                            <DataTableRow key={row.user_id}>
+                                {CAP_IT_ALL_COLUMNS.filter(column => isVisible(column.id)).map(column => (
+                                    <DataTableCell key={column.id} align={column.id === 'player' ? undefined : 'center'}>
+                                        {capItAllCell(column.id, row)}
+                                    </DataTableCell>
+                                ))}
+                            </DataTableRow>
+                        ))
                     )}
                     {!showSkeleton && items.length > 0 && items.length < pageSize && (
                         <tr aria-hidden="true" style={{ height: (pageSize - items.length) * TABLE_ROW_HEIGHT_PX }}>
@@ -396,16 +398,19 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
     )
 }
 
-function MetricCell({ caps, pct, colorClass, indicator = 'bar' }: {
+type MetricAlign = 'center' | 'start'
+
+function MetricCell({ caps, pct, colorClass, indicator = 'bar', align = 'center' }: {
     caps: number
     pct: number
     colorClass: string
     indicator?: 'bar' | 'dot'
+    align?: MetricAlign
 }) {
     const progress = Number.isFinite(pct) ? Math.max(0, Math.min(100, pct)) : 0
     return (
-        <div className="mx-auto max-w-40 space-y-1.5">
-            <div className="flex items-center justify-center gap-2 whitespace-nowrap">
+        <div className={align === 'center' ? 'mx-auto max-w-40 space-y-1.5' : 'w-40 max-w-full space-y-1.5'}>
+            <div className={align === 'center' ? 'flex items-center justify-center gap-2 whitespace-nowrap' : 'flex items-center gap-2 whitespace-nowrap'}>
                 {indicator === 'dot' && (
                     <span
                         aria-hidden="true"

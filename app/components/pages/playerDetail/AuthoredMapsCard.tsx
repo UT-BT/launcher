@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, lazy } from 'react'
+import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { ImageOff, ImagePlus, Search } from 'lucide-react'
 import { fetchMaps, type Map as ApiMap } from '@/app/utils/api'
 import { useAsync } from '@/app/hooks/useAsync'
@@ -7,14 +8,15 @@ import { displayMapName, formatAddedDate } from '@/app/utils/format'
 import { difficultyBgColor } from '@/app/utils/scoreColors'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { MapNavLink } from '@/app/components/shared/MapNavLink'
-import { MapScreenshotModal } from '@/app/components/modals/MapScreenshotModal'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell,
     DataTableRow, DataTableCell, DataTableEmpty, DataTableSkeletonRow,
-    type SortDirection, type ResponsiveColumn,
+    type ColumnTier, type SortDirection, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { PaginationBar } from '@/app/components/ui/pagination'
 import { cn } from '@/lib/utils'
+
+const MapScreenshotModal = lazy(() => import('@/app/components/modals/MapScreenshotModal').then(m => ({ default: m.MapScreenshotModal })))
 
 interface AuthoredMapsCardProps {
     accessToken: string | undefined
@@ -29,6 +31,14 @@ type SortField = 'name' | 'difficulty' | 'added'
 type ColumnId = 'name' | 'difficulty' | 'added' | 'actions'
 
 type ScreenshotState = Pick<ApiMap, 'has_screenshot' | 'screenshot_updated'>
+
+const COLUMN_WIDTH: Partial<Record<ColumnId, string>> = { difficulty: '7rem', added: '9rem', actions: '9rem' }
+const COLUMN_PRIORITY: Partial<Record<ColumnId, number>> = { added: 40, difficulty: 60 }
+const REQUIRED_COLUMNS = new Set<ColumnId>(['name', 'difficulty', 'actions'])
+const COLUMN_TIER: Record<ColumnId, ColumnTier> = { name: 'essential', difficulty: 'essential', added: 'detail', actions: 'detail' }
+const COLUMN_LABEL: Record<ColumnId, string> = { name: 'Map', difficulty: 'Difficulty', added: 'Added', actions: 'Screenshot' }
+const SORT_KEY: Partial<Record<ColumnId, SortField>> = { name: 'name', difficulty: 'difficulty', added: 'added' }
+const CELL_ALIGN: Partial<Record<ColumnId, 'center' | 'right'>> = { difficulty: 'center', added: 'right', actions: 'right' }
 
 const AUTHORED_MAP_COLUMNS = [
     'name', 'added', 'difficulty', 'required_players', 'has_screenshot', 'screenshot_updated',
@@ -102,15 +112,6 @@ export function AuthoredMapsCard({ accessToken, userId, isSelf, onMapSelect, tab
         () => isSelf ? ['name', 'difficulty', 'added', 'actions'] : ['name', 'difficulty', 'added'],
         [isSelf],
     )
-    const responsiveColumns = useMemo<ResponsiveColumn[]>(
-        () => columns.map(id => ({
-            id,
-            width: id === 'difficulty' ? '7rem' : id === 'added' ? '9rem' : id === 'actions' ? '9rem' : undefined,
-            priority: id === 'added' ? 40 : id === 'difficulty' ? 60 : undefined,
-            required: id === 'name' || id === 'difficulty' || id === 'actions',
-        })),
-        [columns],
-    )
     const [resolved, setResolved] = useState<Set<ColumnId> | null>(null)
     const handleResolve = useCallback((ids: Set<string>) => setResolved(ids as Set<ColumnId>), [])
     const isVisible = (id: ColumnId): boolean => columns.includes(id) && (!resolved || resolved.has(id))
@@ -137,35 +138,59 @@ export function AuthoredMapsCard({ accessToken, userId, isSelf, onMapSelect, tab
         </button>
     )
 
-    const compactRows = loading ? (
+    const authoredCell = (id: ColumnId, m: ApiMap): React.ReactNode => {
+        switch (id) {
+            case 'name':
+                return (
+                    <div className="flex items-center gap-2 min-w-0">
+                        <MapThumbnail mapName={m.name} version={m.screenshot_updated} className="size-8 shrink-0" />
+                        <MapNavLink mapName={m.name} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate">{displayMapName(m.name)}</MapNavLink>
+                    </div>
+                )
+            case 'difficulty':
+                return difficultyChip(m.difficulty)
+            case 'added':
+                return (
+                    <span className="text-xs text-muted-foreground">
+                        {m.added ? formatAddedDate(m.added) : '—'}
+                    </span>
+                )
+            case 'actions':
+                return screenshotButton(m)
+        }
+    }
+
+    const responsiveColumns: ResponsiveColumn<ApiMap>[] = columns.map(id => ({
+        id,
+        width: COLUMN_WIDTH[id],
+        priority: COLUMN_PRIORITY[id],
+        required: REQUIRED_COLUMNS.has(id),
+        tier: COLUMN_TIER[id],
+        label: COLUMN_LABEL[id],
+        sortKey: SORT_KEY[id],
+        cell: m => authoredCell(id, m),
+    }))
+
+    const authoredFace = (m: ApiMap) => (
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+            <div className="flex items-center min-w-0">
+                <MapNavLink mapName={m.name} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate min-w-0">{displayMapName(m.name)}</MapNavLink>
+            </div>
+            {difficultyChip(m.difficulty)}
+        </div>
+    )
+
+    const cardPlaceholder = loading ? (
         Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} role="listitem" className="p-3 border-b border-hairline/5 last:border-0 animate-pulse">
+            <div key={i} className="p-3 border-b border-hairline/5 last:border-0 animate-pulse">
                 <div className="h-10 rounded bg-hairline/5" />
             </div>
         ))
     ) : error || visibleRows.length === 0 ? (
-        <div role="listitem" className="px-4 py-12 text-center text-sm text-muted-foreground">
+        <div className="px-4 py-12 text-center text-sm text-muted-foreground">
             {emptyMessage}
         </div>
-    ) : visibleRows.map(m => (
-        <div
-            key={m.name}
-            role="listitem"
-            className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-3 border-b border-hairline/5 last:border-0 cursor-pointer"
-            onClick={() => onMapSelect?.(m.name)}
-        >
-            <div className="min-w-0 space-y-1">
-                <div className="flex items-center min-w-0">
-                    <MapNavLink mapName={m.name} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate min-w-0">{displayMapName(m.name)}</MapNavLink>
-                </div>
-                <div className="text-xs text-muted-foreground">{m.added ? formatAddedDate(m.added) : '—'}</div>
-            </div>
-            <div className="flex items-center gap-2">
-                {difficultyChip(m.difficulty)}
-                {isSelf && screenshotButton(m, 'h-9 px-3')}
-            </div>
-        </div>
-    ))
+    ) : undefined
 
     return (
         <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col overflow-hidden">
@@ -209,8 +234,19 @@ export function AuthoredMapsCard({ accessToken, userId, isSelf, onMapSelect, tab
                     columns: responsiveColumns,
                     nameFloorRem: 14,
                     onResolve: handleResolve,
-                    compactContent: compactRows,
                     compactAriaLabel: 'Authored maps',
+                    cards: {
+                        rows: visibleRows,
+                        rowKey: m => m.name,
+                        face: authoredFace,
+                        onOpen: m => onMapSelect?.(m.name),
+                        placeholder: cardPlaceholder,
+                        sort: {
+                            key: sortField,
+                            direction: sortDir,
+                            onSort: key => handleSort(key as SortField),
+                        },
+                    },
                 }}
             >
                 <DataTableHeaderRow>
@@ -233,31 +269,11 @@ export function AuthoredMapsCard({ accessToken, userId, isSelf, onMapSelect, tab
                                 className="cursor-pointer"
                                 onClick={() => onMapSelect?.(m.name)}
                             >
-                                {isVisible('name') && (
-                                    <DataTableCell>
-                                        <div className="flex items-center gap-2 min-w-0">
-                                            <MapThumbnail mapName={m.name} version={m.screenshot_updated} className="size-8 shrink-0" />
-                                            <MapNavLink mapName={m.name} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate">{displayMapName(m.name)}</MapNavLink>
-                                        </div>
+                                {columns.filter(isVisible).map(id => (
+                                    <DataTableCell key={id} align={CELL_ALIGN[id]}>
+                                        {authoredCell(id, m)}
                                     </DataTableCell>
-                                )}
-                                {isVisible('difficulty') && (
-                                    <DataTableCell align="center">
-                                        {difficultyChip(m.difficulty)}
-                                    </DataTableCell>
-                                )}
-                                {isVisible('added') && (
-                                    <DataTableCell align="right">
-                                        <span className="text-xs text-muted-foreground">
-                                            {m.added ? formatAddedDate(m.added) : '—'}
-                                        </span>
-                                    </DataTableCell>
-                                )}
-                                {isVisible('actions') && (
-                                    <DataTableCell align="right">
-                                        {screenshotButton(m)}
-                                    </DataTableCell>
-                                )}
+                                ))}
                             </DataTableRow>
                         ))
                     )}
@@ -280,21 +296,23 @@ export function AuthoredMapsCard({ accessToken, userId, isSelf, onMapSelect, tab
             )}
 
             {editing && (
-                <MapScreenshotModal
-                    open
-                    onClose={() => setEditing(null)}
-                    accessToken={accessToken}
-                    mapName={editing.name}
-                    hasScreenshot={!!editing.has_screenshot}
-                    screenshotVersion={editing.screenshot_updated}
-                    onUploaded={updated => setOverrides(prev => ({
-                        ...prev,
-                        [updated.name]: {
-                            has_screenshot: updated.has_screenshot,
-                            screenshot_updated: updated.screenshot_updated,
-                        },
-                    }))}
-                />
+                <LazyModalGate open>
+                    <MapScreenshotModal
+                        open
+                        onClose={() => setEditing(null)}
+                        accessToken={accessToken}
+                        mapName={editing.name}
+                        hasScreenshot={!!editing.has_screenshot}
+                        screenshotVersion={editing.screenshot_updated}
+                        onUploaded={updated => setOverrides(prev => ({
+                            ...prev,
+                            [updated.name]: {
+                                has_screenshot: updated.has_screenshot,
+                                screenshot_updated: updated.screenshot_updated,
+                            },
+                        }))}
+                    />
+                </LazyModalGate>
             )}
         </div>
     )

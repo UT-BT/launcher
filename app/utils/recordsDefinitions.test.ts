@@ -44,7 +44,7 @@ describe('records definitions live in one place', () => {
         const callSites = {
             'app/components/pages/TeamCapDetailPage.tsx': 1,
             'app/components/pages/capDetail/HeroSection.tsx': 1,
-            'app/components/pages/mapDetail/LeaderboardCard.tsx': 2,
+            'app/components/pages/mapDetail/LeaderboardCard.tsx': 1,
         }
         for (const [path, calls] of Object.entries(callSites)) {
             const text = sourceOf(path)

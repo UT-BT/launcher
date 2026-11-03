@@ -1,0 +1,20 @@
+import { listed, rowsOf, seen } from './steps'
+import { pageTutorial } from './overlays'
+import type { MobileRouteEntry } from './types'
+
+export const players: MobileRouteEntry = {
+    view: 'players',
+    tier: 'public',
+    path: '/players',
+    fixtures: 'players',
+    decorative: [],
+    storage: seen('utbt:playersPageTutorial:v1'),
+    ready: listed({
+        heading: 'Players',
+        rows: data => rowsOf(data.api('/v2/players', 'limit=10&offset=0&order=asc&sort=rank')),
+        label: row => row.alias,
+        empty: 'No players found.',
+    }),
+    modals: [pageTutorial('Players')],
+    stress: { pr: 'long-text' },
+}

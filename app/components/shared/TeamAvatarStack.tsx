@@ -9,6 +9,10 @@ interface TeamAvatarStackProps {
     className?: string
 }
 
+export function teamRosterLabel(members: TeamHolderMember[]): string {
+    return `Team roster: ${members.slice(0, 12).map(member => member.alias).join(', ')}`
+}
+
 export function TeamAvatarStack({ members, currentUserId, className }: TeamAvatarStackProps) {
     const roster = members.slice(0, 12)
     if (roster.length === 0) return null
@@ -33,7 +37,7 @@ export function TeamAvatarStack({ members, currentUserId, className }: TeamAvata
             <span
                 className={cn('flex items-center -space-x-3.5 cursor-help', className)}
                 tabIndex={0}
-                aria-label={`Team roster: ${roster.map(member => member.alias).join(', ')}`}
+                aria-label={teamRosterLabel(roster)}
             >
                 {roster.map((member, index) => (
                     <PlayerInfo

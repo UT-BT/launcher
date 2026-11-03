@@ -9,6 +9,7 @@ export default [
       'node_modules/**',
       'dist/**',
       'dist-web/**',
+      'dist-e2e/**',
       'build/**',
       'out/**',
       '.vscode/**',

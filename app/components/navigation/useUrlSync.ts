@@ -1,17 +1,8 @@
-import { useCallback, useEffect, type RefObject } from 'react'
-import { IS_WEB } from '@/app/platform'
+import { useEffect, useRef, type RefObject } from 'react'
+import { capabilities, IS_WEB } from '@/app/platform'
 import { pathToNav, viewToPath } from './routes'
+import { createHistorySync, type BlockedHistoryMove } from './historySync'
 import type { NavEntry, NavParams } from './NavigationContext'
-
-interface HistoryEntryState {
-    navId?: number
-    position?: number
-}
-
-interface BlockedHistoryMove {
-    message: string
-    move: () => void
-}
 
 interface UrlSyncArgs {
     stackRef: RefObject<{ entries: NavEntry[]; cursor: number }>
@@ -21,22 +12,8 @@ interface UrlSyncArgs {
     onBlocked: (blocked: BlockedHistoryMove) => void
 }
 
-let position = 0
-let confirmedPosition: number | null = null
-
-function readEntryState(state: unknown): HistoryEntryState {
-    if (!state || typeof state !== 'object') return {}
-    const entry = state as HistoryEntryState
-    return {
-        navId: typeof entry.navId === 'number' ? entry.navId : undefined,
-        position: typeof entry.position === 'number' ? entry.position : undefined,
-    }
-}
-
-function goConfirmed(to: number) {
-    confirmedPosition = to
-    window.history.go(to - position)
-}
+const sync = IS_WEB ? createHistorySync(window.history, task => { setTimeout(task) }) : null
+const browserNav = sync && { back: sync.back, forward: sync.forward }
 
 export function seedEntriesFromUrl(): NavEntry[] {
     const target = IS_WEB
@@ -46,62 +23,51 @@ export function seedEntriesFromUrl(): NavEntry[] {
 }
 
 export function pushUrlForEntry(entry: NavEntry): void {
-    if (!IS_WEB) return
-    position += 1
-    confirmedPosition = null
-    window.history.pushState({ navId: entry.id, position }, '', viewToPath(entry.view, entry.params))
+    sync?.pushPage(entry.id, viewToPath(entry.view, entry.params))
+}
+
+export function registerOverlay(close: () => void): (() => void) | undefined {
+    return capabilities.overlayHistory ? sync?.register(close) : undefined
+}
+
+export function useOverlayHistory(open: boolean, close: () => void): void {
+    const closeRef = useRef(close)
+    useEffect(() => { closeRef.current = close })
+    useEffect(() => open ? registerOverlay(() => closeRef.current()) : undefined, [open])
 }
 
 export function useUrlSync({ stackRef, setCursor, pushExternal, leaveWarning, onBlocked }: UrlSyncArgs): { back: () => void; forward: () => void } | null {
     useEffect(() => {
-        if (!IS_WEB) return
+        if (!sync) return
 
-        const stack = stackRef.current
-        const active = stack?.entries[stack.cursor]
-        const activeId = active?.id ?? 0
-        const canonical = active ? viewToPath(active.view, active.params) : '/'
-        const current = window.location.pathname + window.location.search
-        position = readEntryState(window.history.state).position ?? 0
-        confirmedPosition = null
-        window.history.replaceState({ navId: activeId, position }, '', current === canonical ? current : canonical)
-
-        const onPopState = (event: PopStateEvent) => {
-            const target = readEntryState(event.state)
-            const to = target.position
-            if (to === position) return
-
-            const confirmed = to === confirmedPosition
-            confirmedPosition = null
-            if (to !== undefined && !confirmed) {
-                const message = leaveWarning()
-                if (message) {
-                    window.history.go(position - to)
-                    onBlocked({ message, move: () => goConfirmed(to) })
-                    return
-                }
-            }
-
-            position = to ?? position + 1
-            const current = stackRef.current
-            if (target.navId !== undefined && current) {
-                const index = current.entries.findIndex(e => e.id === target.navId)
+        const active = () => stackRef.current?.entries[stackRef.current.cursor]
+        const seeded = active()
+        const detach = sync.attach({
+            activeId: () => active()?.id,
+            leaveWarning,
+            onBlocked,
+            show: (navId, position) => {
+                const index = stackRef.current?.entries.findIndex(e => e.id === navId) ?? -1
                 if (index >= 0) {
                     setCursor(index)
                     return
                 }
-            }
-            const external = pathToNav(window.location.pathname, window.location.search)
-            const id = pushExternal(external.view, external.params)
-            window.history.replaceState({ navId: id, position }, '', window.location.pathname + window.location.search)
-        }
+                const external = pathToNav(window.location.pathname, window.location.search)
+                const id = pushExternal(external.view, external.params)
+                window.history.replaceState({ navId: id, position }, '', window.location.pathname + window.location.search)
+            },
+        }, seeded ? viewToPath(seeded.view, seeded.params) : '/')
 
+        const onPopState = (event: PopStateEvent) => sync.onPopState(event.state)
         window.addEventListener('popstate', onPopState)
-        return () => window.removeEventListener('popstate', onPopState)
+        return () => {
+            window.removeEventListener('popstate', onPopState)
+            detach()
+        }
     }, [stackRef, setCursor, pushExternal, leaveWarning, onBlocked])
 
-    const back = useCallback(() => goConfirmed(position - 1), [])
-    const forward = useCallback(() => goConfirmed(position + 1), [])
+    const activeId = stackRef.current?.entries[stackRef.current.cursor]?.id
+    useEffect(() => { sync?.settle() }, [activeId])
 
-    if (!IS_WEB) return null
-    return { back, forward }
+    return browserNav
 }

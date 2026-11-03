@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join, posix } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { MOBILE_ROUTES_DOC, mobileRoutesProblem } from './mobile-routes-doc.mjs'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const manifestPath = 'agents/verify.json'
@@ -100,6 +101,13 @@ const skills = readdirSync(join(root, '.claude/skills'))
   .filter(exists)
 for (const path of new Set(['CLAUDE.md', ...skills, ...agentDocs, ...Object.keys(manifest).filter(exists)])) {
   checkLinks(path)
+}
+
+try {
+  const problem = await mobileRoutesProblem()
+  if (problem) fail(problem)
+} catch (error) {
+  fail(`${MOBILE_ROUTES_DOC}: could not render the mobile route manifest: ${error.message}`)
 }
 
 const changed = changedFiles()
