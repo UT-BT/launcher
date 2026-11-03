@@ -3,7 +3,9 @@ import { Spinner } from '@/app/components/ui/spinner'
 import { Modal } from '@/app/components/ui/modal'
 import { Button } from '@/app/components/ui/button'
 import { displayMapName } from '@/app/utils/format'
+import { capabilities } from '@/app/platform'
 import type { MapDownloadState } from '@/app/hooks/useMapDownload'
+import { mapDownloadSuccessCopy } from './mapDownloadCopy'
 
 interface MapDownloadStatusModalProps {
     state: MapDownloadState | null
@@ -23,8 +25,9 @@ function reasonText(reason: string): string {
 export function MapDownloadStatusModal({ state, onClose }: MapDownloadStatusModalProps) {
     const isOpen = state !== null
     const isDownloading = state?.status === 'downloading'
+    const successCopy = state?.status === 'success' ? mapDownloadSuccessCopy(state, capabilities.install) : null
     const title =
-        state?.status === 'success' ? 'Map Installed'
+        successCopy ? successCopy.title
         : state?.status === 'error' ? 'Install Failed'
         : 'Downloading Map'
 
@@ -55,20 +58,20 @@ export function MapDownloadStatusModal({ state, onClose }: MapDownloadStatusModa
                     </p>
                 </div>
             )}
-            {state?.status === 'success' && (
+            {state?.status === 'success' && successCopy && (
                 <div className="space-y-3">
                     <div className="flex items-center gap-3">
                         <CheckCircle2 className="size-5 text-emerald-400 shrink-0" />
                         <div className="text-sm text-foreground/90 font-medium truncate">{displayMapName(state.mapName)}</div>
                     </div>
                     <div className="text-xs text-muted-foreground space-y-1">
-                        <div>Extracted: {state.extracted.length} file{state.extracted.length === 1 ? '' : 's'}</div>
-                        {state.skipped.length > 0 && (
-                            <div>Skipped (already existed): {state.skipped.length} file{state.skipped.length === 1 ? '' : 's'}</div>
+                        {successCopy.summary && <div>{successCopy.summary}</div>}
+                        {successCopy.lines.map(line => <div key={line}>{line}</div>)}
+                        {successCopy.installPath !== null && (
+                            <div className="truncate" title={successCopy.installPath}>
+                                Installed to: {successCopy.installPath}
+                            </div>
                         )}
-                        <div className="truncate" title={state.installPath}>
-                            Installed to: {state.installPath}
-                        </div>
                     </div>
                 </div>
             )}
