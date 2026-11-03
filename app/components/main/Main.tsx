@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense, type Dispatch, type SetStateAction } from 'react'
 import { AppLayout } from '@/app/components/layout/AppLayout'
 import { ErrorBoundary } from '@/app/components/ErrorBoundary'
+import { DesktopPromoProvider } from '@/app/components/desktopPromo/DesktopPromoProvider'
 import { trackPage } from '@/app/utils/telemetry'
 import {
   NavigationContext,
@@ -929,66 +930,68 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   }
 
   return (
-    <div className="h-dvh flex flex-col overflow-hidden">
-      {import.meta.env.DEV && <DevImpersonationBanner />}
-      <UpdateBanner />
-      {installationStatus && installationStatus !== 'valid' && (
-        <InstallationBanner
-          type={installationStatus}
-          onClick={() => window.dispatchEvent(new CustomEvent('open-settings', { detail: { section: 'game-installation' } }))}
-        />
-      )}
-      <div className="flex-1 overflow-hidden">
-        <NavigationContext.Provider value={navValue}>
-          <AppLayout
-            currentView={currentView}
-            onViewChange={navigate}
-            getNavBadge={(view, params) => resolveNavBadge({ view, params }, eventAttention, allEventsAttention, badgeCounts)}
-            userProfile={userProfile}
-            installationStatus={installationStatus}
-          >
-            <ErrorBoundary key={entry.id} variant="view" context={currentView} onNavigateHome={currentView === 'home' ? undefined : () => navigate('home')}>
-              <Suspense fallback={
-                <div className="space-y-4 pt-2">
-                  <div className="h-10 w-64 bg-hairline/5 rounded-lg animate-pulse" />
-                  <div className="h-72 bg-hairline/5 rounded-xl animate-pulse" />
-                </div>
-              }>
-                {renderView()}
-              </Suspense>
-            </ErrorBoundary>
-          </AppLayout>
-        </NavigationContext.Provider>
-      </div>
-      <FavoritesSyncModal
-        open={syncModal.open}
-        dbFavorites={syncModal.db}
-        iniFavorites={syncModal.ini}
-        onResolve={resolveSync}
-        onDismiss={dismissSync}
-      />
-      <PatreonModal />
-      <AuthRequiredModal request={loginRequest} onClose={() => setLoginRequest(null)} />
-      {import.meta.env.DEV && <DevImpersonateModal />}
-      {pendingLeave && (
-        <Suspense fallback={null}>
-          <ConfirmModal
-            isOpen
-            onClose={() => setPendingLeave(null)}
-            onConfirm={() => {
-              const target = pendingLeave
-              setPendingLeave(null)
-              if (target.move) target.move()
-              else if (target.view) commitNavigate(target.view, target.params ?? {})
-            }}
-            title="Leave without saving?"
-            message={pendingLeave.message}
-            detail="Anything you have not saved is lost."
-            confirmText="Leave"
-            variant="error"
+    <DesktopPromoProvider userProfile={userProfile}>
+      <div className="h-dvh flex flex-col overflow-hidden">
+        {import.meta.env.DEV && <DevImpersonationBanner />}
+        <UpdateBanner />
+        {installationStatus && installationStatus !== 'valid' && (
+          <InstallationBanner
+            type={installationStatus}
+            onClick={() => window.dispatchEvent(new CustomEvent('open-settings', { detail: { section: 'game-installation' } }))}
           />
-        </Suspense>
-      )}
-    </div>
+        )}
+        <div className="flex-1 overflow-hidden">
+          <NavigationContext.Provider value={navValue}>
+            <AppLayout
+              currentView={currentView}
+              onViewChange={navigate}
+              getNavBadge={(view, params) => resolveNavBadge({ view, params }, eventAttention, allEventsAttention, badgeCounts)}
+              userProfile={userProfile}
+              installationStatus={installationStatus}
+            >
+              <ErrorBoundary key={entry.id} variant="view" context={currentView} onNavigateHome={currentView === 'home' ? undefined : () => navigate('home')}>
+                <Suspense fallback={
+                  <div className="space-y-4 pt-2">
+                    <div className="h-10 w-64 bg-hairline/5 rounded-lg animate-pulse" />
+                    <div className="h-72 bg-hairline/5 rounded-xl animate-pulse" />
+                  </div>
+                }>
+                  {renderView()}
+                </Suspense>
+              </ErrorBoundary>
+            </AppLayout>
+          </NavigationContext.Provider>
+        </div>
+        <FavoritesSyncModal
+          open={syncModal.open}
+          dbFavorites={syncModal.db}
+          iniFavorites={syncModal.ini}
+          onResolve={resolveSync}
+          onDismiss={dismissSync}
+        />
+        <PatreonModal />
+        <AuthRequiredModal request={loginRequest} onClose={() => setLoginRequest(null)} />
+        {import.meta.env.DEV && <DevImpersonateModal />}
+        {pendingLeave && (
+          <Suspense fallback={null}>
+            <ConfirmModal
+              isOpen
+              onClose={() => setPendingLeave(null)}
+              onConfirm={() => {
+                const target = pendingLeave
+                setPendingLeave(null)
+                if (target.move) target.move()
+                else if (target.view) commitNavigate(target.view, target.params ?? {})
+              }}
+              title="Leave without saving?"
+              message={pendingLeave.message}
+              detail="Anything you have not saved is lost."
+              confirmText="Leave"
+              variant="error"
+            />
+          </Suspense>
+        )}
+      </div>
+    </DesktopPromoProvider>
   )
 }

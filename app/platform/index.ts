@@ -7,6 +7,7 @@ import {
 import { isRejectedSession, platformAuth, type AuthProfile, type PlatformAuth, type SessionRecovery } from './auth'
 import { fetchGatewayPatrons, fetchGatewayServers } from './gateway'
 import { openExternal } from './external'
+import { canRunDesktopInstaller, userAgentOs, type UserAgentOs } from './userAgent'
 import { saveDemoFile, saveMapZip, type DemoSaveResult, type MapSaveResult } from './downloads'
 
 export const capabilities: PlatformCapabilities = IS_WEB ? WEB_CAPABILITIES : DESKTOP_CAPABILITIES
@@ -32,5 +33,5 @@ export function usePlatform() {
     return platform
 }
 
-export { IS_WEB, platformAuth, isRejectedSession, openExternal, fetchGatewayServers, fetchGatewayPatrons, saveDemoFile, saveMapZip }
-export type { PlatformCapabilities, AuthProfile, PlatformAuth, SessionRecovery, DemoSaveResult, MapSaveResult }
+export { IS_WEB, platformAuth, isRejectedSession, openExternal, fetchGatewayServers, fetchGatewayPatrons, saveDemoFile, saveMapZip, canRunDesktopInstaller, userAgentOs }
+export type { PlatformCapabilities, UserAgentOs, AuthProfile, PlatformAuth, SessionRecovery, DemoSaveResult, MapSaveResult }
