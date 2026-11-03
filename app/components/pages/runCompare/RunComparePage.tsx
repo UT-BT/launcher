@@ -7,6 +7,7 @@ import { SITE_NAME } from '@/app/components/navigation/titles'
 import { Spinner } from '@/app/components/ui/spinner'
 import { displayMapName } from '@/app/utils/format'
 import type { UserProfile } from '@/app/utils/api'
+import { useComparisons } from './loading/comparisons'
 import { useReplayVideos } from './loading/replayVideos'
 import { useSoloRuns } from './loading/soloRuns'
 import { composeCompareModel } from './model/compareModel'
@@ -36,9 +37,10 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
     const [stage, setStage] = useState<HTMLElement | null>(null)
     const theaterHeight = useTheaterHeight(theater)
     const stageBox = useStageBox(stage)
+    const comparisons = useComparisons(useMemo(() => composeCompareModel({ query: compare, runs: loaded }).lanes.requests, [compare, loaded]))
     const model = useMemo(
-        () => composeCompareModel({ query: compare, runs: loaded, videos, failedVideos, stageBox }),
-        [compare, loaded, videos, failedVideos, stageBox],
+        () => composeCompareModel({ query: compare, runs: loaded, videos, failedVideos, stageBox, comparisons }),
+        [compare, loaded, videos, failedVideos, stageBox, comparisons],
     )
     const { controller, attachMedia } = useRacePlayback(model.race.runs, model.seekSeconds ?? storedSeekSeconds)
     const onVideoFailed = useCallback((capId: string) => {
@@ -92,7 +94,7 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
                             onVideoFailed={onVideoFailed}
                         />
                     )}
-                    <TransportBar controller={controller} race={model.race} />
+                    <TransportBar controller={controller} race={model.race} lanes={model.lanes} />
                 </div>
             )}
         </div>

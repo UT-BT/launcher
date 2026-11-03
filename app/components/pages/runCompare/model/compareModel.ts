@@ -1,7 +1,9 @@
 import { displayMapName } from '@/app/utils/format'
+import type { LoadedComparisons } from '../loading/comparisons'
 import type { LoadedSoloRuns, SoloRun } from '../loading/soloRuns'
 import { MAX_COMPARE_RUNS, parseCompareQuery, serializeCompareQuery, type CompareNotice, type CompareParam } from '../url/compareUrl'
-import { composeRace, EMPTY_RACE, type LoadedVideos, type RaceModel } from './raceModel'
+import { composeLanes, EMPTY_LANES, withLaneBadges, type LanesModel } from './laneModel'
+import { composeRace, EMPTY_RACE, type LoadedVideos, type RaceInput, type RaceModel } from './raceModel'
 import type { StageBox } from './stageLayout'
 
 export type LoadDropReason = 'not-found' | 'different-map' | 'disallowed'
@@ -14,6 +16,7 @@ export interface CompareModelInput {
     videos?: LoadedVideos
     failedVideos?: ReadonlySet<string>
     stageBox?: StageBox | null
+    comparisons?: LoadedComparisons
 }
 
 export interface CompareModel {
@@ -26,6 +29,7 @@ export interface CompareModel {
     query: string
     seekSeconds: number | null
     race: RaceModel
+    lanes: LanesModel
 }
 
 const NOUNS: Record<CompareParam, [string, string]> = {
@@ -97,12 +101,18 @@ function loadDrop(run: SoloRun | null, map: string | null): LoadDropReason | nul
     return null
 }
 
-export function composeCompareModel({ query, runs: loaded, videos, failedVideos, stageBox }: CompareModelInput): CompareModel {
+function racePart(input: RaceInput, comparisons: LoadedComparisons): { race: RaceModel; lanes: LanesModel } {
+    const race = composeRace(input)
+    const lanes = composeLanes(race, comparisons)
+    return { race: withLaneBadges(race, lanes), lanes }
+}
+
+export function composeCompareModel({ query, runs: loaded, videos, failedVideos, stageBox, comparisons }: CompareModelInput): CompareModel {
     const decoded = parseCompareQuery(query)
     const seekSeconds = decoded.state.t
 
     if (decoded.state.runs.some(capId => !loaded.has(capId))) {
-        return { loading: true, runs: [], map: null, drops: [], noticeLine: null, title: null, query, seekSeconds, race: EMPTY_RACE }
+        return { loading: true, runs: [], map: null, drops: [], noticeLine: null, title: null, query, seekSeconds, race: EMPTY_RACE, lanes: EMPTY_LANES }
     }
 
     const kept: SoloRun[] = []
@@ -131,12 +141,12 @@ export function composeCompareModel({ query, runs: loaded, videos, failedVideos,
         title: compareTitle(kept, map),
         query: serializeCompareQuery(restated.state),
         seekSeconds,
-        race: composeRace({
+        ...racePart({
             runs: kept,
             state: restated.state,
             videos: videos ?? new Map(),
             failedVideos: failedVideos ?? new Set(),
             stageBox: stageBox ?? null,
-        }),
+        }, comparisons ?? new Map()),
     }
 }

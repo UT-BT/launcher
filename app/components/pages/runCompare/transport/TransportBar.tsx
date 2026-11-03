@@ -1,9 +1,11 @@
 import { Pause, Play, StepBack, StepForward } from 'lucide-react'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
-import { formatRaceTime, type RaceModel, type RaceRun } from '../model/raceModel'
+import type { LanesModel } from '../model/laneModel'
+import { formatRaceTime, type RaceModel } from '../model/raceModel'
 import { PLAYBACK_RATES } from '../playback/playbackConstants'
 import type { PlaybackController, PlaybackState } from '../playback/playbackController'
 import { usePlaybackSelector } from '../stage/usePlaybackSelector'
+import { DeltaLanes, SectorTicks } from './DeltaLanes'
 
 interface Controls {
     playing: boolean
@@ -57,23 +59,13 @@ function Timeline({ controller, end }: { controller: PlaybackController | null; 
     )
 }
 
-function LaneRow({ lane }: { lane: RaceRun }) {
-    const { run } = lane
-    return (
-        <li className="run-compare-row run-compare-lane">
-            <PlayerInfo userId={run.user} alias={run.alias} title={run.title} size="sm" className="min-h-11 min-w-0" />
-            <span className="font-mono tabular-nums text-foreground">{formatRaceTime(run.timeSeconds)}</span>
-            {lane.badges.map(badge => <span key={badge} className="run-compare-badge">{badge}</span>)}
-        </li>
-    )
-}
-
 interface TransportBarProps {
     controller: PlaybackController | null
     race: RaceModel
+    lanes: LanesModel
 }
 
-export function TransportBar({ controller, race }: TransportBarProps) {
+export function TransportBar({ controller, race, lanes }: TransportBarProps) {
     const { playing, rate, end, buffering } = usePlaybackSelector(controller, controlsOf, sameControls)
     const stalled = new Set(buffering.split(','))
     const buffered = race.runs.filter(lane => stalled.has(lane.run.capId))
@@ -116,12 +108,13 @@ export function TransportBar({ controller, race }: TransportBarProps) {
                     )}
                 </div>
             </div>
-            <Timeline controller={controller} end={end} />
-            {race.dataOnly.length > 0 && (
-                <ol aria-label="Lanes" className="run-compare-lanes">
-                    {race.dataOnly.map(lane => <LaneRow key={lane.run.capId} lane={lane} />)}
-                </ol>
-            )}
+            <div className="run-compare-track">
+                <div className="run-compare-scrub">
+                    <Timeline controller={controller} end={end} />
+                    <SectorTicks sectors={lanes.sectors} end={end} />
+                </div>
+            </div>
+            <DeltaLanes lanes={lanes.lanes} controller={controller} end={end} />
         </section>
     )
 }

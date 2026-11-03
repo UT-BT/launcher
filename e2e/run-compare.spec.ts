@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import { runCompareFixture } from '../app/utils/fixtures/runCompareFixtures'
+import { RUN_COMPARE_FIXTURES, runCompareErrors, runCompareFixture } from '../app/utils/fixtures/runCompareFixtures'
 import { displayMapName } from '../app/utils/format'
 import type { CapDetail } from '../app/utils/api'
 import { replayVideoUrl, serveReplayVideos } from './replayVideos'
@@ -11,11 +11,20 @@ const FIERD = 'a1a1a1a1-0000-4000-8000-0000000000a1'
 const BUN = 'b2b2b2b2-0000-4000-8000-0000000000b2'
 const DECL = 'd4d4d4d4-0000-4000-8000-0000000000d4'
 const SHX = 'e5e5e5e5-0000-4000-8000-0000000000e5'
+const SHORT = runCompareFixture('short')
+const PATRIK = SHORT.runner.cap_id
+const ARTUREK = SHORT.reference.cap_id
+const BLUE = 'f6f6f6f6-0000-4000-8000-0000000000f6'
 
 function detailFor(id: string, user: string, alias: string, seconds: number, team: number): CapDetail {
     return {
         ...BASE,
         cap: { ...BASE.cap, id, user, alias, cap_time_seconds: seconds, team, active_title: null, disallowed: false },
+        checkpoints: BASE.checkpoints.map(checkpoint => ({
+            ...checkpoint,
+            cumulative: (checkpoint.cumulative * seconds) / BASE.cap.cap_time_seconds,
+            segment: (checkpoint.segment * seconds) / BASE.cap.cap_time_seconds,
+        })),
         compare_candidates: [],
     }
 }
@@ -25,15 +34,22 @@ const DETAILS = new Map<string, CapDetail>([
     [BUN, detailFor(BUN, '700000000000000002', 'Bun`', 79.5, 1)],
     [DECL, detailFor(DECL, '700000000000000004', 'Decl', 13, 0)],
     [SHX, detailFor(SHX, '700000000000000005', 'ShX', 14.25, 0)],
+    [PATRIK, detailFor(PATRIK, '700000000000000006', 'PatriK', SHORT.runner.cap_time_ms / 1000, 0)],
+    [ARTUREK, detailFor(ARTUREK, '700000000000000007', 'Arturek', SHORT.reference.cap_time_ms / 1000, 0)],
+    [BLUE, detailFor(BLUE, '700000000000000008', 'Bluey', 12.9, 1)],
 ])
+
+const CONFLICT = runCompareErrors().find(entry => entry.body.code === 'no_ghost')!
 
 interface MockOptions {
     gate?: Promise<void>
     videos?: readonly string[]
     missingVideos?: readonly string[]
+    comparisons?: Readonly<Record<string, 'short' | 'conflict'>>
+    compared?: string[]
 }
 
-async function mockApi(page: Page, { gate = Promise.resolve(), videos = [], missingVideos = [] }: MockOptions = {}) {
+async function mockApi(page: Page, { gate = Promise.resolve(), videos = [], missingVideos = [], comparisons = {}, compared = [] }: MockOptions = {}) {
     await page.addInitScript(() => { localStorage.setItem('utbt:analyticsConsent:v1', 'denied') })
     await serveReplayVideos(page, missingVideos)
     await page.route(/https:\/\/cdn\.discordapp\.com\/.*/, route => route.fulfill({ contentType: 'image/png', body: AVATAR }))
@@ -48,6 +64,13 @@ async function mockApi(page: Page, { gate = Promise.resolve(), videos = [], miss
             }
             return route.fulfill({ json: [] })
         }
+        if (path === '/ghosts/compare') {
+            const runner = url.searchParams.get('runner') ?? ''
+            compared.push(`${runner}:${url.searchParams.get('reference')}`)
+            const answer = comparisons[runner]
+            if (answer === 'short') return route.fulfill({ json: RUN_COMPARE_FIXTURES.short.body })
+            return route.fulfill({ status: CONFLICT.status, json: CONFLICT.body })
+        }
         const detail = /^\/caps\/([^/]+)\/detail$/.exec(path)
         if (detail) {
             await gate
@@ -61,6 +84,10 @@ async function mockApi(page: Page, { gate = Promise.resolve(), videos = [], miss
 
 function lanes(page: Page) {
     return page.getByRole('list', { name: 'Lanes' })
+}
+
+function lane(page: Page, alias: string): Locator {
+    return lanes(page).getByRole('listitem').filter({ hasText: alias })
 }
 
 function tile(page: Page, alias: string): Locator {
@@ -203,5 +230,86 @@ test.describe('race playback', () => {
         await expect(shx.getByText('CAP 0:14.250 · +1.250 · 2nd')).toBeVisible({ timeout: 15_000 })
         expect((await clockOf(shx)).time).toBeCloseTo(14.25, 2)
         await expect(playButton(page)).toBeVisible()
+    })
+})
+
+test.describe('delta lanes and data rungs', () => {
+    test('an aligned pair shows two lanes, the Replay badge and the reference sector ticks', async ({ page }) => {
+        const compared: string[] = []
+        await mockApi(page, { videos: [PATRIK, ARTUREK], comparisons: { [PATRIK]: 'short' }, compared })
+        await page.goto(`/compare?runs=${PATRIK},${ARTUREK}`)
+
+        await expect(lanes(page).getByRole('listitem')).toHaveCount(2)
+        await expect(lane(page, 'PatriK')).toContainText('Replay')
+        await expect(tile(page, 'PatriK')).toContainText('Replay')
+        await expect(lane(page, 'Arturek')).toContainText('REF')
+        await expect(lane(page, 'PatriK').locator('.run-compare-lane-plot path').first()).toBeAttached()
+        await expect(page.getByRole('list', { name: 'Sectors' }).getByRole('listitem')).toHaveCount(10)
+        expect(compared).toEqual([`${PATRIK}:${ARTUREK}`])
+    })
+
+    test('a comparison the server refuses falls back to the zone delta', async ({ page }) => {
+        await mockApi(page, { videos: [PATRIK, ARTUREK], comparisons: { [PATRIK]: 'conflict' } })
+        await page.goto(`/compare?runs=${PATRIK},${ARTUREK}`)
+
+        await expect(lane(page, 'PatriK')).toContainText('Zones')
+        await expect(lane(page, 'PatriK')).not.toContainText('Replay')
+        await expect(tile(page, 'PatriK')).toContainText('Zones')
+        await expect(lane(page, 'PatriK').locator('.run-compare-lane-plot path').first()).toBeAttached()
+    })
+
+    test('a run set on the other side compares on time only and says which side it was set on', async ({ page }) => {
+        const compared: string[] = []
+        await mockApi(page, { videos: [ARTUREK, BLUE], compared })
+        await page.goto(`/compare?runs=${ARTUREK},${BLUE}`)
+
+        await expect(lane(page, 'Bluey')).toContainText('Time only')
+        await expect(lane(page, 'Bluey')).toContainText('Set on Blue')
+        await expect(tile(page, 'Bluey')).toContainText('Set on Blue')
+        await expect(lane(page, 'Bluey').locator('.run-compare-lane-plot path')).toHaveCount(0)
+        await expect(lane(page, 'Bluey').locator('.run-compare-lane-cap')).toBeVisible()
+        expect(compared).toEqual([])
+    })
+
+    test('a click on a lane seeks every video to that time', async ({ page }) => {
+        await mockApi(page, { videos: [DECL, SHX] })
+        await page.goto(`/compare?runs=${DECL},${SHX}`)
+        await expect.poll(async () => (await clocksOf(page)).length).toBe(2)
+
+        const plot = lane(page, 'Decl').locator('.run-compare-lane-plot')
+        const box = (await plot.boundingBox())!
+        await plot.click({ position: { x: box.width / 2, y: box.height / 2 } })
+
+        await expect.poll(async () => (await clocksOf(page)).map(clock => Math.round(clock.time * 10) / 10)).toEqual([7.1, 7.1])
+        expect((await clocksOf(page)).map(clock => clock.paused)).toEqual([true, true])
+        await expect(page.getByRole('slider', { name: 'Timeline' })).toHaveAttribute('aria-valuetext', /^0:07\.1/)
+    })
+
+    test('on touch a vertical swipe across a lane leaves the playhead and a tap seeks', async ({ page, isMobile }) => {
+        test.skip(!isMobile, 'touch gestures run on the phone project')
+        await mockApi(page, { videos: [DECL, SHX] })
+        await page.goto(`/compare?runs=${DECL},${SHX}`)
+        await expect.poll(async () => (await clocksOf(page)).length).toBe(2)
+
+        const timeline = page.getByRole('slider', { name: 'Timeline' })
+        const plot = lane(page, 'Decl').locator('.run-compare-lane-plot')
+        await plot.scrollIntoViewIfNeeded()
+        const from = (await plot.boundingBox())!
+        const x = from.x + from.width / 4
+        const y = from.y + from.height / 2
+        const start = Date.now() / 1000
+        const cdp = await page.context().newCDPSession(page)
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }], timestamp: start })
+        for (let step = 1; step <= 10; step += 1) {
+            await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: y - step * 12 }], timestamp: start + step * 0.016 })
+        }
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [], timestamp: start + 0.2 })
+        await cdp.detach()
+        await expect(timeline).toHaveAttribute('aria-valuetext', '0:00.000')
+
+        const to = (await plot.boundingBox())!
+        await page.touchscreen.tap(to.x + to.width / 2, to.y + to.height / 2)
+        await expect.poll(async () => (await clocksOf(page)).map(clock => Math.round(clock.time * 10) / 10)).toEqual([7.1, 7.1])
+        await expect(timeline).toHaveAttribute('aria-valuetext', /^0:07\.1/)
     })
 })

@@ -54,7 +54,7 @@ describe('the race stage', () => {
         expect(race.runs.map(r => r.run.capId)).toEqual([A, B])
         expect(race.tiles).toEqual([
             expect.objectContaining({ kind: 'video', id: A, src: `https://media.test/${A}.mp4`, badges: [] }),
-            expect.objectContaining({ kind: 'video', id: B, src: `https://media.test/${B}.mp4`, badges: [] }),
+            expect.objectContaining({ kind: 'video', id: B, src: `https://media.test/${B}.mp4`, badges: ['Replay'] }),
         ])
         expect(race.dataOnly).toEqual([])
     })
@@ -102,7 +102,7 @@ describe('the race stage', () => {
         const race = compose(`runs=${A},${B}&data=${B}`, [run(A, 81.234), run(B, 79.5)])
 
         expect(tileIds(race)).toEqual([A])
-        expect(badgesOf(race)).toEqual({ [B]: ['No video'] })
+        expect(badgesOf(race)).toEqual({ [B]: ['Replay', 'No video'] })
         expect(race.runs.map(r => r.tile)).toEqual([true, false])
     })
 
