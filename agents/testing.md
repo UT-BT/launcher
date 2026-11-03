@@ -339,7 +339,9 @@ policy on Home: it drops the seeded consent and reloads once, so the banner show
 Each entry yields the surfaces `<id>`, `<id>/<modal>`, `<id>/<subView>` and
 `<id>/<subView>/<modal>`, where `<id>` is the entry's `id` or else its `view`, and
 `<surface>~<variant>` for each stress variant crawled. That surface
-id keys the ledger, the gallery and the test titles.
+id keys the ledger, the gallery and the test titles. [mobile-routes.md](mobile-routes.md) lists every
+entry with its tier, sub-views, modals, fixture set and skipped rules. It is generated from the
+manifest: run `npm run docs:mobile-routes` after changing an entry, or `npm run docs:check` fails.
 
 Every public view of the route contract has an entry, with every tab an anonymous visitor sees and
 every modal it can open by tapping. History, settings and the other signed-in modals belong to the

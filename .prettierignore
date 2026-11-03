@@ -1,4 +1,5 @@
 app/utils/fixtures/**/*.json
+agents/mobile-routes.md
 dist*/
 out/
 build/

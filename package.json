@@ -34,6 +34,7 @@
     "test:mobile:refresh-fixtures": "playwright test --config e2e/mobile/refresh.config.ts",
     "check:bundle": "node scripts/check-web-bundle.mjs",
     "docs:check": "node scripts/check-docs.mjs",
+    "docs:mobile-routes": "node scripts/mobile-routes-doc.mjs",
     "quality:web": "npm-run-all typecheck:web typecheck:e2e lint test build:web check:bundle"
   },
   "repository": {

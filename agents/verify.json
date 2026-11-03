@@ -347,6 +347,13 @@
     "app/device/diagnostics/diagnosticTrigger.ts",
     "app/device/diagnostics/mobileDiagnostics.ts"
   ],
+  "agents/mobile-routes.md": [
+    "e2e/mobile/manifest/index.ts",
+    "e2e/mobile/manifest/types.ts",
+    "e2e/mobile/routes-doc.ts",
+    "scripts/check-docs.mjs",
+    "scripts/mobile-routes-doc.mjs"
+  ],
   "agents/features/admin.md": [
     "app/components/main/Main.tsx",
     "app/components/pages/admin/AdminGuard.tsx",
