@@ -195,10 +195,34 @@ cap (owner decision).
   drawer (CSS `max-lg:` translate, no duplicated markup), opened from a fixed top bar
   (a 44px hamburger + logo). The drawer hides the big logo block (`max-lg:hidden`) so nav
   items and the profile card fit an 800px-tall phone. Every nav action goes through
-  `changeView`, which closes the drawer. Only in drawer mode, a **Reload app** item
-  (`SidebarReloadApp`) sits between the nav and the profile card: it calls
-  `location.reload()`, and URL sync brings the same route back. It is the escape hatch for
-  a standalone Home Screen app, which has no browser reload button.
+  `changeView`, which closes the drawer. The drawer opens only from the hamburger or the
+  tab bar's Menu tab; nothing opens it from the left screen edge, which stays free for the
+  system back gesture. It closes with a swipe to the left (`useDrawerSwipe`, plain pointer
+  events): past a third of its width, or on a quick fling, it closes; otherwise it springs
+  back. A fling counts only if the finger was still moving in the last 100 ms before it
+  lifted, so a flick held still springs back. A vertical drag scrolls its list instead,
+  because the drawer and its nav list are `touch-action: pan-y pinch-zoom` below `lg` (pinch-zoom
+  stays allowed). The click a swipe ends on, in the same task as the release, is swallowed;
+  a later click, such as a keyboard or screen-reader activation, goes through. Only in drawer
+  mode, a **Reload app** item (`SidebarReloadApp`) sits between the nav and the profile
+  card: it calls `location.reload()`, and URL sync brings the same route back. It is the
+  escape hatch for a standalone Home Screen app, which has no browser reload button.
+- **Bottom tab bar** (`BottomTabBar`, `app/components/layout/BottomTabBar.tsx`). On touch,
+  below `lg`, in portrait only (`showsBottomTabs` on the device environment; `AppLayout`
+  doesn't mount it anywhere else, so desktop and landscape have no tab bar in the DOM). Five
+  slots: Home, Maps, World Records (captioned "Records"), Events, and Menu, which opens the
+  drawer and gets focus back when it closes. Each tab is a `NavLink` through `changeView`. The
+  current section's tab carries `aria-current="page"` on its detail pages too
+  (`activeBottomTab`, [navigation.md](navigation.md#bottom-tab-bar)). Its height is
+  `--tab-bar-offset` (`shell.css`): `3.5rem` plus the bottom safe-area inset under the same
+  touch, below-`lg`, portrait query, `0px` elsewhere. The bar pads by the bottom and side insets,
+  and the main element pads its bottom by the same variable, so the last row of content
+  scrolls clear of the bar. Anything fixed to the bottom of the screen offsets by it too: the
+  analytics consent banner, the Tutorial card (by the larger of it and the bottom inset) and
+  the match page's Reconnecting toast. Those offsets are inline styles, not arbitrary
+  utilities, which keeps them out of the initial stylesheet's budget. `visible={false}` slides
+  the bar down and makes it `inert`; `AppLayout` always passes `visible` for now, so it is the
+  hook for hiding the bar on scroll.
 - **Top bar height.** `--top-bar-offset` (`app/styles/shell.css`) is `3.5rem`, or `3rem` in
   landscape below `lg`, plus the top safe-area inset. The bar (`.shell-top-bar`) and the
   main element's top padding (`.shell-main`) both read it, so they never drift apart.
@@ -207,10 +231,11 @@ cap (owner decision).
   The shell classes in the same file apply them: the top bar pads by the top inset and, in
   landscape, insets the hamburger and its right edge from the notch side; the drawer
   (`.shell-drawer`) pads top, bottom and left; the main element pads top (at `lg`+, where
-  there is no top bar), right, bottom and, below `lg`, left. Shell
+  there is no top bar), right, bottom (by `--tab-bar-offset` instead while the tab bar
+  shows) and, below `lg`, left. Shell
   code reads the variables, never `env()` directly, so `e2e/mobile/shell.spec.ts` can
-  simulate a notch by setting them on `<html>`. Modal sheets and the bottom tab bar pad
-  themselves.
+  simulate a notch by setting them on `<html>`. Modal sheets and the bottom tab bar
+  (`.shell-tab-bar`) pad themselves.
 - **Status-bar strip.** `body::before` paints the top inset `#070b12`
   (`shell.css`) above everything, in every theme: a Home Screen app uses
   `black-translucent`, whose white status-bar text iOS picks once at launch, so the strip
@@ -331,8 +356,8 @@ Phones parse the web entry chunk on first visit, so it stays lean.
   `pageLoaders.test.ts` asserts `Main.tsx` never value-imports a lazily loaded page.
 - **Anything needed only after a user action** (a modal, a detail page, an admin surface)
   gets `lazy()` and a mount gate. Existing examples: `LoginPage`, `UpdateModal` and
-  `LegacyInstallCard` in `app.tsx`; the Settings modal and `ChangeTitleModal` in
-  `AppLayout`; the diagnostic overlay behind `DiagnosticOverlayTrigger`; per-section
+  `LegacyInstallCard` in `app.tsx`; the Settings modal, `ChangeTitleModal` and the
+  sign-out confirm in `AppLayout`; the diagnostic overlay behind `DiagnosticOverlayTrigger`; per-section
   Settings panels; the pick/ban `ManagerDock` (fetched only when the manager dock model
   shows it); `PrivacyPolicyBody` behind `AnalyticsConsentBanner`'s
   modal, which keeps react-markdown out of the entry. The banner itself stays eager: it

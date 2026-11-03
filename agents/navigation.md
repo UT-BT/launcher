@@ -399,9 +399,38 @@ prevents the default; a held key (`repeat`) toggles once.
 
 **Mobile drawer.** Below `lg` (`AppLayout` matches `(max-width: 1023px)`, the same boundary
 as the `lg` classes) the same `aside` is an off-canvas drawer behind a top bar. Closed, it
-is `inert`; open, it traps focus, closes on Escape and returns focus to the menu button.
-Keep `inert` and the breakpoint in step when changing the shell
-([web-target.md](web-target.md)).
+is `inert`; open, it traps focus, closes on Escape and returns focus to what opened it (the
+menu button, or the tab bar's Menu tab while it is still on screen). It opens only from those
+two controls and closes with a swipe to the left (`useDrawerSwipe`, with the pure thresholds
+in `app/components/layout/drawerSwipe.ts`). Keep `inert` and the breakpoint in step when
+changing the shell ([web-target.md](web-target.md)).
+
+## Bottom tab bar
+
+On touch below `lg` in portrait, `AppLayout` mounts `BottomTabBar`
+(`app/components/layout/BottomTabBar.tsx`) under the content
+([web-target.md](web-target.md)). Its data is the pure module
+`app/components/navigation/bottomTabs.ts`, tested in `bottomTabs.test.ts`:
+
+- `BOTTOM_TABS` is Home, Maps, World Records and Events, taken from the sidebar registry's
+  items, so labels, captions (`navItemCaption`) and icons match the sidebar. Menu is the fifth
+  slot and opens the drawer.
+- `activeBottomTab(view)` picks the highlighted tab:
+
+  | View | Highlights |
+  |---|---|
+  | `home` | Home |
+  | `maps`, `maps-detail` | Maps |
+  | `world-records` | World Records |
+  | `events`, `event-detail`, `match-pickban`, `event-team` | Events |
+  | anything else | none |
+
+  The highlighted tab is a link with `aria-current="page"`. Add a view to this table when it
+  belongs to one of the four sections.
+- `showsBottomTabs(environment)` is the gate: touch, below `lg`, portrait.
+
+Every tab is a `NavLink` that calls `changeView` (close the drawer, then `navigate`), the same
+path as a sidebar item, so leave guards, URL sync and scroll restore behave as they do there.
 
 ## Sidebar badges and the new-item highlight
 

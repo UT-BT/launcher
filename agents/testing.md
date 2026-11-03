@@ -629,6 +629,19 @@ spec that is red today is marked `test.fail()`, with a note naming the ticket th
   WebKit has no multi-touch input, so there the spread is synthetic pointer events on the frame.
   The double tap uses the touchscreen on both engines. `e2e/map-screenshot-viewer.spec.ts`
   checks that desktop keeps the plain hero and that Change still opens the screenshot editor.
+- `bottom-tabs.spec.ts`: at 390×844, each tab opens its page and is the only one with
+  `aria-current="page"`, a map's page highlights Maps, Menu opens the drawer and a drawer link
+  closes it, and with `main` scrolled to the bottom no element of the content ends below the
+  tab bar's top, nor do the first-visit Tutorial card and consent banner. At 844×390, and after
+  turning to it, there is no tab bar. A swipe to the left that starts on a drawer link closes
+  the drawer, whose `touch-action` is `pan-y pinch-zoom`; a vertical drag leaves it open; a
+  short swipe held still before release springs back, and Enter on a drawer link still
+  follows it afterwards; a drag in from the left screen edge doesn't open it. On Chromium the
+  drags are real touch input (`Input.dispatchTouchEvent`), so they also prove the drawer's
+  `touch-action`; on WebKit they are synthetic pointer events. Neither engine sends a click
+  after a touch drag, so the click-swallow test fires synthetic pointer events and then the
+  click a mouse release would send, on both engines, and checks the link isn't followed. `e2e/bottom-tabs-desktop.spec.ts`
+  checks that `desktop-chromium` at 1280 and 1920 has no tab bar and the same sidebar.
 - `scroll-restore.spec.ts`: a cap page opened from a tapped link on the map page starts at the
   top; Back and Forward return each page to within 4 px of where it was left; a new visit to a
   page already in history starts at the top again. The same holds for two list pages, World

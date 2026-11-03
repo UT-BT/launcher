@@ -13,6 +13,7 @@ const ACTION_MODALS: Record<string, string> = {
     'components/modals/ReplayPickerModal.tsx': 'ReplayPickerModal',
     'components/modals/ReviewModal.tsx': 'ReviewModal',
     'components/modals/WorldRecordProgressionModal.tsx': 'WorldRecordProgressionModal',
+    'components/layout/SignOutConfirm.tsx': 'SignOutConfirm',
     'components/shared/ConfirmModal.tsx': 'ConfirmModal',
     'components/shared/DemoDownloadStatusModal.tsx': 'DemoDownloadStatusModal',
     'components/shared/ReplayVideoModal.tsx': 'ReplayVideoModal',

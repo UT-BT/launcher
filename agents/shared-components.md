@@ -213,7 +213,7 @@ and `onMenuOpenChange` serve the tutorial.
   because they reference page refs; that file re-exports `TutorialStep`.
 - The card follows the [modal rules](#modal): on touch it holds the shell scroll lock (steps
   still `scrollIntoView` their targets; on desktop the page scrolls under the card as before), takes
-  focus and returns it, closes on Escape, and grows its close and buttons to 44px on touch. It sits above the bottom safe area and its body scrolls, so
+  focus and returns it, closes on Escape, and grows its close and buttons to 44px on touch. It sits above the bottom safe area, or above the bottom tab bar while that shows, and its body scrolls, so
   it never reaches under the top bar. The dim overlay doesn't take pointer events and stays under
   the top bar and, on desktop, the rail.
 

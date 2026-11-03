@@ -169,7 +169,11 @@ test.describe('safe areas', () => {
         const bar = await topBarBox(page)
         const search = await boxOf(page.getByPlaceholder('Search for a map name or tag...'))
         expect(search.top).toBeGreaterThanOrEqual(bar.bottom)
-        expect(await page.getByRole('main').evaluate(main => parseFloat(getComputedStyle(main).paddingBottom))).toBe(34)
+        const tabBar = page.getByRole('navigation', { name: 'Tab bar' })
+        const tabs = await boxOf(tabBar)
+        expect(tabs.bottom).toBe(height)
+        expect((await boxOf(tabBar.getByRole('link', { name: 'Home' }))).bottom).toBeLessThanOrEqual(height - 34)
+        expect(await page.getByRole('main').evaluate(main => parseFloat(getComputedStyle(main).paddingBottom))).toBe(height - tabs.top)
 
         const drawer = await openDrawer(page)
         const firstLink = await boxOf(drawer.getByRole('link').first())

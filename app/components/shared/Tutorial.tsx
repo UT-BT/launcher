@@ -146,12 +146,14 @@ export function Tutorial({ steps, step, setStep, onClose, ariaLabel }: TutorialP
                 role="dialog"
                 aria-label={ariaLabel}
                 data-modal-backdrop
-                className="fixed bottom-[calc(1.5rem_+_var(--safe-area-bottom))] right-[calc(1.5rem_+_var(--safe-area-right))] z-[80] w-80 max-w-[calc(100vw-3rem)]"
+                className="fixed right-[calc(1.5rem_+_var(--safe-area-right))] z-[80] w-80 max-w-[calc(100vw-3rem)]"
+                style={{ bottom: 'calc(1.5rem + max(var(--safe-area-bottom), var(--tab-bar-offset)))' }}
             >
                 <div
                     ref={panelRef}
                     tabIndex={-1}
-                    className="flex flex-col max-h-[calc(100dvh_-_var(--top-bar-offset)_-_3rem_-_var(--safe-area-bottom))] bg-card border border-accent-500/40 rounded-xl shadow-2xl"
+                    className="flex flex-col bg-card border border-accent-500/40 rounded-xl shadow-2xl"
+                    style={{ maxHeight: 'calc(100dvh - var(--top-bar-offset) - 3rem - max(var(--safe-area-bottom), var(--tab-bar-offset)))' }}
                 >
                     <div className="flex shrink-0 items-center justify-between px-4 pt-3 pb-2 border-b border-hairline/10">
                         <span className="text-[10px] font-semibold uppercase tracking-wider text-accent-300">

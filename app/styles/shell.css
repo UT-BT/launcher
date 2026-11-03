@@ -6,6 +6,7 @@
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --safe-area-left: env(safe-area-inset-left, 0px);
   --top-bar-offset: calc(3.5rem + var(--safe-area-top));
+  --tab-bar-offset: 0px;
 }
 
 body::before {
@@ -21,6 +22,11 @@ body::before {
 .shell-top-bar {
   height: var(--top-bar-offset);
   padding: var(--safe-area-top) max(1rem, var(--safe-area-right)) 0 max(0.5rem, var(--safe-area-left));
+}
+
+.shell-tab-bar {
+  height: var(--tab-bar-offset);
+  padding: 0 var(--safe-area-right) var(--safe-area-bottom) var(--safe-area-left);
 }
 
 .shell-drawer {
@@ -47,6 +53,16 @@ body::before {
     :root {
       --top-bar-offset: calc(3rem + var(--safe-area-top));
     }
+  }
+}
+
+@media (hover: none) and (max-width: 1023px) and (orientation: portrait) {
+  :root {
+    --tab-bar-offset: calc(3.5rem + var(--safe-area-bottom));
+  }
+
+  .shell-main {
+    padding-bottom: var(--tab-bar-offset);
   }
 }
 

@@ -8,6 +8,10 @@ import type { NavParams } from '@/app/components/navigation/NavigationContext'
 import { useNavigation } from '@/app/components/navigation/NavigationContext'
 import { ShellScrollRestore, useShellScroller } from '@/app/components/navigation/useNavScrollRestore'
 import { useViewportRecovery } from '@/app/components/layout/useViewportRecovery'
+import { useDrawerSwipe } from '@/app/components/layout/useDrawerSwipe'
+import { BottomTabBar } from '@/app/components/layout/BottomTabBar'
+import { showsBottomTabs } from '@/app/components/navigation/bottomTabs'
+import { useDeviceEnvironment } from '@/app/device/useDeviceEnvironment'
 import { PullToRefresh } from '@/app/components/layout/PullToRefresh'
 
 const loadSettingsModal = () => IS_WEB
@@ -15,6 +19,7 @@ const loadSettingsModal = () => IS_WEB
     : import('@/app/components/modals/SettingsModalDesktop').then(m => ({ default: m.SettingsModalDesktop }))
 const SettingsModal = lazy(loadSettingsModal)
 const ChangeTitleModal = lazy(() => import('@/app/components/modals/ChangeTitleModal').then(m => ({ default: m.ChangeTitleModal })))
+const SignOutConfirm = lazy(() => import('@/app/components/layout/SignOutConfirm').then(m => ({ default: m.SignOutConfirm })))
 import { PageRefreshProvider } from '@/app/components/navigation/PageRefreshContext'
 
 import { UserProfile } from '@/app/utils/api'
@@ -29,7 +34,7 @@ import { SidebarCollapseToggle } from '@/app/components/layout/sidebar/SidebarCo
 import { SidebarNavItem } from '@/app/components/layout/sidebar/SidebarNavItem'
 import { SidebarReloadApp } from '@/app/components/layout/sidebar/SidebarReloadApp'
 import { SidebarUserCard } from '@/app/components/layout/sidebar/SidebarUserCard'
-import { SignOutConfirm } from '@/app/components/layout/SignOutConfirm'
+import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { readSidebarCollapsed, writeSidebarCollapsed } from '@/app/components/layout/sidebarPreference'
 import { DiagnosticOverlayTrigger } from '@/app/device/diagnostics/DiagnosticOverlayTrigger'
 
@@ -66,6 +71,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
     const [collapsePreference, setCollapsePreference] = useState(readSidebarCollapsed)
     const collapsed = collapsePreference && !isMobileViewport
     const mobileMenuButtonRef = useRef<HTMLButtonElement>(null)
+    const drawerOpenerRef = useRef<HTMLElement | null>(null)
     const sidebarRef = useRef<HTMLElement>(null)
     const shellScrollerRef = useRef<HTMLElement>(null)
     const shellContentRef = useRef<HTMLDivElement>(null)
@@ -74,6 +80,13 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
         setMobileNavOpen(false)
         onViewChange(view, params)
     }
+    const closeDrawer = useCallback(() => setMobileNavOpen(false), [])
+    const openDrawerFrom = (opener: HTMLElement) => {
+        drawerOpenerRef.current = opener
+        setMobileNavOpen(true)
+    }
+    const showTabBar = useDeviceEnvironment(showsBottomTabs)
+    useDrawerSwipe(sidebarRef, isMobileViewport && mobileNavOpen, closeDrawer)
     const { entry } = useNavigation()
     const currentParams = entry.params
     useShellScroller(shellScrollerRef, shellContentRef)
@@ -158,6 +171,8 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
         }
 
         sidebar.removeAttribute('inert')
+        const opener = drawerOpenerRef.current
+        drawerOpenerRef.current = null
         const menuButton = mobileMenuButtonRef.current
         const focusable = () => Array.from(sidebar.querySelectorAll<HTMLElement>(
             'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
@@ -191,7 +206,8 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
         return () => {
             document.removeEventListener('keydown', handleKeyDown)
             sidebar.setAttribute('inert', '')
-            menuButton?.focus({ preventScroll: true })
+            const returnTo = opener?.isConnected ? opener : menuButton
+            returnTo?.focus({ preventScroll: true })
         }
     }, [isMobileViewport, mobileNavOpen])
 
@@ -237,7 +253,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                 tabIndex={-1}
                 className={cn(
                 "shell-drawer w-[var(--sidebar-width,0px)] bg-card/50 backdrop-blur-xl border-r border-hairline/10 flex flex-col relative z-20",
-                "max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:z-50 max-lg:max-w-[85vw] max-lg:bg-card/95 max-lg:touch:bg-card max-lg:touch:backdrop-filter-none max-lg:transition-transform max-lg:duration-200",
+                "max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:z-50 max-lg:max-w-[85vw] max-lg:[touch-action:pan-y_pinch-zoom] max-lg:bg-card/95 max-lg:touch:bg-card max-lg:touch:backdrop-filter-none max-lg:transition-transform max-lg:duration-200",
                 mobileNavOpen ? "max-lg:translate-x-0" : "max-lg:-translate-x-full"
                 )}
             >
@@ -257,7 +273,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                 />
 
                 <nav className={cn(
-                    "flex-1 min-h-0 overflow-y-auto relative z-10",
+                    "flex-1 min-h-0 overflow-y-auto relative z-10 max-lg:[touch-action:pan-y_pinch-zoom]",
                     collapsed
                         ? "overflow-x-hidden [scrollbar-width:none] px-1.5 space-y-2"
                         : "px-4 max-lg:pt-6 space-y-6 [@media(max-height:800px)]:space-y-3"
@@ -327,11 +343,23 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                 )}
             </main>
 
-            {showLogoutConfirm && (
-                <SignOutConfirm
-                    onCancel={() => setShowLogoutConfirm(false)}
-                    onConfirm={() => auth.logout().then(() => window.location.reload())}
+            {showTabBar && (
+                <BottomTabBar
+                    currentView={currentView}
+                    visible
+                    menuOpen={mobileNavOpen}
+                    onNavigate={changeView}
+                    onOpenMenu={openDrawerFrom}
                 />
+            )}
+
+            {showLogoutConfirm && (
+                <LazyModalGate open>
+                    <SignOutConfirm
+                        onCancel={() => setShowLogoutConfirm(false)}
+                        onConfirm={() => auth.logout().then(() => window.location.reload())}
+                    />
+                </LazyModalGate>
             )}
 
             {capabilities.settingsModal && isSettingsOpen && (
