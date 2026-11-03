@@ -272,6 +272,7 @@
     "e2e/mobile/scroll-restore.spec.ts",
     "e2e/mobile/settle.ts",
     "e2e/mobile/table-cards.spec.ts",
+    "e2e/mobile/team-manage-cards.spec.ts",
     "e2e/mobile/tables.ts",
     "e2e/mobile/viewport-recovery.spec.ts",
     "e2e/mobile/viewports.ts",

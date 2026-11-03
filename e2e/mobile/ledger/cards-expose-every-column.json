@@ -14,9 +14,5 @@
   { "surface": "player-detail/personal-bests~long-text", "viewport": "360x780", "engine": "chromium" },
   { "surface": "player-detail/personal-bests~long-text", "viewport": "390x844", "engine": "webkit" },
   { "surface": "player-detail~single-row", "viewport": "360x780", "engine": "chromium" },
-  { "surface": "player-detail~single-row", "viewport": "390x844", "engine": "webkit" },
-  { "surface": "team-detail", "viewport": "360x780", "engine": "chromium" },
-  { "surface": "team-detail", "viewport": "390x844", "engine": "webkit" },
-  { "surface": "team-detail~long-text", "viewport": "360x780", "engine": "chromium" },
-  { "surface": "team-detail~long-text", "viewport": "390x844", "engine": "webkit" }
+  { "surface": "player-detail~single-row", "viewport": "390x844", "engine": "webkit" }
 ]

@@ -1,10 +1,10 @@
 import { useCallback, useMemo, useState, useEffect } from 'react'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow, DataTableCell,
-    DataTableEmpty, DataTableSkeletonRow, type ResponsiveColumn, type SortDirection,
+    DataTableEmpty, DataTableSkeletonRow, type ColumnTier, type ResponsiveColumn, type SortDirection,
 } from '@/app/components/shared/DataTable'
-import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
-import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
+import { PlayerInfo, openPlayer } from '@/app/components/shared/PlayerInfo'
+import { CapTimeLink, openCap } from '@/app/components/shared/CapTimeLink'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { cn } from '@/lib/utils'
 import { displayMapName, formatTimeAgo } from '@/app/utils/format'
@@ -14,14 +14,17 @@ import { SectionHeader, teamErrorMessage } from './teamsShared'
 const FEED_LIMIT = 15
 
 type ActSortField = 'player' | 'type' | 'map' | 'when'
+type ActColumnId = ActSortField | 'result'
 
-const COLUMNS: ResponsiveColumn[] = [
-    { id: 'player', width: '15rem', priority: 60, required: true },
-    { id: 'type', width: '4.5rem', priority: 35 },
-    { id: 'map', width: '10rem', priority: 55, required: true },
-    { id: 'result', width: '6rem', priority: 60 },
-    { id: 'when', width: '5rem', priority: 50 },
+const COLUMNS: (ResponsiveColumn & { id: ActColumnId; tier: ColumnTier; label: string })[] = [
+    { id: 'player', width: '15rem', priority: 60, required: true, tier: 'essential', label: 'Player' },
+    { id: 'type', width: '4.5rem', priority: 35, tier: 'essential', label: 'Type' },
+    { id: 'map', width: '10rem', priority: 55, required: true, tier: 'essential', label: 'Map' },
+    { id: 'result', width: '6rem', priority: 60, tier: 'detail', label: 'Result' },
+    { id: 'when', width: '5rem', priority: 50, tier: 'essential', label: 'When' },
 ]
+
+const CELL_ALIGN: Partial<Record<ActColumnId, 'right'>> = { result: 'right', when: 'right' }
 
 const DEFAULT_DIR: Record<ActSortField, 'asc' | 'desc'> = { player: 'asc', type: 'asc', map: 'asc', when: 'desc' }
 
@@ -89,6 +92,12 @@ export function TeamActivityPanel({ accessToken, teamId, hasMembers, selfUserId 
         return arr
     }, [items, sort])
 
+    const rowKeys = useMemo(
+        () => new Map(items.map((item, i) => [item, `${item.type}-${item.cap_id ?? item.user}-${item.added}-${i}`])),
+        [items],
+    )
+    const rowKey = (item: TeamActivityItem) => rowKeys.get(item) ?? ''
+
     const handleSort = (field: ActSortField) => {
         setSort(sort.by === field ? { by: field, dir: sort.dir === 'asc' ? 'desc' : 'asc' } : { by: field, dir: DEFAULT_DIR[field] })
     }
@@ -110,39 +119,60 @@ export function TeamActivityPanel({ accessToken, teamId, hasMembers, selfUserId 
         )
     }
 
-    const compactRows = loading ? (
-        Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} role="listitem" className="p-3 border-b border-hairline/5 last:border-0 animate-pulse">
-                <div className="h-10 rounded bg-hairline/5" />
-            </div>
-        ))
-    ) : sorted.length === 0 ? (
-        <div role="listitem" className="px-4 py-12 text-center text-sm text-muted-foreground">
-            No recent activity from this team yet.
-        </div>
-    ) : sorted.map((item, i) => {
-        const isOwn = selfUserId != null && String(item.user) === String(selfUserId)
+    const openItem = (item: TeamActivityItem) => (item.cap_id ? openCap(item.cap_id) : openPlayer(item.user))
+
+    const isOwnItem = (item: TeamActivityItem) => selfUserId != null && String(item.user) === String(selfUserId)
+
+    const activityCell = (id: ActColumnId, item: TeamActivityItem): React.ReactNode => {
+        switch (id) {
+            case 'player': {
+                const isOwn = isOwnItem(item)
+                return <PlayerInfo userId={item.user} alias={item.alias} title={item.title} size="sm" highlight={isOwn} showYouBadge={isOwn} />
+            }
+            case 'type': {
+                const badge = TYPE_BADGE[item.type]
+                return <span className={cn('text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border', badge.className)}>{badge.label}</span>
+            }
+            case 'map':
+                return <span className="text-foreground truncate block">{item.map ? displayMapName(item.map) : '—'}</span>
+            case 'result':
+                return resultFor(item)
+            case 'when':
+                return <span className="text-xs text-muted-foreground tabular-nums">{item.added ? formatTimeAgo(item.added) : ''}</span>
+        }
+    }
+
+    const columns: ResponsiveColumn<TeamActivityItem>[] = COLUMNS.map(column => ({
+        ...column,
+        sortKey: column.id === 'result' ? undefined : column.id,
+        cell: item => activityCell(column.id, item),
+    }))
+
+    const activityFace = (item: TeamActivityItem) => {
         const badge = TYPE_BADGE[item.type]
         return (
-            <div
-                key={`${item.type}-${item.cap_id ?? item.user}-${item.added}-${i}`}
-                role="listitem"
-                className={cn('grid grid-cols-[minmax(0,1fr)_auto] gap-3 p-3 border-b border-hairline/5 last:border-0', isOwn && 'bg-emerald-500/[0.05]')}
-            >
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3">
                 <div className="min-w-0 space-y-1.5">
-                    <PlayerInfo userId={item.user} alias={item.alias} title={item.title} size="sm" highlight={isOwn} showYouBadge={isOwn} />
+                    {activityCell('player', item)}
                     <div className="flex items-center gap-2 min-w-0">
                         <span className={cn('shrink-0 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border', badge.className)}>{badge.label}</span>
                         <span className="text-sm text-foreground truncate">{item.map ? displayMapName(item.map) : '—'}</span>
                     </div>
                 </div>
-                <div className="flex flex-col items-end justify-between gap-1.5">
-                    {resultFor(item)}
-                    <span className="text-xs text-muted-foreground tabular-nums">{item.added ? formatTimeAgo(item.added) : ''}</span>
-                </div>
+                <div className="flex items-center">{activityCell('when', item)}</div>
             </div>
         )
-    })
+    }
+
+    const cardPlaceholder = loading ? (
+        Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="h-14 mx-3 my-2 rounded-lg bg-hairline/5 animate-pulse" />
+        ))
+    ) : sorted.length === 0 ? (
+        <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+            No recent activity from this team yet.
+        </div>
+    ) : undefined
 
     return (
         <section>
@@ -157,10 +187,18 @@ export function TeamActivityPanel({ accessToken, teamId, hasMembers, selfUserId 
             <DataTableShell
                 className="!flex-none"
                 responsive={{
-                    columns: COLUMNS,
+                    columns,
                     onResolve: handleResolve,
-                    compactContent: compactRows,
                     compactAriaLabel: 'Team activity',
+                    cards: {
+                        rows: sorted,
+                        rowKey,
+                        face: activityFace,
+                        onOpen: openItem,
+                        rowClassName: item => (isOwnItem(item) ? 'bg-emerald-500/[0.05]' : undefined),
+                        placeholder: cardPlaceholder,
+                        sort: { key: sort.by, direction: sort.dir, onSort: key => handleSort(key as ActSortField) },
+                    },
                 }}
             >
                 <DataTableHeaderRow>
@@ -176,31 +214,13 @@ export function TeamActivityPanel({ accessToken, teamId, hasMembers, selfUserId 
                     ) : sorted.length === 0 ? (
                         <DataTableEmpty colSpan={visibleCount} message="No recent activity from this team yet." />
                     ) : (
-                        sorted.map((item, i) => {
-                            const isOwn = selfUserId != null && String(item.user) === String(selfUserId)
-                            const badge = TYPE_BADGE[item.type]
-                            return (
-                                <DataTableRow key={`${item.type}-${item.cap_id ?? item.user}-${item.added}-${i}`} className={cn(isOwn && 'bg-emerald-500/[0.05]')}>
-                                    <DataTableCell>
-                                        <PlayerInfo userId={item.user} alias={item.alias} title={item.title} size="sm" highlight={isOwn} showYouBadge={isOwn} />
-                                    </DataTableCell>
-                                    {isVisible('type') && (
-                                        <DataTableCell>
-                                            <span className={cn('text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border', badge.className)}>{badge.label}</span>
-                                        </DataTableCell>
-                                    )}
-                                    <DataTableCell>
-                                        <span className="text-foreground truncate block">{item.map ? displayMapName(item.map) : '—'}</span>
-                                    </DataTableCell>
-                                    {isVisible('result') && <DataTableCell align="right">{resultFor(item)}</DataTableCell>}
-                                    {isVisible('when') && (
-                                        <DataTableCell align="right">
-                                            <span className="text-xs text-muted-foreground tabular-nums">{item.added ? formatTimeAgo(item.added) : ''}</span>
-                                        </DataTableCell>
-                                    )}
-                                </DataTableRow>
-                            )
-                        })
+                        sorted.map(item => (
+                            <DataTableRow key={rowKey(item)} className={cn(isOwnItem(item) && 'bg-emerald-500/[0.05]')}>
+                                {COLUMNS.filter(column => isVisible(column.id)).map(column => (
+                                    <DataTableCell key={column.id} align={CELL_ALIGN[column.id]}>{activityCell(column.id, item)}</DataTableCell>
+                                ))}
+                            </DataTableRow>
+                        ))
                     )}
                 </tbody>
             </DataTableShell>

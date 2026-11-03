@@ -442,10 +442,11 @@ times through `CapTimeLink`, and handle skeleton and empty states themselves, si
 `compactContent` replaces the whole table including `DataTableSkeletonRow` and
 `DataTableEmpty`.
 
-Reference page: `teams/TeamActivityPanel.tsx`. Tiered tables: `WorldRecordsPage.tsx`,
+Reference page: `playerDetail/RecentCapsCard.tsx`. Tiered tables: `WorldRecordsPage.tsx`,
 `PlayersPage.tsx` and `ServerBrowserPage.tsx` (with ColumnsMenu, `onCompactChange` and the
 card sort), `CapItAllPage.tsx`, `mapDetail/LeaderboardCard.tsx` (a panel with actions),
-`home/LatestRecordsCard.tsx` (every column essential, no panel).
+`home/LatestRecordsCard.tsx` (every column essential, no panel), `teams/TeamActivityPanel.tsx`
+(card sort over a client-sorted feed).
 
 ## Buttons and chips
 

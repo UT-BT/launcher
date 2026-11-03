@@ -642,6 +642,16 @@ spec that is red today is marked `test.fail()`, with a note naming the ticket th
   header's `aria-sort` once the page is widened to 1920 px, and come back on the cards, with the
   card that was open still open; switching to Top Rushers and back closes it. Cards stack one per
   row at 430×932 and 440×956 and sit two per row at 744×1133 and 844×390.
+- `team-manage-cards.spec.ts`: the tiered team and Manage tables at 390×844. A team world record
+  card keeps holder, map and time on its face, with Difficulty and Date in the panel, and its body
+  opens the cap; a team activity card keeps player, type, map and when, with Result in the panel,
+  and its body opens the cap, or the player for a playtime item.
+  Both sort from the cards (world records: the request carries the new sort; activity: the cards
+  reorder) and show it as the header's `aria-sort` at 1920 px. Signed in as the event manager, a
+  Matches card keeps match, status, Edit and Picks & Bans on its face: Edit opens the match editor,
+  the panel's streamer picker saves an assignment, and Picks & Bans opens the match page. A pick/ban
+  queue card keeps match, status and its actions, with stage, schedule, streamer and Ready / Online
+  in the panel, and Open Page opens the match page. Both manage cards' bodies open the match page.
 - `leaderboard-cards.spec.ts`: the map leaderboards on a phone. A solo card shows rank, medal and
   time on its face and Team, Date, Watch replay and Download demo in its panel; Watch opens the
   replay video and Download fetches the card's demo (the demo read is routed in the spec). The
