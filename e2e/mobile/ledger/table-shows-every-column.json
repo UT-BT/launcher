@@ -39,10 +39,6 @@
   { "surface": "admin/user-management", "viewport": "915x412", "engine": "chromium" },
   { "surface": "admin/user-management", "viewport": "390x844", "engine": "webkit" },
   { "surface": "admin/user-management", "viewport": "844x390", "engine": "webkit" },
-  { "surface": "cap-it-all", "viewport": "915x412", "engine": "chromium" },
-  { "surface": "cap-it-all", "viewport": "844x390", "engine": "webkit" },
-  { "surface": "cap-it-all~long-text", "viewport": "915x412", "engine": "chromium" },
-  { "surface": "cap-it-all~long-text", "viewport": "844x390", "engine": "webkit" },
   { "surface": "event-detail/teams", "viewport": "915x412", "engine": "chromium" },
   { "surface": "event-detail/teams", "viewport": "844x390", "engine": "webkit" },
   { "surface": "event-detail/teams~long-text", "viewport": "915x412", "engine": "chromium" },
@@ -60,9 +56,5 @@
   { "surface": "maps/new", "viewport": "915x412", "engine": "chromium" },
   { "surface": "maps/new", "viewport": "844x390", "engine": "webkit" },
   { "surface": "maps~most-columns", "viewport": "915x412", "engine": "chromium" },
-  { "surface": "maps~most-columns", "viewport": "844x390", "engine": "webkit" },
-  { "surface": "servers", "viewport": "915x412", "engine": "chromium" },
-  { "surface": "servers", "viewport": "844x390", "engine": "webkit" },
-  { "surface": "servers~long-text", "viewport": "915x412", "engine": "chromium" },
-  { "surface": "servers~long-text", "viewport": "844x390", "engine": "webkit" }
+  { "surface": "maps~most-columns", "viewport": "844x390", "engine": "webkit" }
 ]

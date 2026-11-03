@@ -565,7 +565,8 @@ What the crawl expects of a card, so later card work passes these rules without 
 Decorative columns are declared per manifest entry
 ([Mobile route manifest](#mobile-route-manifest)). Today they are the thumbnail columns of Maps, the
 server browser and the History modal. A list that desktop shows only in a hover card, such as a
-server's player names, is not in a cell, so these rules can't see it.
+server's player names, is not in a cell, so these rules can't see it; `player-server-cards.spec.ts`
+checks the server panel's name lists instead.
 
 ### Interaction specs
 
@@ -596,6 +597,13 @@ spec that is red today is marked `test.fail()`, with a note naming the ticket th
   after it closes `main` takes a swipe again. A multi-filter dropdown and a `modal={false}` menu
   fit the visible area and hold the page still too. Signed-in overlays sign in by seeding the
   stored login and answering the profile request.
+- `player-server-cards.spec.ts`: the tiered Players, Cap It All and Servers tables at 390×844.
+  A server card keeps name, players n/max, flag and status on its face, and its panel lists the
+  player and spectator names with the spectator count. A sort field and direction picked on the
+  Servers and Players cards reorder the cards (Players: the request carries the new sort) and show
+  as the header's `aria-sort` at 1920 px. The Players face holds rank, points and WRs with Role in
+  the panel; the Cap It All face holds the certified percentage with the three breakdowns in the
+  panel and no sort control. Tapping a Players or Cap It All card body opens the player.
 - `pull-to-refresh.spec.ts`: on Maps with the New maps filter set, a short pull shows the
   indicator and refreshes nothing. A pull past the threshold shows the spinner below the top
   bar while the refetch is held, refetches the maps' data, and keeps the filter. The event

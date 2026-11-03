@@ -371,12 +371,27 @@ re-sorting reuses the total.
 controls; the header shows `map_count` active maps. It pages the way World Records does (ref page
 cache, neighbour prefetch, `querySig` gate). The only persisted pref is the page size.
 
+- **Phone cards**: the table is tiered
+  ([shared-components.md](../shared-components.md#column-tiers-and-phone-cards)). The face holds
+  rank, player, total (count and percentage) and the certified percentage, so the total is never
+  hidden. Certified, non-certified and team maps (count, percentage and bar) sit in the expand
+  panel; certified is a detail column even though its percentage is on the face, because the
+  panel is the only place with its count. Tapping the body opens the player. No sort control, as
+  the table has none. `e2e/mobile/player-server-cards.spec.ts` checks the cards.
+
 ## Players list
 
 `fetchPlayers` (`/v2/players/`) and `fetchPlayersCount` (`/v2/players/count/`, search only) page
 and sort server-side. `rank` and `alias` sort ascending on first click, every other field
 descending. A `rank` of 0 means unranked and renders "—". Rank and points are the same
 server-computed values the profile hero shows.
+
+- **Phone cards**: the table is tiered
+  ([shared-components.md](../shared-components.md#column-tiers-and-phone-cards)). The face holds
+  rank, player (with the Banned badge), points and world records; role, the medal counts and
+  member since sit in the expand panel, when the user shows those columns. Tapping the body opens
+  the player. The card sort control offers every visible sortable column, on the same sort state
+  as the header. `e2e/mobile/player-server-cards.spec.ts` checks the cards.
 
 ## Maps list
 

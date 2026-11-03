@@ -131,6 +131,16 @@ is `'Unsupported'`.
 - **Ping.** `pingServer` accepts IPv4 only (schema) and runs one `ping` with a 1 s
   timeout; `999` means failed. The server browser pings unique IPs six at a time after
   each fetch, behind `capabilities.ping`.
+- **Server browser phone cards.** The table is tiered
+  ([shared-components.md](../shared-components.md#column-tiers-and-phone-cards)). The face holds
+  the favourite, the type icon, the server name, players n/max, the region flag, the map, the
+  status and, with `capabilities.game`, Join and Spec. The expand panel holds the type in words,
+  ping (desktop), and the player and spectator lists: each shows its count, then every name in
+  the same rows as the desktop dropdowns (`PlayerInfo`, or the spectator bot's Twitch row). Players and spectators are detail
+  columns for that reason, although the n/max count is on the face too; the thumbnail is
+  decorative. The body has no tap action, as there is no server page. The card sort control
+  offers every visible sortable column. `e2e/mobile/player-server-cards.spec.ts` checks the
+  cards.
 
 ### The game already running
 

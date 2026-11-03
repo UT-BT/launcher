@@ -243,6 +243,7 @@
     "e2e/mobile/modal-sheet.spec.ts",
     "e2e/mobile/overlays.spec.ts",
     "e2e/mobile/owner-repro.spec.ts",
+    "e2e/mobile/player-server-cards.spec.ts",
     "e2e/mobile/pull-to-refresh.spec.ts",
     "e2e/mobile/refresh-fixtures.ts",
     "e2e/mobile/refresh.config.ts",

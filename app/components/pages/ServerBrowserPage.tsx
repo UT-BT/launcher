@@ -45,7 +45,7 @@ import { displayMapName } from '@/app/utils/format'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow,
     DataTableCell, DataTableEmpty, DataTableSkeletonRow,
-    type ResponsiveColumn,
+    type ColumnTier, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import {
     DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
@@ -92,6 +92,19 @@ const COLUMN_PRIORITY: Partial<Record<ServerColumnId, number>> = {
     status: 20,
     type: 35,
     thumbnail: 30,
+}
+
+const COLUMN_TIER: Record<ServerColumnId, ColumnTier> = {
+    thumbnail: 'decorative',
+    type: 'detail',
+    name: 'essential',
+    map: 'essential',
+    region: 'essential',
+    ping: 'detail',
+    players: 'detail',
+    spectators: 'detail',
+    status: 'essential',
+    actions: 'essential',
 }
 
 const SORTABLE_COLUMNS: Partial<Record<ServerColumnId, ServerSortField>> = {
@@ -261,11 +274,10 @@ interface PlayerListCellProps {
     plural: string
 }
 
+const byName = (players: Player[]): Player[] => [...players].sort((a, b) => a.name.localeCompare(b.name))
+
 const PlayerListCell = ({ players, displayText, displayColor, singular, plural }: PlayerListCellProps) => {
-    const sorted = useMemo(
-        () => [...players].sort((a, b) => a.name.localeCompare(b.name)),
-        [players],
-    )
+    const sorted = useMemo(() => byName(players), [players])
 
     const trigger = (
         <div className={cn(
@@ -301,6 +313,50 @@ const PlayerListCell = ({ players, displayText, displayColor, singular, plural }
                 </div>
             </DropdownMenuContent>
         </DropdownMenu>
+    )
+}
+
+const ServerPlayerList = ({ players, count, countColor }: { players: Player[]; count: string; countColor: string }) => {
+    const sorted = useMemo(() => byName(players), [players])
+    return (
+        <div className="min-w-0 flex-1">
+            <span className={cn('text-xs font-bold tabular-nums', countColor)}>{count}</span>
+            {sorted.length > 0 && (
+                <div className="-mx-2 mt-1 space-y-0.5">
+                    {sorted.map((p, i) => <PlayerRow key={`${p.id}-${p.name}-${i}`} player={p} />)}
+                </div>
+            )}
+        </div>
+    )
+}
+
+const displayServerName = (server: Server): string =>
+    trimServerName(server.hostname).replace(/\s*\([^)]+\)\s*$/, '')
+
+const playerCountColor = (server: Server): string =>
+    server.player_count >= server.max_players ? 'text-rose-400' :
+        server.player_count > 0 ? 'text-emerald-400' : 'text-muted-foreground'
+
+const StatusBadge = ({ server, className }: { server: Server; className?: string }) => {
+    const text = getGameStatusText(
+        server.remaining_time_seconds,
+        server.certified_records,
+        getServerType(server.hostname),
+        server.red_team_score,
+        server.blue_team_score,
+    )
+    const isEnded = text === 'Match Ended' || text === 'Overtime'
+    return (
+        <div className={cn(
+            'inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border whitespace-nowrap',
+            isEnded
+                ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                : 'bg-hairline/5 border-hairline/5 text-muted-foreground',
+            className,
+        )}>
+            {isEnded ? <Flag className="size-3" /> : <Clock className="size-3" />}
+            {text}
+        </div>
     )
 }
 
@@ -568,16 +624,6 @@ export function ServerBrowserPage({
         [displayColumnOrder, state.columnVisibility],
     )
 
-    const responsiveColumns = useMemo<ResponsiveColumn[]>(
-        () => visibleColumns.map(id => ({
-            id,
-            width: COLUMN_LAYOUT[id].width,
-            priority: COLUMN_PRIORITY[id],
-            required: RESPONSIVE_REQUIRED_COLUMNS.has(id),
-        })),
-        [visibleColumns],
-    )
-
     const [resolved, setResolved] = useState<Set<ServerColumnId> | null>(null)
     const handleResolve = useCallback((ids: Set<string>) => {
         setResolved(ids as Set<ServerColumnId>)
@@ -624,77 +670,61 @@ export function ServerBrowserPage({
         )
     }
 
-    const renderCell = (id: ServerColumnId, server: Server, isFirstRow: boolean): React.ReactNode => {
-        if (!isEffectivelyVisible(id)) return null
-        const align = COLUMN_LAYOUT[id].align
+    const serverCell = (id: ServerColumnId, server: Server, isFirstRow = false): React.ReactNode => {
         const type = getServerType(server.hostname)
         const region = getServerRegion(server.hostname)
         switch (id) {
             case 'thumbnail':
-                return (
-                    <DataTableCell key={id} align={align}>
-                        <MapThumbnail mapName={server.map_name} className="mx-auto w-12 h-12 rounded shadow-sm" />
-                    </DataTableCell>
-                )
+                return <MapThumbnail mapName={server.map_name} className="mx-auto w-12 h-12 rounded shadow-sm" />
             case 'type':
                 return (
-                    <DataTableCell key={id} align={align}>
-                        <Tooltip content={type} side="top">
-                            <span className="inline-flex"><TypeIcon type={type} /></span>
-                        </Tooltip>
-                    </DataTableCell>
+                    <Tooltip content={type} side="top">
+                        <span className="inline-flex"><TypeIcon type={type} /></span>
+                    </Tooltip>
                 )
             case 'name': {
-                const trimmed = trimServerName(server.hostname).replace(/\s*\([^)]+\)\s*$/, '')
+                const trimmed = displayServerName(server)
                 return (
-                    <DataTableCell key={id} align={align}>
-                        <div className="flex items-center gap-2 min-w-0">
-                            <span ref={isFirstRow ? firstRowFavRef : undefined} className="inline-flex shrink-0">
-                                <FavoriteStar
-                                    name={trimmed}
-                                    isFavorited={favoriteServerIds.has(server.id)}
-                                    onToggle={() => onToggleServerFavorite(server.id)}
-                                    size="sm"
-                                />
-                            </span>
-                            <span className="min-w-0 truncate text-sm font-bold text-foreground" title={trimmed}>{trimmed}</span>
-                        </div>
-                    </DataTableCell>
+                    <div className="flex items-center gap-2 min-w-0">
+                        <span ref={isFirstRow ? firstRowFavRef : undefined} className="inline-flex shrink-0">
+                            <FavoriteStar
+                                name={trimmed}
+                                isFavorited={favoriteServerIds.has(server.id)}
+                                onToggle={() => onToggleServerFavorite(server.id)}
+                                size="sm"
+                            />
+                        </span>
+                        <span className="min-w-0 truncate text-sm font-bold text-foreground" title={trimmed}>{trimmed}</span>
+                    </div>
                 )
             }
             case 'map':
-                return (
-                    <DataTableCell key={id} align={align}>
-                        {onMapSelect ? (
-                            <MapNavLink
-                                mapName={server.map_name}
-                                onMapSelect={onMapSelect}
-                                className="text-sm font-semibold text-foreground truncate inline-block max-w-full align-middle text-left hover:text-accent-300 hover:underline underline-offset-2 transition-colors cursor-pointer"
-                            >
-                                {displayMapName(server.map_name)}
-                            </MapNavLink>
-                        ) : (
-                            <span className="text-sm font-semibold text-foreground truncate inline-block max-w-full align-middle">
-                                {displayMapName(server.map_name)}
-                            </span>
-                        )}
-                    </DataTableCell>
+                return onMapSelect ? (
+                    <MapNavLink
+                        mapName={server.map_name}
+                        onMapSelect={onMapSelect}
+                        className="text-sm font-semibold text-foreground truncate inline-block max-w-full align-middle text-left hover:text-accent-300 hover:underline underline-offset-2 transition-colors cursor-pointer"
+                    >
+                        {displayMapName(server.map_name)}
+                    </MapNavLink>
+                ) : (
+                    <span className="text-sm font-semibold text-foreground truncate inline-block max-w-full align-middle">
+                        {displayMapName(server.map_name)}
+                    </span>
                 )
             case 'region':
                 return (
-                    <DataTableCell key={id} align={align}>
-                        <Tooltip content={region} side="top">
-                            <img
-                                src={getRegionFlag(region)}
-                                alt={region}
-                                width={24}
-                                height={16}
-                                loading="lazy"
-                                decoding="async"
-                                className="inline-block align-middle h-4 w-6 object-cover rounded-[2px] border border-hairline/10"
-                            />
-                        </Tooltip>
-                    </DataTableCell>
+                    <Tooltip content={region} side="top">
+                        <img
+                            src={getRegionFlag(region)}
+                            alt={region}
+                            width={24}
+                            height={16}
+                            loading="lazy"
+                            decoding="async"
+                            className="inline-block align-middle h-4 w-6 object-cover rounded-[2px] border border-hairline/10"
+                        />
+                    </Tooltip>
                 )
             case 'ping': {
                 const ping = server.ping
@@ -702,68 +732,34 @@ export function ServerBrowserPage({
                     ping < 100 ? 'text-green-500' :
                         ping < 200 ? 'text-yellow-500' : 'text-red-500'
                 return (
-                    <DataTableCell key={id} align={align}>
-                        <div className={cn('inline-flex items-center gap-1.5 text-xs font-bold tabular-nums', pingColor)}>
-                            <Signal className="size-3.5" />
-                            {ping ? `${ping}ms` : '...'}
-                        </div>
-                    </DataTableCell>
+                    <div className={cn('inline-flex items-center gap-1.5 text-xs font-bold tabular-nums', pingColor)}>
+                        <Signal className="size-3.5" />
+                        {ping ? `${ping}ms` : '...'}
+                    </div>
                 )
             }
-            case 'players': {
-                const activePlayers = server.players.filter(p => !p.is_spectator)
-                const playerColor =
-                    server.player_count >= server.max_players ? 'text-rose-400' :
-                        server.player_count > 0 ? 'text-emerald-400' : 'text-muted-foreground'
+            case 'players':
                 return (
-                    <DataTableCell key={id} align={align} ref={isFirstRow ? (firstRowPlayersRef as React.RefObject<HTMLTableCellElement>) : undefined}>
-                        <PlayerListCell
-                            players={activePlayers}
-                            displayText={`${server.player_count}/${server.max_players}`}
-                            displayColor={playerColor}
-                            singular="player"
-                            plural="players"
-                        />
-                    </DataTableCell>
+                    <PlayerListCell
+                        players={server.players.filter(p => !p.is_spectator)}
+                        displayText={`${server.player_count}/${server.max_players}`}
+                        displayColor={playerCountColor(server)}
+                        singular="player"
+                        plural="players"
+                    />
                 )
-            }
-            case 'spectators': {
-                const specPlayers = server.players.filter(p => p.is_spectator)
+            case 'spectators':
                 return (
-                    <DataTableCell key={id} align={align} ref={isFirstRow ? (firstRowSpectatorsRef as React.RefObject<HTMLTableCellElement>) : undefined}>
-                        <PlayerListCell
-                            players={specPlayers}
-                            displayText={String(server.spectators)}
-                            displayColor="text-muted-foreground"
-                            singular="spectator"
-                            plural="spectators"
-                        />
-                    </DataTableCell>
+                    <PlayerListCell
+                        players={server.players.filter(p => p.is_spectator)}
+                        displayText={String(server.spectators)}
+                        displayColor="text-muted-foreground"
+                        singular="spectator"
+                        plural="spectators"
+                    />
                 )
-            }
-            case 'status': {
-                const text = getGameStatusText(
-                    server.remaining_time_seconds,
-                    server.certified_records,
-                    type,
-                    server.red_team_score,
-                    server.blue_team_score,
-                )
-                const isEnded = text === 'Match Ended' || text === 'Overtime'
-                return (
-                    <DataTableCell key={id} align={align} ref={isFirstRow ? (firstRowStatusRef as React.RefObject<HTMLTableCellElement>) : undefined}>
-                        <div className={cn(
-                            'inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border whitespace-nowrap',
-                            isEnded
-                                ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
-                                : 'bg-hairline/5 border-hairline/5 text-muted-foreground',
-                        )}>
-                            {isEnded ? <Flag className="size-3" /> : <Clock className="size-3" />}
-                            {text}
-                        </div>
-                    </DataTableCell>
-                )
-            }
+            case 'status':
+                return <StatusBadge server={server} />
             case 'actions': {
                 const canJoin = installationStatus === 'valid' && server.player_count < server.max_players
                 const canSpec = installationStatus === 'valid'
@@ -777,69 +773,118 @@ export function ServerBrowserPage({
                         installationStatus === 'unsupported' ? 'Unsupported game version' :
                             'Spectate'
                 return (
-                    <DataTableCell key={id} align={align} ref={isFirstRow ? (firstRowJoinRef as React.RefObject<HTMLTableCellElement>) : undefined}>
-                        <div className="inline-flex items-center gap-1.5">
-                            <Tooltip content={joinTooltip} side="top">
-                                <span className="inline-flex">
-                                    <button
-                                        type="button"
-                                        onClick={() => handleJoin(server, false)}
-                                        disabled={!canJoin}
-                                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium border border-accent-500/30 bg-accent-500/10 text-accent-300 hover:bg-accent-500/25 hover:text-accent-100 hover:border-accent-500/50 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-accent-500/10 disabled:hover:text-accent-300 disabled:hover:border-accent-500/30"
-                                    >
-                                        <Play className="size-3 fill-current" />
-                                        Join
-                                    </button>
-                                </span>
-                            </Tooltip>
-                            <Tooltip content={specTooltip} side="top">
-                                <span className="inline-flex">
-                                    <button
-                                        type="button"
-                                        onClick={() => handleJoin(server, true)}
-                                        disabled={!canSpec}
-                                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium border border-hairline/10 bg-hairline/5 text-muted-foreground hover:bg-hairline/10 hover:text-foreground hover:border-hairline/20 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-hairline/5 disabled:hover:text-muted-foreground disabled:hover:border-hairline/10"
-                                    >
-                                        <Eye className="size-3" />
-                                        Spec
-                                    </button>
-                                </span>
-                            </Tooltip>
-                        </div>
-                    </DataTableCell>
+                    <div className="inline-flex items-center gap-1.5">
+                        <Tooltip content={joinTooltip} side="top">
+                            <span className="inline-flex">
+                                <button
+                                    type="button"
+                                    onClick={() => handleJoin(server, false)}
+                                    disabled={!canJoin}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium border border-accent-500/30 bg-accent-500/10 text-accent-300 hover:bg-accent-500/25 hover:text-accent-100 hover:border-accent-500/50 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-accent-500/10 disabled:hover:text-accent-300 disabled:hover:border-accent-500/30"
+                                >
+                                    <Play className="size-3 fill-current" />
+                                    Join
+                                </button>
+                            </span>
+                        </Tooltip>
+                        <Tooltip content={specTooltip} side="top">
+                            <span className="inline-flex">
+                                <button
+                                    type="button"
+                                    onClick={() => handleJoin(server, true)}
+                                    disabled={!canSpec}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium border border-hairline/10 bg-hairline/5 text-muted-foreground hover:bg-hairline/10 hover:text-foreground hover:border-hairline/20 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-hairline/5 disabled:hover:text-muted-foreground disabled:hover:border-hairline/10"
+                                >
+                                    <Eye className="size-3" />
+                                    Spec
+                                </button>
+                            </span>
+                        </Tooltip>
+                    </div>
                 )
             }
         }
     }
 
+    const serverPanelCell = (id: ServerColumnId, server: Server): React.ReactNode => {
+        switch (id) {
+            case 'type': {
+                const type = getServerType(server.hostname)
+                return (
+                    <span className="inline-flex items-center gap-1.5">
+                        <TypeIcon type={type} />
+                        {type}
+                    </span>
+                )
+            }
+            case 'players':
+                return (
+                    <ServerPlayerList
+                        players={server.players.filter(p => !p.is_spectator)}
+                        count={`${server.player_count}/${server.max_players}`}
+                        countColor={playerCountColor(server)}
+                    />
+                )
+            case 'spectators':
+                return (
+                    <ServerPlayerList
+                        players={server.players.filter(p => p.is_spectator)}
+                        count={String(server.spectators)}
+                        countColor="text-muted-foreground"
+                    />
+                )
+            default:
+                return serverCell(id, server)
+        }
+    }
+
+    const firstRowCellRef: Partial<Record<ServerColumnId, React.RefObject<HTMLElement | null>>> = {
+        players: firstRowPlayersRef,
+        spectators: firstRowSpectatorsRef,
+        status: firstRowStatusRef,
+        actions: firstRowJoinRef,
+    }
+
+    const renderCell = (id: ServerColumnId, server: Server, isFirstRow: boolean): React.ReactNode => {
+        if (!isEffectivelyVisible(id)) return null
+        const cellRef = isFirstRow ? firstRowCellRef[id] as React.RefObject<HTMLTableCellElement> | undefined : undefined
+        return (
+            <DataTableCell key={id} align={COLUMN_LAYOUT[id].align} ref={cellRef}>
+                {serverCell(id, server, isFirstRow)}
+            </DataTableCell>
+        )
+    }
+
+    const serverColumns: ResponsiveColumn<Server>[] = visibleColumns.map(id => ({
+        id,
+        width: COLUMN_LAYOUT[id].width,
+        priority: COLUMN_PRIORITY[id],
+        required: RESPONSIVE_REQUIRED_COLUMNS.has(id),
+        tier: COLUMN_TIER[id],
+        label: SERVER_COLUMN_LABELS[id],
+        sortKey: SORTABLE_COLUMNS[id],
+        cell: server => serverPanelCell(id, server),
+    }))
+
     const visibleColumnCount = displayColumnOrder.reduce(
         (count, id) => count + (isEffectivelyVisible(id) ? 1 : 0), 0,
     )
 
-    const compactServerContent = showSkeleton ? (
+    const serverCardPlaceholder = showSkeleton ? (
         Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="h-16 mx-3 my-2 rounded-lg bg-hairline/5 animate-pulse" />
         ))
     ) : processedServers.length === 0 ? (
         <div className="px-4 py-16 text-center text-muted-foreground">No servers match your filters.</div>
-    ) : processedServers.map(server => {
+    ) : undefined
+
+    const serverFace = (server: Server) => {
         const type = getServerType(server.hostname)
         const region = getServerRegion(server.hostname)
-        const trimmed = trimServerName(server.hostname).replace(/\s*\([^)]+\)\s*$/, '')
-        const playerColor =
-            server.player_count >= server.max_players ? 'text-rose-400' :
-                server.player_count > 0 ? 'text-emerald-400' : 'text-muted-foreground'
-        const statusText = getGameStatusText(
-            server.remaining_time_seconds,
-            server.certified_records,
-            type,
-            server.red_team_score,
-            server.blue_team_score,
-        )
-        const isEnded = statusText === 'Match Ended' || statusText === 'Overtime'
+        const trimmed = displayServerName(server)
         const canJoin = installationStatus === 'valid' && server.player_count < server.max_players
         return (
-            <div key={server.id} role="listitem" className="p-3 border-b border-hairline/5 last:border-0 space-y-2">
+            <div className="space-y-2">
                 <div className="flex items-center gap-2 min-w-0">
                     <FavoriteStar
                         name={trimmed}
@@ -849,7 +894,7 @@ export function ServerBrowserPage({
                     />
                     <TypeIcon type={type} />
                     <span className="text-sm font-bold text-foreground truncate">{trimmed}</span>
-                    <span className={cn('ml-auto shrink-0 text-sm font-bold tabular-nums', playerColor)}>
+                    <span className={cn('ml-auto shrink-0 text-sm font-bold tabular-nums', playerCountColor(server))}>
                         {server.player_count}/{server.max_players}
                     </span>
                 </div>
@@ -876,15 +921,7 @@ export function ServerBrowserPage({
                             {displayMapName(server.map_name)}
                         </span>
                     )}
-                    <span className={cn(
-                        'ml-auto shrink-0 inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border whitespace-nowrap',
-                        isEnded
-                            ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
-                            : 'bg-hairline/5 border-hairline/5 text-muted-foreground',
-                    )}>
-                        {isEnded ? <Flag className="size-3" /> : <Clock className="size-3" />}
-                        {statusText}
-                    </span>
+                    <StatusBadge server={server} className="ml-auto shrink-0" />
                 </div>
                 {capabilities.game && (
                     <div className="flex items-center gap-1.5">
@@ -910,7 +947,7 @@ export function ServerBrowserPage({
                 )}
             </div>
         )
-    })
+    }
 
     return (
         <div className="space-y-4 flex flex-col overflow-hidden">
@@ -1101,11 +1138,21 @@ export function ServerBrowserPage({
 
             <DataTableShell
                 responsive={{
-                    columns: responsiveColumns,
+                    columns: serverColumns,
                     onResolve: handleResolve,
-                    compactContent: compactServerContent,
                     compactAriaLabel: 'Servers',
                     onCompactChange: handleCompactChange,
+                    cards: {
+                        rows: processedServers,
+                        rowKey: server => server.id,
+                        face: serverFace,
+                        placeholder: serverCardPlaceholder,
+                        sort: {
+                            key: state.sortBy,
+                            direction: state.sortDir,
+                            onSort: key => handleSort(key as ServerSortField),
+                        },
+                    },
                 }}
             >
                 <DataTableHeaderRow theadDataAttr="data-utbt-servers-thead">
