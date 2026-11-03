@@ -442,7 +442,8 @@ times through `CapTimeLink`, and handle skeleton and empty states themselves, si
 `compactContent` replaces the whole table including `DataTableSkeletonRow` and
 `DataTableEmpty`.
 
-Reference page: `events/stats/MapStatsTable.tsx`. Tiered tables: `WorldRecordsPage.tsx`,
+No page uses `compactContent` any more. Tiered tables: the five event tables
+([events.md](features/events.md#phone-cards), standings with `cards.panel`), `WorldRecordsPage.tsx`,
 `PlayersPage.tsx` and `ServerBrowserPage.tsx` (with ColumnsMenu, `onCompactChange` and the
 card sort), `CapItAllPage.tsx`, `mapDetail/LeaderboardCard.tsx` (a panel with actions),
 `home/LatestRecordsCard.tsx` (every column essential, no panel), `teams/TeamActivityPanel.tsx`

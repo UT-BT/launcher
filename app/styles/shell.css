@@ -63,6 +63,7 @@ body::before {
 
   .shell-main {
     padding-bottom: var(--tab-bar-offset);
+    scroll-padding-bottom: var(--tab-bar-offset);
   }
 }
 

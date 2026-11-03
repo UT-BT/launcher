@@ -436,11 +436,6 @@ export function teamMatchView(match: EventTeamStatsMatch, names: Record<string, 
     }
 }
 
-export interface StatCell {
-    label: string
-    value: string
-}
-
 export interface BarCell {
     value: string
     share: number
@@ -461,11 +456,9 @@ export interface MapTableRowView {
     pickerRate: string
     pickerRecord: string
     fastest: { run: RunView; teamId: string } | null
-    compact: StatCell[]
 }
 
 export interface MapTableView {
-    hasDeciders: boolean
     columns: ResponsiveColumn[]
     rows: MapTableRowView[]
     emptyText: string
@@ -476,40 +469,28 @@ export function mapTableView(maps: readonly EventStatsMap[]): MapTableView {
     const maxPicks = Math.max(1, ...maps.map(map => map.picks))
     const maxBans = Math.max(1, ...maps.map(map => map.bans))
     const columns: ResponsiveColumn[] = [
-        { id: 'map', width: '12rem', required: true },
-        { id: 'played', width: '5.5rem', priority: 90 },
-        { id: 'picks', width: '9rem', priority: 80 },
-        { id: 'bans', width: '9rem', priority: 75 },
-        { id: 'firstBans', width: '6.5rem', priority: 50 },
-        ...(hasDeciders ? [{ id: 'deciders', width: '6rem', priority: 45 }] : []),
-        { id: 'picker', width: '8.5rem', priority: 60 },
-        { id: 'fastest', width: '15rem', required: true },
+        { id: 'map', width: '12rem', required: true, tier: 'essential', label: 'Map' },
+        { id: 'played', width: '5.5rem', priority: 90, tier: 'essential', label: 'Played' },
+        { id: 'picks', width: '9rem', priority: 80, tier: 'essential', label: 'Picks' },
+        { id: 'bans', width: '9rem', priority: 75, tier: 'essential', label: 'Bans' },
+        { id: 'firstBans', width: '6.5rem', priority: 50, tier: 'detail', label: '1st bans' },
+        ...(hasDeciders ? [{ id: 'deciders', width: '6rem', priority: 45, tier: 'detail', label: 'Deciders' } as const] : []),
+        { id: 'picker', width: '8.5rem', priority: 60, tier: 'detail', label: 'Picker wins' },
+        { id: 'fastest', width: '15rem', required: true, tier: 'detail', label: 'Fastest cup run' },
     ]
-    const rows = maps.map(map => {
-        const pickerRate = rateText(map.picker_win_rate)
-        const compact: StatCell[] = [
-            { label: 'Played', value: String(map.played) },
-            { label: 'Picks', value: String(map.picks) },
-            { label: 'Bans', value: String(map.bans) },
-            { label: '1st bans', value: String(map.first_bans) },
-            { label: 'Picker wins', value: pickerRate },
-            ...(hasDeciders ? [{ label: 'Deciders', value: String(map.deciders) }] : []),
-        ]
-        return {
-            map: map.map,
-            displayName: map.display_name,
-            played: String(map.played),
-            picks: { value: String(map.picks), share: map.picks / maxPicks },
-            bans: { value: String(map.bans), share: map.bans / maxBans },
-            firstBans: String(map.first_bans),
-            deciders: String(map.deciders),
-            pickerRate,
-            pickerRecord: `${map.picker_wins}/${map.picker_games}`,
-            fastest: map.fastest_run ? { run: runView(map.fastest_run), teamId: map.fastest_run.team_id } : null,
-            compact,
-        }
-    })
-    return { hasDeciders, columns, rows, emptyText: 'No maps played in this stage yet.' }
+    const rows = maps.map(map => ({
+        map: map.map,
+        displayName: map.display_name,
+        played: String(map.played),
+        picks: { value: String(map.picks), share: map.picks / maxPicks },
+        bans: { value: String(map.bans), share: map.bans / maxBans },
+        firstBans: String(map.first_bans),
+        deciders: String(map.deciders),
+        pickerRate: rateText(map.picker_win_rate),
+        pickerRecord: `${map.picker_wins}/${map.picker_games}`,
+        fastest: map.fastest_run ? { run: runView(map.fastest_run), teamId: map.fastest_run.team_id } : null,
+    }))
+    return { columns, rows, emptyText: 'No maps played in this stage yet.' }
 }
 
 export interface MapProfileRowView {
@@ -524,7 +505,6 @@ export interface MapProfileRowView {
     caps: string
     bestRun: RunView | null
     rank: MapRankView | null
-    compact: StatCell[]
 }
 
 export interface MapRankView {
@@ -544,23 +524,21 @@ export interface MapProfileView {
 }
 
 const MAP_PROFILE_COLUMNS: readonly ResponsiveColumn[] = [
-    { id: 'map', width: '12rem', required: true },
-    { id: 'picked', width: '6rem', priority: 70 },
-    { id: 'bannedBy', width: '7rem', priority: 65 },
-    { id: 'bannedAgainst', width: '8rem', priority: 60 },
-    { id: 'played', width: '5.5rem', priority: 90 },
-    { id: 'wdl', width: '7.5rem', priority: 85 },
-    { id: 'caps', width: '6rem', priority: 50 },
-    { id: 'best', width: '8rem', required: true },
-    { id: 'rank', width: '6.5rem', required: true },
+    { id: 'map', width: '12rem', required: true, tier: 'essential', label: 'Map' },
+    { id: 'picked', width: '6rem', priority: 70, tier: 'detail', label: 'Picked' },
+    { id: 'bannedBy', width: '7rem', priority: 65, tier: 'detail', label: 'Banned' },
+    { id: 'bannedAgainst', width: '8rem', priority: 60, tier: 'detail', label: 'Banned vs' },
+    { id: 'played', width: '5.5rem', priority: 90, tier: 'detail', label: 'Played' },
+    { id: 'wdl', width: '7.5rem', priority: 85, tier: 'essential', label: 'W-D-L' },
+    { id: 'caps', width: '6rem', priority: 50, tier: 'detail', label: 'Caps' },
+    { id: 'best', width: '8rem', required: true, tier: 'essential', label: 'Best time' },
+    { id: 'rank', width: '6.5rem', required: true, tier: 'essential', label: 'Rank' },
 ]
 
 export function mapProfileView(rows: readonly EventTeamMapProfileRow[]): MapProfileView {
     return {
         columns: [...MAP_PROFILE_COLUMNS],
         rows: rows.map(row => {
-            const wdl = row.played ? wdlText(row) : null
-            const caps = row.played ? capsText({ for: row.caps_for, against: row.caps_against }) : EMPTY_STAT
             const share = (n: number) => (row.played ? n / row.played : 0)
             return {
                 map: row.map,
@@ -569,19 +547,11 @@ export function mapProfileView(rows: readonly EventTeamMapProfileRow[]): MapProf
                 bannedBy: String(row.banned_by),
                 bannedAgainst: String(row.banned_against),
                 played: String(row.played),
-                wdl,
+                wdl: row.played ? wdlText(row) : null,
                 wdlShares: { w: share(row.w), d: share(row.d), l: share(row.l) },
-                caps,
+                caps: row.played ? capsText({ for: row.caps_for, against: row.caps_against }) : EMPTY_STAT,
                 bestRun: row.best_run ? runView(row.best_run) : null,
                 rank: mapRankView(row.best_rank),
-                compact: [
-                    { label: 'Picked', value: String(row.picked) },
-                    { label: 'Banned', value: String(row.banned_by) },
-                    { label: 'Banned vs', value: String(row.banned_against) },
-                    { label: 'Played', value: String(row.played) },
-                    { label: 'W-D-L', value: wdl ?? EMPTY_STAT },
-                    { label: 'Caps', value: caps },
-                ],
             }
         }),
         emptyText: 'No pick & ban or maps in this stage yet.',
@@ -597,7 +567,6 @@ export interface TeamRunRowView {
     opponentLabel: string
     stageName: string
     completedAt: string
-    compactSubtitle: string
 }
 
 export interface TeamRunsView {
@@ -607,33 +576,29 @@ export interface TeamRunsView {
 }
 
 const TEAM_RUNS_COLUMNS: readonly ResponsiveColumn[] = [
-    { id: 'map', width: '12rem', required: true },
-    { id: 'time', width: '8rem', required: true },
-    { id: 'players', width: '13rem', priority: 90 },
-    { id: 'opponent', width: '11rem', priority: 70 },
-    { id: 'stage', width: '8.5rem', priority: 50 },
-    { id: 'date', width: '6rem', priority: 60 },
-    { id: 'replay', width: '3.5rem', priority: 80 },
+    { id: 'map', width: '12rem', required: true, tier: 'essential', label: 'Map' },
+    { id: 'time', width: '8rem', required: true, tier: 'essential', label: 'Time' },
+    { id: 'players', width: '13rem', priority: 90, tier: 'detail', label: 'Run' },
+    { id: 'opponent', width: '11rem', priority: 70, tier: 'essential', label: 'Opponent' },
+    { id: 'stage', width: '8.5rem', priority: 50, tier: 'detail', label: 'Stage' },
+    { id: 'date', width: '6rem', priority: 60, tier: 'detail', label: 'Date' },
+    { id: 'replay', width: '3.5rem', priority: 80, tier: 'detail', label: 'Replay' },
 ]
 
 export function teamRunsView(stats: EventTeamStats): TeamRunsView {
     const names = teamNames(teamPageTeams(stats))
     return {
         columns: [...TEAM_RUNS_COLUMNS],
-        rows: stats.runs.map(run => {
-            const opponentLabel = names[run.opponent_id] ?? 'TBD'
-            return {
-                map: run.map,
-                displayName: run.display_name,
-                run: runView(run),
-                matchId: run.match_id,
-                opponentId: run.opponent_id,
-                opponentLabel,
-                stageName: run.stage_name,
-                completedAt: run.completed_at,
-                compactSubtitle: `vs ${opponentLabel}`,
-            }
-        }),
+        rows: stats.runs.map(run => ({
+            map: run.map,
+            displayName: run.display_name,
+            run: runView(run),
+            matchId: run.match_id,
+            opponentId: run.opponent_id,
+            opponentLabel: names[run.opponent_id] ?? 'TBD',
+            stageName: run.stage_name,
+            completedAt: run.completed_at,
+        })),
         emptyText: 'No linked runs in this stage yet.',
     }
 }

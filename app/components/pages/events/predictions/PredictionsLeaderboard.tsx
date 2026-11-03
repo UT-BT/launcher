@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import {
     DataTableCell, DataTableEmpty, DataTableHeaderCell, DataTableHeaderRow, DataTableRow,
     DataTableShell, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { PaginationBar } from '@/app/components/ui/pagination'
-import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { openPlayer, PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { ErrorBanner } from '@/app/components/pages/teams/teamsShared'
 import {
     eventErrorMessage, fetchEventPredictionLeaderboard,
@@ -15,14 +15,25 @@ import { CHIP_SHAPE } from '@/app/components/shared/chipStyles'
 import { CoinAmount, formatCoins } from './predictionsShared'
 import { PROJECTED_NOTE, pendingChipLabel, pendingChipTitle, showsProjectedNote } from './leaderboardView'
 
-const COLUMNS: ResponsiveColumn[] = [
-    { id: 'rank', width: '3rem', required: true },
-    { id: 'player', width: '14rem', required: true },
-    { id: 'coins', width: '6rem', required: true },
-    { id: 'profit', width: '6rem', priority: 90 },
-    { id: 'inplay', width: '6rem', priority: 70 },
-    { id: 'record', width: '7rem', priority: 60 },
-]
+type LeaderboardColumnId = 'rank' | 'player' | 'coins' | 'profit' | 'inplay' | 'record'
+
+const CELL_LAYOUT: Record<LeaderboardColumnId, { align?: 'right'; className?: string }> = {
+    rank: { align: 'right', className: 'tabular-nums text-muted-foreground' },
+    player: {},
+    coins: { align: 'right', className: 'tabular-nums font-semibold text-foreground' },
+    profit: { align: 'right' },
+    inplay: { align: 'right', className: 'tabular-nums text-muted-foreground' },
+    record: { align: 'right', className: 'tabular-nums text-muted-foreground' },
+}
+
+const COLUMNS: (ResponsiveColumn<PredictionLeaderboardRow> & { id: LeaderboardColumnId })[] = ([
+    { id: 'rank', width: '3rem', required: true, tier: 'essential', label: 'Rank' },
+    { id: 'player', width: '14rem', required: true, tier: 'essential', label: 'Player' },
+    { id: 'coins', width: '6rem', required: true, tier: 'essential', label: 'Coins' },
+    { id: 'profit', width: '6rem', priority: 90, tier: 'essential', label: 'Profit' },
+    { id: 'inplay', width: '6rem', priority: 70, tier: 'detail', label: 'In play' },
+    { id: 'record', width: '7rem', priority: 60, tier: 'detail', label: 'W–L–R' },
+] as const).map(column => ({ ...column, cell: (row: PredictionLeaderboardRow) => leaderboardCell(column.id, row) }))
 
 function PendingChip({ row }: { row: PredictionLeaderboardRow }) {
     const label = pendingChipLabel(row)
@@ -35,6 +46,37 @@ function PendingChip({ row }: { row: PredictionLeaderboardRow }) {
             {label}
             <span className="sr-only"> ({pendingChipTitle(row)})</span>
         </span>
+    )
+}
+
+function leaderboardCell(id: LeaderboardColumnId, row: PredictionLeaderboardRow): ReactNode {
+    switch (id) {
+        case 'rank': return row.rank
+        case 'player': return (
+            <div className="flex items-center gap-2 min-w-0">
+                <PlayerInfo userId={row.user_id} alias={row.alias} size="sm" />
+                <PendingChip row={row} />
+            </div>
+        )
+        case 'coins': return formatCoins(row.net_worth)
+        case 'profit': return <CoinAmount value={row.profit} signed />
+        case 'inplay': return formatCoins(row.staked)
+        case 'record': return <>{row.positions_won}–{row.positions_lost}–{row.positions_refunded}</>
+    }
+}
+
+function LeaderboardFace({ row }: { row: PredictionLeaderboardRow }) {
+    return (
+        <div className="flex items-center justify-between gap-2 min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
+                <span className="w-6 shrink-0 text-right tabular-nums text-muted-foreground">{row.rank}</span>
+                {leaderboardCell('player', row)}
+            </div>
+            <div className="shrink-0 text-right">
+                <div className="tabular-nums text-foreground font-semibold">{leaderboardCell('coins', row)}</div>
+                <div className="text-[11px]">{leaderboardCell('profit', row)}</div>
+            </div>
+        </div>
     )
 }
 
@@ -70,30 +112,8 @@ export function PredictionsLeaderboard({ slug, accessToken, viewerId }: {
     const totalPages = Math.max(1, Math.ceil(board.total / pageSize))
     const columnCount = COLUMNS.filter(column => shows(column.id)).length
 
-    const compact = (
-        <div className="divide-y divide-hairline/5">
-            {board.items.map(row => (
-                <div
-                    key={row.user_id}
-                    role="listitem"
-                    className={cn(
-                        'flex items-center justify-between gap-2 min-w-0 px-4 py-2',
-                        viewerId && row.user_id === viewerId && 'bg-accent-500/[0.06]',
-                    )}
-                >
-                    <div className="flex items-center gap-2 min-w-0">
-                        <span className="w-6 shrink-0 text-right tabular-nums text-muted-foreground">{row.rank}</span>
-                        <PlayerInfo userId={row.user_id} alias={row.alias} size="sm" />
-                        <PendingChip row={row} />
-                    </div>
-                    <div className="shrink-0 text-right">
-                        <div className="tabular-nums text-foreground font-semibold">{formatCoins(row.net_worth)}</div>
-                        <div className="text-[11px]"><CoinAmount value={row.profit} signed /></div>
-                    </div>
-                </div>
-            ))}
-        </div>
-    )
+    const highlight = (row: PredictionLeaderboardRow) => viewerId && row.user_id === viewerId ? 'bg-accent-500/[0.06]' : undefined
+    const emptyMessage = loading ? 'Loading…' : 'Nobody has claimed their coins yet.'
 
     return (
         <div className="flex flex-col gap-3">
@@ -113,9 +133,18 @@ export function PredictionsLeaderboard({ slug, accessToken, viewerId }: {
             <DataTableShell responsive={{
                 columns: COLUMNS,
                 nameFloorRem: 14,
-                compactContent: compact,
                 compactAriaLabel: 'Prediction leaderboard',
                 onResolve,
+                cards: {
+                    rows: board.items,
+                    rowKey: row => row.user_id,
+                    face: row => <LeaderboardFace row={row} />,
+                    onOpen: row => openPlayer(row.user_id),
+                    rowClassName: highlight,
+                    placeholder: board.items.length === 0 && (
+                        <div className="px-4 py-16 text-center text-muted-foreground">{emptyMessage}</div>
+                    ),
+                },
             }}>
                 <DataTableHeaderRow>
                     <DataTableHeaderCell width="3rem" align="right">#</DataTableHeaderCell>
@@ -127,42 +156,14 @@ export function PredictionsLeaderboard({ slug, accessToken, viewerId }: {
                 </DataTableHeaderRow>
                 <tbody>
                     {board.items.length === 0 ? (
-                        <DataTableEmpty
-                            colSpan={columnCount}
-                            message={loading ? 'Loading…' : 'Nobody has claimed their coins yet.'}
-                        />
+                        <DataTableEmpty colSpan={columnCount} message={emptyMessage} />
                     ) : board.items.map(row => (
-                        <DataTableRow
-                            key={row.user_id}
-                            className={cn(viewerId && row.user_id === viewerId && 'bg-accent-500/[0.06]')}
-                        >
-                            <DataTableCell align="right" className="tabular-nums text-muted-foreground">
-                                {row.rank}
-                            </DataTableCell>
-                            <DataTableCell>
-                                <div className="flex items-center gap-2 min-w-0">
-                                    <PlayerInfo userId={row.user_id} alias={row.alias} size="sm" />
-                                    <PendingChip row={row} />
-                                </div>
-                            </DataTableCell>
-                            <DataTableCell align="right" className="tabular-nums font-semibold text-foreground">
-                                {formatCoins(row.net_worth)}
-                            </DataTableCell>
-                            {shows('profit') && (
-                                <DataTableCell align="right">
-                                    <CoinAmount value={row.profit} signed />
+                        <DataTableRow key={row.user_id} className={highlight(row)}>
+                            {COLUMNS.filter(column => shows(column.id)).map(column => (
+                                <DataTableCell key={column.id} align={CELL_LAYOUT[column.id].align} className={CELL_LAYOUT[column.id].className}>
+                                    {column.cell?.(row)}
                                 </DataTableCell>
-                            )}
-                            {shows('inplay') && (
-                                <DataTableCell align="right" className="tabular-nums text-muted-foreground">
-                                    {formatCoins(row.staked)}
-                                </DataTableCell>
-                            )}
-                            {shows('record') && (
-                                <DataTableCell align="right" className="tabular-nums text-muted-foreground">
-                                    {row.positions_won}–{row.positions_lost}–{row.positions_refunded}
-                                </DataTableCell>
-                            )}
+                            ))}
                         </DataTableRow>
                     ))}
                 </tbody>

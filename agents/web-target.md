@@ -218,7 +218,9 @@ cap (owner decision).
   `--tab-bar-offset` (`shell.css`): `3.5rem` plus the bottom safe-area inset under the same
   touch, below-`lg`, portrait query, `0px` elsewhere. The bar pads by the bottom and side insets,
   and the main element pads its bottom by the same variable, so the last row of content
-  scrolls clear of the bar. Anything fixed to the bottom of the screen offsets by it too: the
+  scrolls clear of the bar. Its `scroll-padding-bottom` is the same variable, so whatever
+  scrolls a control into view (keyboard focus, `scrollIntoView`, a test's tap) stops above the
+  bar instead of under it. Anything fixed to the bottom of the screen offsets by it too: the
   analytics consent banner, the Tutorial card (by the larger of it and the bottom inset) and
   the match page's Reconnecting toast. Those offsets are inline styles, not arbitrary
   utilities, which keeps them out of the initial stylesheet's budget. `visible={false}` slides

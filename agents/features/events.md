@@ -29,7 +29,7 @@ owns all of it except `schedule/`, `pickban/`, `manage/pickban/` and `stream/` (
 | `events/predictions/` | Predictions tab, bet modal, odds context; pure `marketLock.ts`, `leaderboardView.ts`, `predictionsShared.tsx`, `marketBasics.ts` (the countdown, price and side helpers Home's closing-soon banner needs, kept apart so the rest of `predictionsShared.tsx` stays out of the web entry; `predictionsShared.tsx` re-exports them) |
 | `events/achievements/`, `events/maps/` | the lazy Achievements tab (`eventAchievementBoard.ts`) and the Maps tab (`mapsShared.ts`, also its gate); achievement rules app-wide in `app/components/pages/achievements/eventAchievements.ts` |
 | `app/utils/api.ts`, `app/utils/fixtures/eventStats/` | event fetchers and types; the sha-pinned stats payloads |
-| `e2e/` | `event-stats-responsive`, `event-achievements-responsive`, `predictions-responsive`, `manage-matches` and `bracket-desktop` specs; `mobile/bracket-snap.spec.ts` |
+| `e2e/` | `event-stats-responsive`, `event-achievements-responsive`, `predictions-responsive`, `manage-matches` and `bracket-desktop` specs; `mobile/bracket-snap.spec.ts`, `mobile/event-table-cards.spec.ts` |
 
 ## Brackets and formats
 
@@ -330,7 +330,7 @@ to it.
 
 `events/stats/statsView.ts` (plus `team/teamPageView.ts`, `team/teamTablesView.ts`) is the pure
 view-model between payloads and components: stage chips, team sorts, accent slots, form pips, path text,
-team cards, rank text, tiles, run and map rows (desktop `responsive` columns and phone `compact` cells),
+team cards, rank text, tiles, run and map rows (the `responsive` columns with their phone tiers and labels),
 "Time not recorded" placeholders, live/upcoming match states. Put new logic there, unit-tested against the
 fixtures; keep components thin.
 
@@ -349,13 +349,38 @@ stat row: `StageChips` / `team/TeamStageChips` (an `aria-pressed` group over `st
 nothing links to a pick & ban), `MapStatsTable`, `team/teamShared.tsx` (`TeamPageContext` /
 `useTeamPage()`, `TeamLink`, `TeamAvatars`, `ResultBadge`, `FormPips`, `StandingChip`, `SECTION_LABEL`),
 `team/RunRow` + `UnrecordedRow` (each player's own cap time inline, region hidden on phones),
-`team/TeamTable` (shared table scaffolding), `team/MatchTimeline` / `MatchCard` / `PickBanSteps` /
-`MapRow`.
+`team/TeamTable` (shared table scaffolding: it adds each column's `cell` and `sortKey` and passes the
+page's card face), `team/MatchTimeline` / `MatchCard` / `PickBanSteps` / `MapRow`.
 
 Rules: every player is a `PlayerInfo`, every run time a `CapTimeLink`, every navigation target a real
-`NavLink`; tables are `DataTable` with `responsive` columns and `compactContent` phone rows from the
-view-model (`mapTableView`, `mapProfileView`, `teamRunsView`), identifying columns required and the rest
-dropping by priority.
+`NavLink`; tables are tiered `DataTable`s ([shared-components.md](../shared-components.md#column-tiers-and-phone-cards))
+whose `responsive` columns come from the view-model (`mapTableView`, `mapProfileView`, `teamRunsView`),
+identifying columns required and the rest dropping by priority on desktop.
+
+### Phone cards
+
+The five event tables are tiered: on a touch screen each shows cards unless every column fits. The face
+holds the essential columns and the "Details" panel the rest.
+
+| Table | Card face | Panel | Card body opens |
+|---|---|---|---|
+| Group standings (`bracket/GroupStageView.tsx`) | rank (with the advancement band), team, W–L or W–D–L, points | maps, diff, caps, the team's matches | the team's event page |
+| Predictions leaderboard (`predictions/PredictionsLeaderboard.tsx`) | rank, player with the Pending chip, coins, profit | in play, W–L–R | the player |
+| Event map stats (`stats/MapStatsTable.tsx`) | map, played, picks, bans | 1st bans, deciders, picker wins, fastest cup run | the map |
+| Team map profile (`team/MapProfileTable.tsx`) | map, W-D-L, best time, rank | picked, banned, banned vs, played, caps | the map |
+| Team runs (`team/TeamRunsTable.tsx`) | map, time, opponent | run (players), stage, date, replay | the run |
+
+- **Standings keep one expand control per row.** The table row toggles the team's matches as before; on a
+  card the "Details" chevron opens maps, diff, caps and the matches together. The matches are not a
+  column: the cards pass them as `cards.panel`, below the label/value grid, and the table renders
+  them in its expanded row.
+- **Team runs sort with the shared card control** (field picker plus direction), reading and writing
+  `teamRuns.sort` like the headers. Cards still show the first 12 runs until "Show all".
+- The tiers and panel labels of map stats, map profile and team runs live in `statsView.ts`; the cells
+  live in the components.
+- `e2e/mobile/event-table-cards.spec.ts` runs the table rules on standings and the leaderboard (no
+  crawl surface shows them) and checks the standings matches and the team runs card sort; the crawl
+  covers map stats (`event-detail/teams`) and the team page (`event-team`).
 
 ### Stats styling
 

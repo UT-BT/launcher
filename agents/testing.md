@@ -588,6 +588,15 @@ spec that is red today is marked `test.fail()`, with a note naming the ticket th
   control closes the modal, the hamburger opens the drawer and a swipe scrolls the page back to the
   real top. It passes in emulation since the shared modal opens as a sheet portalled above the top
   bar; what a real pinch and rotation leave behind on iOS stays on the manual iPhone checklist.
+- `event-table-cards.spec.ts`: the tiered event tables. Group standings and the predictions
+  leaderboard appear on no crawl surface (the fixture's bracket opens on its Swiss stage, and the
+  leaderboard is a view inside the Predictions tab), so it opens them on the `event-detail/bracket`
+  and `event-detail/predictions` surfaces and runs the two table rules at every PR-subset viewport
+  (the leaderboard rows are synthetic). At 390×844: a standings card has one control, its
+  "Details" chevron, whose panel holds Maps, Diff, Caps and the team's matches; at 1920 px a
+  standings row still reveals the matches; a standings card body opens the team's event page.
+  A sort field and direction picked on the team runs cards reorder them and show as the Time
+  header's `aria-sort` at 1920 px. The map profile and runs panels hold their detail columns.
 - `modal-sheet.spec.ts`: a page modal opens as a sheet over the top bar that fills the visible area
   in portrait and at 844×390, and a swipe inside a sheet scrolls only its body while the header and
   close stay in view.

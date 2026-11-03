@@ -1,10 +1,1 @@
-[
-  { "surface": "event-detail/teams", "viewport": "360x780", "engine": "chromium" },
-  { "surface": "event-detail/teams", "viewport": "390x844", "engine": "webkit" },
-  { "surface": "event-detail/teams~long-text", "viewport": "360x780", "engine": "chromium" },
-  { "surface": "event-detail/teams~long-text", "viewport": "390x844", "engine": "webkit" },
-  { "surface": "event-team", "viewport": "360x780", "engine": "chromium" },
-  { "surface": "event-team", "viewport": "390x844", "engine": "webkit" },
-  { "surface": "event-team~long-text", "viewport": "360x780", "engine": "chromium" },
-  { "surface": "event-team~long-text", "viewport": "390x844", "engine": "webkit" }
-]
+[]

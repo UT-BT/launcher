@@ -408,7 +408,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                 />
                 {nextMatch && myTeamId && <NextMatchBanner match={nextMatch} myTeamId={myTeamId} now={now} />}
 
-                <div className="flex items-center gap-1 border-b border-white/10 overflow-x-auto">
+                <div className="flex items-center gap-1 border-b border-white/10 overflow-x-auto overflow-y-hidden">
                     {visibleTabs.map(t => {
                         const inviteCount = t.id === 'signup' ? todoCounts.invitations : 0
                         const scheduleCount = t.id === 'schedule' ? scheduleTodo.count : 0
@@ -419,7 +419,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                                 key={t.id}
                                 onClick={() => setTab(t.id)}
                                 className={cn(
-                                    'flex items-center gap-1.5 px-3 py-2 text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors cursor-pointer',
+                                    'flex items-center gap-1.5 px-3 py-2 text-sm font-medium whitespace-nowrap border-b transition-colors cursor-pointer',
                                     activeTab === t.id
                                         ? 'border-accent-400 text-white'
                                         : signupCallout

@@ -221,6 +221,7 @@
     "e2e/mobile/bottom-tabs.spec.ts",
     "e2e/mobile/crawl.spec.ts",
     "e2e/mobile/dev-server.ts",
+    "e2e/mobile/event-table-cards.spec.ts",
     "e2e/mobile/fixtures/client-fields.ts",
     "e2e/mobile/fixtures/data.ts",
     "e2e/mobile/fixtures/index.ts",
