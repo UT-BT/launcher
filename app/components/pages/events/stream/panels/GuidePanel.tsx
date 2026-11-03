@@ -1,11 +1,12 @@
 import { useEffect, useRef } from 'react'
 import { ChevronDown, Download, Link2 } from 'lucide-react'
 import { usePlatform } from '@/app/platform'
+import { DESKTOP_APP_DOWNLOAD_URL } from '@/app/constants/desktopApp'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { cn } from '@/lib/utils'
 import { StreamCard } from '../StreamCard'
 import { guideStepFromHash, guideStepHash, toggleStep, withStepOpen } from './guide/guideDeepLink'
-import { DESKTOP_LAUNCHER_URL, GUIDE_STEPS, guideStepIds, type GuideBlock, type GuideStep } from './guide/guideSteps'
+import { GUIDE_STEPS, guideStepIds, type GuideBlock, type GuideStep } from './guide/guideSteps'
 
 export function GuidePanel() {
     const { capabilities } = usePlatform()
@@ -138,7 +139,7 @@ function GuideBlockView({ block, desktop }: { block: GuideBlock; desktop: boolea
 function LauncherLink() {
     return (
         <a
-            href={DESKTOP_LAUNCHER_URL}
+            href={DESKTOP_APP_DOWNLOAD_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex h-8 items-center gap-2 rounded-md border border-accent-500/40 bg-accent-500/15 px-3 text-xs font-medium text-accent-200 transition-colors hover:border-accent-500/60 hover:bg-accent-500/25"

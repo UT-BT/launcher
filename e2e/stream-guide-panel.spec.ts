@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { DESKTOP_APP_DOWNLOAD_URL } from '../app/constants/desktopApp'
 import { horizontalOverflow } from './layout'
 
 const SLUG = 'stream-cup'
@@ -100,7 +101,7 @@ test('the website marks the cam steps desktop only and links to the launcher', a
     const panel = page.getByRole('region', { name: 'Guide' })
 
     await expect(panel.getByText('Desktop only')).toHaveCount(1)
-    await expect(panel.getByRole('link', { name: 'Get the desktop launcher' })).toHaveAttribute('href', 'https://github.com/UT-BT/launcher/releases/latest')
+    await expect(panel.getByRole('link', { name: 'Get the desktop launcher' })).toHaveAttribute('href', DESKTOP_APP_DOWNLOAD_URL)
 
     await panel.getByRole('button', { name: /Launch the cams/ }).click()
     await expect(panel.getByText(/This step is done in the desktop launcher/)).toBeVisible()

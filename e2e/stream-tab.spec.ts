@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { DESKTOP_APP_DOWNLOAD_URL } from '../app/constants/desktopApp'
 import { horizontalOverflow } from './layout'
 import { openStreamPanel, streamPanelNav } from './streamPanels'
 
@@ -293,7 +294,7 @@ test('the website Cams panel sends a streamer to the desktop launcher', async ({
     const cams = page.getByRole('region', { name: 'Cams' })
     await expect(cams.getByText('The cam tool needs the desktop launcher.')).toBeVisible()
     await expect(cams.getByRole('link', { name: 'Get the desktop launcher' }))
-        .toHaveAttribute('href', 'https://github.com/UT-BT/launcher/releases/latest')
+        .toHaveAttribute('href', DESKTOP_APP_DOWNLOAD_URL)
     await expect(cams.getByText('Coming soon.')).toHaveCount(0)
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1)
 })
