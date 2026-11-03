@@ -24,6 +24,7 @@ import { RaceStage, type StageOverlays } from './stage/RaceStage'
 import { useRacePlayback } from './stage/useRacePlayback'
 import { useStageBox, useTheaterHeight } from './stage/useStageMeasure'
 import { TransportBar } from './transport/TransportBar'
+import { useCueSync } from './transport/useCueSync'
 import { parseCompareQuery } from './url/compareUrl'
 import './runCompare.css'
 
@@ -56,6 +57,7 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
         if (!composed.loading) settled.current = composed
     }, [composed])
     const { controller, attachMedia } = useRacePlayback(model.race.runs, model.seekSeconds ?? storedSeekSeconds)
+    const cueSync = useCueSync(controller, model.cues, model.sync)
     const [storedDrawerOpen, setDrawerOpen] = useNavState<boolean | null>('compare.drawerOpen', null)
     const [editNote, setEditNote] = useState<string | null>(null)
     const drawerOpen = storedDrawerOpen === true && !model.loading && model.runs.length > 0
@@ -157,6 +159,10 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
                         lanes={model.lanes}
                         runsOpen={drawerOpen}
                         onToggleRuns={() => setDrawerOpen(!drawerOpen)}
+                        cues={model.cues}
+                        cueSync={cueSync}
+                        syncMode={model.sync.mode}
+                        onToggleSync={() => edit({ kind: 'sync', mode: model.sync.mode === 'position' ? 'race' : 'position' })}
                     />
                 </div>
             )}

@@ -130,6 +130,16 @@ describe('offsets', () => {
     })
 })
 
+describe('the sync mode', () => {
+    it('stores sync by position and keeps the rest of the set', () => {
+        expect(edit(`${FOUR}&ref=${A}`, { kind: 'sync', mode: 'position' }).query).toBe(`${FOUR}&ref=${A}&sync=position`)
+    })
+
+    it('drops the parameter when the race clock comes back', () => {
+        expect(edit(`${FOUR}&sync=position`, { kind: 'sync', mode: 'race' }).query).toBe(FOUR)
+    })
+})
+
 describe('the URL an edit produces', () => {
     it('never carries the start time', () => {
         const model = modelOf(`${FOUR}&t=12.500`)

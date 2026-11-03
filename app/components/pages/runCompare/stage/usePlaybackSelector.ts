@@ -1,7 +1,7 @@
 import { useCallback, useRef, useSyncExternalStore } from 'react'
 import type { PlaybackController, PlaybackState } from '../playback/playbackController'
 
-const IDLE: PlaybackState = { playing: false, t: 0, end: 0, rate: 1, stalled: [], frozen: [], errored: [], runTimes: {} }
+const IDLE: PlaybackState = { playing: false, t: 0, end: 0, rate: 1, stalled: [], frozen: [], errored: [], runTimes: {}, cue: null }
 
 const noSubscription = () => () => undefined
 

@@ -1,11 +1,16 @@
-import { ListVideo, Pause, Play, StepBack, StepForward } from 'lucide-react'
+import { Crosshair, ListVideo, Pause, Play, SkipBack, SkipForward, StepBack, StepForward } from 'lucide-react'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { useDeviceEnvironment } from '@/app/device/useDeviceEnvironment'
+import type { CueModel } from '../model/cueModel'
 import type { LanesModel } from '../model/laneModel'
 import { formatRaceTime, type RaceModel } from '../model/raceModel'
 import { PLAYBACK_RATES } from '../playback/playbackConstants'
 import type { PlaybackController, PlaybackState } from '../playback/playbackController'
 import { usePlaybackSelector } from '../stage/usePlaybackSelector'
-import { DeltaLanes, SectorTicks } from './DeltaLanes'
+import type { CompareSync } from '../url/compareUrl'
+import { CueTicks } from './CueTicks'
+import { DeltaLanes } from './DeltaLanes'
+import type { CueSync } from './useCueSync'
 
 interface Controls {
     playing: boolean
@@ -65,10 +70,48 @@ interface TransportBarProps {
     lanes: LanesModel
     runsOpen: boolean
     onToggleRuns: () => void
+    cues: CueModel
+    cueSync: CueSync
+    syncMode: CompareSync
+    onToggleSync: () => void
 }
 
-export function TransportBar({ controller, race, lanes, runsOpen, onToggleRuns }: TransportBarProps) {
+interface CueControlsProps {
+    controller: PlaybackController | null
+    cues: CueModel
+    cueSync: CueSync
+}
+
+function CueControls({ controller, cues, cueSync }: CueControlsProps) {
+    const idle = !controller || cues.points.length === 0
+    return (
+        <>
+            <button type="button" aria-label="Previous cue" disabled={idle} onClick={cueSync.previousCue}>
+                <SkipBack className="size-4" />
+            </button>
+            <select
+                aria-label="Cue"
+                value={cueSync.active ?? ''}
+                disabled={idle}
+                onChange={event => {
+                    const point = cues.points.find(candidate => candidate.key === event.currentTarget.value)
+                    if (point) cueSync.cue(point)
+                }}
+                style={{ colorScheme: 'dark' }}
+            >
+                <option value="" disabled>Cue</option>
+                {cues.points.map(point => <option key={point.key} value={point.key}>{point.label}</option>)}
+            </select>
+            <button type="button" aria-label="Next cue" disabled={idle} onClick={cueSync.nextCue}>
+                <SkipForward className="size-4" />
+            </button>
+        </>
+    )
+}
+
+export function TransportBar({ controller, race, lanes, runsOpen, onToggleRuns, cues, cueSync, syncMode, onToggleSync }: TransportBarProps) {
     const { playing, rate, end, buffering } = usePlaybackSelector(controller, controlsOf, sameControls)
+    const touch = useDeviceEnvironment(environment => environment.touch)
     const stalled = new Set(buffering.split(','))
     const buffered = race.runs.filter(lane => stalled.has(lane.run.capId))
 
@@ -99,6 +142,16 @@ export function TransportBar({ controller, race, lanes, runsOpen, onToggleRuns }
                     {PLAYBACK_RATES.map(option => <option key={option} value={String(option)}>{option}×</option>)}
                 </select>
                 <Clock controller={controller} />
+                <CueControls controller={controller} cues={cues} cueSync={cueSync} />
+                <button
+                    type="button"
+                    aria-pressed={syncMode === 'position'}
+                    className="run-compare-sync-button"
+                    onClick={onToggleSync}
+                >
+                    <Crosshair className="size-4" />
+                    <span>Sync by position</span>
+                </button>
                 <div aria-live="polite" className="run-compare-buffering text-muted-foreground">
                     {buffered.length > 0 && (
                         <>
@@ -122,8 +175,9 @@ export function TransportBar({ controller, race, lanes, runsOpen, onToggleRuns }
             </div>
             <div className="run-compare-track">
                 <div className="run-compare-scrub">
+                    <CueTicks label="Sectors" kind="sector" points={cues.sectors} end={end} active={cueSync.active} interactive={!touch} onCue={cueSync.cue} />
                     <Timeline controller={controller} end={end} />
-                    <SectorTicks sectors={lanes.sectors} end={end} />
+                    <CueTicks label="Zones" kind="zone" points={cues.zones} end={end} active={cueSync.active} interactive={!touch} onCue={cueSync.cue} />
                 </div>
             </div>
             <DeltaLanes lanes={lanes.lanes} controller={controller} end={end} />

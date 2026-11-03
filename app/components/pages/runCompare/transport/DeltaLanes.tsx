@@ -2,7 +2,7 @@ import { useRef, type PointerEvent } from 'react'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { HAIRLINE, TONE_AREA, TONE_STROKE } from '@/app/components/pages/capDetail/runDelta/deltaStyles'
 import type { CapComparisonPoint } from '@/app/utils/api'
-import type { Lane, SectorTick } from '../model/laneModel'
+import type { Lane } from '../model/laneModel'
 import { formatRaceTime } from '../model/raceModel'
 import type { PlaybackController } from '../playback/playbackController'
 
@@ -179,25 +179,6 @@ export function DeltaLanes({ lanes, controller, end }: DeltaLanesProps) {
                 <li key={lane.capId} className="run-compare-track run-compare-lane">
                     <LaneLabel lane={lane} />
                     <LanePlot lane={lane} controller={controller} end={end} />
-                </li>
-            ))}
-        </ol>
-    )
-}
-
-interface SectorTicksProps {
-    sectors: readonly SectorTick[]
-    end: number
-}
-
-export function SectorTicks({ sectors, end }: SectorTicksProps) {
-    const endMs = end * 1000
-    if (sectors.length === 0 || endMs <= 0) return null
-    return (
-        <ol aria-label="Sectors" className="run-compare-ticks">
-            {sectors.map(sector => (
-                <li key={sector.index} className="run-compare-tick" style={{ left: percent(Math.min(sector.endMs, endMs), endMs) }}>
-                    <span className="sr-only">{`${sector.label} ends at ${formatRaceTime(sector.endMs / 1000)}`}</span>
                 </li>
             ))}
         </ol>

@@ -468,6 +468,118 @@ test.describe('the runs drawer', () => {
     })
 })
 
+function transport(page: Page): Locator {
+    return page.getByRole('region', { name: 'Playback' })
+}
+
+function syncToggle(page: Page): Locator {
+    return transport(page).getByRole('button', { name: 'Sync by position' })
+}
+
+async function rounded(page: Page): Promise<number[]> {
+    return (await clocksOf(page)).map(clock => Math.round(clock.time * 1000) / 1000)
+}
+
+test.describe('sector cue and sync by position', () => {
+    test('clicking sector 4\'s tick puts each video at its own entry into it, and a lane click clears the cue', async ({ page, isMobile }) => {
+        test.skip(isMobile, 'on touch the ticks are marks and the Cue menu cues')
+        await mockApi(page, { videos: [PATRIK, ARTUREK], comparisons: { [PATRIK]: 'short' } })
+        await page.goto(`/compare?runs=${PATRIK},${ARTUREK}`)
+        await expect(lane(page, 'PatriK')).toContainText('Replay')
+        await expect.poll(async () => (await clocksOf(page)).length).toBe(2)
+
+        await page.getByRole('list', { name: 'Sectors' }).getByRole('button', { name: 'Cue S4' }).click()
+
+        await expect.poll(() => rounded(page)).toEqual([3.74, 3.549])
+        expect((await clocksOf(page)).map(clock => clock.paused)).toEqual([true, true])
+        await expect(transport(page).getByRole('slider', { name: 'Timeline' })).toHaveAttribute('aria-valuetext', '0:03.549')
+        await expect(transport(page).getByRole('combobox', { name: 'Cue' })).toHaveValue('S4')
+
+        const plot = lane(page, 'Arturek').locator('.run-compare-lane-plot')
+        const box = (await plot.boundingBox())!
+        await plot.click({ position: { x: box.width / 2, y: box.height / 2 } })
+
+        await expect.poll(async () => {
+            const [patrik, arturek] = await rounded(page)
+            return Math.abs(patrik - arturek)
+        }).toBeLessThan(0.002)
+        await expect(transport(page).getByRole('combobox', { name: 'Cue' })).toHaveValue('')
+    })
+
+    test('the Cue menu and the next and previous cue buttons cue every run', async ({ page }) => {
+        await mockApi(page, { videos: [PATRIK, ARTUREK], comparisons: { [PATRIK]: 'short' } })
+        await page.goto(`/compare?runs=${PATRIK},${ARTUREK}`)
+        await expect(lane(page, 'PatriK')).toContainText('Replay')
+        await expect.poll(async () => (await clocksOf(page)).length).toBe(2)
+
+        await transport(page).getByRole('combobox', { name: 'Cue' }).selectOption('S4')
+        await expect.poll(() => rounded(page)).toEqual([3.74, 3.549])
+
+        await transport(page).getByRole('button', { name: 'Next cue' }).click()
+        await expect.poll(() => rounded(page)).toEqual([4.955, 4.732])
+        await expect(transport(page).getByRole('combobox', { name: 'Cue' })).toHaveValue('S5')
+
+        await transport(page).getByRole('button', { name: 'Previous cue' }).click()
+        await transport(page).getByRole('button', { name: 'Previous cue' }).click()
+        await expect.poll(() => rounded(page)).toEqual([2.644, 2.366])
+    })
+
+    test('pinning another reference clears the cue', async ({ page }) => {
+        await mockApi(page, { videos: [PATRIK, ARTUREK], comparisons: { [PATRIK]: 'short' } })
+        await page.goto(`/compare?runs=${PATRIK},${ARTUREK}`)
+        await expect(lane(page, 'PatriK')).toContainText('Replay')
+        await expect.poll(async () => (await clocksOf(page)).length).toBe(2)
+        await transport(page).getByRole('combobox', { name: 'Cue' }).selectOption('S4')
+        await expect.poll(() => rounded(page)).toEqual([3.74, 3.549])
+
+        await runsButton(page).click()
+        await rosterRow(page, 'PatriK').getByRole('button', { name: 'Pin' }).click()
+
+        await expect(lane(page, 'PatriK')).toContainText('REF')
+        await expect(transport(page).getByRole('combobox', { name: 'Cue' })).toHaveValue('')
+        await expect.poll(() => rounded(page)).toEqual([3.549, 3.549])
+    })
+
+    test('the toggle writes sync=position in place and marks a run that stays on the race clock', async ({ page }) => {
+        await mockApi(page, { videos: [PATRIK, ARTUREK, DECL], comparisons: { [PATRIK]: 'short' } })
+        await page.goto(`/compare?runs=${PATRIK},${ARTUREK},${DECL}`)
+        await expect(lane(page, 'PatriK')).toContainText('Replay')
+        await expect(lane(page, 'Decl')).toContainText('Zones')
+        await expect(page.getByText('Race clock')).toHaveCount(0)
+        await expect(syncToggle(page)).toHaveAttribute('aria-pressed', 'false')
+        const lengthBefore = await historyLength(page)
+
+        await syncToggle(page).click()
+
+        await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${PATRIK},${ARTUREK},${DECL}&sync=position`)
+        expect(await historyLength(page)).toBe(lengthBefore)
+        await expect(syncToggle(page)).toHaveAttribute('aria-pressed', 'true')
+        await expect(lane(page, 'Decl')).toContainText('Race clock')
+        await expect(tile(page, 'Decl')).toContainText('Race clock')
+        await expect(lane(page, 'PatriK')).not.toContainText('Race clock')
+        await expect(lane(page, 'Arturek')).not.toContainText('Race clock')
+
+        await syncToggle(page).click()
+
+        await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${PATRIK},${ARTUREK},${DECL}`)
+        await expect(page.getByText('Race clock')).toHaveCount(0)
+        expect(await historyLength(page)).toBe(lengthBefore)
+    })
+
+    test('a link with sync=position holds each aligned run at the reference\'s position', async ({ page }) => {
+        await mockApi(page, { videos: [PATRIK, ARTUREK, DECL], comparisons: { [PATRIK]: 'short' } })
+        await page.goto(`/compare?runs=${PATRIK},${ARTUREK},${DECL}&sync=position&t=6.000`)
+        await expect(lane(page, 'PatriK')).toContainText('Replay')
+
+        await expect.poll(() => rounded(page)).toEqual([6.038, 6, 6])
+        expect((await clocksOf(page)).map(clock => clock.paused)).toEqual([true, true, true])
+
+        await syncToggle(page).click()
+
+        await expect.poll(() => rounded(page)).toEqual([6, 6, 6])
+    })
+})
+
 const EXTRA = ['c7c7c7c7-0000-4000-8000-0000000000c7', 'c8c8c8c8-0000-4000-8000-0000000000c8', 'c9c9c9c9-0000-4000-8000-0000000000c9', 'cacacaca-0000-4000-8000-0000000000ca']
 const EXTRA_DETAILS = new Map(EXTRA.map((id, i) => [id, detailFor(id, `70000000000000002${i}`, `Extra ${i + 1}`, 20 + i, 0)]))
 const DISALLOWED = 'cbcbcbcb-0000-4000-8000-0000000000cb'

@@ -307,18 +307,57 @@
   position: relative;
 }
 
-.run-compare-ticks {
-  position: absolute;
-  inset: 0 var(--run-compare-inset);
-  pointer-events: none;
+.run-compare-cues {
+  position: relative;
+  height: 0.75rem;
+  margin-inline: var(--run-compare-inset);
 }
 
-.run-compare-tick {
+.run-compare-cue {
   position: absolute;
+  top: 0;
   bottom: 0;
+  display: flex;
+  transform: translateX(-50%);
+}
+
+.run-compare-cue > button,
+.run-compare-cue-mark {
+  display: flex;
+  justify-content: center;
+  width: 0.75rem;
+  height: 100%;
+}
+
+.run-compare-cue > button {
+  cursor: pointer;
+}
+
+.run-compare-cue > button::before,
+.run-compare-cue-mark::before {
+  content: '';
   width: 1px;
-  height: 0.375rem;
+  height: 100%;
   background: rgb(var(--hairline-rgb) / 0.45);
+}
+
+.run-compare-cues.is-zones > .run-compare-cue > button::before,
+.run-compare-cues.is-zones .run-compare-cue-mark::before {
+  width: 0.375rem;
+  height: 0.375rem;
+  margin-top: 0.1875rem;
+  transform: rotate(45deg);
+}
+
+.run-compare-cue > button:hover::before,
+.run-compare-cue > button:focus-visible::before,
+.run-compare-cue.is-active > :first-child::before {
+  background: var(--color-accent-400);
+}
+
+.run-compare-cues:not(.is-zones) .run-compare-cue > button:hover::before,
+.run-compare-cues:not(.is-zones) .run-compare-cue.is-active > :first-child::before {
+  width: 2px;
 }
 
 .run-compare-lanes {
@@ -411,6 +450,19 @@
 
 .run-compare-runs-button[aria-expanded='true'] {
   background: rgb(var(--hairline-rgb) / 0.12);
+}
+
+.run-compare-controls .run-compare-sync-button {
+  gap: 0.375rem;
+  width: auto;
+  padding: 0 0.5rem;
+  color: var(--color-muted-foreground);
+  white-space: nowrap;
+}
+
+.run-compare-sync-button[aria-pressed='true'] {
+  background: rgb(var(--hairline-rgb) / 0.12);
+  color: var(--color-foreground);
 }
 
 .run-compare-stage-area {
@@ -597,6 +649,11 @@
 @media (hover: none) {
   .run-compare-roster-action,
   .run-compare-controls .run-compare-runs-button {
+    min-width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .run-compare-controls .run-compare-sync-button {
     min-width: 2.75rem;
     height: 2.75rem;
   }

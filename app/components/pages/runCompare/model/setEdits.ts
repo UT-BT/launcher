@@ -1,5 +1,5 @@
 import type { SoloRun } from '../loading/soloRuns'
-import { MAX_COMPARE_RUNS, parseCompareQuery, serializeCompareQuery, type CompareUrlState } from '../url/compareUrl'
+import { MAX_COMPARE_RUNS, parseCompareQuery, serializeCompareQuery, type CompareSync, type CompareUrlState } from '../url/compareUrl'
 import type { CompareModel } from './compareModel'
 import { MAX_VIDEO_TILES } from './raceModel'
 import { sideGroupOf } from './referenceModel'
@@ -11,6 +11,7 @@ export type SetEdit =
     | { kind: 'unpin'; capId: string }
     | { kind: 'video'; capId: string; on: boolean }
     | { kind: 'offset'; capId: string; ms: number }
+    | { kind: 'sync'; mode: CompareSync }
 
 export interface EditableSet {
     state: CompareUrlState
@@ -57,6 +58,7 @@ function withOffset(state: CompareUrlState, capId: string, ms: number): CompareU
 
 function nextState(set: EditableSet, edit: SetEdit): CompareUrlState | string {
     const { state } = set
+    if (edit.kind === 'sync') return { ...state, sync: edit.mode }
     const { capId } = edit
     switch (edit.kind) {
         case 'add':

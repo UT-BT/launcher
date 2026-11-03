@@ -4,6 +4,10 @@ import {
     FALLBACK_FPS,
     MAX_PLAYBACK_RATE,
     MIN_PLAYBACK_RATE,
+    POSITION_CATCH_UP_SECONDS,
+    POSITION_RATE_MAX_FACTOR,
+    POSITION_RATE_MIN_FACTOR,
+    POSITION_RESEEK_SECONDS,
     SEEK_TOLERANCE_SECONDS,
     SKIP_SECONDS,
     START_GATE_LIMIT_SECONDS,
@@ -29,6 +33,11 @@ export interface PlaybackState {
     frozen: string[]
     errored: string[]
     runTimes: Readonly<Record<string, number>>
+    cue: string | null
+}
+
+export interface SetTargetsOptions {
+    clearCue?: boolean
 }
 
 export interface PlaybackController {
@@ -37,6 +46,9 @@ export interface PlaybackController {
     setRuns: (runs: readonly PlaybackRun[]) => void
     setGroupTarget: (group: string, target: ClockTarget) => void
     resetTargets: () => void
+    setTargets: (targets: ReadonlyMap<string, ClockTarget>, options?: SetTargetsOptions) => void
+    cue: (id: string, at: number, targets: ReadonlyMap<string, ClockTarget>) => void
+    clearCue: () => void
     play: () => void
     pause: () => void
     seek: (t: number) => void
@@ -58,6 +70,7 @@ interface Track {
     errored: boolean
     playing: boolean
     parkedAt: number | null
+    rateFactor: number
 }
 
 type MediaTrack = Track & { run: { media: PlaybackMedia } }
@@ -73,7 +86,13 @@ interface StartGate {
     from: Map<Track, number>
 }
 
+interface CueLayer {
+    id: string
+    targets: ReadonlyMap<string, ClockTarget>
+}
+
 const MAX_RECONCILE_PASSES = 3
+const RATE_FACTOR_TOLERANCE = 0.01
 
 function clamp(value: number, low: number, high: number): number {
     return Math.min(high, Math.max(low, value))
@@ -106,12 +125,13 @@ function placedDifferently(before: PlaybackRun, after: PlaybackRun): boolean {
 function sameState(a: PlaybackState, b: PlaybackState): boolean {
     return a.playing === b.playing && a.t === b.t && a.end === b.end && a.rate === b.rate
         && sameList(a.stalled, b.stalled) && sameList(a.frozen, b.frozen) && sameList(a.errored, b.errored)
-        && sameRecord(a.runTimes, b.runTimes)
+        && sameRecord(a.runTimes, b.runTimes) && a.cue === b.cue
 }
 
 export function createPlaybackController({ time }: PlaybackControllerOptions): PlaybackController {
     const listeners = new Set<() => void>()
     const targets = new Map<string, ClockTarget>()
+    let cueLayer: CueLayer | null = null
     let tracks: Track[] = []
     let t = 0
     let rate = 1
@@ -126,7 +146,21 @@ export function createPlaybackController({ time }: PlaybackControllerOptions): P
     let state: PlaybackState = buildState()
 
     function targetOf(run: PlaybackRun): ClockTarget {
-        return targets.get(groupOf(run)) ?? RACE_TARGET
+        const group = groupOf(run)
+        return cueLayer?.targets.get(group) ?? targets.get(group) ?? RACE_TARGET
+    }
+
+    function rateFactorOf(track: Track, gap = 0): number {
+        const { slope } = targetOf(track.run)
+        if (!slope) return 1
+        return clamp(slope(t) + gap / POSITION_CATCH_UP_SECONDS, POSITION_RATE_MIN_FACTOR, POSITION_RATE_MAX_FACTOR)
+    }
+
+    function applyRateFactor(track: Track, rateFactor: number) {
+        const settled = rateFactor === 1 ? track.rateFactor === 1 : Math.abs(track.rateFactor - rateFactor) < RATE_FACTOR_TOLERANCE
+        if (settled) return
+        track.rateFactor = rateFactor
+        track.run.media?.setRate(rate * rateFactor)
     }
 
     function timelineEnd(): number {
@@ -202,6 +236,7 @@ export function createPlaybackController({ time }: PlaybackControllerOptions): P
             frozen,
             errored: tracks.filter(track => track.errored).map(track => track.run.id),
             runTimes,
+            cue: cueLayer?.id ?? null,
         }
     }
 
@@ -240,6 +275,7 @@ export function createPlaybackController({ time }: PlaybackControllerOptions): P
         }
         track.parkedAt = null
         if (Math.abs(track.run.media.currentTime() - position) > tolerance) track.run.media.seek(position)
+        applyRateFactor(track, rateFactorOf(track))
     }
 
     function hide(track: Track) {
@@ -307,7 +343,7 @@ export function createPlaybackController({ time }: PlaybackControllerOptions): P
         let least = Number.POSITIVE_INFINITY
         open.from.forEach((position, track) => {
             if (!track.playing || !track.run.media) return
-            const advanced = track.run.media.currentTime() - position
+            const advanced = (track.run.media.currentTime() - position) / track.rateFactor
             if (advanced > 0) least = Math.min(least, advanced)
             else started = false
         })
@@ -322,7 +358,14 @@ export function createPlaybackController({ time }: PlaybackControllerOptions): P
             const { media } = track.run
             if (!track.playing || !media.canPlay()) return
             const { position } = placement(track)
-            if (Math.abs(media.currentTime() - position) > driftToleranceOf(track.run)) media.seek(position)
+            const gap = position - media.currentTime()
+            if (!targetOf(track.run).slope) {
+                if (Math.abs(gap) > driftToleranceOf(track.run)) media.seek(position)
+            } else if (Math.abs(gap) > POSITION_RESEEK_SECONDS) {
+                media.seek(position)
+            } else {
+                applyRateFactor(track, rateFactorOf(track, gap))
+            }
         })
     }
 
@@ -365,6 +408,12 @@ export function createPlaybackController({ time }: PlaybackControllerOptions): P
         tracks.filter(participates).forEach(track => align(track, SEEK_TOLERANCE_SECONDS))
     }
 
+    function retargetChanged(change: () => void) {
+        const before = new Map(tracks.map(track => [track, targetOf(track.run)]))
+        change()
+        retarget(track => targetOf(track.run) !== before.get(track))
+    }
+
     function retarget(affected: (track: Track) => boolean) {
         t = Math.min(t, timelineEnd())
         tracks
@@ -376,7 +425,7 @@ export function createPlaybackController({ time }: PlaybackControllerOptions): P
 
     function attach(run: PlaybackRun, replaced: Track | undefined): Track {
         const errored = replaced?.errored === true && run.media == null
-        const track: Track = { run, unsubscribe: () => {}, errored, playing: false, parkedAt: null }
+        const track: Track = { run, unsubscribe: () => {}, errored, playing: false, parkedAt: null, rateFactor: 1 }
         if (run.media) {
             run.media.setRate(rate)
             track.unsubscribe = run.media.subscribe(event => onMediaEvent(track, event))
@@ -415,10 +464,30 @@ export function createPlaybackController({ time }: PlaybackControllerOptions): P
         },
         resetTargets: () => {
             targets.clear()
+            cueLayer = null
             retarget(() => true)
         },
+        setTargets: (next, options = {}) => {
+            retargetChanged(() => {
+                targets.clear()
+                next.forEach((target, group) => targets.set(group, target))
+                if (options.clearCue) cueLayer = null
+            })
+        },
+        cue: (id, at, cued) => {
+            if (!Number.isFinite(at)) return
+            cueLayer = { id, targets: new Map(cued) }
+            moveTo(at)
+            reconcile()
+        },
+        clearCue: () => {
+            if (cueLayer) retargetChanged(() => { cueLayer = null })
+        },
         play: () => {
-            if (t >= timelineEnd()) moveTo(0)
+            if (t >= timelineEnd()) {
+                cueLayer = null
+                moveTo(0)
+            }
             wantPlay = true
             reconcile()
             ensureFrame()
@@ -429,12 +498,14 @@ export function createPlaybackController({ time }: PlaybackControllerOptions): P
         },
         seek: next => {
             if (!Number.isFinite(next)) return
+            cueLayer = null
             moveTo(next)
             reconcile()
         },
         beginScrub: () => {
             scrubbing = true
-            reconcile()
+            if (cueLayer) retargetChanged(() => { cueLayer = null })
+            else reconcile()
         },
         endScrub: () => {
             scrubbing = false
@@ -447,6 +518,7 @@ export function createPlaybackController({ time }: PlaybackControllerOptions): P
             reconcile()
         },
         skip: direction => {
+            cueLayer = null
             moveTo(t + direction * SKIP_SECONDS)
             reconcile()
         },
@@ -455,7 +527,7 @@ export function createPlaybackController({ time }: PlaybackControllerOptions): P
             if (running) advanceClock(time.now())
             rate = clamp(next, MIN_PLAYBACK_RATE, MAX_PLAYBACK_RATE)
             tracks.forEach(track => {
-                if (!track.errored) track.run.media?.setRate(rate)
+                if (!track.errored) track.run.media?.setRate(rate * track.rateFactor)
             })
             reconcile()
         },
@@ -465,6 +537,7 @@ export function createPlaybackController({ time }: PlaybackControllerOptions): P
             wantPlay = false
             running = false
             gate = null
+            cueLayer = null
             tracks.forEach(release)
             tracks = []
             listeners.clear()

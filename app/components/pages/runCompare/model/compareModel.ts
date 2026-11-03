@@ -2,7 +2,9 @@ import { displayMapName } from '@/app/utils/format'
 import type { LoadedComparisons } from '../loading/comparisons'
 import type { LoadedSoloRuns, SoloRun } from '../loading/soloRuns'
 import { MAX_COMPARE_RUNS, parseCompareQuery, serializeCompareQuery, type CompareNotice, type CompareParam } from '../url/compareUrl'
+import { composeCues, EMPTY_CUES, type CueModel } from './cueModel'
 import { composeLanes, EMPTY_LANES, withLaneBadges, type LanesModel } from './laneModel'
+import { composeSync, EMPTY_SYNC, withRaceClock, type SyncModel } from './positionModel'
 import { composeRace, EMPTY_RACE, type LoadedVideos, type RaceInput, type RaceModel } from './raceModel'
 import { onePinPerSide } from './referenceModel'
 import type { StageBox } from './stageLayout'
@@ -34,6 +36,8 @@ export interface CompareModel {
     seekSeconds: number | null
     race: RaceModel
     lanes: LanesModel
+    cues: CueModel
+    sync: SyncModel
 }
 
 const NOUNS: Record<CompareParam, [string, string]> = {
@@ -106,10 +110,12 @@ function loadDrop(run: SoloRun | null, map: string | null): LoadDropReason | nul
     return null
 }
 
-function racePart(input: RaceInput, comparisons: LoadedComparisons): { race: RaceModel; lanes: LanesModel } {
+function racePart(input: RaceInput, comparisons: LoadedComparisons): { race: RaceModel; lanes: LanesModel; cues: CueModel; sync: SyncModel } {
     const race = composeRace(input)
     const lanes = composeLanes(race, comparisons)
-    return { race: withLaneBadges(race, lanes), lanes }
+    const sync = composeSync(race, lanes, comparisons, input.state.sync)
+    const marked = withRaceClock(lanes, sync)
+    return { race: withLaneBadges(race, marked), lanes: marked, cues: composeCues(race, lanes, comparisons), sync }
 }
 
 export function composeCompareModel({ query, runs: loaded, videos, failedVideos, stageBox, comparisons }: CompareModelInput): CompareModel {
@@ -117,7 +123,7 @@ export function composeCompareModel({ query, runs: loaded, videos, failedVideos,
     const seekSeconds = decoded.state.t
 
     if (decoded.state.runs.some(capId => !loaded.has(capId))) {
-        return { loading: true, runs: [], map: null, drops: [], noticeLine: null, title: null, query, seekSeconds, race: EMPTY_RACE, lanes: EMPTY_LANES }
+        return { loading: true, runs: [], map: null, drops: [], noticeLine: null, title: null, query, seekSeconds, race: EMPTY_RACE, lanes: EMPTY_LANES, cues: EMPTY_CUES, sync: EMPTY_SYNC }
     }
 
     const kept: SoloRun[] = []
