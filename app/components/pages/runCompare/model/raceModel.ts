@@ -3,6 +3,7 @@ import { formatCapTime } from '@/app/utils/format'
 import type { ReplaySource, ReplayVideo } from '@/app/utils/api'
 import type { SoloRun } from '../loading/soloRuns'
 import { EMPTY_COMPARE_STATE, type CompareUrlState } from '../url/compareUrl'
+import { resolveReferences, type References } from './referenceModel'
 import { packStage, type StageBox, type StageLayout } from './stageLayout'
 
 export const MAX_VIDEO_TILES = 8
@@ -36,6 +37,7 @@ export interface RaceRun {
 export interface RaceModel {
     runs: RaceRun[]
     reference: string | null
+    references: References
     tiles: TileSlot[]
     dataOnly: RaceRun[]
     layout: StageLayout<TileSlot>
@@ -66,10 +68,6 @@ export function formatRaceTime(seconds: number): string {
     return formatCapTime(seconds).replace(/^0(?=\d:)/, '')
 }
 
-function fastest(runs: readonly SoloRun[]): SoloRun | null {
-    return runs.reduce<SoloRun | null>((best, run) => (!best || run.timeSeconds < best.timeSeconds ? run : best), null)
-}
-
 function resultLine(run: SoloRun, runs: readonly SoloRun[], reference: SoloRun): string {
     const gapMs = Math.round(run.timeSeconds * 1000) - Math.round(reference.timeSeconds * 1000)
     const rank = 1 + runs.filter(other => other.side === run.side && other.timeSeconds < run.timeSeconds).length
@@ -83,13 +81,15 @@ function offsetOf(state: CompareUrlState, capId: string, video: ReplayVideo | nu
 }
 
 export function composeRace({ runs, state, videos, failedVideos, stageBox }: RaceInput): RaceModel {
-    const reference = fastest(runs)
+    const references = resolveReferences(runs, state.refs)
+    const byId = new Map(runs.map(run => [run.capId, run]))
     const dataOnly = new Set(state.data)
     const tiles: TileSlot[] = []
     const raceRuns = runs.map(run => {
         const video = videos.get(run.capId)
         const failed = failedVideos.has(run.capId)
-        const result = reference ? resultLine(run, runs, reference) : ''
+        const partner = byId.get(references.partners.get(run.capId) ?? '')
+        const result = partner ? resultLine(run, runs, partner) : ''
         const tile = !failed && video !== null && !dataOnly.has(run.capId) && tiles.length < MAX_VIDEO_TILES
         if (tile) tiles.push({ kind: 'video', id: run.capId, run, src: video?.mp4_url ?? null, badges: [], result })
         return {
@@ -105,7 +105,8 @@ export function composeRace({ runs, state, videos, failedVideos, stageBox }: Rac
     })
     return {
         runs: raceRuns,
-        reference: reference?.capId ?? null,
+        reference: references.lead,
+        references,
         tiles,
         dataOnly: raceRuns.filter(run => !run.tile),
         layout: packStage(tiles, stageBox ?? UNMEASURED),

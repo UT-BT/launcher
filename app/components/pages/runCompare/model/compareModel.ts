@@ -4,11 +4,15 @@ import type { LoadedSoloRuns, SoloRun } from '../loading/soloRuns'
 import { MAX_COMPARE_RUNS, parseCompareQuery, serializeCompareQuery, type CompareNotice, type CompareParam } from '../url/compareUrl'
 import { composeLanes, EMPTY_LANES, withLaneBadges, type LanesModel } from './laneModel'
 import { composeRace, EMPTY_RACE, type LoadedVideos, type RaceInput, type RaceModel } from './raceModel'
+import { onePinPerSide } from './referenceModel'
 import type { StageBox } from './stageLayout'
 
 export type LoadDropReason = 'not-found' | 'different-map' | 'disallowed'
 
-export type CompareDrop = CompareNotice | { param: 'runs'; reason: LoadDropReason; value: string }
+export type CompareDrop =
+    | CompareNotice
+    | { param: 'runs'; reason: LoadDropReason; value: string }
+    | { param: 'ref'; reason: 'same-side'; value: string }
 
 export interface CompareModelInput {
     query: string
@@ -55,6 +59,7 @@ function dropLabel(drop: CompareDrop, plural: boolean): string {
             case 'disallowed': return `disallowed ${noun}`
         }
     }
+    if (drop.reason === 'same-side') return `${noun} past one per side`
     if (drop.param === 'sync') return `unknown ${noun}`
     if (drop.param === 't') return `invalid ${noun}`
     switch (drop.reason) {
@@ -130,7 +135,10 @@ export function composeCompareModel({ query, runs: loaded, videos, failedVideos,
     }
 
     const restated = parseCompareQuery(serializeCompareQuery({ ...decoded.state, runs: kept.map(run => run.capId), t: null }))
-    const drops = [...decoded.notices, ...loadDrops, ...restated.notices]
+    const pins = onePinPerSide(kept, restated.state.refs)
+    const state = { ...restated.state, refs: pins.refs }
+    const pinDrops = pins.dropped.map((value): CompareDrop => ({ param: 'ref', reason: 'same-side', value }))
+    const drops = [...decoded.notices, ...loadDrops, ...restated.notices, ...pinDrops]
 
     return {
         loading: false,
@@ -139,11 +147,11 @@ export function composeCompareModel({ query, runs: loaded, videos, failedVideos,
         drops,
         noticeLine: noticeLineFor(drops),
         title: compareTitle(kept, map),
-        query: serializeCompareQuery(restated.state),
+        query: serializeCompareQuery(state),
         seekSeconds,
         ...racePart({
             runs: kept,
-            state: restated.state,
+            state,
             videos: videos ?? new Map(),
             failedVideos: failedVideos ?? new Set(),
             stageBox: stageBox ?? null,

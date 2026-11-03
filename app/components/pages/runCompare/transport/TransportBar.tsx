@@ -1,4 +1,4 @@
-import { Pause, Play, StepBack, StepForward } from 'lucide-react'
+import { ListVideo, Pause, Play, StepBack, StepForward } from 'lucide-react'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import type { LanesModel } from '../model/laneModel'
 import { formatRaceTime, type RaceModel } from '../model/raceModel'
@@ -63,9 +63,11 @@ interface TransportBarProps {
     controller: PlaybackController | null
     race: RaceModel
     lanes: LanesModel
+    runsOpen: boolean
+    onToggleRuns: () => void
 }
 
-export function TransportBar({ controller, race, lanes }: TransportBarProps) {
+export function TransportBar({ controller, race, lanes, runsOpen, onToggleRuns }: TransportBarProps) {
     const { playing, rate, end, buffering } = usePlaybackSelector(controller, controlsOf, sameControls)
     const stalled = new Set(buffering.split(','))
     const buffered = race.runs.filter(lane => stalled.has(lane.run.capId))
@@ -107,6 +109,16 @@ export function TransportBar({ controller, race, lanes }: TransportBarProps) {
                         </>
                     )}
                 </div>
+                <button
+                    type="button"
+                    aria-expanded={runsOpen}
+                    aria-controls="run-compare-drawer"
+                    className="run-compare-runs-button"
+                    onClick={onToggleRuns}
+                >
+                    <ListVideo className="size-4" />
+                    <span>Runs</span>
+                </button>
             </div>
             <div className="run-compare-track">
                 <div className="run-compare-scrub">

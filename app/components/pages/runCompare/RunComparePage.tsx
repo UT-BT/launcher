@@ -7,11 +7,14 @@ import { SITE_NAME } from '@/app/components/navigation/titles'
 import { Spinner } from '@/app/components/ui/spinner'
 import { displayMapName } from '@/app/utils/format'
 import type { UserProfile } from '@/app/utils/api'
+import { RunsDrawer } from './drawer/RunsDrawer'
+import { rosterRows } from './drawer/rosterRows'
 import { useComparisons } from './loading/comparisons'
 import { useReplayVideos } from './loading/replayVideos'
 import { useSoloRuns } from './loading/soloRuns'
 import { composeCompareModel } from './model/compareModel'
 import { videoReadOrder } from './model/raceModel'
+import { editableSet, editSet, type SetEdit } from './model/setEdits'
 import { RaceStage } from './stage/RaceStage'
 import { useRacePlayback } from './stage/useRacePlayback'
 import { useStageBox, useTheaterHeight } from './stage/useStageMeasure'
@@ -43,6 +46,18 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
         [compare, loaded, videos, failedVideos, stageBox, comparisons],
     )
     const { controller, attachMedia } = useRacePlayback(model.race.runs, model.seekSeconds ?? storedSeekSeconds)
+    const [storedDrawerOpen, setDrawerOpen] = useNavState<boolean | null>('compare.drawerOpen', null)
+    const [editNote, setEditNote] = useState<string | null>(null)
+    const drawerOpen = storedDrawerOpen === true && !model.loading && model.runs.length > 0
+    const closeDrawer = useCallback(() => setDrawerOpen(false), [setDrawerOpen])
+    const edit = useCallback((change: SetEdit) => {
+        const outcome = editSet(editableSet(model), change)
+        setEditNote(outcome.blocked)
+        if (outcome.query === null) return
+        setStoredNotice(null)
+        if (outcome.query !== model.query) replaceParams(outcome.query ? { compare: outcome.query } : {})
+    }, [model, replaceParams, setStoredNotice])
+    const roster = useMemo(() => rosterRows({ model, videos, failedVideos }), [model, videos, failedVideos])
     const onVideoFailed = useCallback((capId: string) => {
         setFailedVideos(previous => (previous.has(capId) ? previous : new Set(previous).add(capId)))
     }, [])
@@ -54,11 +69,17 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
         replaceParams(model.query ? { compare: model.query } : {})
     }, [model, compare, replaceParams, setSeekSeconds, setStoredNotice])
 
+    useEffect(() => {
+        if (model.loading || storedDrawerOpen !== null) return
+        setDrawerOpen(model.runs.length === 1)
+    }, [model.loading, model.runs.length, storedDrawerOpen, setDrawerOpen])
+
     useDocumentTitle(model.title, SITE_NAME)
     useNavScrollRestore(!model.loading)
 
     const notice = model.noticeLine ?? storedNotice
     const hasTiles = model.race.tiles.length > 0
+    const fillsViewport = hasTiles || drawerOpen
 
     return (
         <div className="run-compare-page">
@@ -84,17 +105,28 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
             )}
 
             {!model.loading && model.runs.length > 0 && (
-                <div ref={setTheater} className="run-compare-theater" style={hasTiles && theaterHeight !== null ? { height: theaterHeight } : undefined}>
-                    {hasTiles && (
-                        <RaceStage
-                            layout={model.race.layout}
-                            controller={controller}
-                            stageRef={setStage}
-                            attachMedia={attachMedia}
-                            onVideoFailed={onVideoFailed}
-                        />
+                <div ref={setTheater} className="run-compare-theater" style={fillsViewport && theaterHeight !== null ? { height: theaterHeight } : undefined}>
+                    {fillsViewport && (
+                        <div className="run-compare-stage-area">
+                            {hasTiles && (
+                                <RaceStage
+                                    layout={model.race.layout}
+                                    controller={controller}
+                                    stageRef={setStage}
+                                    attachMedia={attachMedia}
+                                    onVideoFailed={onVideoFailed}
+                                />
+                            )}
+                            <RunsDrawer open={drawerOpen} onClose={closeDrawer} rows={roster} note={editNote} onEdit={edit} />
+                        </div>
                     )}
-                    <TransportBar controller={controller} race={model.race} lanes={model.lanes} />
+                    <TransportBar
+                        controller={controller}
+                        race={model.race}
+                        lanes={model.lanes}
+                        runsOpen={drawerOpen}
+                        onToggleRuns={() => setDrawerOpen(!drawerOpen)}
+                    />
                 </div>
             )}
         </div>

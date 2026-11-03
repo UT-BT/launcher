@@ -1,0 +1,67 @@
+import type { SoloRun } from '../loading/soloRuns'
+import type { CompareModel } from '../model/compareModel'
+import { formatRaceTime, NO_VIDEO, type LoadedVideos } from '../model/raceModel'
+import { isSideReference } from '../model/referenceModel'
+import { FALLBACK_FPS } from '../playback/playbackConstants'
+import { parseCompareQuery } from '../url/compareUrl'
+
+export const NOT_FRAME_SYNCED = 'Not frame-synced'
+
+export type RosterVideo = 'on' | 'off' | 'none'
+
+export interface RosterRow {
+    capId: string
+    run: SoloRun
+    time: string
+    reference: boolean
+    pinned: boolean
+    badges: string[]
+    sideLabel: string | null
+    video: RosterVideo
+    frameSynced: boolean
+    offsetMs: number
+    fps: number
+}
+
+export interface RosterInput {
+    model: CompareModel
+    videos: LoadedVideos
+    failedVideos: ReadonlySet<string>
+}
+
+function rowOrder(model: CompareModel): string[] {
+    const { references } = model.race
+    const order = references.sides.flatMap(({ capId: reference }) => [
+        reference,
+        ...model.runs
+            .map(run => run.capId)
+            .filter(capId => references.partners.get(capId) === reference && !isSideReference(references, capId)),
+    ])
+    return order.length === model.runs.length ? order : model.runs.map(run => run.capId)
+}
+
+export function rosterRows({ model, videos, failedVideos }: RosterInput): RosterRow[] {
+    const state = parseCompareQuery(model.query).state
+    const raceRuns = new Map(model.race.runs.map(raceRun => [raceRun.run.capId, raceRun]))
+    const lanes = new Map(model.lanes.lanes.map(lane => [lane.capId, lane]))
+    const pins = new Set(state.refs)
+    return rowOrder(model).flatMap(capId => {
+        const raceRun = raceRuns.get(capId)
+        const lane = lanes.get(capId)
+        if (!raceRun || !lane) return []
+        const video: RosterVideo = failedVideos.has(capId) || videos.get(capId) === null ? 'none' : raceRun.tile ? 'on' : 'off'
+        return [{
+            capId,
+            run: raceRun.run,
+            time: formatRaceTime(raceRun.run.timeSeconds),
+            reference: lane.reference,
+            pinned: pins.has(capId),
+            badges: lane.badges.filter(badge => badge !== lane.sideLabel && !(video === 'off' && badge === NO_VIDEO)),
+            sideLabel: lane.sideLabel,
+            video,
+            frameSynced: raceRun.source === null || raceRun.source === 'utrecorder',
+            offsetMs: state.offsets.find(offset => offset.capId === capId)?.ms ?? 0,
+            fps: raceRun.fps ?? FALLBACK_FPS,
+        }]
+    })
+}

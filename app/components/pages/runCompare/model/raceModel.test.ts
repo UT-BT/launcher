@@ -127,7 +127,7 @@ describe('the default reference and the result at the cap', () => {
         expect(race.reference).toBe(A)
     })
 
-    it('shows the cap time, the gap to the reference and the finish position on its side', () => {
+    it('shows the cap time, the gap to the side reference and the finish position on its side', () => {
         const race = compose(`runs=${A},${B},${C},${D}`, [
             run(A, 83.456),
             run(B, 82.944),
@@ -136,7 +136,7 @@ describe('the default reference and the result at the cap', () => {
         ])
 
         expect(race.runs.map(r => r.result)).toEqual([
-            'CAP 1:23.456 · +3.956 · 2nd',
+            'CAP 1:23.456 · +0.512 · 2nd',
             'CAP 1:22.944 · +3.444 · 1st',
             'CAP 1:19.500 · ±0.000 · 1st',
             'CAP 1:21.000 · +1.500 · 2nd',

@@ -263,3 +263,128 @@
     min-height: 2.75rem;
   }
 }
+
+.run-compare-controls .run-compare-runs-button {
+  gap: 0.375rem;
+  width: auto;
+  padding: 0 0.5rem;
+}
+
+.run-compare-runs-button[aria-expanded='true'] {
+  background: rgb(var(--hairline-rgb) / 0.12);
+}
+
+.run-compare-stage-area {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.run-compare-drawer-layer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  width: min(24rem, 100%);
+}
+
+.run-compare-drawer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  height: 100%;
+  padding: 0.75rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid rgb(var(--hairline-rgb) / 0.15);
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--color-card) 96%, transparent);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.35);
+}
+
+.run-compare-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.run-compare-roster {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.run-compare-roster-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  background: rgb(var(--hairline-rgb) / 0.04);
+  font-size: 0.8125rem;
+}
+
+.run-compare-roster-who {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.run-compare-roster-badges,
+.run-compare-roster-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.run-compare-roster-badges:empty {
+  display: none;
+}
+
+.run-compare-roster-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 0.5rem;
+  border-radius: 0.375rem;
+  color: var(--color-muted-foreground);
+}
+
+.run-compare-roster-action:hover:not(:disabled) {
+  background: rgb(var(--hairline-rgb) / 0.1);
+  color: var(--color-foreground);
+}
+
+.run-compare-roster-action[aria-pressed='true'] {
+  background: rgb(var(--hairline-rgb) / 0.12);
+  color: var(--color-foreground);
+}
+
+.run-compare-roster-action:disabled {
+  opacity: 0.5;
+}
+
+@media (hover: none) {
+  .run-compare-roster-action,
+  .run-compare-controls .run-compare-runs-button {
+    min-width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .run-compare-drawer-layer {
+    position: fixed;
+    top: var(--top-bar-offset, 0px);
+    bottom: var(--tab-bar-offset, 0px);
+    z-index: 25;
+    padding-right: var(--safe-area-right, 0px);
+  }
+}

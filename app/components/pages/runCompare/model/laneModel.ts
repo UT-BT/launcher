@@ -15,6 +15,7 @@ import type { CapComparison, CapComparisonPoint } from '@/app/utils/api'
 import { comparisonKey, type ComparisonRequest, type LoadedComparisons } from '../loading/comparisons'
 import type { SoloRun } from '../loading/soloRuns'
 import type { RaceModel, RaceRun } from './raceModel'
+import { isSideReference, leadSide, type References } from './referenceModel'
 
 export const REPLAY = 'Replay'
 export const ZONES = 'Zones'
@@ -89,9 +90,16 @@ function wantsPairwise(run: SoloRun, reference: SoloRun): boolean {
     return run.capId !== reference.capId && !onOtherSide(run, reference) && run.hasGhost && reference.hasGhost
 }
 
-export function comparisonRequests(runs: readonly SoloRun[], reference: SoloRun | null): ComparisonRequest[] {
-    if (!reference) return []
-    return runs.filter(run => wantsPairwise(run, reference)).map(run => ({ runner: run.capId, reference: reference.capId }))
+function partnerOf(runs: ReadonlyMap<string, SoloRun>, references: References, run: SoloRun): SoloRun {
+    return runs.get(references.partners.get(run.capId) ?? '') ?? run
+}
+
+export function comparisonRequests(runs: readonly SoloRun[], references: References): ComparisonRequest[] {
+    const byId = new Map(runs.map(run => [run.capId, run]))
+    return runs.flatMap(run => {
+        const partner = partnerOf(byId, references, run)
+        return !isSideReference(references, run.capId) && wantsPairwise(run, partner) ? [{ runner: run.capId, reference: partner.capId }] : []
+    })
 }
 
 export function sectorTicks(reference: SoloRun | null): SectorTick[] {
@@ -205,13 +213,19 @@ function compareData(run: SoloRun, reference: SoloRun, comparisons: LoadedCompar
     return zoneData(run, reference) ?? TIME_ONLY_DATA
 }
 
-function laneFor(raceRun: RaceRun, reference: SoloRun, comparisons: LoadedComparisons): Lane {
+interface LaneContext {
+    partner: SoloRun
+    isReference: boolean
+    lead: number | null
+    comparisons: LoadedComparisons
+}
+
+function laneFor(raceRun: RaceRun, { partner, isReference, lead, comparisons }: LaneContext): Lane {
     const { run } = raceRun
-    const isReference = run.capId === reference.capId
-    const data = isReference ? referenceData(run) : compareData(run, reference, comparisons)
-    const sideLabel = !isReference && onOtherSide(run, reference) ? SET_ON[run.side!] : null
+    const data = run.capId === partner.capId ? referenceData(run) : isReference ? TIME_ONLY_DATA : compareData(run, partner, comparisons)
+    const sideLabel = run.side !== null && lead !== null && run.side !== lead ? SET_ON[run.side] : null
     const capMs = msOf(run.timeSeconds)
-    const finalMs = capMs - msOf(reference.timeSeconds)
+    const finalMs = capMs - msOf(partner.timeSeconds)
     return {
         capId: run.capId,
         run,
@@ -237,9 +251,16 @@ export function composeLanes(race: RaceModel, comparisons: LoadedComparisons): L
     const reference = race.runs.find(raceRun => raceRun.run.capId === race.reference)?.run ?? null
     if (!reference) return EMPTY_LANES
     const runs = race.runs.map(raceRun => raceRun.run)
+    const byId = new Map(runs.map(run => [run.capId, run]))
+    const lead = leadSide(runs)
     return {
-        lanes: race.runs.map(raceRun => laneFor(raceRun, reference, comparisons)),
-        requests: comparisonRequests(runs, reference),
+        lanes: race.runs.map(raceRun => laneFor(raceRun, {
+            partner: partnerOf(byId, race.references, raceRun.run),
+            isReference: isSideReference(race.references, raceRun.run.capId),
+            lead,
+            comparisons,
+        })),
+        requests: comparisonRequests(runs, race.references),
         sectors: sectorTicks(reference),
     }
 }

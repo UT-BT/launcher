@@ -31,7 +31,7 @@ doesn't run on the surfaces it names.
 | `achievements` | `achievements` | public | `/achievements` | `achievements` | 0 | 0 |
 | `news` | `news` | public | `/news` | `news` | 0 | 0 |
 | `news-detail` | `news-detail` | public | `/news/15` | `news-detail` | 0 | 0 |
-| `run-compare` | `run-compare` | public | `/compare?runs=258021df-51b1-4ed3-99cc-62d4e75892a7,418b0aec-34c5-40e7-acf4-f2bc33373063` | `run-compare` | 0 | 0 |
+| `run-compare` | `run-compare` | public | `/compare?runs=258021df-51b1-4ed3-99cc-62d4e75892a7,418b0aec-34c5-40e7-acf4-f2bc33373063` | `run-compare` | 0 | 1 |
 | `home:signed-in` | `home` | role-gated | `/` | `home-signed-in` | 0 | 2 |
 | `maps:signed-in` | `maps` | role-gated | `/maps` | `maps-signed-in` | 0 | 0 |
 | `admin` | `admin` | role-gated | `/admin` | `admin` | 19 | 4 |
@@ -513,7 +513,9 @@ No sub-views.
 
 ### Modals
 
-No modals.
+| Surface | Label | Opened from |
+|---|---|---|
+| `run-compare/runs` | Runs drawer | `run-compare` |
 
 ### Skipped rules
 

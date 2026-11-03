@@ -47,9 +47,10 @@ interface MockOptions {
     missingVideos?: readonly string[]
     comparisons?: Readonly<Record<string, 'short' | 'conflict'>>
     compared?: string[]
+    converted?: readonly string[]
 }
 
-async function mockApi(page: Page, { gate = Promise.resolve(), videos = [], missingVideos = [], comparisons = {}, compared = [] }: MockOptions = {}) {
+async function mockApi(page: Page, { gate = Promise.resolve(), videos = [], missingVideos = [], comparisons = {}, compared = [], converted = [] }: MockOptions = {}) {
     await page.addInitScript(() => { localStorage.setItem('utbt:analyticsConsent:v1', 'denied') })
     await serveReplayVideos(page, missingVideos)
     await page.route(/https:\/\/cdn\.discordapp\.com\/.*/, route => route.fulfill({ contentType: 'image/png', body: AVATAR }))
@@ -60,7 +61,8 @@ async function mockApi(page: Page, { gate = Promise.resolve(), videos = [], miss
             if (/^\/users\/[^/]+\/avatar$/.test(path)) return route.fulfill({ contentType: 'image/png', body: AVATAR })
             const replay = /^\/replays\/([^/]+)$/.exec(path)
             if (replay && videos.includes(replay[1])) {
-                return route.fulfill({ json: { source: 'utrecorder', mp4_url: replayVideoUrl(replay[1]), view_url: null, fps: 60 } })
+                const source = converted.includes(replay[1]) ? 'democonverter' : 'utrecorder'
+                return route.fulfill({ json: { source, mp4_url: replayVideoUrl(replay[1]), view_url: null, fps: 60 } })
             }
             return route.fulfill({ json: [] })
         }
@@ -311,5 +313,157 @@ test.describe('delta lanes and data rungs', () => {
         await page.touchscreen.tap(to.x + to.width / 2, to.y + to.height / 2)
         await expect.poll(async () => (await clocksOf(page)).map(clock => Math.round(clock.time * 10) / 10)).toEqual([7.1, 7.1])
         await expect(timeline).toHaveAttribute('aria-valuetext', /^0:07\.1/)
+    })
+})
+
+function drawer(page: Page): Locator {
+    return page.getByRole('region', { name: 'Runs' })
+}
+
+function rosterRow(page: Page, alias: string): Locator {
+    return drawer(page).getByRole('list', { name: 'Roster' }).getByRole('listitem').filter({ hasText: alias })
+}
+
+function runsButton(page: Page): Locator {
+    return page.getByRole('region', { name: 'Playback' }).getByRole('button', { name: 'Runs', exact: true })
+}
+
+function historyLength(page: Page): Promise<number> {
+    return page.evaluate(() => window.history.length)
+}
+
+async function stageBox(page: Page) {
+    return page.getByRole('region', { name: 'Stage' }).boundingBox()
+}
+
+test.describe('the runs drawer', () => {
+    test('opens over the stage without resizing it, and removing a run replaces the address in place', async ({ page }) => {
+        await mockApi(page, { videos: [DECL, SHX, PATRIK] })
+        await page.goto(`/compare?runs=${DECL},${SHX},${PATRIK}`)
+        await expect(tile(page, 'PatriK').locator('video')).toHaveCount(1)
+        await expect(drawer(page)).toHaveCount(0)
+        const closed = await stageBox(page)
+
+        await runsButton(page).click()
+
+        await expect(drawer(page)).toBeVisible()
+        await expect(runsButton(page)).toHaveAttribute('aria-expanded', 'true')
+        expect(await stageBox(page)).toEqual(closed)
+        const lengthBefore = await historyLength(page)
+
+        await rosterRow(page, 'PatriK').getByRole('button', { name: 'Remove' }).click()
+
+        await expect(tile(page, 'PatriK')).toHaveCount(0)
+        await expect(lane(page, 'PatriK')).toHaveCount(0)
+        await expect(lanes(page).getByRole('listitem')).toHaveCount(2)
+        await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${DECL},${SHX}`)
+        expect(await historyLength(page)).toBe(lengthBefore)
+        await expect(drawer(page)).toBeVisible()
+        await expect(drawer(page).getByRole('list', { name: 'Roster' }).getByRole('listitem')).toHaveCount(2)
+    })
+
+    test('pinning a reference measures the other runs against it', async ({ page }) => {
+        const compared: string[] = []
+        await mockApi(page, { videos: [PATRIK, ARTUREK], comparisons: { [PATRIK]: 'short' }, compared })
+        await page.goto(`/compare?runs=${PATRIK},${ARTUREK}`)
+        await expect(lane(page, 'PatriK')).toContainText('Replay')
+        await expect(lane(page, 'Arturek')).toContainText('REF')
+
+        await runsButton(page).click()
+        await rosterRow(page, 'PatriK').getByRole('button', { name: 'Pin' }).click()
+
+        await expect(lane(page, 'PatriK')).toContainText('REF')
+        await expect(lane(page, 'Arturek')).not.toContainText('REF')
+        await expect(lane(page, 'Arturek')).toContainText('Zones')
+        await expect(rosterRow(page, 'PatriK').getByRole('button', { name: 'Pin' })).toHaveAttribute('aria-pressed', 'true')
+        await expect(drawer(page).getByRole('listitem').first()).toContainText('PatriK')
+        await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${PATRIK},${ARTUREK}&ref=${PATRIK}`)
+        expect(compared).toEqual([`${PATRIK}:${ARTUREK}`, `${ARTUREK}:${PATRIK}`])
+    })
+
+    test('turning a video off keeps its lane and drops its tile', async ({ page }) => {
+        await mockApi(page, { videos: [DECL, SHX] })
+        await page.goto(`/compare?runs=${DECL},${SHX}`)
+        await expect(tile(page, 'ShX').locator('video')).toHaveCount(1)
+        await runsButton(page).click()
+
+        await rosterRow(page, 'ShX').getByRole('button', { name: 'Video' }).click()
+
+        await expect(tile(page, 'ShX')).toHaveCount(0)
+        await expect(lane(page, 'ShX')).toBeVisible()
+        await expect(rosterRow(page, 'ShX').getByRole('button', { name: 'Video' })).toHaveAttribute('aria-pressed', 'false')
+        await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${DECL},${SHX}&data=${SHX}`)
+    })
+
+    test('a video not from UTRecorder is flagged and its offset is nudged from the row menu', async ({ page }) => {
+        await mockApi(page, { videos: [DECL, SHX], converted: [SHX] })
+        await page.goto(`/compare?runs=${DECL},${SHX}`)
+        await expect(tile(page, 'ShX').locator('video')).toHaveCount(1)
+        await runsButton(page).click()
+        await expect(rosterRow(page, 'ShX')).toContainText('Not frame-synced')
+        await expect(rosterRow(page, 'Decl')).not.toContainText('Not frame-synced')
+        await expect(rosterRow(page, 'Decl').getByRole('button', { name: /^Offset/ })).toHaveCount(0)
+        const lengthBefore = await historyLength(page)
+
+        await rosterRow(page, 'ShX').getByRole('button', { name: 'Offset 0 ms' }).click()
+        await page.getByRole('menuitem', { name: '+1 frame' }).click()
+        await page.getByRole('menuitem', { name: '+100 ms' }).click()
+
+        await expect(page.getByRole('menu').getByText('Offset +117 ms')).toBeVisible()
+        await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${DECL},${SHX}&off=${SHX}:117`)
+        expect(await historyLength(page)).toBe(lengthBefore)
+
+        await page.keyboard.press('Escape')
+        await expect(page.getByRole('menu')).toHaveCount(0)
+        await expect(drawer(page)).toBeVisible()
+        await expect(rosterRow(page, 'ShX').getByRole('button', { name: 'Offset +117 ms' })).toBeVisible()
+        await expect(tile(page, 'ShX')).not.toContainText('Offset')
+    })
+
+    test('a link with one run opens with the drawer open', async ({ page }) => {
+        await mockApi(page, { videos: [DECL] })
+        await page.goto(`/compare?runs=${DECL}`)
+
+        await expect(drawer(page)).toBeVisible()
+        await expect(rosterRow(page, 'Decl')).toContainText('REF')
+        await expect(rosterRow(page, 'Decl').getByRole('button', { name: 'Remove' })).toBeDisabled()
+    })
+
+    test('Back closes the open drawer and keeps the page and its edits; the next Back leaves the page', async ({ page }) => {
+        await mockApi(page, { videos: [DECL, SHX, PATRIK] })
+        await page.goto('/news')
+        await page.evaluate(path => { window.location.assign(path) }, `/compare?runs=${DECL},${SHX},${PATRIK}`)
+        await expect(lanes(page).getByRole('listitem')).toHaveCount(3)
+        await runsButton(page).click()
+        await rosterRow(page, 'PatriK').getByRole('button', { name: 'Remove' }).click()
+        await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${DECL},${SHX}`)
+
+        await page.goBack()
+
+        await expect(drawer(page)).toHaveCount(0)
+        await expect(page.getByRole('heading', { name: 'Compare Runs' })).toBeVisible()
+        await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${DECL},${SHX}`)
+        await expect(lanes(page).getByRole('listitem')).toHaveCount(2)
+
+        await page.goBack()
+        await expect.poll(() => new URL(page.url()).pathname).toBe('/news')
+    })
+
+    test('Escape closes the drawer and its own close button does too', async ({ page }) => {
+        await mockApi(page, { videos: [DECL, SHX] })
+        await page.goto(`/compare?runs=${DECL},${SHX}`)
+        await expect(lanes(page).getByRole('listitem')).toHaveCount(2)
+        const lengthBefore = await historyLength(page)
+
+        await runsButton(page).click()
+        await expect(drawer(page)).toBeVisible()
+        await expect.poll(() => historyLength(page)).toBe(lengthBefore + 1)
+        await page.keyboard.press('Escape')
+        await expect(drawer(page)).toHaveCount(0)
+
+        await runsButton(page).click()
+        await drawer(page).getByRole('button', { name: 'Close Runs' }).click()
+        await expect(drawer(page)).toHaveCount(0)
+        await expect(runsButton(page)).toHaveAttribute('aria-expanded', 'false')
     })
 })

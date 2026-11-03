@@ -1,5 +1,5 @@
 import { CAP_ID } from './cap-detail'
-import { shows } from './steps'
+import { shows, tap } from './steps'
 import type { MobileRouteEntry } from './types'
 
 const RIVAL_ID = '418b0aec-34c5-40e7-acf4-f2bc33373063'
@@ -11,4 +11,12 @@ export const runCompare: MobileRouteEntry = {
     fixtures: 'run-compare',
     decorative: [],
     ready: shows(page => page.getByRole('region', { name: 'Playback' })),
+    modals: [
+        {
+            id: 'runs',
+            label: 'Runs drawer',
+            open: tap(page => page.getByRole('region', { name: 'Playback' }).getByRole('button', { name: 'Runs', exact: true })),
+            root: '.run-compare-drawer-layer',
+        },
+    ],
 }
