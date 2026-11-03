@@ -45,4 +45,4 @@ The commands you need and the gate every commit passes. `package.json` `scripts`
    `npm run build:web` then `npm run check:bundle`.
 7. UI change or change under `e2e/mobile/`: `npm run test:mobile`, narrowed with `-- -g <surface>`
    while you iterate. The required `Mobile suite` CI check runs the whole PR subset on Windows,
-   in eight shards ([testing.md](testing.md#ci)).
+   in eight WebKit and two Chromium shards ([testing.md](testing.md#ci)).

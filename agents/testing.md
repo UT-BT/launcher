@@ -812,7 +812,7 @@ further steps. A second drop fails the test.
 |---|---|---|
 | `.github/workflows/ci.yml`, job `Fast gate` | pull request into `staging` or `main`, push to `staging` | Windows, Node 20: `npm ci`, `typecheck:web`, `typecheck:e2e`, `lint`, `test` (Windows-only suites included), `docs:check`, `build:web`, `check:bundle`, one step each |
 | `.github/workflows/ci.yml`, jobs `Playwright (1/4)` to `Playwright (4/4)` | the same | Windows, Node 20: `npm ci`, `npx playwright install chromium`, `npm run test:e2e -- --shard=<n>/4` (all three projects, against the `-win32` baselines, split across four parallel jobs); on failure each shard uploads its `playwright-report/` and `test-results/` as artifacts |
-| `.github/workflows/ci.yml`, jobs `Mobile suite (1/8)` to `(8/8)`, then `Mobile suite` | the same | Windows, Node 20. Each shard runs `npm ci`, `npx playwright install webkit chromium`, then `npm run test:mobile -- --workers=3 --shard=<n>/8` (the PR subset on the built bundle, mocked data only, [Mobile suite](#mobile-suite)). Whatever the result, each shard uploads its gallery as `mobile-gallery-<n>` and its HTML report as `mobile-playwright-report-<n>`. The `Mobile suite` job needs every shard and passes only when all eight did, so branch protection requires that one check name |
+| `.github/workflows/ci.yml`, jobs `Mobile suite (webkit 1/8)` to `(webkit 8/8)` and `Mobile suite (chromium 1/2)` to `(chromium 2/2)`, then `Mobile suite` | the same | Windows, Node 20. Each shard runs `npm ci`, installs its one engine, then `npx cross-env E2E_SERVER=build playwright test --project=mobile-suite-<engine> --workers=3 --shard=<n>/<of>`. That is `npm run test:mobile` (the PR subset on the built bundle, mocked data only, [Mobile suite](#mobile-suite)) narrowed to one engine. Whatever the result, each shard uploads its gallery as `mobile-gallery-<engine>-<n>` and its HTML report as `mobile-playwright-report-<engine>-<n>`. The `Mobile suite` job needs every shard and passes only when all ten did, so branch protection requires that one check name |
 | `.github/workflows/mobile-nightly.yml`, jobs `Mobile full matrix (1/12)` to `(12/12)` | daily at 03:00 UTC on the default branch, manual (Run workflow, any branch) | Windows, Node 20: the same install, then `npm run test:mobile:full -- --workers=3 --shard=<n>/12`; each shard uploads its gallery as `mobile-gallery-full-<n>` and its report as `mobile-playwright-report-full-<n>` |
 | `.github/workflows/web.yml` | push to `main`, manual | Ubuntu, Node 20: `npm ci`, `npm run quality:web` (`typecheck:web`, `typecheck:e2e`, `lint`, `test`, `build:web`, `check:bundle`), then a deploy that waits for approval |
 | `.github/workflows/release.yml` | push to `main` | Windows: builds and publishes the installer when the `package.json` version has no tag yet; no tests |
@@ -839,10 +839,12 @@ The mobile jobs pass `--reporter=list,github,html,./e2e/mobile/gallery-reporter.
   - Linux font metrics moved a scroll-restore verdict;
   - one unsharded job ran past 30 minutes.
 - **Three workers per shard** leave headroom on the runner's four cores.
-- **The shard counts** keep each shard near the Playwright shards' time: 8 for the PR subset,
-  12 for the nightly full matrix.
-- Playwright splits shards by test count, not duration, so shards that draw WebKit crawl tests
-  take longest. Open a gallery artifact's `index.html` to see every
+- **The shard counts** keep each shard near the Playwright shards' time.
+- **The pull request run splits by engine first.** Playwright splits shards by test count, not
+  duration, and a WebKit test takes several times as long as a Chromium one. So mixed shards that
+  drew the WebKit crawl took 25 minutes while others took 4.
+  - WebKit gets eight shards and Chromium two, from the same 384 tests each.
+  - The nightly full matrix runs as 12 mixed shards. Open a gallery artifact's `index.html` to see every
 surface the run crawled, and the report's `index.html` for a failing test's error and trace. A
 pull request run splits both across its six shards, and a nightly run across its four. The nightly run gates
 nothing: read its failures as ledger entries the full matrix is missing or new regressions at sizes

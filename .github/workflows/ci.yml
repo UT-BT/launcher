@@ -107,13 +107,23 @@ jobs:
           retention-days: 7
 
   mobile-shard:
-    name: Mobile suite (${{ matrix.shard }}/8)
+    name: Mobile suite (${{ matrix.engine }} ${{ matrix.shard }}/${{ matrix.of }})
     runs-on: windows-latest
     timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+        include:
+          - { engine: webkit, shard: 1, of: 8 }
+          - { engine: webkit, shard: 2, of: 8 }
+          - { engine: webkit, shard: 3, of: 8 }
+          - { engine: webkit, shard: 4, of: 8 }
+          - { engine: webkit, shard: 5, of: 8 }
+          - { engine: webkit, shard: 6, of: 8 }
+          - { engine: webkit, shard: 7, of: 8 }
+          - { engine: webkit, shard: 8, of: 8 }
+          - { engine: chromium, shard: 1, of: 2 }
+          - { engine: chromium, shard: 2, of: 2 }
     steps:
       - name: Keep committed line endings on checkout
         run: git config --global core.autocrlf false
@@ -130,11 +140,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install WebKit and Chromium
-        run: npx playwright install webkit chromium
+      - name: Install ${{ matrix.engine }}
+        run: npx playwright install ${{ matrix.engine }}
 
-      - name: Mobile suite (PR subset, shard ${{ matrix.shard }}/8)
-        run: npm run test:mobile -- --workers=3 --shard=${{ matrix.shard }}/8 --reporter=list,github,html,./e2e/mobile/gallery-reporter.ts
+      - name: Mobile suite (PR subset, ${{ matrix.engine }} shard ${{ matrix.shard }}/${{ matrix.of }})
+        run: npx cross-env E2E_SERVER=build playwright test --project=mobile-suite-${{ matrix.engine }} --workers=3 --shard=${{ matrix.shard }}/${{ matrix.of }} --reporter=list,github,html,./e2e/mobile/gallery-reporter.ts
         env:
           PLAYWRIGHT_HTML_OPEN: never
 
@@ -142,7 +152,7 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: mobile-gallery-${{ matrix.shard }}
+          name: mobile-gallery-${{ matrix.engine }}-${{ matrix.shard }}
           path: test-results/mobile-gallery/
           retention-days: 7
 
@@ -150,7 +160,7 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: mobile-playwright-report-${{ matrix.shard }}
+          name: mobile-playwright-report-${{ matrix.engine }}-${{ matrix.shard }}
           path: playwright-report/
           retention-days: 7
 
