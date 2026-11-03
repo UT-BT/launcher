@@ -10,5 +10,5 @@ export const runCompare: MobileRouteEntry = {
     path: `/compare?runs=${CAP_ID},${RIVAL_ID}`,
     fixtures: 'run-compare',
     decorative: [],
-    ready: shows(page => page.getByRole('list', { name: 'Runs' })),
+    ready: shows(page => page.getByRole('region', { name: 'Playback' })),
 }

@@ -1,6 +1,8 @@
 import { displayMapName } from '@/app/utils/format'
 import type { LoadedSoloRuns, SoloRun } from '../loading/soloRuns'
 import { MAX_COMPARE_RUNS, parseCompareQuery, serializeCompareQuery, type CompareNotice, type CompareParam } from '../url/compareUrl'
+import { composeRace, EMPTY_RACE, type LoadedVideos, type RaceModel } from './raceModel'
+import type { StageBox } from './stageLayout'
 
 export type LoadDropReason = 'not-found' | 'different-map' | 'disallowed'
 
@@ -9,6 +11,9 @@ export type CompareDrop = CompareNotice | { param: 'runs'; reason: LoadDropReaso
 export interface CompareModelInput {
     query: string
     runs: LoadedSoloRuns
+    videos?: LoadedVideos
+    failedVideos?: ReadonlySet<string>
+    stageBox?: StageBox | null
 }
 
 export interface CompareModel {
@@ -20,6 +25,7 @@ export interface CompareModel {
     title: string | null
     query: string
     seekSeconds: number | null
+    race: RaceModel
 }
 
 const NOUNS: Record<CompareParam, [string, string]> = {
@@ -91,12 +97,12 @@ function loadDrop(run: SoloRun | null, map: string | null): LoadDropReason | nul
     return null
 }
 
-export function composeCompareModel({ query, runs: loaded }: CompareModelInput): CompareModel {
+export function composeCompareModel({ query, runs: loaded, videos, failedVideos, stageBox }: CompareModelInput): CompareModel {
     const decoded = parseCompareQuery(query)
     const seekSeconds = decoded.state.t
 
     if (decoded.state.runs.some(capId => !loaded.has(capId))) {
-        return { loading: true, runs: [], map: null, drops: [], noticeLine: null, title: null, query, seekSeconds }
+        return { loading: true, runs: [], map: null, drops: [], noticeLine: null, title: null, query, seekSeconds, race: EMPTY_RACE }
     }
 
     const kept: SoloRun[] = []
@@ -125,5 +131,12 @@ export function composeCompareModel({ query, runs: loaded }: CompareModelInput):
         title: compareTitle(kept, map),
         query: serializeCompareQuery(restated.state),
         seekSeconds,
+        race: composeRace({
+            runs: kept,
+            state: restated.state,
+            videos: videos ?? new Map(),
+            failedVideos: failedVideos ?? new Set(),
+            stageBox: stageBox ?? null,
+        }),
     }
 }
