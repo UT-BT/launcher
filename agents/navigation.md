@@ -130,7 +130,8 @@ page root may clip sideways (`overflow-hidden`) and an inner wrapper may scroll 
 (`overflow-x-auto`, as a wide table does), but the page grows with its content and `main`
 scrolls it. Anything that follows page scrolling attaches to `main`: the modal scroll lock
 ([shared-components.md](shared-components.md#modal)), pull-to-refresh
-([below](#page-refresh-registry-and-freshness)), and the hide-on-scroll bars once they exist.
+([below](#page-refresh-registry-and-freshness)), and the hide-on-scroll bars
+([web-target.md](web-target.md#responsive-layout)).
 Both of those wrappers are still scroll containers, so a
 `sticky` element inside one sticks to it rather than to `main`. Where a page has a sticky
 element below `lg`, its wrappers clip with `max-lg:overflow-x-clip max-lg:overflow-y-visible`
@@ -397,8 +398,8 @@ prevents the default; a held key (`repeat`) toggles once.
   portalled to `document.body` (`role="alert"`, linked by `aria-describedby`) and clears on
   the next login click.
 
-**Mobile drawer.** Below `lg` (`AppLayout` matches `(max-width: 1023px)`, the same boundary
-as the `lg` classes) the same `aside` is an off-canvas drawer behind a top bar. Closed, it
+**Mobile drawer.** Below `lg` (`AppLayout` reads `belowLg` from the device environment, the
+same boundary as the `lg` classes) the same `aside` is an off-canvas drawer behind a top bar. Closed, it
 is `inert`; open, it traps focus, closes on Escape and returns focus to what opened it (the
 menu button, or the tab bar's Menu tab while it is still on screen). It opens only from those
 two controls and closes with a swipe to the left (`useDrawerSwipe`, with the pure thresholds

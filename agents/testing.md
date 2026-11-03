@@ -654,6 +654,18 @@ spec that is red today is marked `test.fail()`, with a note naming the ticket th
   after a touch drag, so the click-swallow test fires synthetic pointer events and then the
   click a mouse release would send, on both engines, and checks the link isn't followed. `e2e/bottom-tabs-desktop.spec.ts`
   checks that `desktop-chromium` at 1280 and 1920 has no tab bar and the same sidebar.
+- `hide-on-scroll.spec.ts`: at 390×844, a finger scroll down Maps slides the top bar and the tab
+  bar out of the visible area together, a scroll back up brings both back, and an 8 px nudge
+  leaves them, as does a tap followed at once by a scroll made by code. Scrolling `main` to its
+  top by code shows them; tapping a map opens its page with
+  both shown, and Back restores Maps' position with them still shown; closing the Playtime modal
+  on a map page shows them. At 844×390 the top bar hides and comes back the same way. On
+  Chromium the scroll is real touch input (`Input.dispatchTouchEvent`), held still before the
+  finger lifts so no fling swallows the next tap; on WebKit it is a synthetic `touchstart` and
+  `touchmove` on the content with a `scrollBy` and a `scroll` event per step. Each move waits
+  for `main` to stop moving. `e2e/hide-on-scroll-desktop.spec.ts` checks that on
+  `desktop-chromium` at 1280 and 1920 a wheel scroll leaves the sidebar where it was, and that
+  a 900 px window on a pointer device keeps its top bar in view while it scrolls.
 - `scroll-restore.spec.ts`: a cap page opened from a tapped link on the map page starts at the
   top; Back and Forward return each page to within 4 px of where it was left; a new visit to a
   page already in history starts at the top again. The same holds for two list pages, World

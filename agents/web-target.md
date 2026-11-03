@@ -221,11 +221,38 @@ cap (owner decision).
   analytics consent banner, the Tutorial card (by the larger of it and the bottom inset) and
   the match page's Reconnecting toast. Those offsets are inline styles, not arbitrary
   utilities, which keeps them out of the initial stylesheet's budget. `visible={false}` slides
-  the bar down and makes it `inert`; `AppLayout` always passes `visible` for now, so it is the
-  hook for hiding the bar on scroll.
+  the bar down and makes it `inert`; `AppLayout` passes the hide-on-scroll state (below). The
+  main element's bottom padding stays while the bar is hidden, so the last row stays reachable.
 - **Top bar height.** `--top-bar-offset` (`app/styles/shell.css`) is `3.5rem`, or `3rem` in
   landscape below `lg`, plus the top safe-area inset. The bar (`.shell-top-bar`) and the
   main element's top padding (`.shell-main`) both read it, so they never drift apart.
+- **Hide-on-scroll bars.** On touch below `lg` (`hidesBarsOnScroll` in `AppLayout`, read from
+  the device environment, both orientations), the top bar and the bottom tab bar slide away
+  together while the user scrolls `main` down, so content gets the whole screen. `AppLayout`
+  holds one `barsHidden` state for both bars and mounts `HideOnScrollBars`
+  (`app/components/layout/HideOnScrollBars.tsx`) only behind that gate. It is a lazy chunk:
+  the initial bundle has no room for it, and desktop never loads it. It renders nothing and
+  feeds `main`'s scroll events to the pure `barsAfterScroll` (`barVisibility.ts`, Vitest in
+  `barVisibility.test.ts`):
+  - A scroll counts as the user's only within 300 ms of a finger moving (`touchmove`), a wheel
+    or a key event on `main`, and each such scroll extends that window, so a fling keeps
+    counting. A tap is not a scroll gesture: a scroll the app or a test makes right after one
+    (scroll restore, a `scrollIntoView`, the crawl's code scrolls) moves the reference point but
+    never hides or shows the bars.
+  - The bars hide once the user has scrolled more than 16 px down from the highest point since
+    they last showed, and come back after more than 16 px up from the lowest point since they
+    hid. Smaller jitters do nothing, a scroll event that doesn't move the page changes nothing,
+    and an overscroll bounce past the bottom counts as staying at the bottom.
+  - They show whenever `main` is within 16 px of its top, however it got there, after every
+    navigation (a new nav entry), when the drawer opens or closes, and when the last
+    scroll-lock hold is released, which is when a modal, sheet or locking dropdown closes.
+    The navigation and drawer resets happen in the effect's cleanup, which also shows the bars
+    if the gate turns off.
+  - The top bar hides with an inline `translate: 0 -100%` (no new utility, for the initial CSS
+    budget) and both bars are `inert` while hidden, so focus never lands in them. `main`'s top
+    padding stays, so the top of the page is never under the bar when the bar shows.
+  - Desktop and pointer devices never hide anything: nothing is mounted unless the device is
+    touch and below `lg`.
 - **Safe areas.** `shell.css` exposes the insets as `--safe-area-top/right/bottom/left`
   (`env(safe-area-inset-*)`, `0px` where the browser has none, so desktop is unchanged).
   The shell classes in the same file apply them: the top bar pads by the top inset and, in

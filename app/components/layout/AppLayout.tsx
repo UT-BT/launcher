@@ -12,6 +12,7 @@ import { useDrawerSwipe } from '@/app/components/layout/useDrawerSwipe'
 import { BottomTabBar } from '@/app/components/layout/BottomTabBar'
 import { showsBottomTabs } from '@/app/components/navigation/bottomTabs'
 import { useDeviceEnvironment } from '@/app/device/useDeviceEnvironment'
+import type { DeviceEnvironment } from '@/app/device/deviceEnvironment'
 import { PullToRefresh } from '@/app/components/layout/PullToRefresh'
 
 const loadSettingsModal = () => IS_WEB
@@ -20,6 +21,7 @@ const loadSettingsModal = () => IS_WEB
 const SettingsModal = lazy(loadSettingsModal)
 const ChangeTitleModal = lazy(() => import('@/app/components/modals/ChangeTitleModal').then(m => ({ default: m.ChangeTitleModal })))
 const SignOutConfirm = lazy(() => import('@/app/components/layout/SignOutConfirm').then(m => ({ default: m.SignOutConfirm })))
+const HideOnScrollBars = lazy(() => import('@/app/components/layout/HideOnScrollBars').then(m => ({ default: m.HideOnScrollBars })))
 import { PageRefreshProvider } from '@/app/components/navigation/PageRefreshContext'
 
 import { UserProfile } from '@/app/utils/api'
@@ -40,6 +42,14 @@ import { DiagnosticOverlayTrigger } from '@/app/device/diagnostics/DiagnosticOve
 
 const SIDEBAR_WIDTH_EXPANDED = '16rem'
 const SIDEBAR_WIDTH_COLLAPSED = '5rem'
+
+function isBelowLg(environment: DeviceEnvironment): boolean {
+    return environment.belowLg
+}
+
+function hidesBarsOnScroll(environment: DeviceEnvironment): boolean {
+    return environment.touch && environment.belowLg
+}
 
 function isTypingTarget(target: EventTarget | null): boolean {
     return target instanceof HTMLElement && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
@@ -65,9 +75,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
     const [loginError, setLoginError] = useState<string | null>(() => auth.consumeLoginError())
     const [mobileNavOpen, setMobileNavOpen] = useState(false)
-    const [isMobileViewport, setIsMobileViewport] = useState(
-        () => window.matchMedia('(max-width: 1023px)').matches,
-    )
+    const isMobileViewport = useDeviceEnvironment(isBelowLg)
     const [collapsePreference, setCollapsePreference] = useState(readSidebarCollapsed)
     const collapsed = collapsePreference && !isMobileViewport
     const mobileMenuButtonRef = useRef<HTMLButtonElement>(null)
@@ -91,6 +99,8 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
     const currentParams = entry.params
     useShellScroller(shellScrollerRef, shellContentRef)
     useViewportRecovery(shellScrollerRef)
+    const hideBarsOnScroll = useDeviceEnvironment(hidesBarsOnScroll)
+    const [barsHidden, setBarsHidden] = useState(false)
     const [isSettingsOpen, setIsSettingsOpen] = useState(false)
     const [isChangeTitleOpen, setIsChangeTitleOpen] = useState(false)
     const [settingsInitialSection, setSettingsInitialSection] = useState<string | undefined>(undefined)
@@ -120,15 +130,6 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
             window.removeEventListener('open-settings', handleOpenSettings)
             window.removeEventListener('open-change-title', handleOpenChangeTitle)
         }
-    }, [])
-
-    useEffect(() => {
-        const mobileQuery = window.matchMedia('(max-width: 1023px)')
-        const handleViewportChange = (event: MediaQueryListEvent) => setIsMobileViewport(event.matches)
-
-        setIsMobileViewport(mobileQuery.matches)
-        mobileQuery.addEventListener('change', handleViewportChange)
-        return () => mobileQuery.removeEventListener('change', handleViewportChange)
     }, [])
 
     useLayoutEffect(() => {
@@ -219,7 +220,11 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
             {currentView === 'home' && <SeasonalAmbient />}
 
             {/* Mobile top bar */}
-            <div className="lg:hidden shell-top-bar fixed top-0 inset-x-0 z-30 flex items-center gap-3 bg-card/80 backdrop-blur-xl touch:bg-card touch:backdrop-filter-none border-b border-hairline/10">
+            <div
+                inert={barsHidden}
+                style={barsHidden ? { translate: '0 -100%' } : undefined}
+                className="lg:hidden shell-top-bar fixed top-0 inset-x-0 z-30 flex items-center gap-3 bg-card/80 backdrop-blur-xl touch:bg-card touch:backdrop-filter-none border-b border-hairline/10 transition-transform duration-200"
+            >
                 <button
                     ref={mobileMenuButtonRef}
                     type="button"
@@ -343,10 +348,21 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                 )}
             </main>
 
+            {hideBarsOnScroll && (
+                <Suspense fallback={null}>
+                    <HideOnScrollBars
+                        scrollerRef={shellScrollerRef}
+                        entryId={entry.id}
+                        drawerOpen={mobileNavOpen}
+                        onHiddenChange={setBarsHidden}
+                    />
+                </Suspense>
+            )}
+
             {showTabBar && (
                 <BottomTabBar
                     currentView={currentView}
-                    visible
+                    visible={!barsHidden}
                     menuOpen={mobileNavOpen}
                     onNavigate={changeView}
                     onOpenMenu={openDrawerFrom}
