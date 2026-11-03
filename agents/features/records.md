@@ -506,4 +506,7 @@ phone cards included.
    cards render with no horizontal scroll. Add the tab to `TABS` in
    `e2e/profile-tabs-responsive.spec.ts` with its headers, empty message, card face, panel and sort
    field, and its list read to `serveApi` and `emptyTabRead`; `npm run test:e2e -- responsive-accessibility`
-   still renders `/players/1` without the error boundary.
+   still renders `/players/1` without the error boundary. Add the tab to the `player-detail` mobile
+   manifest entry (`tableTab(…)` in `e2e/mobile/manifest/player-detail.ts`), run
+   `npm run docs:mobile-routes`, and `npm run test:mobile -- -g "player-detail/<id>"` passes
+   ([mobile.md](../mobile.md#mobile-route-manifest)).

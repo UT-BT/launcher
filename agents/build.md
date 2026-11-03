@@ -38,8 +38,9 @@ The commands you need and the gate every commit passes. `package.json` `scripts`
 3. `npm test`: green. Writing tests or fixing a red suite: [testing.md](testing.md).
 4. `npm run docs:check`: fix every failure; update each doc listed under "Review" in the same
    commit, or confirm it still matches the code.
-5. UI change: smoke it in `npm run dev`, and in `npm run dev:web` at 390 px and 1920 px. The
-   typecheck proves types, not behaviour.
+5. UI change: smoke it in `npm run dev`, and in `npm run dev:web` at 390 px and 1920 px, and
+   check it against [mobile.md](mobile.md#mobile-ready). The typecheck proves types, not
+   behaviour.
 6. Change that can move the bundle (new page import, new dependency, new lazy boundary):
    `npm run build:web` then `npm run check:bundle`.
 7. UI change or change under `e2e/mobile/`: `npm run test:mobile`, narrowed with `-- -g <surface>`

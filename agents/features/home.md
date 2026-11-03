@@ -194,4 +194,5 @@ Favorite Servers, the Cap It All tiles). Steps, from how those landed:
 7. **Verify**: `npm run typecheck:web` and `npm test` pass; in `npm run dev:web` the widget
    renders signed out and signed in at 390 px and 1920 px with no horizontal scroll; and
    `npx playwright test e2e/responsive-accessibility.spec.ts` passes (it renders `/` against a
-   mocked API).
+   mocked API), and so does `npm run test:mobile -- -g "home"`, whose crawl covers the
+   signed-out `home` and the `home:signed-in` entries ([mobile.md](../mobile.md#mobile-suite)).

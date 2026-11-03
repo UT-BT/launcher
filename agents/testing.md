@@ -214,7 +214,10 @@ lines; read those first when a page stays blank.
 
 ### Adding a spec
 
-1. Name it `e2e/<feature>.spec.ts`, or `e2e/<scene>.broadcast.spec.ts` for a scene page.
+1. Name it `e2e/<feature>.spec.ts`, or `e2e/<scene>.broadcast.spec.ts` for a scene page. A flow
+   that a phone user drives (a gesture, a sheet, phone cards) goes in `e2e/mobile/<flow>.spec.ts`
+   as an [interaction spec](#interaction-specs) instead, and a new route or tab gets a manifest
+   entry rather than a spec ([Mobile route manifest](#mobile-route-manifest)).
 2. Register a catch-all plus the feature's routes and seed consent (and auth, if needed) before
    `goto`. Build payloads from the area's fixture builder or golden fixture.
 3. Locate by role, label and text; scenes also stamp `data-*` hooks. Skip per size with `isMobile`;

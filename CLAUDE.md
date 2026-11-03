@@ -26,6 +26,8 @@ table column, add an IPC channel, wire new API data, audit the docs) trigger on 
 | navigation, Back/Forward, detail pages, sidebar, URL sync | [agents/navigation.md](agents/navigation.md) |
 | call the API, asset URLs, favorites, Patreon tiers | [agents/api.md](agents/api.md) |
 | web build, platform gating, responsive layout, bundle budget | [agents/web-target.md](agents/web-target.md) |
+| make UI mobile-ready: touch gating, phone cards, sheets, gestures, the mobile suite, the iPhone checklist | [agents/mobile.md](agents/mobile.md) |
+| which mobile routes the crawl covers (generated) | [agents/mobile-routes.md](agents/mobile-routes.md) |
 | IPC channels, `window.conveyor`, main → renderer events | [lib/conveyor/README.md](lib/conveyor/README.md) |
 | main process: file and URL safety, config, cams, auto-updates | [lib/main/README.md](lib/main/README.md) |
 | settings panels, UT99 ini keys | [app/components/pages/settings/README.md](app/components/pages/settings/README.md) |
@@ -53,7 +55,8 @@ table column, add an IPC channel, wire new API data, audit the docs) trigger on 
 4. **A native `<select>` gets `style={{ colorScheme: 'dark' }}`** so Chromium draws dark form
    chrome on Windows.
 5. **Modals use `app/components/ui/modal.tsx`**, with `offsetSidebar` when the modal should
-   respect the navigation rail.
+   respect the navigation rail. An overlay whose own markup must stay uses `useModalBehaviour`
+   instead ([shared-components.md](agents/shared-components.md#modal)).
 6. **State lives in its tier; views change only through `navigate()`.** Primary-page state:
    `usePageState` in `Main.tsx` with a versioned `utbt:<thing>:v<n>` key. Detail-page transient
    UI: `useNavState`. One back/forward mechanism: the nav stack.
@@ -64,11 +67,14 @@ table column, add an IPC channel, wire new API data, audit the docs) trigger on 
    get it added to the API (skill: consume-api-data) instead of deriving it in the renderer.
 9. **Desktop-only behaviour gates through `app/platform/` capabilities** (`usePlatform()` or its
    named exports), not `window.conveyor` presence checks or `__WEB_TARGET__` reads.
-10. **Every UI change works from a 360 px phone to 4K on both targets, and stays cheap.**
-    Tables get `responsive` configs with a tier on every column and phone `cards` instead of
-    horizontal scroll; heroes and tiles wrap instead of truncating key data; controls stay
-    tappable at 390 px. Lazy-load anything opened after a user action and keep `npm run check:bundle`
-    green; no per-row `backdrop-blur` or infinite animations
+10. **Every UI change is mobile-ready, works from a 360 px phone to 4K on both targets, and stays
+    cheap.** [mobile.md](agents/mobile.md) defines mobile-ready. Every route has an entry in the
+    mobile route manifest (`e2e/mobile/manifest/`; `routes.contract.test.ts` fails without one);
+    every table column declares a tier, and tables render phone `cards`, never horizontal scroll;
+    touch behaviour reads the device environment. The mobile gate, `npm run test:mobile` (the
+    `Mobile suite` CI job), must pass: fix what it reports, and never add a ledger entry for a
+    failure your change caused. Lazy-load anything opened after a user action and keep
+    `npm run check:bundle` green; no per-row `backdrop-blur` or infinite animations
     ([styling.md](agents/styling.md), [web-target.md](agents/web-target.md)).
 
 ## Keeping docs honest

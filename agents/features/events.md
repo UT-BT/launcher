@@ -560,7 +560,11 @@ instance. For a gate that depends on the viewer, copy the Stream tab's `streamTa
    `e2e/event-achievements-responsive.spec.ts`: route-mock `api|gateway.utbt.net` (the event with the
    flag on, bracket, `me`, teams, LFP and the tab's read), open `/events/<slug>?tab=<id>`, assert the
    content and `horizontalOverflow(page)` ≤ 1. It runs in the desktop and the Pixel 7 project
-   ([testing.md](../testing.md)).
+   ([testing.md](../testing.md)). Add the tab to the mobile route manifest as a sub-view: in
+   `e2e/mobile/manifest/event-detail.ts` (`tab('<id>', '<Label>')`) when the recorded event shows
+   it, or in `event-detail-manager.ts` when only managers see it; then run
+   `npm run docs:mobile-routes` ([mobile.md](../mobile.md#mobile-route-manifest)).
 7. **Verify.** `npm run typecheck:web`, `npm test` and `npx playwright test e2e/event-<tab>-responsive.spec.ts`
-   pass; `npm run build:web` then `npm run check:bundle` passes; in `npm run dev:web`,
+   pass, and so does `npm run test:mobile -- -g "event-detail"`; `npm run build:web` then
+   `npm run check:bundle` passes; in `npm run dev:web`,
    `/events/<slug>?tab=<id>` opens the tab when the gate passes and Info when it fails.

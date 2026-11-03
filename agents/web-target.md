@@ -339,10 +339,11 @@ cap (owner decision).
   A `position: fixed` overlay inside a container-query ancestor must be portalled to
   `document.body`, or containment traps it.
 - **Tables** pass `responsive={{ columns, …, cards }}`, with a tier and a label on every column,
-  and fall back to DataTable's cards below the required-fit width, never horizontal scroll
-  ([styling.md](styling.md)). On a touch screen they show cards unless every non-decorative
-  column fits ([shared-components.md](shared-components.md#column-tiers-and-phone-cards)). Only
-  the cap page's numeric tables pass `tableOnly: true` instead.
+  and DataTable renders its phone cards instead of horizontal scroll: on a touch screen unless
+  every non-decorative column fits, elsewhere only when the required columns don't fit
+  ([shared-components.md](shared-components.md#column-tiers-and-phone-cards),
+  [styling.md](styling.md#responsive-columns)). Only the cap page's numeric tables pass
+  `tableOnly: true` instead.
 - **Pagination.** `PaginationBar` (`app/components/ui/pagination.tsx`) switches to a touch
   bar below `sm` on its own.
 - **Heroes and tiles**: see [styling.md](styling.md).
@@ -366,9 +367,11 @@ cap (owner decision).
   `DiagnosticOverlay` is a lazy chunk. The iPhone checklist and how to capture a report are in
   [mobile.md](mobile.md).
 
-Screenshot-verify new surfaces at 390×844, 1024×768 (the breakpoint boundary, the most
-fragile width), 1920×1080 and 3840×2160, and run the manual iPhone checklist in
-[mobile.md](mobile.md) after mobile work lands.
+What "mobile-ready" means for a change, the gating tiers and the mobile suite are in
+[mobile.md](mobile.md). Screenshot-verify new surfaces at 390×844, 844×390, 1024×768 (the
+breakpoint boundary, the most fragile width), 1920×1080 and 3840×2160; the mobile suite's crawl
+covers every manifest surface on its own ([testing.md](testing.md#mobile-suite)). Run the manual
+iPhone checklist in [mobile.md](mobile.md#iphone-checklist) after mobile work lands.
 
 ## Performance and bundle budgets
 
@@ -436,8 +439,8 @@ Phones parse the web entry chunk on first visit, so it stays lean.
   `app/public/` stays PNG (favicons, PWA icons, OG card), which scrapers and manifests
   require.
 - **CSS runtime cost** is a separate budget (compositor, RAM, CPU): no per-row
-  `backdrop-blur`, no per-row infinite animations, compact-card renderers mount only below
-  the required-fit width. Rules in [styling.md](styling.md).
+  `backdrop-blur`, no per-row infinite animations, and card faces mount only while DataTable
+  shows cards. Rules in [styling.md](styling.md).
 
 `npm run check:bundle` (`scripts/check-web-bundle.mjs`) reads
 `dist-web/.vite/manifest.json` and measures the real initial payload (entry plus its
