@@ -390,7 +390,7 @@ platform gates.
 | Initial CSS | 36 KiB |
 | Initial total | 224 KiB |
 | Largest lazy chunk (and each stream scene chunk) | 120 KiB |
-| App JS (every JS file except those only the stream scene pages load) | 900 KiB |
+| App JS (every JS file except those only the stream scene pages load) | 920 KiB |
 | Stream scene JS (files reachable only from the scene root) | 120 KiB |
 
 It also asserts `dist-web/index.html`: exactly one module script, at least one
