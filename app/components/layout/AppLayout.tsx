@@ -12,6 +12,7 @@ const loadSettingsModal = () => IS_WEB
     : import('@/app/components/modals/SettingsModalDesktop').then(m => ({ default: m.SettingsModalDesktop }))
 const SettingsModal = lazy(loadSettingsModal)
 const ChangeTitleModal = lazy(() => import('@/app/components/modals/ChangeTitleModal').then(m => ({ default: m.ChangeTitleModal })))
+const DesktopPromoNavRow = lazy(() => import('@/app/components/desktopPromo/DesktopPromoNavRow').then(m => ({ default: m.DesktopPromoNavRow })))
 import { PageRefreshProvider } from '@/app/components/navigation/PageRefreshContext'
 
 import { UserProfile } from '@/app/utils/api'
@@ -26,6 +27,7 @@ import { SidebarCollapseToggle } from '@/app/components/layout/sidebar/SidebarCo
 import { SidebarNavItem } from '@/app/components/layout/sidebar/SidebarNavItem'
 import { SidebarUserCard } from '@/app/components/layout/sidebar/SidebarUserCard'
 import { readSidebarCollapsed, writeSidebarCollapsed } from '@/app/components/layout/sidebarPreference'
+import { useDesktopPromo } from '@/app/components/desktopPromo/useDesktopPromo'
 
 const SIDEBAR_WIDTH_EXPANDED = '16rem'
 const SIDEBAR_WIDTH_COLLAPSED = '5rem'
@@ -49,6 +51,7 @@ interface AppLayoutProps {
 
 export function AppLayout({ children, currentView, onViewChange, getNavBadge, userProfile, installationStatus }: AppLayoutProps) {
     const { capabilities, auth } = usePlatform()
+    const desktopPromo = useDesktopPromo()
     const season = useSeason()
     const logo = logoFor(season)
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
@@ -276,6 +279,12 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                         </div>
                     ))}
                 </nav>
+
+                {capabilities.desktopPromo && desktopPromo.ambientVisible && (
+                    <Suspense fallback={null}>
+                        <DesktopPromoNavRow collapsed={collapsed} onActivate={() => setMobileNavOpen(false)} />
+                    </Suspense>
+                )}
 
                 <SidebarUserCard
                     userProfile={userProfile}

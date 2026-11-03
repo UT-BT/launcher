@@ -1,11 +1,20 @@
 import { defineConfig, devices } from '@playwright/test'
+import { DESKTOP_SEEN_STORAGE_KEY } from './app/components/desktopPromo/desktopPromoStorage'
 
 const port = process.env.E2E_PORT ?? '5175'
 const origin = `http://127.0.0.1:${port}`
 const BROADCAST_SPECS = /\.broadcast\.spec\.ts$/
-const SEASONAL_THEMES_OFF = {
+const APP_STORAGE_STATE = {
   cookies: [],
-  origins: [{ origin, localStorage: [{ name: 'utbt:seasonalThemes:v1', value: '"off"' }] }],
+  origins: [
+    {
+      origin,
+      localStorage: [
+        { name: 'utbt:seasonalThemes:v1', value: '"off"' },
+        { name: DESKTOP_SEEN_STORAGE_KEY, value: JSON.stringify(new Date().toISOString()) },
+      ],
+    },
+  ],
 }
 
 export default defineConfig({
@@ -37,8 +46,8 @@ export default defineConfig({
     timeout: 120_000,
   },
   projects: [
-    { name: 'desktop-chromium', testIgnore: BROADCAST_SPECS, use: { ...devices['Desktop Chrome'], storageState: SEASONAL_THEMES_OFF } },
-    { name: 'mobile-chromium', testIgnore: BROADCAST_SPECS, use: { ...devices['Pixel 7'], storageState: SEASONAL_THEMES_OFF } },
+    { name: 'desktop-chromium', testIgnore: BROADCAST_SPECS, use: { ...devices['Desktop Chrome'], storageState: APP_STORAGE_STATE } },
+    { name: 'mobile-chromium', testIgnore: BROADCAST_SPECS, use: { ...devices['Pixel 7'], storageState: APP_STORAGE_STATE } },
     {
       name: 'broadcast',
       testMatch: BROADCAST_SPECS,
