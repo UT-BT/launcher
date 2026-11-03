@@ -18,24 +18,40 @@ import { MapLink } from '../components/MapLink'
 import { Checkbox } from '@/app/components/ui/checkbox'
 import { ActionButton, Feedback, Pager, SearchInput, errMessage } from '../components/controls'
 import { useAdminPageSize } from '../components/shared'
+import { AdminCardFace, adminCardsPlaceholder } from '../components/AdminCardFace'
 import {
   DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow, DataTableCell, DataTableEmpty,
   DataTableSkeletonRow, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 
-const UNLINKED_COLUMNS: ResponsiveColumn[] = [
-  { id: 'author', required: true },
-  { id: 'maps', width: '5rem', required: true },
-  { id: 'notes', width: '12rem', priority: 30 },
-  { id: 'action', width: '7.5rem', required: true },
+function mapCount(n: number) {
+  return <span className="tabular-nums text-muted-foreground">{n}</span>
+}
+
+function mapStatus(m: { active: boolean }) {
+  return (
+    <span className={cn('text-[11px]', m.active ? 'text-emerald-300' : 'text-muted-foreground/60')}>
+      {m.active ? 'Active' : 'Inactive'}
+    </span>
+  )
+}
+
+type PreviewMap = MapAuthorPreview['maps'][number]
+
+const MAP_LIST_COLUMNS: ResponsiveColumn<PreviewMap>[] = [
+  { id: 'map', label: 'Map', required: true, tier: 'essential', cell: (m) => <MapLink name={m.name} /> },
+  { id: 'status', label: 'Status', width: '6rem', required: true, tier: 'essential', cell: mapStatus },
 ]
 
-const LINKED_COLUMNS: ResponsiveColumn[] = [
-  { id: 'player', required: true },
-  { id: 'maps', width: '5rem', required: true },
-  { id: 'was', width: '12rem', priority: 30 },
-  { id: 'action', width: '6rem', required: true },
-]
+function AuthorFace({ name, count, action }: { name: ReactNode; count: number; action: ReactNode }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+      <div className="min-w-0">{name}</div>
+      <span className="text-xs text-muted-foreground tabular-nums">{count} {count === 1 ? 'map' : 'maps'}</span>
+      <div className="ml-auto">{action}</div>
+    </div>
+  )
+}
 
 type Step =
   | { status: 'browse' }
@@ -132,6 +148,8 @@ export function MapAuthorsModal({ open, onClose, token, onApplied }: {
 
   const [linked, setLinked] = useState<LinkedMapAuthorRow[]>([])
   const [tab, setTab] = useState<'unlinked' | 'linked'>('unlinked')
+
+  const [cards, setCards] = useState(false)
 
   const [unlinkedResolved, setUnlinkedResolved] = useState<Set<string> | null>(null)
   const handleUnlinkedResolve = useCallback((ids: Set<string>) => setUnlinkedResolved(ids), [])
@@ -267,6 +285,64 @@ export function MapAuthorsModal({ open, onClose, token, onApplied }: {
     }
   }
 
+  const notes = (r: MapAuthorRow) => (
+    <span className="flex flex-wrap gap-1">
+      {r.placeholder && <FlagChip tone="red">placeholder</FlagChip>}
+      {r.co_authored && <FlagChip tone="amber">co-authored</FlagChip>}
+      {r.exact_alias_match && <FlagChip tone="amber">alias match</FlagChip>}
+    </span>
+  )
+  const review = (r: MapAuthorRow) => (
+    <ActionButton tone="accent" icon={ArrowRight} onClick={() => setStep({ status: 'review', author: r })}>
+      Review
+    </ActionButton>
+  )
+  const authorName = (r: MapAuthorRow) => <span className="font-mono text-xs text-foreground truncate">{r.author_str}</span>
+  const unlinkedColumns: ResponsiveColumn<MapAuthorRow>[] = [
+    { id: 'author', label: 'Author', required: true, tier: 'essential', cell: authorName },
+    { id: 'maps', label: 'Maps', width: '5rem', required: true, tier: 'essential', cell: (r) => mapCount(r.map_count) },
+    { id: 'notes', label: 'Notes', width: '12rem', priority: 30, tier: 'detail', cell: notes },
+    { id: 'action', label: 'Review', width: '7.5rem', required: true, tier: 'essential', cell: review },
+  ]
+
+  const linkedPlayer = (r: LinkedMapAuthorRow) => <PlayerInfo userId={r.author_ref} alias={r.alias} title={null} size="sm" interactive={false} />
+  const was = (r: LinkedMapAuthorRow) => <span className="font-mono text-[11px] text-muted-foreground truncate">{r.original_str ?? '—'}</span>
+  const unlinkButton = (r: LinkedMapAuthorRow) => r.original_str && (
+    <ActionButton tone="red" icon={Unlink} onClick={() => unlink(r)}>Unlink</ActionButton>
+  )
+  const linkedColumns: ResponsiveColumn<LinkedMapAuthorRow>[] = [
+    { id: 'player', label: 'Player', required: true, tier: 'essential', cell: linkedPlayer },
+    { id: 'maps', label: 'Maps', width: '5rem', required: true, tier: 'essential', cell: (r) => mapCount(r.map_count) },
+    { id: 'was', label: 'Was', width: '12rem', priority: 30, tier: 'detail', cell: was },
+    { id: 'action', label: 'Unlink', width: '6rem', required: true, tier: 'essential', cell: unlinkButton },
+  ]
+
+  const includeMap = (m: PreviewMap) => (
+    <Checkbox
+      checked={selected.has(m.name)}
+      onCheckedChange={() => setSelected((prev) => {
+        const next = new Set(prev)
+        if (next.has(m.name)) next.delete(m.name)
+        else next.add(m.name)
+        return next
+      })}
+      aria-label={`Include ${m.name}`}
+    />
+  )
+  const includeMapTarget = (m: PreviewMap) => (
+    <label className="-m-2 flex size-11 shrink-0 items-center justify-center cursor-pointer">{includeMap(m)}</label>
+  )
+
+  const selectAllMaps = (preview: MapAuthorPreview) => (
+    <Checkbox
+      checked={selected.size === 0 ? false : selected.size === preview.maps.length ? true : 'indeterminate'}
+      onCheckedChange={(v) => setSelected(v === true
+        ? new Set(preview.maps.map((m) => m.name))
+        : new Set())}
+      aria-label="Select all maps"
+    />
+  )
+
   const title = useMemo(() => {
     if (step.status === 'review') return `Review "${step.author.author_str}"`
     if (step.status === 'pick' || step.status === 'preview') return `Link "${step.author.author_str}"`
@@ -374,7 +450,16 @@ export function MapAuthorsModal({ open, onClose, token, onApplied }: {
 
                 <DataTableShell
                   className="max-h-[22rem]"
-                  responsive={{ columns: UNLINKED_COLUMNS, nameFloorRem: 8, onResolve: handleUnlinkedResolve }}
+                  responsive={{
+                    columns: unlinkedColumns, nameFloorRem: 8, onResolve: handleUnlinkedResolve,
+                    compactAriaLabel: 'Unlinked names',
+                    cards: {
+                      rows,
+                      rowKey: (r) => r.author_str,
+                      face: (r) => <AuthorFace name={authorName(r)} count={r.map_count} action={review(r)} />,
+                      placeholder: adminCardsPlaceholder(loading, rows.length === 0, 'No author names found.'),
+                    },
+                  }}
                 >
                   <DataTableHeaderRow>
                     <DataTableHeaderCell align="left">Author</DataTableHeaderCell>
@@ -389,26 +474,12 @@ export function MapAuthorsModal({ open, onClose, token, onApplied }: {
                     {!loading && rows.length === 0 && <DataTableEmpty colSpan={showNotes ? 4 : 3} message="No author names found." />}
                     {rows.map((r) => (
                       <DataTableRow key={r.author_str}>
-                        <DataTableCell align="left">
-                          <span className="font-mono text-xs text-foreground truncate">{r.author_str}</span>
-                        </DataTableCell>
+                        <DataTableCell align="left">{authorName(r)}</DataTableCell>
                         <DataTableCell align="right" className="tabular-nums text-muted-foreground">
                           {r.map_count}
                         </DataTableCell>
-                        {showNotes && (
-                          <DataTableCell align="left">
-                            <span className="flex flex-wrap gap-1">
-                              {r.placeholder && <FlagChip tone="red">placeholder</FlagChip>}
-                              {r.co_authored && <FlagChip tone="amber">co-authored</FlagChip>}
-                              {r.exact_alias_match && <FlagChip tone="amber">alias match</FlagChip>}
-                            </span>
-                          </DataTableCell>
-                        )}
-                        <DataTableCell align="right">
-                          <ActionButton tone="accent" icon={ArrowRight} onClick={() => setStep({ status: 'review', author: r })}>
-                            Review
-                          </ActionButton>
-                        </DataTableCell>
+                        {showNotes && <DataTableCell align="left">{notes(r)}</DataTableCell>}
+                        <DataTableCell align="right">{review(r)}</DataTableCell>
                       </DataTableRow>
                     ))}
                   </tbody>
@@ -427,7 +498,16 @@ export function MapAuthorsModal({ open, onClose, token, onApplied }: {
                 </p>
                 <DataTableShell
                   className="max-h-[22rem]"
-                  responsive={{ columns: LINKED_COLUMNS, nameFloorRem: 8, onResolve: handleLinkedResolve }}
+                  responsive={{
+                    columns: linkedColumns, nameFloorRem: 8, onResolve: handleLinkedResolve,
+                    compactAriaLabel: 'Linked players',
+                    cards: {
+                      rows: linked,
+                      rowKey: (r) => r.author_ref,
+                      face: (r) => <AuthorFace name={linkedPlayer(r)} count={r.map_count} action={unlinkButton(r)} />,
+                      placeholder: adminCardsPlaceholder(loading, linked.length === 0, 'No linked authors yet.'),
+                    },
+                  }}
                 >
                   <DataTableHeaderRow>
                     <DataTableHeaderCell align="left">Player</DataTableHeaderCell>
@@ -442,22 +522,12 @@ export function MapAuthorsModal({ open, onClose, token, onApplied }: {
                     {!loading && linked.length === 0 && <DataTableEmpty colSpan={showWas ? 4 : 3} message="No linked authors yet." />}
                     {linked.map((r) => (
                       <DataTableRow key={r.author_ref}>
-                        <DataTableCell align="left">
-                          <PlayerInfo userId={r.author_ref} alias={r.alias} title={null} size="sm" interactive={false} />
-                        </DataTableCell>
+                        <DataTableCell align="left">{linkedPlayer(r)}</DataTableCell>
                         <DataTableCell align="right" className="tabular-nums text-muted-foreground">
                           {r.map_count}
                         </DataTableCell>
-                        {showWas && (
-                          <DataTableCell align="left">
-                            <span className="font-mono text-[11px] text-muted-foreground truncate">{r.original_str ?? '—'}</span>
-                          </DataTableCell>
-                        )}
-                        <DataTableCell align="right">
-                          {r.original_str && (
-                            <ActionButton tone="red" icon={Unlink} onClick={() => unlink(r)}>Unlink</ActionButton>
-                          )}
-                        </DataTableCell>
+                        {showWas && <DataTableCell align="left">{was(r)}</DataTableCell>}
+                        <DataTableCell align="right">{unlinkButton(r)}</DataTableCell>
                       </DataTableRow>
                     ))}
                   </tbody>
@@ -505,16 +575,29 @@ export function MapAuthorsModal({ open, onClose, token, onApplied }: {
                   </Banner>
                 )}
 
-                <DataTableShell className="max-h-80">
+                {cards && reviewPreview.maps.length > 0 && (
+                  <label className="flex h-11 items-center gap-3 px-1 text-sm text-muted-foreground cursor-pointer">
+                    {selectAllMaps(reviewPreview)}
+                    Select all maps
+                  </label>
+                )}
+
+                <DataTableShell
+                  className="max-h-80"
+                  responsive={{
+                    columns: MAP_LIST_COLUMNS, nameFloorRem: 8, extraRem: 2.5, density: false,
+                    compactAriaLabel: 'Maps credited to this name', onCompactChange: setCards,
+                    cards: {
+                      rows: reviewPreview.maps,
+                      rowKey: (m) => m.name,
+                      face: (m) => <AdminCardFace columns={MAP_LIST_COLUMNS} row={m} lead={includeMapTarget(m)} />,
+                      placeholder: adminCardsPlaceholder(false, reviewPreview.maps.length === 0, 'No maps use this name anymore.'),
+                    },
+                  }}
+                >
                   <DataTableHeaderRow>
                     <DataTableHeaderCell width="2.5rem" align="left">
-                      <Checkbox
-                        checked={selected.size === 0 ? false : selected.size === reviewPreview.maps.length ? true : 'indeterminate'}
-                        onCheckedChange={(v) => setSelected(v === true
-                          ? new Set(reviewPreview.maps.map((m) => m.name))
-                          : new Set())}
-                        aria-label="Select all maps"
-                      />
+                      {selectAllMaps(reviewPreview)}
                     </DataTableHeaderCell>
                     <DataTableHeaderCell align="left">Map</DataTableHeaderCell>
                     <DataTableHeaderCell width="6rem" align="right">Status</DataTableHeaderCell>
@@ -525,24 +608,9 @@ export function MapAuthorsModal({ open, onClose, token, onApplied }: {
                     )}
                     {reviewPreview.maps.map((m) => (
                       <DataTableRow key={m.name}>
-                        <DataTableCell align="left">
-                          <Checkbox
-                            checked={selected.has(m.name)}
-                            onCheckedChange={() => setSelected((prev) => {
-                              const next = new Set(prev)
-                              if (next.has(m.name)) next.delete(m.name)
-                              else next.add(m.name)
-                              return next
-                            })}
-                            aria-label={`Include ${m.name}`}
-                          />
-                        </DataTableCell>
+                        <DataTableCell align="left">{includeMap(m)}</DataTableCell>
                         <DataTableCell align="left"><MapLink name={m.name} /></DataTableCell>
-                        <DataTableCell align="right">
-                          <span className={cn('text-[11px]', m.active ? 'text-emerald-300' : 'text-muted-foreground/60')}>
-                            {m.active ? 'Active' : 'Inactive'}
-                          </span>
-                        </DataTableCell>
+                        <DataTableCell align="right">{mapStatus(m)}</DataTableCell>
                       </DataTableRow>
                     ))}
                   </tbody>
@@ -649,7 +717,18 @@ export function MapAuthorsModal({ open, onClose, token, onApplied }: {
               <p className="text-xs text-muted-foreground mb-2">
                 {previewSelectedCount} {previewSelectedCount === 1 ? 'map' : 'maps'} will be re-credited
               </p>
-              <DataTableShell className="max-h-64">
+              <DataTableShell
+                className="max-h-64"
+                responsive={{
+                  columns: MAP_LIST_COLUMNS, nameFloorRem: 8, density: false,
+                  compactAriaLabel: 'Maps to re-credit',
+                  cards: {
+                    rows: step.preview.maps.filter((m) => selected.has(m.name)),
+                    rowKey: (m) => m.name,
+                    face: (m) => <AdminCardFace columns={MAP_LIST_COLUMNS} row={m} />,
+                  },
+                }}
+              >
                 <DataTableHeaderRow>
                   <DataTableHeaderCell align="left">Map</DataTableHeaderCell>
                   <DataTableHeaderCell width="6rem" align="right">Status</DataTableHeaderCell>
@@ -658,11 +737,7 @@ export function MapAuthorsModal({ open, onClose, token, onApplied }: {
                   {step.preview.maps.filter((m) => selected.has(m.name)).map((m) => (
                     <DataTableRow key={m.name}>
                       <DataTableCell align="left"><MapLink name={m.name} /></DataTableCell>
-                      <DataTableCell align="right">
-                        <span className={cn('text-[11px]', m.active ? 'text-emerald-300' : 'text-muted-foreground/60')}>
-                          {m.active ? 'Active' : 'Inactive'}
-                        </span>
-                      </DataTableCell>
+                      <DataTableCell align="right">{mapStatus(m)}</DataTableCell>
                     </DataTableRow>
                   ))}
                 </tbody>

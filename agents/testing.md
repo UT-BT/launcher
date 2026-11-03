@@ -378,7 +378,7 @@ both.
 
 | Entry | Signed in as | Crawls |
 |---|---|---|
-| `admin` | Admin, so every section shows | Overview, then one sub-view per section in `ADMIN_SECTIONS`, picked in the section `<select>` (or the side nav from `lg`), plus the Anti-Cheat High Cap Delta and Low FPS WRs tabs and the Map Uploads Publishing / Recent and Drift tabs |
+| `admin` | Admin, so every section shows | Overview, then one sub-view per section in `ADMIN_SECTIONS`, picked in the section `<select>` (or the side nav from `lg`), plus the Anti-Cheat High Cap Delta and Low FPS WRs tabs and the Map Uploads Publishing / Recent and Drift tabs; modals: Maps Management's Difficulty Sync and Map authors (both tabs), Anti-Cheat's shared-identifier detail |
 | `home:signed-in` | a user | the signed-in Home, the Recent Caps History modal (See More) and Settings (drawer, user card menu) |
 | `maps:signed-in` | a user | the Maps page with the viewer's medals, PBs and reviews in the cards and table |
 | `event-detail:manager` | an event manager (`/tournaments/<slug>/me` with `can_manage`) | the Manage tab and its Signups, Format, Bracket, Matches (plus the match editor), Picks & Bans, Schedule and Predictions sub-tabs, and the Stream tab as a manager sees it |
@@ -630,7 +630,14 @@ spec that is red today is marked `test.fail()`, with a note naming the ticket th
   columns; Drift lists every location. Audit Logs opens the entry's details, with Roll back,
   in the card panel, and at 1920 px in a single-cell expand row under the table row. A sort
   picked on the User Management cards is sent with the request and shows as the header's
-  `aria-sort` at 1920 px, where the Columns menu is back.
+  `aria-sort` at 1920 px, where the Columns menu is back. Maps Management: Edit opens the
+  editor, the card sort is sent with the request, and the card body opens the map; Difficulty
+  Sync's selection works on its cards. Map Authors: Review and Unlink sit on the cards, and the
+  review and re-credit lists never scroll sideways. Anti-Cheat: a shared-identifier card opens
+  the identifier's detail, whose cap cards open the cap; High Cap Delta and Low FPS WRs keep
+  row selection on the cards, their actions open the confirms, a card body opens the cap stats,
+  and its percentile cards show FPS and ping on the face. A card body is tapped on a spot of the
+  face outside its controls.
 - `player-server-cards.spec.ts`: the tiered Players, Cap It All and Servers tables at 390×844.
   A server card keeps name, players n/max, flag and status on its face, and its panel lists the
   player and spectator names with the spectator count. A sort field and direction picked on the

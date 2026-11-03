@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { ShieldAlert, RefreshCw, ExternalLink, ShieldOff, ShieldCheck, Undo2 } from 'lucide-react'
 import {
   fetchAcShared, fetchAcSharedCount, fetchAcCapDelta, fetchAcCapDeltaCount, fetchAcLowFpsWr, fetchAcLowFpsWrCount,
@@ -14,6 +14,7 @@ import { SectionShell } from '../components/SectionShell'
 import { Pager, Feedback, ActionButton, AdminSelect, ConfirmDialog, Copyable, relTime, errMessage } from '../components/controls'
 import { useAdminTable, type AdminColumn } from '../components/useAdminTable'
 import { TableControls } from '../components/TableControls'
+import { AdminCardFace, adminCardsPlaceholder } from '../components/AdminCardFace'
 import { useResetOnChange, useAdminPageSize } from '../components/shared'
 import { MapLink } from '../components/MapLink'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
@@ -24,7 +25,7 @@ import { Checkbox } from '@/app/components/ui/checkbox'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import {
   DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow, DataTableCell, DataTableEmpty,
-  DataTableSkeletonRow, type SortDirection, type ResponsiveColumn,
+  DataTableSkeletonRow, type SortDirection,
 } from '@/app/components/shared/DataTable'
 
 type TableLayout = Record<string, { width?: string; align?: 'left' | 'center' | 'right' }>
@@ -92,11 +93,11 @@ function netspeedText(s: AcCapStats): string {
 }
 
 const SHARED_MODAL_COLUMNS: AdminColumn[] = [
-  { id: 'player', label: 'Player', required: true },
-  { id: 'map', label: 'Map' },
-  { id: 'time', label: 'Time' },
-  { id: 'status', label: 'Status' },
-  { id: 'added', label: 'Added' },
+  { id: 'player', label: 'Player', required: true, tier: 'essential' },
+  { id: 'map', label: 'Map', tier: 'detail' },
+  { id: 'time', label: 'Time', tier: 'detail' },
+  { id: 'status', label: 'Status', tier: 'detail' },
+  { id: 'added', label: 'Added', tier: 'detail' },
 ]
 
 const SHARED_MODAL_LAYOUT: TableLayout = {
@@ -137,10 +138,6 @@ function SharedDetailModal({ open, onClose, token, group, onMapSelect }: {
     return () => c.abort()
   }, [open, group, token, offset, PAGE])
 
-  const responsiveColumns = useMemo<ResponsiveColumn[]>(
-    () => tbl.columnOrder.filter(tbl.isVisible).map((id) => ({ id, width: SHARED_MODAL_LAYOUT[id]?.width, priority: SHARED_MODAL_PRIORITY[id], required: tbl.requiredColumns.has(id) })),
-    [tbl.columnOrder, tbl.isVisible, tbl.requiredColumns],
-  )
   const [resolvedSharedModal, setResolvedSharedModal] = useState<Set<string> | null>(null)
   const handleResolveSharedModal = useCallback((ids: Set<string>) => { setResolvedSharedModal(ids) }, [])
   const isShownSharedModal = useCallback((id: string) => tbl.isVisible(id) && (!resolvedSharedModal || resolvedSharedModal.has(id)), [tbl, resolvedSharedModal])
@@ -152,24 +149,40 @@ function SharedDetailModal({ open, onClose, token, group, onMapSelect }: {
     return <DataTableHeaderCell key={id} width={layout.width} align={layout.align}>{tbl.columnLabels[id]}</DataTableHeaderCell>
   }
 
-  const renderCell = (id: string, c: AcIdentifierCap): ReactNode => {
-    if (!isShownSharedModal(id)) return null
-    const align = SHARED_MODAL_LAYOUT[id].align
+  const sharedModalCell = (id: string, c: AcIdentifierCap): ReactNode => {
     switch (id) {
       case 'player':
-        return <DataTableCell key={id} align={align}><PlayerInfo userId={c.user} alias={c.alias} title={titleFor(c.active_title)} size="sm" /></DataTableCell>
+        return <PlayerInfo userId={c.user} alias={c.alias} title={titleFor(c.active_title)} size="sm" />
       case 'map':
-        return <DataTableCell key={id} align={align}><MapLink name={c.map} onSelect={onMapSelect} className="text-sm" /></DataTableCell>
+        return <MapLink name={c.map} onSelect={onMapSelect} className="text-sm" />
       case 'time':
-        return <DataTableCell key={id} align={align} className="tabular-nums"><CapTimeLink capId={c.cap_id} seconds={c.cap_time_seconds ?? 0} className="text-sm" /></DataTableCell>
+        return <CapTimeLink capId={c.cap_id} seconds={c.cap_time_seconds ?? 0} className="text-sm" />
       case 'status':
-        return <DataTableCell key={id} align={align}><CapStatus verified={c.verified} disallowed={c.disallowed} /></DataTableCell>
+        return <CapStatus verified={c.verified} disallowed={c.disallowed} />
       case 'added':
-        return <DataTableCell key={id} align={align} className="text-xs text-muted-foreground whitespace-nowrap">{relTime(c.added)}</DataTableCell>
+        return <span className="text-xs text-muted-foreground whitespace-nowrap">{relTime(c.added)}</span>
       default:
         return null
     }
   }
+
+  const renderCell = (id: string, c: AcIdentifierCap): ReactNode => {
+    if (!isShownSharedModal(id)) return null
+    const align = SHARED_MODAL_LAYOUT[id].align
+    switch (id) {
+      case 'time':
+        return <DataTableCell key={id} align={align} className="tabular-nums">{sharedModalCell(id, c)}</DataTableCell>
+      case 'added':
+        return <DataTableCell key={id} align={align} className="text-xs text-muted-foreground whitespace-nowrap">{relTime(c.added)}</DataTableCell>
+      default:
+        return <DataTableCell key={id} align={align}>{sharedModalCell(id, c)}</DataTableCell>
+    }
+  }
+
+  const columns = tbl.responsiveColumns<AcIdentifierCap>((id) => ({
+    width: SHARED_MODAL_LAYOUT[id]?.width, priority: SHARED_MODAL_PRIORITY[id], cell: (c) => sharedModalCell(id, c),
+  }))
+  const items = detail?.items ?? []
 
   return (
     <Modal isOpen={open} onClose={onClose} title={group ? `${group.type.toUpperCase()} detail` : 'Detail'} offsetSidebar maxWidth="52rem">
@@ -193,7 +206,20 @@ function SharedDetailModal({ open, onClose, token, group, onMapSelect }: {
             <StatChip label="Players" value={detail.summary.player_count} />
           </div>
         )}
-        <DataTableShell className="flex-none" responsive={{ columns: responsiveColumns, nameFloorRem: 14, extraRem: 0, onResolve: handleResolveSharedModal }}>
+        <DataTableShell
+          className="flex-none"
+          responsive={{
+            columns, nameFloorRem: 14, extraRem: 0, onResolve: handleResolveSharedModal,
+            compactAriaLabel: 'Caps on this identifier', onCompactChange: tbl.onCompactChange,
+            cards: {
+              rows: items,
+              rowKey: (c) => c.cap_id,
+              face: (c) => <AdminCardFace columns={columns} row={c} />,
+              onOpen: (c) => { openCap(c.cap_id); onClose() },
+              placeholder: adminCardsPlaceholder(loading, items.length === 0, 'No caps on this identifier.'),
+            },
+          }}
+        >
           <DataTableHeaderRow>
             {tbl.columnOrder.map((id) => renderHeader(id))}
           </DataTableHeaderRow>
@@ -322,9 +348,9 @@ function MapComparisonSection({ token, capId }: { token: string; capId: string }
 }
 
 const CAP_STATS_COLUMNS: AdminColumn[] = [
-  { id: 'bucket', label: 'Percentile', required: true },
-  { id: 'fps', label: 'FPS' },
-  { id: 'ping', label: 'Ping' },
+  { id: 'bucket', label: 'Percentile', required: true, tier: 'essential' },
+  { id: 'fps', label: 'FPS', tier: 'essential' },
+  { id: 'ping', label: 'Ping', tier: 'essential' },
 ]
 
 const CAP_STATS_LAYOUT: TableLayout = {
@@ -340,13 +366,10 @@ const CAP_STATS_BUCKETS: { label: string; fps: keyof AcCapStats; ping: keyof AcC
   { label: '50%', fps: 'fps_50pc', ping: 'ping_50pc' },
 ]
 
+type CapStatsBucket = typeof CAP_STATS_BUCKETS[number]
+
 function CapPercentileTable({ stats }: { stats: AcCapStats }) {
   const tbl = useAdminTable('utbt:admin:ac.capstats:cols:v2', CAP_STATS_COLUMNS, { defaultFiltersOpen: false })
-
-  const responsiveColumns = useMemo<ResponsiveColumn[]>(
-    () => tbl.columnOrder.filter(tbl.isVisible).map((id) => ({ id, width: CAP_STATS_LAYOUT[id]?.width, required: true })),
-    [tbl.columnOrder, tbl.isVisible],
-  )
 
   const renderHeader = (id: string): ReactNode => {
     if (!tbl.isVisible(id)) return null
@@ -354,7 +377,9 @@ function CapPercentileTable({ stats }: { stats: AcCapStats }) {
     return <DataTableHeaderCell key={id} width={layout.width} align={layout.align}>{tbl.columnLabels[id]}</DataTableHeaderCell>
   }
 
-  const renderCell = (id: string, bucket: typeof CAP_STATS_BUCKETS[number]): ReactNode => {
+  const pingCell = (bucket: CapStatsBucket) => (stats[bucket.ping] as number | null) ?? <span className="text-muted-foreground/40">—</span>
+
+  const renderCell = (id: string, bucket: CapStatsBucket): ReactNode => {
     if (!tbl.isVisible(id)) return null
     const align = CAP_STATS_LAYOUT[id].align
     switch (id) {
@@ -363,11 +388,39 @@ function CapPercentileTable({ stats }: { stats: AcCapStats }) {
       case 'fps':
         return <DataTableCell key={id} align={align} className="tabular-nums">{fpsCell(stats[bucket.fps] as number | null)}</DataTableCell>
       case 'ping':
-        return <DataTableCell key={id} align={align} className="tabular-nums text-foreground">{(stats[bucket.ping] as number | null) ?? <span className="text-muted-foreground/40">—</span>}</DataTableCell>
+        return <DataTableCell key={id} align={align} className="tabular-nums text-foreground">{pingCell(bucket)}</DataTableCell>
       default:
         return null
     }
   }
+
+  const statsCell = (id: string, bucket: CapStatsBucket): ReactNode => {
+    switch (id) {
+      case 'bucket':
+        return <span className="text-xs uppercase tracking-wider text-muted-foreground">{bucket.label}</span>
+      case 'fps':
+        return <span className="tabular-nums">{fpsCell(stats[bucket.fps] as number | null)}</span>
+      case 'ping':
+        return <span className="tabular-nums text-foreground">{pingCell(bucket)}</span>
+      default:
+        return null
+    }
+  }
+
+  const columns = tbl.responsiveColumns<CapStatsBucket>((id) => ({
+    width: CAP_STATS_LAYOUT[id]?.width, cell: (bucket) => statsCell(id, bucket),
+  })).map((c) => ({ ...c, required: true }))
+
+  const face = (bucket: CapStatsBucket) => (
+    <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1">
+      {columns.map((c) => (
+        <span key={c.id} className={cn('inline-flex items-baseline gap-1.5 text-sm', c.id === 'bucket' && 'w-10')}>
+          {c.id !== 'bucket' && <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{c.label}</span>}
+          {c.cell?.(bucket)}
+        </span>
+      ))}
+    </div>
+  )
 
   return (
     <div className="space-y-2">
@@ -375,7 +428,13 @@ function CapPercentileTable({ stats }: { stats: AcCapStats }) {
         <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Frame rate &amp; ping percentiles</span>
         <TableControls table={tbl} showFilters={false} />
       </div>
-      <DataTableShell className="flex-none" responsive={{ columns: responsiveColumns }}>
+      <DataTableShell
+        className="flex-none"
+        responsive={{
+          columns, compactAriaLabel: 'Frame rate and ping percentiles', onCompactChange: tbl.onCompactChange,
+          cards: { rows: CAP_STATS_BUCKETS, rowKey: (bucket) => bucket.label, face },
+        }}
+      >
         <DataTableHeaderRow>
           {tbl.columnOrder.map((id) => renderHeader(id))}
         </DataTableHeaderRow>
@@ -581,6 +640,46 @@ function reallowLabel(alias: string | null, user: string, map: string): ReactNod
   )
 }
 
+interface CapActionStates {
+  dis: CapActionState
+  allow: CapActionState
+  unallow: CapActionState
+  reallow: CapActionState
+}
+
+function CapActions({ view, row: r, actions: { dis, allow, unallow, reallow } }: {
+  view: AcView; row: { cap_id: string; alias: string | null; user: string; map: string }; actions: CapActionStates
+}) {
+  if (view === 'allowed') {
+    return (
+      <div className="flex items-center justify-center">
+        <ActionButton tone="accent" icon={Undo2} title="Remove from allow list (re-flag)"
+          loading={unallow.busy && unallow.target?.capId === r.cap_id}
+          onClick={() => unallow.setTarget({ capId: r.cap_id, label: unallowLabel(r.alias, r.user, r.map) })} />
+      </div>
+    )
+  }
+  if (view === 'denied') {
+    return (
+      <div className="flex items-center justify-center">
+        <ActionButton tone="accent" icon={Undo2} title="Re-allow cap (undo disallow)"
+          loading={reallow.busy && reallow.target?.capId === r.cap_id}
+          onClick={() => reallow.setTarget({ capId: r.cap_id, label: reallowLabel(r.alias, r.user, r.map) })} />
+      </div>
+    )
+  }
+  return (
+    <div className="flex items-center justify-center gap-1.5">
+      <ActionButton tone="emerald" icon={ShieldCheck} title="Mark legitimate (allow list)"
+        loading={allow.busy && allow.target?.capId === r.cap_id}
+        onClick={() => allow.setTarget({ capId: r.cap_id, label: allowLabel(r.alias, r.user, r.map) })} />
+      <ActionButton tone="red" icon={ShieldOff} title="Disallow cap"
+        loading={dis.busy && dis.target?.capId === r.cap_id}
+        onClick={() => dis.setTarget({ capId: r.cap_id, label: disallowLabel(r.alias, r.user, r.map) })} />
+    </div>
+  )
+}
+
 function ViewToggle({ view, onChange, counts }: {
   view: AcView; onChange: (v: AcView) => void; counts: Record<AcView, number | null>
 }) {
@@ -622,6 +721,26 @@ function useSelection<T extends { cap_id: string }>(rows: T[], resetKey: string)
     return next
   })
   return { selected, clear, allSelected, someSelected, toggleAll, toggleOne }
+}
+
+type Selection = ReturnType<typeof useSelection>
+
+function SelectCap({ sel, capId }: { sel: Selection; capId: string }) {
+  return (
+    <label className="-m-2 flex size-11 shrink-0 items-center justify-center cursor-pointer">
+      <Checkbox checked={sel.selected.has(capId)} onCheckedChange={() => sel.toggleOne(capId)} aria-label="Select cap" />
+    </label>
+  )
+}
+
+function SelectAllOnPage({ sel }: { sel: Selection }) {
+  return (
+    <label className="flex h-11 items-center gap-3 self-start px-1 text-sm text-muted-foreground cursor-pointer">
+      <Checkbox checked={sel.allSelected ? true : sel.someSelected ? 'indeterminate' : false}
+        onCheckedChange={sel.toggleAll} aria-label="Select all caps on this page" />
+      Select all on this page
+    </label>
+  )
 }
 
 type BulkMutation = (token: string, capIds: string[], reason?: string) => Promise<unknown>
@@ -685,11 +804,11 @@ function BulkAllowConfirm({ state }: { state: BulkAcActionState }) {
 }
 
 const SHARED_COLUMNS: AdminColumn[] = [
-  { id: 'type', label: 'Type', required: true },
-  { id: 'identifier', label: 'Identifier', required: true },
-  { id: 'players', label: 'Shared by' },
-  { id: 'caps', label: 'Caps' },
-  { id: 'lastSeen', label: 'Last seen' },
+  { id: 'type', label: 'Type', required: true, tier: 'essential' },
+  { id: 'identifier', label: 'Identifier', required: true, tier: 'essential' },
+  { id: 'players', label: 'Shared by', tier: 'detail' },
+  { id: 'caps', label: 'Caps', tier: 'detail' },
+  { id: 'lastSeen', label: 'Last seen', tier: 'detail' },
 ]
 
 const SHARED_LAYOUT: TableLayout = {
@@ -734,10 +853,6 @@ function SharedTable({ token, defaultTotal, onMapSelect }: { token: string; defa
 
   useEffect(() => { const c = new AbortController(); load(c.signal); return () => c.abort() }, [load])
 
-  const responsiveColumns = useMemo<ResponsiveColumn[]>(
-    () => tbl.columnOrder.filter(tbl.isVisible).map((id) => ({ id, width: SHARED_LAYOUT[id]?.width, priority: SHARED_PRIORITY[id], required: tbl.requiredColumns.has(id) })),
-    [tbl.columnOrder, tbl.isVisible, tbl.requiredColumns],
-  )
   const [resolvedShared, setResolvedShared] = useState<Set<string> | null>(null)
   const handleResolveShared = useCallback((ids: Set<string>) => { setResolvedShared(ids) }, [])
   const isShownShared = useCallback((id: string) => tbl.isVisible(id) && (!resolvedShared || resolvedShared.has(id)), [tbl, resolvedShared])
@@ -749,32 +864,45 @@ function SharedTable({ token, defaultTotal, onMapSelect }: { token: string; defa
     return <DataTableHeaderCell key={id} width={layout.width} align={layout.align}>{tbl.columnLabels[id]}</DataTableHeaderCell>
   }
 
+  const sharedCell = (id: string, g: AcSharedGroup): ReactNode => {
+    switch (id) {
+      case 'type':
+        return <TypeBadge type={g.type} />
+      case 'identifier':
+        return <span className="font-mono text-xs text-foreground truncate block" title={g.value}>{g.value}</span>
+      case 'players':
+        return (
+          <div className="flex flex-wrap gap-x-4 gap-y-1.5 py-1">
+            {g.players.map((p) => (
+              <PlayerInfo key={p.id} userId={p.id} alias={p.alias} title={titleFor(p.active_title)} size="sm" />
+            ))}
+          </div>
+        )
+      case 'caps':
+        return <span className="tabular-nums text-muted-foreground">{g.cap_count}</span>
+      case 'lastSeen':
+        return <span className="text-xs text-muted-foreground whitespace-nowrap">{relTime(g.last_seen)}</span>
+      default:
+        return null
+    }
+  }
+
   const renderCell = (id: string, g: AcSharedGroup): ReactNode => {
     if (!isShownShared(id)) return null
     const align = SHARED_LAYOUT[id].align
     switch (id) {
-      case 'type':
-        return <DataTableCell key={id} align={align}><TypeBadge type={g.type} /></DataTableCell>
-      case 'identifier':
-        return <DataTableCell key={id} align={align}><span className="font-mono text-xs text-foreground truncate block" title={g.value}>{g.value}</span></DataTableCell>
-      case 'players':
-        return (
-          <DataTableCell key={id} align={align}>
-            <div className="flex flex-wrap gap-x-4 gap-y-1.5 py-1">
-              {g.players.map((p) => (
-                <PlayerInfo key={p.id} userId={p.id} alias={p.alias} title={titleFor(p.active_title)} size="sm" />
-              ))}
-            </div>
-          </DataTableCell>
-        )
       case 'caps':
         return <DataTableCell key={id} align={align} className="tabular-nums text-muted-foreground">{g.cap_count}</DataTableCell>
       case 'lastSeen':
         return <DataTableCell key={id} align={align} className="text-xs text-muted-foreground whitespace-nowrap">{relTime(g.last_seen)}</DataTableCell>
       default:
-        return null
+        return <DataTableCell key={id} align={align}>{sharedCell(id, g)}</DataTableCell>
     }
   }
+
+  const columns = tbl.responsiveColumns<AcSharedGroup>((id) => ({
+    width: SHARED_LAYOUT[id]?.width, priority: SHARED_PRIORITY[id], cell: (g) => sharedCell(id, g),
+  }))
 
   return (
     <div className="space-y-3">
@@ -788,7 +916,24 @@ function SharedTable({ token, defaultTotal, onMapSelect }: { token: string; defa
           <ActionButton tone="accent" icon={RefreshCw} onClick={() => load()} loading={loading} />
         </div>
       </div>
-      <DataTableShell className="flex-none" responsive={{ columns: responsiveColumns, nameFloorRem: 14, extraRem: 0, onResolve: handleResolveShared }}>
+      <DataTableShell
+        className="flex-none"
+        responsive={{
+          columns, nameFloorRem: 14, extraRem: 0, onResolve: handleResolveShared,
+          compactAriaLabel: 'Shared identifiers', onCompactChange: tbl.onCompactChange,
+          cards: {
+            rows,
+            rowKey: (g) => `${g.type}:${g.value}`,
+            face: (g) => (
+              <div className="flex min-w-0 items-center gap-3">
+                {columns.filter((c) => c.tier === 'essential').map((c) => <div key={c.id} className="min-w-0">{c.cell?.(g)}</div>)}
+              </div>
+            ),
+            onOpen: setSelected,
+            placeholder: adminCardsPlaceholder(loading, rows.length === 0, 'No accounts share an identifier.'),
+          },
+        }}
+      >
         <DataTableHeaderRow>
           {tbl.columnOrder.map((id) => renderHeader(id))}
         </DataTableHeaderRow>
@@ -819,12 +964,12 @@ function deltaText(d: number | null): string {
 type CapDeltaSort = 'risk' | 'added'
 
 const CAP_DELTA_COLUMNS: AdminColumn[] = [
-  { id: 'player', label: 'Player', required: true },
-  { id: 'map', label: 'Map' },
-  { id: 'time', label: 'Time' },
-  { id: 'delta', label: 'Delta' },
-  { id: 'added', label: 'Added' },
-  { id: 'action', label: 'Action', required: true },
+  { id: 'player', label: 'Player', required: true, tier: 'essential' },
+  { id: 'map', label: 'Map', tier: 'detail' },
+  { id: 'time', label: 'Time', tier: 'detail' },
+  { id: 'delta', label: 'Delta', tier: 'detail' },
+  { id: 'added', label: 'Added', tier: 'detail' },
+  { id: 'action', label: 'Action', required: true, tier: 'essential' },
 ]
 
 const CAP_DELTA_LAYOUT: TableLayout = {
@@ -888,10 +1033,6 @@ function CapDeltaTable({ token, defaultTotal, onMapSelect }: { token: string; de
 
   const toggleSort = (col: CapDeltaSort) => { if (sort !== col) setSort(col) }
 
-  const responsiveColumns = useMemo<ResponsiveColumn[]>(
-    () => tbl.columnOrder.filter(tbl.isVisible).map((id) => ({ id, width: CAP_DELTA_LAYOUT[id]?.width, priority: CAP_DELTA_PRIORITY[id], required: tbl.requiredColumns.has(id) })),
-    [tbl.columnOrder, tbl.isVisible, tbl.requiredColumns],
-  )
   const [resolvedCapDelta, setResolvedCapDelta] = useState<Set<string> | null>(null)
   const handleResolveCapDelta = useCallback((ids: Set<string>) => { setResolvedCapDelta(ids) }, [])
   const isShownCapDelta = useCallback((id: string) => tbl.isVisible(id) && (!resolvedCapDelta || resolvedCapDelta.has(id)), [tbl, resolvedCapDelta])
@@ -912,51 +1053,48 @@ function CapDeltaTable({ token, defaultTotal, onMapSelect }: { token: string; de
     return <DataTableHeaderCell key={id} width={layout.width} align={layout.align}>{tbl.columnLabels[id]}</DataTableHeaderCell>
   }
 
+  const actions = { dis, allow, unallow, reallow }
+  const capDeltaEmpty = view === 'allowed' ? 'No allow-listed cap-delta runs.' : view === 'denied' ? 'No disallowed cap-delta runs.' : 'No world-record runs over the delta threshold.'
+
+  const capDeltaCell = (id: string, r: AcCapDeltaRow): ReactNode => {
+    switch (id) {
+      case 'player':
+        return <PlayerInfo userId={r.user} alias={r.alias} title={titleFor(r.active_title)} size="sm" />
+      case 'map':
+        return <MapLink name={r.map} onSelect={onMapSelect} className="text-sm" />
+      case 'time':
+        return <CapTimeLink capId={r.cap_id} seconds={r.cap_time_seconds ?? 0} className="text-sm" />
+      case 'delta':
+        return <span className="tabular-nums text-red-300 font-medium">{deltaText(r.client_cap_delta)}</span>
+      case 'added':
+        return <span className="text-xs text-muted-foreground whitespace-nowrap">{relTime(r.added)}</span>
+      case 'action':
+        return <CapActions view={view} row={r} actions={actions} />
+      default:
+        return null
+    }
+  }
+
   const renderCell = (id: string, r: AcCapDeltaRow): ReactNode => {
     if (!isShownCapDelta(id)) return null
     const align = CAP_DELTA_LAYOUT[id].align
     switch (id) {
-      case 'player':
-        return <DataTableCell key={id} align={align}><PlayerInfo userId={r.user} alias={r.alias} title={titleFor(r.active_title)} size="sm" /></DataTableCell>
-      case 'map':
-        return <DataTableCell key={id} align={align}><MapLink name={r.map} onSelect={onMapSelect} className="text-sm" /></DataTableCell>
       case 'time':
-        return <DataTableCell key={id} align={align} className="tabular-nums"><CapTimeLink capId={r.cap_id} seconds={r.cap_time_seconds ?? 0} className="text-sm" /></DataTableCell>
+        return <DataTableCell key={id} align={align} className="tabular-nums">{capDeltaCell(id, r)}</DataTableCell>
       case 'delta':
         return <DataTableCell key={id} align={align} className="tabular-nums text-red-300 font-medium">{deltaText(r.client_cap_delta)}</DataTableCell>
       case 'added':
         return <DataTableCell key={id} align={align} className="text-xs text-muted-foreground whitespace-nowrap">{relTime(r.added)}</DataTableCell>
       case 'action':
-        return (
-          <DataTableCell key={id} align={align} onClick={(e) => e.stopPropagation()}>
-            {view === 'allowed' ? (
-              <div className="flex items-center justify-center">
-                <ActionButton tone="accent" icon={Undo2} title="Remove from allow list (re-flag)"
-                  loading={unallow.busy && unallow.target?.capId === r.cap_id}
-                  onClick={() => unallow.setTarget({ capId: r.cap_id, label: unallowLabel(r.alias, r.user, r.map) })} />
-              </div>
-            ) : view === 'denied' ? (
-              <div className="flex items-center justify-center">
-                <ActionButton tone="accent" icon={Undo2} title="Re-allow cap (undo disallow)"
-                  loading={reallow.busy && reallow.target?.capId === r.cap_id}
-                  onClick={() => reallow.setTarget({ capId: r.cap_id, label: reallowLabel(r.alias, r.user, r.map) })} />
-              </div>
-            ) : (
-              <div className="flex items-center justify-center gap-1.5">
-                <ActionButton tone="emerald" icon={ShieldCheck} title="Mark legitimate (allow list)"
-                  loading={allow.busy && allow.target?.capId === r.cap_id}
-                  onClick={() => allow.setTarget({ capId: r.cap_id, label: allowLabel(r.alias, r.user, r.map) })} />
-                <ActionButton tone="red" icon={ShieldOff} title="Disallow cap"
-                  loading={dis.busy && dis.target?.capId === r.cap_id}
-                  onClick={() => dis.setTarget({ capId: r.cap_id, label: disallowLabel(r.alias, r.user, r.map) })} />
-              </div>
-            )}
-          </DataTableCell>
-        )
+        return <DataTableCell key={id} align={align} onClick={(e) => e.stopPropagation()}>{capDeltaCell(id, r)}</DataTableCell>
       default:
-        return null
+        return <DataTableCell key={id} align={align}>{capDeltaCell(id, r)}</DataTableCell>
     }
   }
+
+  const columns = tbl.responsiveColumns<AcCapDeltaRow>((id) => ({
+    width: CAP_DELTA_LAYOUT[id]?.width, priority: CAP_DELTA_PRIORITY[id], sortKey: CAP_DELTA_SORTABLE[id], cell: (r) => capDeltaCell(id, r),
+  }))
 
   return (
     <div className="space-y-3">
@@ -980,7 +1118,23 @@ function CapDeltaTable({ token, defaultTotal, onMapSelect }: { token: string; de
           allow={() => bulkAllow.setTarget({ ids: [...sel.selected], label: bulkLabel('Mark', sel.selected.size, 'They leave the flagged list but stay on the leaderboard. The reason is recorded in the audit log.') })}
           disallow={() => bulkDis.setTarget({ ids: [...sel.selected], label: bulkLabel('Disallow', sel.selected.size, 'They leave the leaderboard. The reason is recorded in the audit log for each.') })} />
       )}
-      <DataTableShell className="flex-none" responsive={{ columns: responsiveColumns, nameFloorRem: 14, extraRem: showSelect ? 3 : 0, onResolve: handleResolveCapDelta }}>
+      {showSelect && tbl.cards && rows.length > 0 && <SelectAllOnPage sel={sel} />}
+      <DataTableShell
+        className="flex-none"
+        responsive={{
+          columns, nameFloorRem: 14, extraRem: showSelect ? 3 : 0, onResolve: handleResolveCapDelta,
+          compactAriaLabel: 'High cap delta runs', onCompactChange: tbl.onCompactChange,
+          cards: {
+            rows,
+            rowKey: (r) => r.cap_id,
+            face: (r) => <AdminCardFace columns={columns} row={r} lead={showSelect ? <SelectCap sel={sel} capId={r.cap_id} /> : undefined} />,
+            onOpen: (r) => setStatsCapId(r.cap_id),
+            rowClassName: (r) => sel.selected.has(r.cap_id) ? 'bg-accent-500/[0.06]' : undefined,
+            placeholder: adminCardsPlaceholder(loading, rows.length === 0, capDeltaEmpty),
+            sort: { key: sort, direction: 'desc', onSort: (key) => toggleSort(key as CapDeltaSort) },
+          },
+        }}
+      >
         <DataTableHeaderRow>
           {showSelect && (
             <DataTableHeaderCell width="3rem" align="center">
@@ -994,7 +1148,7 @@ function CapDeltaTable({ token, defaultTotal, onMapSelect }: { token: string; de
           {loading && rows.length === 0 ? (
             Array.from({ length: 8 }).map((_, i) => <DataTableSkeletonRow key={i} columnCount={effectiveCountCapDelta + (showSelect ? 1 : 0)} />)
           ) : rows.length === 0 ? (
-            <DataTableEmpty colSpan={effectiveCountCapDelta + (showSelect ? 1 : 0)} message={view === 'allowed' ? 'No allow-listed cap-delta runs.' : view === 'denied' ? 'No disallowed cap-delta runs.' : 'No world-record runs over the delta threshold.'} />
+            <DataTableEmpty colSpan={effectiveCountCapDelta + (showSelect ? 1 : 0)} message={capDeltaEmpty} />
           ) : rows.map((r) => (
             <DataTableRow key={r.cap_id} onClick={() => setStatsCapId(r.cap_id)}
               className={cn('cursor-pointer', sel.selected.has(r.cap_id) && 'bg-accent-500/[0.06]')}>
@@ -1082,17 +1236,17 @@ function RiskBadge({ tier, flags, baselineFps }: { tier: AcLowFpsWrRow['tier']; 
 }
 
 const LOW_FPS_COLUMNS: AdminColumn[] = [
-  { id: 'player', label: 'Player', required: true },
-  { id: 'map', label: 'Map' },
-  { id: 'time', label: 'Time' },
-  { id: 'fps1', label: '1%' },
-  { id: 'fps5', label: '5%' },
-  { id: 'fps25', label: '25%' },
-  { id: 'fps50', label: '50%' },
-  { id: 'limits', label: 'Limits' },
-  { id: 'spawns', label: 'Spawns' },
-  { id: 'risk', label: 'Risk' },
-  { id: 'action', label: 'Action', required: true },
+  { id: 'player', label: 'Player', required: true, tier: 'essential' },
+  { id: 'map', label: 'Map', tier: 'detail' },
+  { id: 'time', label: 'Time', tier: 'detail' },
+  { id: 'fps1', label: '1%', tier: 'detail' },
+  { id: 'fps5', label: '5%', tier: 'detail' },
+  { id: 'fps25', label: '25%', tier: 'detail' },
+  { id: 'fps50', label: '50%', tier: 'detail' },
+  { id: 'limits', label: 'Limits', tier: 'detail' },
+  { id: 'spawns', label: 'Spawns', tier: 'detail' },
+  { id: 'risk', label: 'Risk', tier: 'detail' },
+  { id: 'action', label: 'Action', required: true, tier: 'essential' },
 ]
 
 const LOW_FPS_LAYOUT: TableLayout = {
@@ -1158,10 +1312,6 @@ function LowFpsTable({ token, defaultTotal, onMapSelect }: { token: string; defa
   const bulkAllow = useBulkAcAction(bulkAllowCaps, token, load, setError, sel.clear)
   const showSelect = view === 'flagged'
 
-  const responsiveColumns = useMemo<ResponsiveColumn[]>(
-    () => tbl.columnOrder.filter(tbl.isVisible).map((id) => ({ id, width: LOW_FPS_LAYOUT[id]?.width, priority: LOW_FPS_PRIORITY[id], required: tbl.requiredColumns.has(id) })),
-    [tbl.columnOrder, tbl.isVisible, tbl.requiredColumns],
-  )
   const [resolvedLowFps, setResolvedLowFps] = useState<Set<string> | null>(null)
   const handleResolveLowFps = useCallback((ids: Set<string>) => { setResolvedLowFps(ids) }, [])
   const isShownLowFps = useCallback((id: string) => tbl.isVisible(id) && (!resolvedLowFps || resolvedLowFps.has(id)), [tbl, resolvedLowFps])
@@ -1173,61 +1323,60 @@ function LowFpsTable({ token, defaultTotal, onMapSelect }: { token: string; defa
     return <DataTableHeaderCell key={id} width={layout.width} align={layout.align}>{tbl.columnLabels[id]}</DataTableHeaderCell>
   }
 
-  const renderCell = (id: string, r: AcLowFpsWrRow): ReactNode => {
-    if (!isShownLowFps(id)) return null
-    const align = LOW_FPS_LAYOUT[id].align
+  const actions = { dis, allow, unallow, reallow }
+  const lowFpsEmpty = view === 'allowed' ? 'No allow-listed world records.' : view === 'denied' ? 'No disallowed low FPS caps.' : 'No flagged world records.'
+
+  const lowFpsCell = (id: string, r: AcLowFpsWrRow): ReactNode => {
     switch (id) {
       case 'player':
-        return <DataTableCell key={id} align={align}><PlayerInfo userId={r.user} alias={r.alias} title={titleFor(r.active_title)} size="sm" /></DataTableCell>
+        return <PlayerInfo userId={r.user} alias={r.alias} title={titleFor(r.active_title)} size="sm" />
       case 'map':
-        return <DataTableCell key={id} align={align}><MapLink name={r.map} onSelect={onMapSelect} className="text-sm" /></DataTableCell>
+        return <MapLink name={r.map} onSelect={onMapSelect} className="text-sm" />
       case 'time':
-        return <DataTableCell key={id} align={align} className="tabular-nums"><CapTimeLink capId={r.cap_id} seconds={r.cap_time_seconds ?? 0} className="text-sm" /></DataTableCell>
+        return <CapTimeLink capId={r.cap_id} seconds={r.cap_time_seconds ?? 0} className="text-sm" />
       case 'fps1':
-        return <DataTableCell key={id} align={align} className="tabular-nums">{fpsCell(r.fps_1pc)}</DataTableCell>
+        return fpsCell(r.fps_1pc)
       case 'fps5':
-        return <DataTableCell key={id} align={align} className="tabular-nums">{fpsCell(r.fps_5pc)}</DataTableCell>
+        return fpsCell(r.fps_5pc)
       case 'fps25':
-        return <DataTableCell key={id} align={align} className="tabular-nums">{fpsCell(r.fps_25pc)}</DataTableCell>
+        return fpsCell(r.fps_25pc)
       case 'fps50':
-        return <DataTableCell key={id} align={align} className="tabular-nums">{fpsCell(r.fps_50pc)}</DataTableCell>
+        return fpsCell(r.fps_50pc)
       case 'limits':
-        return <DataTableCell key={id} align={align}><LimitsCell row={r} /></DataTableCell>
+        return <LimitsCell row={r} />
       case 'spawns':
-        return <DataTableCell key={id} align={align} className={cn('tabular-nums text-xs', r.spawn_count === 0 ? 'text-red-300 font-medium' : 'text-muted-foreground')}>{r.spawn_count ?? '—'}</DataTableCell>
+        return <span className={cn('tabular-nums text-xs', r.spawn_count === 0 ? 'text-red-300 font-medium' : 'text-muted-foreground')}>{r.spawn_count ?? '—'}</span>
       case 'risk':
-        return <DataTableCell key={id} align={align}><RiskBadge tier={r.tier} flags={r.flags} baselineFps={r.baseline_fps} /></DataTableCell>
+        return <RiskBadge tier={r.tier} flags={r.flags} baselineFps={r.baseline_fps} />
       case 'action':
-        return (
-          <DataTableCell key={id} align={align} onClick={(e) => e.stopPropagation()}>
-            {view === 'allowed' ? (
-              <div className="flex items-center justify-center">
-                <ActionButton tone="accent" icon={Undo2} title="Remove from allow list (re-flag)"
-                  loading={unallow.busy && unallow.target?.capId === r.cap_id}
-                  onClick={() => unallow.setTarget({ capId: r.cap_id, label: unallowLabel(r.alias, r.user, r.map) })} />
-              </div>
-            ) : view === 'denied' ? (
-              <div className="flex items-center justify-center">
-                <ActionButton tone="accent" icon={Undo2} title="Re-allow cap (undo disallow)"
-                  loading={reallow.busy && reallow.target?.capId === r.cap_id}
-                  onClick={() => reallow.setTarget({ capId: r.cap_id, label: reallowLabel(r.alias, r.user, r.map) })} />
-              </div>
-            ) : (
-              <div className="flex items-center justify-center gap-1.5">
-                <ActionButton tone="emerald" icon={ShieldCheck} title="Mark legitimate (allow list)"
-                  loading={allow.busy && allow.target?.capId === r.cap_id}
-                  onClick={() => allow.setTarget({ capId: r.cap_id, label: allowLabel(r.alias, r.user, r.map) })} />
-                <ActionButton tone="red" icon={ShieldOff} title="Disallow cap"
-                  loading={dis.busy && dis.target?.capId === r.cap_id}
-                  onClick={() => dis.setTarget({ capId: r.cap_id, label: disallowLabel(r.alias, r.user, r.map) })} />
-              </div>
-            )}
-          </DataTableCell>
-        )
+        return <CapActions view={view} row={r} actions={actions} />
       default:
         return null
     }
   }
+
+  const renderCell = (id: string, r: AcLowFpsWrRow): ReactNode => {
+    if (!isShownLowFps(id)) return null
+    const align = LOW_FPS_LAYOUT[id].align
+    switch (id) {
+      case 'time':
+      case 'fps1':
+      case 'fps5':
+      case 'fps25':
+      case 'fps50':
+        return <DataTableCell key={id} align={align} className="tabular-nums">{lowFpsCell(id, r)}</DataTableCell>
+      case 'spawns':
+        return <DataTableCell key={id} align={align} className={cn('tabular-nums text-xs', r.spawn_count === 0 ? 'text-red-300 font-medium' : 'text-muted-foreground')}>{r.spawn_count ?? '—'}</DataTableCell>
+      case 'action':
+        return <DataTableCell key={id} align={align} onClick={(e) => e.stopPropagation()}>{lowFpsCell(id, r)}</DataTableCell>
+      default:
+        return <DataTableCell key={id} align={align}>{lowFpsCell(id, r)}</DataTableCell>
+    }
+  }
+
+  const columns = tbl.responsiveColumns<AcLowFpsWrRow>((id) => ({
+    width: LOW_FPS_LAYOUT[id]?.width, priority: LOW_FPS_PRIORITY[id], cell: (r) => lowFpsCell(id, r),
+  }))
 
   return (
     <div className="space-y-3">
@@ -1251,7 +1400,22 @@ function LowFpsTable({ token, defaultTotal, onMapSelect }: { token: string; defa
           allow={() => bulkAllow.setTarget({ ids: [...sel.selected], label: bulkLabel('Mark', sel.selected.size, 'They leave the flagged list but stay on the leaderboard. The reason is recorded in the audit log.') })}
           disallow={() => bulkDis.setTarget({ ids: [...sel.selected], label: bulkLabel('Disallow', sel.selected.size, 'They leave the leaderboard. The reason is recorded in the audit log for each.') })} />
       )}
-      <DataTableShell className="flex-none" responsive={{ columns: responsiveColumns, nameFloorRem: 14, extraRem: showSelect ? 3 : 0, onResolve: handleResolveLowFps }}>
+      {showSelect && tbl.cards && rows.length > 0 && <SelectAllOnPage sel={sel} />}
+      <DataTableShell
+        className="flex-none"
+        responsive={{
+          columns, nameFloorRem: 14, extraRem: showSelect ? 3 : 0, onResolve: handleResolveLowFps,
+          compactAriaLabel: 'Low FPS world records', onCompactChange: tbl.onCompactChange,
+          cards: {
+            rows,
+            rowKey: (r) => r.cap_id,
+            face: (r) => <AdminCardFace columns={columns} row={r} lead={showSelect ? <SelectCap sel={sel} capId={r.cap_id} /> : undefined} />,
+            onOpen: (r) => setStatsCapId(r.cap_id),
+            rowClassName: (r) => sel.selected.has(r.cap_id) ? 'bg-accent-500/[0.06]' : undefined,
+            placeholder: adminCardsPlaceholder(loading, rows.length === 0, lowFpsEmpty),
+          },
+        }}
+      >
         <DataTableHeaderRow>
           {showSelect && (
             <DataTableHeaderCell width="3rem" align="center">
@@ -1265,7 +1429,7 @@ function LowFpsTable({ token, defaultTotal, onMapSelect }: { token: string; defa
           {loading && rows.length === 0 ? (
             Array.from({ length: 8 }).map((_, i) => <DataTableSkeletonRow key={i} columnCount={effectiveCountLowFps + (showSelect ? 1 : 0)} />)
           ) : rows.length === 0 ? (
-            <DataTableEmpty colSpan={effectiveCountLowFps + (showSelect ? 1 : 0)} message={view === 'allowed' ? 'No allow-listed world records.' : view === 'denied' ? 'No disallowed low FPS caps.' : 'No flagged world records.'} />
+            <DataTableEmpty colSpan={effectiveCountLowFps + (showSelect ? 1 : 0)} message={lowFpsEmpty} />
           ) : rows.map((r) => (
             <DataTableRow key={r.cap_id} onClick={() => setStatsCapId(r.cap_id)}
               className={cn('cursor-pointer', sel.selected.has(r.cap_id) && 'bg-accent-500/[0.06]')}>

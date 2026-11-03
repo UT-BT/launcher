@@ -98,8 +98,19 @@ table's required columns plus its main action; every other column is in the expa
   then hides the Columns menu while cards show. Sortable tables pass the header's state and
   toggle as `cards.sort`, so the card sort and the header share one sort.
 - **Body taps** open the detail page where a row has one: the player (User Management, Usage &
-  Health's recent users), the cap (Caps Management), the article (News), the draft (Map Uploads
-  drafts), the publish (Recent publishes). The other tables have no body action.
+  Health's recent users), the cap (Caps Management, and the Anti-Cheat shared-identifier detail,
+  which closes on the way), the article (News), the draft (Map Uploads drafts), the publish
+  (Recent publishes), the map (Maps Management). Anti-Cheat cards open what today's row click
+  opens: the identifier's detail (Shared HWID / IP) or the cap stats (High Cap Delta, Low FPS
+  WRs). The other tables have no body action.
+- **Row selection on cards.** Tables with a selection column lead each card face with the row
+  checkbox in a 44 px `<label>` hit area, and show a select-all checkbox above the cards while
+  they show (Caps Management, High Cap Delta, Low FPS WRs, Difficulty Sync, Map Authors'
+  review list). The bulk bar and the selected tint work as on the table. High Cap Delta and
+  Low FPS WRs have the selection column in the Flagged view only, on cards as on the table.
+- **Tables outside `useAdminTable`** (Difficulty Sync, Map Authors) declare
+  `ResponsiveColumn`s with `label`, `tier` and `cell` directly. The ones that had no responsive
+  config pass `density: false`, so their desktop rows keep today's padding.
 
 | Table | Card face | Notes |
 |---|---|---|
@@ -111,6 +122,15 @@ table's required columns plus its main action; every other column is in the expa
 | Usage & Health, recent signed-in users | player | |
 | Map Uploads: drafts, recent publishes, drift | [map-uploads.md](map-uploads.md) | |
 | Audit Logs | summary | the panel adds the entry's details below time, actor and action |
+| Maps Management | map, Edit | sortable |
+| Difficulty Sync preview | selection, map, difficulty change | |
+| Map Authors: unlinked names, linked players | name, map count, Review / Unlink | |
+| Map Authors: review maps, re-credit preview | (selection,) map, status | no panel; they stay tables wherever both columns fit, as on a 390 px phone |
+| Anti-Cheat: Shared HWID / IP | type, identifier | |
+| Anti-Cheat: shared-identifier detail | player | |
+| Anti-Cheat: High Cap Delta | selection, player, actions | sortable (Delta, Added; descending only, as the header) |
+| Anti-Cheat: Low FPS WRs | selection, player, actions | |
+| Anti-Cheat: cap stats percentiles | percentile, FPS, ping | every column on the face, labelled; no panel |
 
 **Audit Logs details.** On the table a row click opens the details in a `DataTableExpandRow`
 (the full-width row under it); on cards they open in the card's panel through
@@ -118,7 +138,9 @@ table's required columns plus its main action; every other column is in the expa
 them (a column hidden through the Columns menu stays in the details). Both render
 `ExpandedDetail`, with Roll back.
 
-Maps Management, Map Authors, Difficulty Sync and Anti-Cheat still use the untiered layout.
+Hidden columns: until the panel lists every column (owner decision, ticket 24), a column a user
+hides through the Columns menu is missing from the card panel too. That applies to every table
+above with a Columns menu; the Map Authors and Difficulty Sync tables have none.
 
 ## Map authors
 

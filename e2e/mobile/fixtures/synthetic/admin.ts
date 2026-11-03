@@ -1,6 +1,9 @@
 import type {
     AcCapDeltaRow,
+    AcCapStats,
+    AcIdentifierDetail,
     AcLowFpsWrRow,
+    AcMapComparison,
     AcSharedGroup,
     AdminActiveTitle,
     AdminCapRow,
@@ -19,6 +22,9 @@ import type {
     EventDetail,
     EventFormatTemplate,
     EventManager,
+    LinkedMapAuthorRow,
+    MapAuthorPreview,
+    MapAuthorRow,
     MapvoteStatus,
     RosterStreamer,
     RosterSuggestion,
@@ -363,7 +369,7 @@ function mapRow(index: number): AdminMapRow {
         author_alias: author.alias,
         superseded_by: index % 13 === 12 ? syntheticMap(index + 1) : null,
         preceded_by: index % 13 === 0 && index ? syntheticMap(index - 1) : null,
-        added: daysAgo(index * 4),
+        added: daysAgo(index * 4 + 1),
         required_players: index % 7 === 0 ? 2 : 1,
         has_screenshot: true,
         screenshot_updated: daysAgo(index * 4),
@@ -386,6 +392,104 @@ const difficultySync: DifficultySyncChange[] = Array.from({ length: 6 }, (_, ind
     review_count: 5 + index * 3,
     proposed: index + 2,
 }))
+
+function mapAuthorRow(index: number): MapAuthorRow {
+    return {
+        author_str: `Test Mapper ${index + 1}`,
+        map_count: 12 - (index % 10),
+        active_map_count: 10 - (index % 10),
+        co_authored: index % 5 === 1,
+        placeholder: index % 7 === 3,
+        exact_alias_match: index % 4 === 0 ? { id: person(index + 50).id, alias: person(index + 50).alias } : null,
+    }
+}
+
+const linkedAuthors: LinkedMapAuthorRow[] = Array.from({ length: 4 }, (_, index) => ({
+    author_ref: person(index + 70).id,
+    alias: person(index + 70).alias,
+    map_count: 6 - index,
+    active_map_count: 5 - index,
+    original_str: `Test Mapper ${index + 41}`,
+    link_audit_id: `synthetic-audit-${index + 1}`,
+}))
+
+function mapAuthorPreview(url: URL): FixtureReply {
+    const authorStr = url.searchParams.get('author_str') ?? 'Test Mapper 1'
+    const target = url.searchParams.get('user_id')
+    const preview: MapAuthorPreview = {
+        author_str: authorStr,
+        match: 'exact',
+        map_count: 5,
+        maps: Array.from({ length: 5 }, (_, index) => ({ name: syntheticMap(index + 20), active: index !== 3, difficulty: index + 3, author_str: authorStr })),
+        variants: [],
+        co_authored: false,
+        placeholder: false,
+        target: target ? { id: target, alias: person(70).alias, active_title: ACTIVE_TITLE, existing_map_count: 0, existing_maps: [] } : null,
+    }
+    return ok(preview)
+}
+
+function identifierDetail(url: URL): FixtureReply {
+    const total = 23
+    const detail: AcIdentifierDetail = {
+        summary: { cap_count: total, map_count: 9, player_count: 3 },
+        total,
+        items: pageOf(url, index => ({
+            cap_id: capRow(index + 300).id,
+            user: person(index % 3).id,
+            alias: person(index % 3).alias,
+            active_title: ACTIVE_TITLE,
+            map: syntheticMap(index),
+            cap_time_seconds: 44.6 + index,
+            verified: index % 3 === 0,
+            disallowed: index % 8 === 5,
+            added: hoursAgo(index * 9 + 2),
+        }), total),
+    }
+    return ok(detail)
+}
+
+function capStats(url: URL): FixtureReply {
+    const capId = url.pathname.split('/').pop() ?? capRow(0).id
+    const someone = person(5)
+    const stats: AcCapStats = {
+        cap_id: capId,
+        user: someone.id,
+        alias: someone.alias,
+        active_title: ACTIVE_TITLE,
+        map: syntheticMap(0),
+        cap_time_seconds: 38.2,
+        client_cap_delta: 0.9,
+        verified: true,
+        disallowed: false,
+        added: hoursAgo(3),
+        fps_1pc: 18,
+        fps_5pc: 31,
+        fps_25pc: 64,
+        fps_50pc: 88,
+        set_fps_min: 60,
+        set_fps_max: 200,
+        ping_1pc: 41,
+        ping_5pc: 46,
+        ping_25pc: 52,
+        ping_50pc: 57,
+        spawn_count: 4,
+        team: 0,
+        netspeed_min: 10000,
+        netspeed_max: 20000,
+        ip: documentationIp(100),
+        hwid: fakeHwid(100),
+        btpog_id: fakeBtpog(100),
+    }
+    return ok(stats)
+}
+
+const mapComparison: AcMapComparison = {
+    cap_id: capRow(0).id,
+    map: syntheticMap(0),
+    population: { n_total: 9, sufficient: false },
+    metrics: { fps_1pc: null, fps_5pc: null, fps_25pc: null, fps_50pc: null },
+}
 
 const patches: AdminPatch[] = Array.from({ length: 8 }, (_, index) => ({
     id: `synthetic-patch-${index + 1}`,
@@ -412,7 +516,7 @@ function sharedGroup(index: number): AcSharedGroup {
         player_count: players.length,
         cap_count: 30 + index * 7,
         first_seen: daysAgo(200 - index),
-        last_seen: daysAgo(index),
+        last_seen: daysAgo(index + 1),
         players,
     }
 }
@@ -431,7 +535,7 @@ function capDeltaRow(index: number): AcCapDeltaRow {
         ip: documentationIp(index + 100),
         hwid: fakeHwid(index + 100),
         btpog_id: fakeBtpog(index + 100),
-        added: hoursAgo(index * 7),
+        added: hoursAgo(index * 7 + 1),
     }
 }
 
@@ -458,7 +562,7 @@ function lowFpsRow(index: number): AcLowFpsWrRow {
         baseline_fps: 140,
         tier: FPS_TIERS[index % FPS_TIERS.length],
         flags: ['low_1pc', 'fps_cap_change'].slice(0, 1 + (index % 2)),
-        added: hoursAgo(index * 5),
+        added: hoursAgo(index * 5 + 1),
     }
 }
 
@@ -569,6 +673,10 @@ export const ADMIN_SET: FixtureSet = {
         items('/admin/maps/tags', MAP_TAGS),
         { host: 'api', path: '/admin/mapvote', reply: ok(mapvote) },
         { host: 'api', path: '/admin/maps/difficulty-sync/preview', reply: ok({ changes: difficultySync }) },
+        ...paged('/admin/maps/authors', mapAuthorRow, 37),
+        items('/admin/maps/authors/linked', linkedAuthors),
+        { host: 'api', path: '/admin/maps/authors/preview', reply: mapAuthorPreview },
+        { host: 'api', path: '/admin/maps/authors/candidates', reply: ok({ candidates: [] }) },
         { host: 'api', path: '/admin/map-uploads/drafts', reply: uploads('drafts') },
         { host: 'api', path: '/admin/map-uploads/publishes', reply: uploads('publishes') },
         { host: 'api', path: '/admin/map-uploads/drift', reply: uploads('drift') },
@@ -576,6 +684,9 @@ export const ADMIN_SET: FixtureSet = {
         ...paged('/admin/anti-cheat/shared', sharedGroup, 143),
         ...paged('/admin/anti-cheat/cap-delta', capDeltaRow, 87),
         ...paged('/admin/anti-cheat/low-fps-wr', lowFpsRow, 64),
+        { host: 'api', path: '/admin/anti-cheat/identifier', reply: identifierDetail },
+        { host: 'api', path: /^\/admin\/anti-cheat\/cap\/[^/]+\/map-comparison$/, reply: ok(mapComparison) },
+        { host: 'api', path: /^\/admin\/anti-cheat\/cap\/[^/]+$/, reply: capStats },
         ...paged('/admin/audit', auditRow, 18342),
         items('/admin/roles', roles),
         { host: 'api', path: '/admin/hosts', reply: ok(hosts) },

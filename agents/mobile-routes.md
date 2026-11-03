@@ -33,7 +33,7 @@ doesn't run on the surfaces it names.
 | `news-detail` | `news-detail` | public | `/news/15` | `news-detail` | 0 | 0 |
 | `home:signed-in` | `home` | role-gated | `/` | `home-signed-in` | 0 | 2 |
 | `maps:signed-in` | `maps` | role-gated | `/maps` | `maps-signed-in` | 0 | 0 |
-| `admin` | `admin` | role-gated | `/admin` | `admin` | 19 | 0 |
+| `admin` | `admin` | role-gated | `/admin` | `admin` | 19 | 4 |
 | `event-detail:manager` | `event-detail` | role-gated | `/events/test-cup-manage?tab=manage` | `event-manager` | 7 | 1 |
 | `match-pickban:captain` | `match-pickban` | role-gated | `/events/test-cup-pickban/matches/5d0c8e2a-7b41-5f93-a6d2-3e9f10b7c4a1` | `match-pickban-captain` | 0 | 0 |
 | `match-pickban:manager` | `match-pickban` | role-gated | `/events/test-cup-pickban/matches/5d0c8e2a-7b41-5f93-a6d2-3e9f10b7c4a1` | `match-pickban-manager` | 0 | 0 |
@@ -577,7 +577,12 @@ No skipped rules.
 
 ### Modals
 
-No modals.
+| Surface | Label | Opened from |
+|---|---|---|
+| `admin/maps-management/difficulty-sync` | Difficulty Sync | `admin/maps-management` |
+| `admin/maps-management/map-authors` | Map authors | `admin/maps-management` |
+| `admin/maps-management/map-authors-linked` | Map authors › Linked players | `admin/maps-management` |
+| `admin/anti-cheat/shared-detail` | Shared identifier detail | `admin/anti-cheat` |
 
 ### Skipped rules
 

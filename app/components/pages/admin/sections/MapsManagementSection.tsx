@@ -17,6 +17,7 @@ import { useAdminFilterPresets } from '../components/useAdminFilterPresets'
 import { TableControls } from '../components/TableControls'
 import { PANEL_LABEL, useResetOnChange, useAdminPageSize } from '../components/shared'
 import { MapLink } from '../components/MapLink'
+import { AdminCardFace, adminCardsPlaceholder } from '../components/AdminCardFace'
 import { MapAuthorsModal } from './MapAuthorsModal'
 import { AuthorPicker, type AuthorUser } from '../components/AuthorPicker'
 import { TagEditor } from '../components/TagEditor'
@@ -55,15 +56,15 @@ const STATUS_OPTIONS: { value: MapStatus; label: string }[] = [
 ]
 
 const MAP_COLUMNS: AdminColumn[] = [
-  { id: 'map', label: 'Map', required: true },
-  { id: 'author', label: 'Author' },
-  { id: 'added', label: 'Added' },
-  { id: 'difficulty', label: 'Difficulty' },
-  { id: 'players', label: 'Players' },
-  { id: 'tags', label: 'Tags' },
-  { id: 'status', label: 'Status' },
-  { id: 'superseded', label: 'Superseded' },
-  { id: 'edit', label: 'Edit', required: true },
+  { id: 'map', label: 'Map', required: true, tier: 'essential' },
+  { id: 'author', label: 'Author', tier: 'detail' },
+  { id: 'added', label: 'Added', tier: 'detail' },
+  { id: 'difficulty', label: 'Difficulty', tier: 'detail' },
+  { id: 'players', label: 'Players', tier: 'detail' },
+  { id: 'tags', label: 'Tags', tier: 'detail' },
+  { id: 'status', label: 'Status', tier: 'detail' },
+  { id: 'superseded', label: 'Superseded', tier: 'detail' },
+  { id: 'edit', label: 'Edit', required: true, tier: 'essential' },
 ]
 
 const LAYOUT: Record<string, { width?: string; align?: 'left' | 'center' | 'right' }> = {
@@ -468,6 +469,30 @@ function MapvoteModal({ open, onClose, token, onRegenerated }: { open: boolean; 
   )
 }
 
+function syncMap(c: DifficultySyncChange) {
+  return <span className="font-medium text-sm text-foreground truncate">{c.name}</span>
+}
+
+function syncDifficulty(c: DifficultySyncChange) {
+  return (
+    <>
+      <span className="text-muted-foreground">{c.current ?? '—'}</span>
+      <span className="text-muted-foreground/50 mx-1.5">→</span>
+      <span className="text-foreground font-medium">{c.proposed}</span>
+    </>
+  )
+}
+
+function syncAverage(c: DifficultySyncChange) {
+  return <>{c.average} <span className="text-muted-foreground/50">({c.review_count})</span></>
+}
+
+const DIFFICULTY_SYNC_COLUMNS: ResponsiveColumn<DifficultySyncChange>[] = [
+  { id: 'map', label: 'Map', required: true, tier: 'essential', cell: syncMap },
+  { id: 'difficulty', label: 'Difficulty', width: '8rem', required: true, tier: 'essential', cell: (c) => <span className="tabular-nums">{syncDifficulty(c)}</span> },
+  { id: 'average', label: 'Avg (reviews)', width: '9rem', required: true, tier: 'detail', cell: (c) => <span className="tabular-nums text-muted-foreground">{syncAverage(c)}</span> },
+]
+
 type DifficultySyncState =
   | { status: 'loading' }
   | { status: 'preview'; changes: DifficultySyncChange[] }
@@ -507,6 +532,30 @@ function DifficultySyncModal({ open, onClose, token, onApplied }: {
     return next
   })
   const toggleAll = () => setSelected(allChecked ? new Set() : new Set(changes.map((c) => c.name)))
+  const [cards, setCards] = useState(false)
+
+  const selectAll = (
+    <input
+      type="checkbox"
+      checked={allChecked}
+      ref={(el) => { if (el) el.indeterminate = selected.size > 0 && !allChecked }}
+      onChange={toggleAll}
+      style={{ colorScheme: 'dark' }}
+      className="size-4 accent-emerald-500 cursor-pointer align-middle"
+      aria-label="Select all"
+    />
+  )
+
+  const syncBox = (c: DifficultySyncChange) => (
+    <input
+      type="checkbox"
+      checked={selected.has(c.name)}
+      onChange={() => toggle(c.name)}
+      style={{ colorScheme: 'dark' }}
+      className="size-4 accent-emerald-500 cursor-pointer align-middle"
+      aria-label={`Sync ${c.name}`}
+    />
+  )
 
   const apply = async () => {
     const maps = [...selected]
@@ -587,18 +636,28 @@ function DifficultySyncModal({ open, onClose, token, onApplied }: {
               and can be rolled back.
             </p>
 
-            <DataTableShell className="max-h-[22rem]">
+            {cards && (
+              <label className="flex h-11 items-center gap-3 px-1 text-sm text-muted-foreground cursor-pointer">
+                {selectAll}
+                Select all
+              </label>
+            )}
+
+            <DataTableShell
+              className="max-h-[22rem]"
+              responsive={{
+                columns: DIFFICULTY_SYNC_COLUMNS, nameFloorRem: 8, extraRem: 3, density: false,
+                compactAriaLabel: 'Proposed changes', onCompactChange: setCards,
+                cards: {
+                  rows: changes,
+                  rowKey: (c) => c.name,
+                  face: (c) => <AdminCardFace columns={DIFFICULTY_SYNC_COLUMNS} row={c} lead={<label className="-m-2 flex size-11 shrink-0 items-center justify-center cursor-pointer">{syncBox(c)}</label>} />,
+                },
+              }}
+            >
               <DataTableHeaderRow>
                 <DataTableHeaderCell width="3rem" align="center">
-                  <input
-                    type="checkbox"
-                    checked={allChecked}
-                    ref={(el) => { if (el) el.indeterminate = selected.size > 0 && !allChecked }}
-                    onChange={toggleAll}
-                    style={{ colorScheme: 'dark' }}
-                    className="size-4 accent-emerald-500 cursor-pointer align-middle"
-                    aria-label="Select all"
-                  />
+                  {selectAll}
                 </DataTableHeaderCell>
                 <DataTableHeaderCell align="left">Map</DataTableHeaderCell>
                 <DataTableHeaderCell width="8rem" align="center">Difficulty</DataTableHeaderCell>
@@ -607,27 +666,10 @@ function DifficultySyncModal({ open, onClose, token, onApplied }: {
               <tbody>
                 {changes.map((c) => (
                   <DataTableRow key={c.name}>
-                    <DataTableCell align="center">
-                      <input
-                        type="checkbox"
-                        checked={selected.has(c.name)}
-                        onChange={() => toggle(c.name)}
-                        style={{ colorScheme: 'dark' }}
-                        className="size-4 accent-emerald-500 cursor-pointer align-middle"
-                        aria-label={`Sync ${c.name}`}
-                      />
-                    </DataTableCell>
-                    <DataTableCell align="left">
-                      <span className="font-medium text-sm text-foreground truncate">{c.name}</span>
-                    </DataTableCell>
-                    <DataTableCell align="center" className="tabular-nums">
-                      <span className="text-muted-foreground">{c.current ?? '—'}</span>
-                      <span className="text-muted-foreground/50 mx-1.5">→</span>
-                      <span className="text-foreground font-medium">{c.proposed}</span>
-                    </DataTableCell>
-                    <DataTableCell align="right" className="tabular-nums text-muted-foreground">
-                      {c.average} <span className="text-muted-foreground/50">({c.review_count})</span>
-                    </DataTableCell>
+                    <DataTableCell align="center">{syncBox(c)}</DataTableCell>
+                    <DataTableCell align="left">{syncMap(c)}</DataTableCell>
+                    <DataTableCell align="center" className="tabular-nums">{syncDifficulty(c)}</DataTableCell>
+                    <DataTableCell align="right" className="tabular-nums text-muted-foreground">{syncAverage(c)}</DataTableCell>
                   </DataTableRow>
                 ))}
               </tbody>
@@ -765,10 +807,6 @@ export function MapsManagementSection({ userProfile, onMapSelect, onNavigate }: 
 
   const statusLabel = STATUS_OPTIONS.find((o) => o.value === status)?.label ?? status
 
-  const responsiveColumns = useMemo<ResponsiveColumn[]>(
-    () => tbl.columnOrder.filter(tbl.isVisible).map((id) => ({ id, width: LAYOUT[id]?.width, priority: PRIORITY[id], required: tbl.requiredColumns.has(id) })),
-    [tbl.columnOrder, tbl.isVisible, tbl.requiredColumns],
-  )
   const [resolved, setResolved] = useState<Set<string> | null>(null)
   const handleResolve = useCallback((ids: Set<string>) => { setResolved(ids) }, [])
   const isShown = useCallback((id: string) => tbl.isVisible(id) && (!resolved || resolved.has(id)), [tbl, resolved])
@@ -789,29 +827,65 @@ export function MapsManagementSection({ userProfile, onMapSelect, onNavigate }: 
     return <DataTableHeaderCell key={id} width={layout.width} align={layout.align}>{tbl.columnLabels[id]}</DataTableHeaderCell>
   }
 
+  const mapCell = (id: string, m: AdminMapRow): ReactNode => {
+    switch (id) {
+      case 'map':
+        return (
+          <div className="flex items-center gap-3 min-w-0">
+            <MapThumbnail mapName={m.name} className="size-11" version={m.screenshot_updated} />
+            <MapLink name={m.name} onSelect={onMapSelect} className="font-medium text-sm" />
+          </div>
+        )
+      case 'author':
+        return m.author_ref ? (
+          <PlayerInfo userId={m.author_ref} alias={m.author_alias} title={null} size="sm" />
+        ) : (
+          <span className="text-sm text-muted-foreground truncate">{m.author_str || '—'}</span>
+        )
+      case 'added':
+        return <span className="text-muted-foreground text-xs whitespace-nowrap" title={m.added ?? ''}>{relTime(m.added)}</span>
+      case 'difficulty':
+        return <span className="tabular-nums">{m.difficulty ?? '—'}</span>
+      case 'players':
+        return <span className="tabular-nums">{m.required_players}</span>
+      case 'tags': {
+        const tags = m.tags ? m.tags.split(',').map((x) => x.trim()).filter(Boolean) : []
+        const expanded = expandedTags.includes(m.name)
+        const shownTags = expanded ? tags : tags.slice(0, 2)
+        return tags.length === 0 ? <span className="text-muted-foreground/40 text-xs">—</span> : (
+          <div className="flex flex-wrap gap-1 items-center">
+            {shownTags.map((t) => (
+              <span key={t} className="text-[11px] bg-hairline/10 border border-hairline/10 rounded px-1.5 py-0.5 text-muted-foreground">{t}</span>
+            ))}
+            {tags.length > 2 && (
+              <button type="button" onClick={() => toggleTags(m.name)} className="text-[11px] text-accent-300 hover:text-accent-200 cursor-pointer">
+                {expanded ? 'less' : `+${tags.length - 2}`}
+              </button>
+            )}
+          </div>
+        )
+      }
+      case 'status':
+        return m.active ? <span className="text-emerald-300 text-xs">Active</span> : <span className="text-muted-foreground text-xs">Inactive</span>
+      case 'superseded':
+        return m.superseded_by
+          ? <span className="text-xs text-muted-foreground" title={m.superseded_by}>→ {m.superseded_by}</span>
+          : <span className="text-muted-foreground/40 text-xs">—</span>
+      case 'edit':
+        return (
+          <div className="flex justify-center">
+            <ActionButton tone="accent" icon={Pencil} onClick={() => setEditing(m)} title="Edit map" />
+          </div>
+        )
+      default:
+        return null
+    }
+  }
+
   const renderCell = (id: string, m: AdminMapRow): ReactNode => {
     if (!isShown(id)) return null
     const align = LAYOUT[id].align
     switch (id) {
-      case 'map':
-        return (
-          <DataTableCell key={id} align={align}>
-            <div className="flex items-center gap-3 min-w-0">
-              <MapThumbnail mapName={m.name} className="size-11" version={m.screenshot_updated} />
-              <MapLink name={m.name} onSelect={onMapSelect} className="font-medium text-sm" />
-            </div>
-          </DataTableCell>
-        )
-      case 'author':
-        return (
-          <DataTableCell key={id} align={align}>
-            {m.author_ref ? (
-              <PlayerInfo userId={m.author_ref} alias={m.author_alias} title={null} size="sm" />
-            ) : (
-              <span className="text-sm text-muted-foreground truncate">{m.author_str || '—'}</span>
-            )}
-          </DataTableCell>
-        )
       case 'added':
         return (
           <DataTableCell key={id} align={align} className="text-muted-foreground text-xs whitespace-nowrap" title={m.added ?? ''}>
@@ -822,53 +896,16 @@ export function MapsManagementSection({ userProfile, onMapSelect, onNavigate }: 
         return <DataTableCell key={id} align={align} className="tabular-nums">{m.difficulty ?? '—'}</DataTableCell>
       case 'players':
         return <DataTableCell key={id} align={align} className="tabular-nums">{m.required_players}</DataTableCell>
-      case 'tags': {
-        const tags = m.tags ? m.tags.split(',').map((x) => x.trim()).filter(Boolean) : []
-        const expanded = expandedTags.includes(m.name)
-        const shownTags = expanded ? tags : tags.slice(0, 2)
-        return (
-          <DataTableCell key={id} align={align}>
-            {tags.length === 0 ? <span className="text-muted-foreground/40 text-xs">—</span> : (
-              <div className="flex flex-wrap gap-1 items-center">
-                {shownTags.map((t) => (
-                  <span key={t} className="text-[11px] bg-hairline/10 border border-hairline/10 rounded px-1.5 py-0.5 text-muted-foreground">{t}</span>
-                ))}
-                {tags.length > 2 && (
-                  <button type="button" onClick={() => toggleTags(m.name)} className="text-[11px] text-accent-300 hover:text-accent-200 cursor-pointer">
-                    {expanded ? 'less' : `+${tags.length - 2}`}
-                  </button>
-                )}
-              </div>
-            )}
-          </DataTableCell>
-        )
-      }
-      case 'status':
-        return (
-          <DataTableCell key={id} align={align}>
-            {m.active ? <span className="text-emerald-300 text-xs">Active</span> : <span className="text-muted-foreground text-xs">Inactive</span>}
-          </DataTableCell>
-        )
       case 'superseded':
-        return (
-          <DataTableCell key={id} align={align} className="truncate">
-            {m.superseded_by
-              ? <span className="text-xs text-muted-foreground" title={m.superseded_by}>→ {m.superseded_by}</span>
-              : <span className="text-muted-foreground/40 text-xs">—</span>}
-          </DataTableCell>
-        )
-      case 'edit':
-        return (
-          <DataTableCell key={id} align={align}>
-            <div className="flex justify-center">
-              <ActionButton tone="accent" icon={Pencil} onClick={() => setEditing(m)} title="Edit map" />
-            </div>
-          </DataTableCell>
-        )
+        return <DataTableCell key={id} align={align} className="truncate">{mapCell(id, m)}</DataTableCell>
       default:
-        return null
+        return <DataTableCell key={id} align={align}>{mapCell(id, m)}</DataTableCell>
     }
   }
+
+  const columns = tbl.responsiveColumns<AdminMapRow>((id) => ({
+    width: LAYOUT[id]?.width, priority: PRIORITY[id], sortKey: SORTABLE[id], cell: (m) => mapCell(id, m),
+  }))
 
   return (
     <SectionShell
@@ -950,7 +987,21 @@ export function MapsManagementSection({ userProfile, onMapSelect, onNavigate }: 
         </div>
       )}
 
-      <DataTableShell className="flex-none" responsive={{ columns: responsiveColumns, nameFloorRem: 14, extraRem: 0, onResolve: handleResolve }}>
+      <DataTableShell
+        className="flex-none"
+        responsive={{
+          columns, nameFloorRem: 14, extraRem: 0, onResolve: handleResolve,
+          compactAriaLabel: 'Maps', onCompactChange: tbl.onCompactChange,
+          cards: {
+            rows,
+            rowKey: (m) => m.name,
+            face: (m) => <AdminCardFace columns={columns} row={m} />,
+            onOpen: onMapSelect ? (m) => onMapSelect(m.name) : undefined,
+            placeholder: adminCardsPlaceholder(loading || total === null, rows.length === 0, 'No maps match these filters.'),
+            sort: { key: sort, direction: order, onSort: (key) => toggleSort(key as AdminMapSort) },
+          },
+        }}
+      >
         <DataTableHeaderRow>
           {tbl.columnOrder.map((id) => renderHeader(id))}
         </DataTableHeaderRow>
