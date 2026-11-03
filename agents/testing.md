@@ -296,7 +296,9 @@ Narrow a run with `-- -g <surface or viewport>`, for example `npm run test:mobil
 or `-g 390x844`. All five read `E2E_PORT` through the config. The four `test:mobile` and
 `test:mobile:ledger` scripts crawl the built bundle ([Built bundle](#how-specs-reach-the-app));
 `test:mobile:refresh-fixtures` and `npx playwright test e2e/mobile/...` without a script use the
-dev server. WebKit must be installed: `npx playwright install webkit chromium`.
+dev server. WebKit must be installed: `npx playwright install webkit chromium`, and on Linux
+`npx playwright install --with-deps webkit chromium` (it installs the system libraries with `sudo`), as
+the `Mobile suite` job does ([CI](#ci)).
 
 The projects are `mobile-suite-webkit` (iPhone 14 base) and `mobile-suite-chromium` (Pixel 7 base),
 both with touch and `isMobile`, seasonal decor off, and each test at its own viewport and screen
@@ -684,7 +686,8 @@ holds every rule result. The terminal prints the same tallies and the time per s
 `e2e/mobile/gallery-reporter.ts` writes it, and the config loads that reporter for every run.
 `--reporter` on the command line replaces the config's reporters, so list
 `./e2e/mobile/gallery-reporter.ts` among them when you pass one. The gallery is never committed and
-never compared against baselines; every run clears `test-results/`.
+never compared against baselines; every run clears `test-results/`. CI uploads it as an artifact
+([CI](#ci)).
 
 ### Dev server drops
 
@@ -699,14 +702,16 @@ further steps. A second drop fails the test.
 |---|---|---|
 | `.github/workflows/ci.yml`, job `Fast gate` | pull request into `staging` or `main`, push to `staging` | Windows, Node 20: `npm ci`, `typecheck:web`, `typecheck:e2e`, `lint`, `test` (Windows-only suites included), `docs:check`, `build:web`, `check:bundle`, one step each |
 | `.github/workflows/ci.yml`, jobs `Playwright (1/4)` to `Playwright (4/4)` | the same | Windows, Node 20: `npm ci`, `npx playwright install chromium`, `npm run test:e2e -- --shard=<n>/4` (all three projects, against the `-win32` baselines, split across four parallel jobs); on failure each shard uploads its `playwright-report/` and `test-results/` as artifacts |
+| `.github/workflows/ci.yml`, job `Mobile suite` | the same | Ubuntu, Node 20: `npm ci`, `npx playwright install --with-deps webkit chromium`, `npm run test:mobile -- --workers=4` (the PR subset on the built bundle, mocked data only, [Mobile suite](#mobile-suite)); whatever the result, it uploads the gallery as `mobile-gallery` and the HTML report as `mobile-playwright-report` |
+| `.github/workflows/mobile-nightly.yml`, jobs `Mobile full matrix (1/4)` to `(4/4)` | daily at 03:00 UTC on the default branch, manual (Run workflow, any branch) | Ubuntu, Node 20: the same install, then `npm run test:mobile:full -- --workers=4 --shard=<n>/4`; each shard uploads its gallery as `mobile-gallery-full-<n>` and its report as `mobile-playwright-report-full-<n>` |
 | `.github/workflows/web.yml` | push to `main`, manual | Ubuntu, Node 20: `npm ci`, `npm run quality:web` (`typecheck:web`, `typecheck:e2e`, `lint`, `test`, `build:web`, `check:bundle`), then a deploy that waits for approval |
 | `.github/workflows/release.yml` | push to `main` | Windows: builds and publishes the installer when the `package.json` version has no tag yet; no tests |
 
-`ci.yml` turns off `core.autocrlf` before checkout, so the runner gets each file's committed line
+`ci.yml`'s Windows jobs turn off `core.autocrlf` before checkout (Linux checks out LF already), so the runner gets each file's committed line
 endings, as a local checkout does. A newer push to the same pull request cancels its run in
 progress; runs on `staging` finish, so every merged commit gets a result.
 GitHub sets `CI`, so Playwright runs with 2 retries, `forbidOnly` and the `github` reporter
-([Projects](#projects)); the jobs add `--reporter=list,github,html`, so the log shows each test as
+([Projects](#projects)); the `Playwright` jobs add `--reporter=list,github,html`, so the log shows each test as
 it finishes and a failure leaves an HTML report. The full suite takes too long for one runner, so
 it runs as four shards. Download the failing shard's `playwright-report-<n>` artifact and open its
 `index.html`, or read the images and `trace.zip` in `playwright-test-results-<n>` as in
@@ -714,10 +719,19 @@ it runs as four shards. Download the failing shard's `playwright-report-<n>` art
 `docs:check` runs on a shallow checkout with no history before the tested commit, so in CI it
 checks paths, links and the manifest but lists no docs to review; run it locally for that list.
 
-`Fast gate` is the check to require on `staging` and `main`. The `Playwright` shards stay advisory
-until they have been stable. A branch is ready when the gate in [build.md](build.md) and `npm run test:e2e`
-pass locally, the same commands the two jobs run. `npm run quality:web` reproduces the `main` web
-job.
+The mobile jobs pass `--reporter=list,github,html,./e2e/mobile/gallery-reporter.ts`: a
+`--reporter` option replaces the config's reporters, so the gallery reporter is listed again
+([Gallery](#gallery)). They run on Linux because the suite has no screenshot baselines, and
+`--workers=4` matches the runner's four cores. Open a gallery artifact's `index.html` to see every
+surface the run crawled, and the report's `index.html` for a failing test's error and trace; a
+nightly run splits both across its four shards. The nightly run gates
+nothing: read its failures as ledger entries the full matrix is missing or new regressions at sizes
+the PR subset skips.
+
+`Fast gate` and `Mobile suite` are the checks to require on `staging` and `main`. The `Playwright`
+shards stay advisory until they have been stable. A branch is ready when the gate in
+[build.md](build.md), `npm run test:e2e` and `npm run test:mobile` pass locally, the same commands
+the jobs run. `npm run quality:web` reproduces the `main` web job.
 
 ## When the gate fails
 

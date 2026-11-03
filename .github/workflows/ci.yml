@@ -105,3 +105,44 @@ jobs:
           name: playwright-test-results-${{ matrix.shard }}
           path: test-results/
           retention-days: 7
+
+  mobile:
+    name: Mobile suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install WebKit and Chromium
+        run: npx playwright install --with-deps webkit chromium
+
+      - name: Mobile suite (PR subset)
+        run: npm run test:mobile -- --workers=4 --reporter=list,github,html,./e2e/mobile/gallery-reporter.ts
+        env:
+          PLAYWRIGHT_HTML_OPEN: never
+
+      - name: Upload mobile gallery
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-gallery
+          path: test-results/mobile-gallery/
+          retention-days: 7
+
+      - name: Upload HTML report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-playwright-report
+          path: playwright-report/
+          retention-days: 7

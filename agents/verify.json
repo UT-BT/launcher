@@ -191,6 +191,7 @@
   ],
   "agents/testing.md": [
     ".github/workflows/ci.yml",
+    ".github/workflows/mobile-nightly.yml",
     ".github/workflows/release.yml",
     ".github/workflows/web.yml",
     ".prettierignore",
