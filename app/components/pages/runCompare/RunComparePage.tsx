@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigation } from '@/app/components/navigation/NavigationContext'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
@@ -8,13 +8,15 @@ import { Spinner } from '@/app/components/ui/spinner'
 import { displayMapName } from '@/app/utils/format'
 import type { UserProfile } from '@/app/utils/api'
 import { loadReplayVideoVolume, saveReplayVideoVolume } from '@/app/utils/replayVideoVolume'
+import { AddRuns } from './drawer/AddRuns'
 import { RunsDrawer } from './drawer/RunsDrawer'
 import { rosterRows } from './drawer/rosterRows'
 import { useComparisons } from './loading/comparisons'
 import { useReplayVideos } from './loading/replayVideos'
 import { useSoloRuns } from './loading/soloRuns'
+import { holdWhileAdding, type SetChange } from './model/addRuns'
 import { audibleRun, chooseAudio } from './model/audioModel'
-import { composeCompareModel } from './model/compareModel'
+import { composeCompareModel, type CompareModel } from './model/compareModel'
 import { tileOverlays } from './model/overlayModel'
 import { videoReadOrder } from './model/raceModel'
 import { editableSet, editSet, type SetEdit } from './model/setEdits'
@@ -44,10 +46,15 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
     const theaterHeight = useTheaterHeight(theater)
     const stageBox = useStageBox(stage)
     const comparisons = useComparisons(useMemo(() => composeCompareModel({ query: compare, runs: loaded }).lanes.requests, [compare, loaded]))
-    const model = useMemo(
+    const composed = useMemo(
         () => composeCompareModel({ query: compare, runs: loaded, videos, failedVideos, stageBox, comparisons }),
         [compare, loaded, videos, failedVideos, stageBox, comparisons],
     )
+    const settled = useRef<CompareModel | null>(null)
+    const model = useMemo(() => holdWhileAdding(composed, settled.current), [composed])
+    useEffect(() => {
+        if (!composed.loading) settled.current = composed
+    }, [composed])
     const { controller, attachMedia } = useRacePlayback(model.race.runs, model.seekSeconds ?? storedSeekSeconds)
     const [storedDrawerOpen, setDrawerOpen] = useNavState<boolean | null>('compare.drawerOpen', null)
     const [editNote, setEditNote] = useState<string | null>(null)
@@ -60,6 +67,12 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
         setStoredNotice(null)
         if (outcome.query !== model.query) replaceParams(outcome.query ? { compare: outcome.query } : {})
     }, [model, replaceParams, setStoredNotice])
+    const applySetChange = useCallback(({ outcome, note }: SetChange) => {
+        setEditNote(outcome.blocked ?? note)
+        if (outcome.query === null) return
+        setStoredNotice(null)
+        if (outcome.query !== model.query) replaceParams(outcome.query ? { compare: outcome.query } : {})
+    }, [model.query, replaceParams, setStoredNotice])
     const roster = useMemo(() => rosterRows({ model, videos, failedVideos }), [model, videos, failedVideos])
     const [audioFrom, setAudioFrom] = useNavState<string | null>('compare.audioFrom', null)
     const [volume, setVolume] = useState(loadReplayVideoVolume)
@@ -133,7 +146,9 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
                                     tileOverlays={stageOverlays}
                                 />
                             )}
-                            <RunsDrawer open={drawerOpen} onClose={closeDrawer} rows={roster} note={editNote} onEdit={edit} audible={audible} onAudio={onAudio} />
+                            <RunsDrawer open={drawerOpen} onClose={closeDrawer} rows={roster} note={editNote} onEdit={edit} audible={audible} onAudio={onAudio}>
+                                <AddRuns model={model} accessToken={userProfile?.accessToken ?? ''} userId={userProfile?.id ?? null} onChange={applySetChange} />
+                            </RunsDrawer>
                         </div>
                     )}
                     <TransportBar

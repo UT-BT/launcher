@@ -2209,6 +2209,9 @@ export interface LeaderboardEntry {
     id: string
     team?: number | null
     active_title?: ActiveTitle | null
+    has_ghost?: boolean
+    zone_checkpoints?: string | null
+    disallowed?: boolean
 }
 
 export async function fetchMapLeaderboard(accessToken: string, mapName: string, verifiedOnly = false): Promise<LeaderboardEntry[]> {

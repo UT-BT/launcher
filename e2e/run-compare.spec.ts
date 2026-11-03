@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { RUN_COMPARE_FIXTURES, runCompareErrors, runCompareFixture } from '../app/utils/fixtures/runCompareFixtures'
 import { displayMapName } from '../app/utils/format'
-import type { CapDetail } from '../app/utils/api'
+import type { CapDetail, LeaderboardEntry } from '../app/utils/api'
 import { replayVideoUrl, serveReplayVideos } from './replayVideos'
 
 const AVATAR = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64')
@@ -465,6 +465,135 @@ test.describe('the runs drawer', () => {
         await drawer(page).getByRole('button', { name: 'Close Runs' }).click()
         await expect(drawer(page)).toHaveCount(0)
         await expect(runsButton(page)).toHaveAttribute('aria-expanded', 'false')
+    })
+})
+
+const EXTRA = ['c7c7c7c7-0000-4000-8000-0000000000c7', 'c8c8c8c8-0000-4000-8000-0000000000c8', 'c9c9c9c9-0000-4000-8000-0000000000c9', 'cacacaca-0000-4000-8000-0000000000ca']
+const EXTRA_DETAILS = new Map(EXTRA.map((id, i) => [id, detailFor(id, `70000000000000002${i}`, `Extra ${i + 1}`, 20 + i, 0)]))
+const DISALLOWED = 'cbcbcbcb-0000-4000-8000-0000000000cb'
+
+function leaderboardEntry({ cap }: CapDetail): LeaderboardEntry {
+    return {
+        map: cap.map,
+        user: String(cap.user),
+        cap_time_seconds: cap.cap_time_seconds,
+        added: cap.added ?? '',
+        alias: cap.alias ?? '',
+        cap_type: cap.cap_type,
+        verified: true,
+        id: cap.id,
+        team: cap.team,
+        active_title: null,
+        has_ghost: cap.has_ghost,
+        zone_checkpoints: cap.zone_checkpoints ?? null,
+        disallowed: false,
+    }
+}
+
+async function mockLeaderboard(page: Page, capIds: readonly string[], { held = new Map<string, Promise<void>>() } = {}) {
+    const details = new Map([...DETAILS, ...EXTRA_DETAILS])
+    const entries = [
+        ...capIds.map(capId => leaderboardEntry(details.get(capId)!)),
+        { ...leaderboardEntry(detailFor(DISALLOWED, '700000000000000030', 'Banned', 11, 0)), disallowed: true },
+    ]
+    await page.route(/https:\/\/api\.utbt\.net\/caps\/leaderboard\/map\/.*/, route => route.fulfill({ json: { success: true, data: entries } }))
+    await page.route(/https:\/\/api\.utbt\.net\/caps\/[^/]+\/detail$/, async route => {
+        const capId = /\/caps\/([^/]+)\/detail$/.exec(new URL(route.request().url()).pathname)![1]
+        await held.get(capId)
+        const extra = EXTRA_DETAILS.get(capId)
+        if (extra) return route.fulfill({ json: { success: true, data: extra } })
+        return route.fallback()
+    })
+}
+
+function leaderboard(page: Page): Locator {
+    return drawer(page).getByRole('list', { name: 'Leaderboard' })
+}
+
+function leaderboardRow(page: Page, alias: string): Locator {
+    return leaderboard(page).getByRole('listitem').filter({ hasText: alias })
+}
+
+function quickAdd(page: Page, label: string): Locator {
+    return drawer(page).getByRole('group', { name: 'Quick Add' }).getByRole('button', { name: label, exact: true })
+}
+
+test.describe('adding runs from the leaderboard', () => {
+    test('a chip adds a tile and a lane behind the open drawer and replaces the address, keeping the stage while the run loads', async ({ page }) => {
+        let release = () => {}
+        const shxLoaded = new Promise<void>(resolve => { release = resolve })
+        await mockApi(page, { videos: [DECL, SHX, BLUE] })
+        await mockLeaderboard(page, [BLUE, DECL, SHX, FIERD, BUN], { held: new Map([[SHX, shxLoaded]]) })
+        await page.goto(`/compare?runs=${DECL}`)
+        await expect(drawer(page)).toBeVisible()
+        await expect(leaderboard(page).getByRole('listitem').first()).toContainText('Decl')
+        await expect(leaderboardRow(page, 'Decl')).toContainText('REF')
+        await expect(leaderboardRow(page, 'Decl')).toContainText('In comparison')
+        await expect(leaderboard(page)).not.toContainText('Banned')
+        await expect(quickAdd(page, 'WR')).toBeEnabled()
+        await expect(quickAdd(page, 'Top 3')).toBeEnabled()
+        await expect(quickAdd(page, 'Your PB')).toHaveCount(0)
+        const lengthBefore = await historyLength(page)
+
+        await quickAdd(page, 'Next slower').click()
+
+        await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${DECL},${SHX}`)
+        await expect(tile(page, 'Decl').locator('video')).toHaveCount(1)
+        await expect(drawer(page)).toBeVisible()
+        await expect(leaderboardRow(page, 'ShX')).toContainText('In comparison')
+        release()
+        await expect(tile(page, 'ShX').locator('video')).toHaveCount(1)
+        await expect(lane(page, 'ShX')).toBeVisible()
+        await expect(rosterRow(page, 'ShX')).toBeVisible()
+        await expect(drawer(page)).toBeVisible()
+        await expect(quickAdd(page, 'Next slower')).toBeDisabled()
+        expect(await historyLength(page)).toBe(lengthBefore)
+    })
+
+    test('a search result adds its run with its badges, and removing it from the list drops it', async ({ page }) => {
+        await mockApi(page, { videos: [DECL, SHX, BLUE] })
+        await mockLeaderboard(page, [BLUE, DECL, SHX, FIERD, BUN])
+        await page.goto(`/compare?runs=${DECL},${SHX}`)
+        await expect(lanes(page).getByRole('listitem')).toHaveCount(2)
+        await runsButton(page).click()
+
+        const lengthBefore = await historyLength(page)
+        await drawer(page).getByRole('searchbox', { name: 'Search Players' }).fill('blue')
+        await expect(leaderboard(page).getByRole('listitem')).toHaveCount(1)
+        await expect(leaderboardRow(page, 'Bluey')).toContainText('Video')
+        await expect(leaderboardRow(page, 'Bluey')).toContainText('Replay')
+        await expect(leaderboardRow(page, 'Bluey')).toContainText('Set on Blue')
+        await leaderboardRow(page, 'Bluey').getByRole('button', { name: 'Add' }).click()
+
+        await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${DECL},${SHX},${BLUE}`)
+        await expect(tile(page, 'Bluey').locator('video')).toHaveCount(1)
+        await expect(lane(page, 'Bluey')).toBeVisible()
+        await expect(drawer(page)).toBeVisible()
+        expect(await historyLength(page)).toBe(lengthBefore)
+
+        await drawer(page).getByRole('searchbox', { name: 'Search Players' }).fill('')
+        await leaderboardRow(page, 'ShX').getByRole('button', { name: 'Remove' }).click()
+
+        await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${DECL},${BLUE}`)
+        await expect(tile(page, 'ShX')).toHaveCount(0)
+        await expect(lane(page, 'ShX')).toHaveCount(0)
+        await expect(leaderboardRow(page, 'ShX')).not.toContainText('In comparison')
+        await expect(drawer(page)).toBeVisible()
+    })
+
+    test('an eleventh run is blocked with the explanation', async ({ page }) => {
+        const ten = [DECL, SHX, BLUE, FIERD, BUN, PATRIK, ARTUREK, ...EXTRA.slice(0, 3)]
+        await mockApi(page)
+        await mockLeaderboard(page, [...ten, EXTRA[3]])
+        await page.goto(`/compare?runs=${ten.join(',')}`)
+        await expect(lanes(page).getByRole('listitem')).toHaveCount(10)
+        await runsButton(page).click()
+
+        await leaderboardRow(page, 'Extra 4').getByRole('button', { name: 'Add' }).click()
+
+        await expect(drawer(page).getByText('A comparison holds at most 10 runs. Remove one before adding another.')).toBeVisible()
+        await expect(lanes(page).getByRole('listitem')).toHaveCount(10)
+        expect(new URL(page.url()).search).toBe(`?runs=${ten.join(',')}`)
     })
 })
 

@@ -512,11 +512,97 @@
   opacity: 0.5;
 }
 
+.run-compare-add {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgb(var(--hairline-rgb) / 0.1);
+}
+
+.run-compare-chips,
+.run-compare-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.run-compare-chip,
+.run-compare-filter {
+  border: 1px solid rgb(var(--hairline-rgb) / 0.15);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.run-compare-add-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.run-compare-roster-row.is-in {
+  background: rgb(var(--hairline-rgb) / 0.1);
+}
+
+.run-compare-search-field {
+  position: relative;
+}
+
+.run-compare-search-icon {
+  position: absolute;
+  top: 50%;
+  left: 0.75rem;
+  width: 1rem;
+  height: 1rem;
+  transform: translateY(-50%);
+  color: var(--color-muted-foreground);
+  pointer-events: none;
+}
+
+.run-compare-search {
+  width: 100%;
+  padding: 0.5rem 0.75rem 0.5rem 2.25rem;
+  border: 1px solid rgb(var(--hairline-rgb) / 0.1);
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--color-card) 50%, transparent);
+  color: var(--color-foreground);
+  font-size: 0.875rem;
+}
+
+.run-compare-search::placeholder {
+  color: var(--color-muted-foreground);
+}
+
+.run-compare-search:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--color-accent-500) 50%, transparent);
+}
+
+.run-compare-add-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem 0;
+  color: var(--color-muted-foreground);
+  font-size: 0.875rem;
+}
+
+.run-compare-show-more {
+  align-self: center;
+}
+
 @media (hover: none) {
   .run-compare-roster-action,
   .run-compare-controls .run-compare-runs-button {
     min-width: 2.75rem;
     height: 2.75rem;
+  }
+
+  .run-compare-search {
+    min-height: 2.75rem;
   }
 
   .run-compare-drawer-layer {
