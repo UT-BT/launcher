@@ -77,7 +77,7 @@ and modal sheets pad by them, and the strip behind the iOS status bar stays dark
 Anything new fixed to a screen edge reads the same variables (inline, to keep the initial CSS
 budget), never `env()` directly. `e2e/mobile/shell.spec.ts` simulates a notch by setting the
 variables. Details: [web-target.md](web-target.md#responsive-layout), Safe areas, Top bar
-height, Status-bar strip.
+height, Status bar.
 
 The phone shell around the content:
 

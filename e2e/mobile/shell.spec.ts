@@ -105,7 +105,7 @@ test.describe('web entry', () => {
         const meta = (name: string) => page.locator(`head meta[name="${name}"]`)
         await expect(meta('apple-mobile-web-app-capable')).toHaveAttribute('content', 'yes')
         await expect(meta('mobile-web-app-capable')).toHaveAttribute('content', 'yes')
-        await expect(meta('apple-mobile-web-app-status-bar-style')).toHaveAttribute('content', 'black-translucent')
+        await expect(meta('apple-mobile-web-app-status-bar-style')).toHaveAttribute('content', 'black')
         await expect(meta('apple-mobile-web-app-title')).toHaveAttribute('content', 'UTBT')
         await expect(page.locator('head link[rel="manifest"]')).toHaveAttribute('href', '/site.webmanifest')
         await expect(page.locator('head link[rel="apple-touch-icon"]')).toHaveAttribute('href', '/apple-touch-icon.png')
@@ -172,7 +172,8 @@ test.describe('safe areas', () => {
         const tabBar = page.getByRole('navigation', { name: 'Tab bar' })
         const tabs = await boxOf(tabBar)
         expect(tabs.bottom).toBe(height)
-        expect((await boxOf(tabBar.getByRole('link', { name: 'Home' }))).bottom).toBeLessThanOrEqual(height - 34)
+        expect(tabs.height).toBeLessThanOrEqual(70)
+        expect((await boxOf(tabBar.getByRole('link', { name: 'Home' }))).bottom).toBeLessThanOrEqual(height - 21)
         expect(await page.getByRole('main').evaluate(main => parseFloat(getComputedStyle(main).paddingBottom))).toBe(height - tabs.top)
 
         const drawer = await openDrawer(page)

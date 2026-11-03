@@ -26,7 +26,7 @@ body::before {
 
 .shell-tab-bar {
   height: var(--tab-bar-offset);
-  padding: 0 var(--safe-area-right) var(--safe-area-bottom) var(--safe-area-left);
+  padding: 0 var(--safe-area-right) max(6px, var(--safe-area-bottom) - 12px) var(--safe-area-left);
 }
 
 .shell-drawer {
@@ -58,7 +58,7 @@ body::before {
 
 @media (hover: none) and (max-width: 1023px) and (orientation: portrait) {
   :root {
-    --tab-bar-offset: calc(3.5rem + var(--safe-area-bottom));
+    --tab-bar-offset: calc(3rem + max(6px, var(--safe-area-bottom) - 12px));
   }
 
   .shell-main {

@@ -215,8 +215,14 @@ cap (owner decision).
   drawer and gets focus back when it closes. Each tab is a `NavLink` through `changeView`. The
   current section's tab carries `aria-current="page"` on its detail pages too
   (`activeBottomTab`, [navigation.md](navigation.md#bottom-tab-bar)). Its height is
-  `--tab-bar-offset` (`shell.css`): `3.5rem` plus the bottom safe-area inset under the same
-  touch, below-`lg`, portrait query, `0px` elsewhere. The bar pads by the bottom and side insets,
+  `--tab-bar-offset` (`shell.css`): `3rem` plus the bar's bottom padding, under the same
+  touch, below-`lg`, portrait query, and `0px` elsewhere.
+  - **The bottom padding** is `max(6px, var(--safe-area-bottom) - 12px)`: the bottom
+    safe-area inset less 12px, and at least 6px. The tabs stay out of the home indicator's
+    band without a tall empty strip under them.
+  - **Why it's written out twice:** it appears in full in both the bar's padding and the offset,
+    because a variable for it pushed the initial CSS over its budget.
+  - The bar pads its sides by the side insets,
   and the main element pads its bottom by the same variable, so the last row of content
   scrolls clear of the bar. Its `scroll-padding-bottom` is the same variable, so whatever
   scrolls a control into view (keyboard focus, `scrollIntoView`, a test's tap) stops above the
@@ -266,10 +272,14 @@ cap (owner decision).
   code reads the variables, never `env()` directly, so `e2e/mobile/shell.spec.ts` can
   simulate a notch by setting them on `<html>`. Modal sheets and the bottom tab bar
   (`.shell-tab-bar`) pad themselves.
-- **Status-bar strip.** `body::before` paints the top inset `#070b12`
-  (`shell.css`) above everything, in every theme: a Home Screen app uses
-  `black-translucent`, whose white status-bar text iOS picks once at launch, so the strip
-  keeps it readable in the Light theme.
+- **Status bar.** A Home Screen app uses `black`: iOS gives the status bar its own black
+  strip and starts the page below it, so the top inset is `0` there and the status bar is
+  readable in every theme. Don't switch back to `black-translucent`. With it, the page drew
+  under the status bar, but iOS sized the layout viewport a status-bar height short of the
+  screen (`innerHeight` = screen height minus the top inset). So everything fixed to
+  `bottom: 0`, the tab bar and the sheets, floated above a dead strip at the bottom.
+  `body::before` still paints any top inset `#070b12` (`shell.css`), in every theme, for
+  browsers that report one.
 - **Touch chrome.** On touch devices (`hover: none`) the top bar, the drawer, the drawer
   backdrop and the modal backdrop drop `backdrop-blur` for solid tints, and the modal panel
   drops its blur (`touch:` variant, [styling.md](styling.md)); desktop keeps the blur.
@@ -480,7 +490,7 @@ catch that regression.
   `display: standalone`, `orientation: any`, the name, `#070b12` colours and the 192, 512
   and maskable icons.
 - `app/index.html` declares `apple-mobile-web-app-capable`, `mobile-web-app-capable`,
-  `apple-mobile-web-app-status-bar-style: black-translucent` and
+  `apple-mobile-web-app-status-bar-style: black` (see Status bar above) and
   `apple-mobile-web-app-title` (`UTBT`). The viewport keeps `viewport-fit=cover` and allows
   pinch zoom: never add `maximum-scale` or `user-scalable=no`. No iOS launch-screen
   images.
