@@ -283,6 +283,7 @@ ship: 600 and 700 upright, 800 and 900 italic.
   <toolbar />         {/* search / Filters / Columns, shrink-0 */}
   <filterPanel />     {/* collapsible, shrink-0 */}
   <error />           {/* conditional banner */}
+  <promoStrip />      {/* web, Server Browser only: DesktopAppNotice, shrink-0 */}
   <DataTableShell />  {/* flex-1 min-h-0 */}
   <PaginationBar />   {/* optional, shrink-0 */}
   <modals />
@@ -594,6 +595,28 @@ scale animate.
   avatar: from rarity 3 a 2px ring in the title colour, at rarity 5 also a 15px glow
   with `animate-pulse-slow`. Signed out, the Discord button is a `size-10` square. The
   login-error popover is `bg-popover/95` with a red border and no backdrop blur.
+
+### Desktop promotion (web only)
+
+Promotion stays quiet: theme tokens only, no accent on the sidebar row, no animation. What
+shows when is in [web-target.md](web-target.md#desktop-promotion).
+
+- **Sidebar row** (`DesktopPromoNavRow`): muted like the other rows,
+  `text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors`, with
+  no icon accent. The label is `text-sm font-medium` so it fits beside the × at 16rem.
+  Collapsed it is an icon-only tile (`min-h-11`, the rail tile padding).
+- **Its ×** shows through opacity, not `visibility`, so it stays in the tab order:
+  `opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100`,
+  no transition. Expanded it is a full-height `w-8` strip on the row's right edge;
+  collapsed, a `size-6` button in the tile's top-right corner.
+- **Modal CTA** ("Download for Windows"): the Accent tinted colours at
+  `h-10 px-4 text-sm` (larger than the `h-8` family shape, so it stays tappable at
+  390 px), full width below `sm`.
+- **Inline notice** (`DesktopAppNotice`): `rounded-lg border border-hairline/10 bg-card/30`,
+  muted `text-sm` text and icon, the link `text-accent-300` (underline on hover). Hosts
+  restyle through `className`: the download result lines pass `text-xs`. Tap targets reach
+  40 px without a taller line: the link is `inline-block -mx-2 -my-2.5 px-2 py-2.5` and the
+  × is `size-10`.
 
 ## Motion
 

@@ -318,6 +318,16 @@ through `app.setDemoWatcherConfig`, and the game's own recording switch `AutoDem
 - Web hides launching, ping, the install flow and the titlebar through `app/platform/`
   capabilities and turns map and demo saves into browser downloads; the full table is in
   [web-target.md](../web-target.md).
+- On the web, a successful map download says "Map Downloaded" and "Downloaded as
+  `<map>`.zip. Unzip it into your UT99 folder to play it.", never install wording:
+  `MapDownloadStatusModal` takes its success copy from `mapDownloadSuccessCopy` in
+  `shared/mapDownloadCopy.ts`, chosen by `capabilities.install`. The error branch still
+  reads "Install Failed" on both targets.
+- The website's desktop promotion ([web-target.md](../web-target.md#desktop-promotion))
+  adds three lines here, never in the desktop app: the server browser's strip above the
+  table ("Join servers in one click with the desktop app", dismissible), and on a
+  successful map or demo download a `DownloadResultPromo` line ("The desktop app installs
+  maps straight into UT" / "The desktop app uploads your demos automatically").
 
 ## Adding a file that installs into the game folder
 

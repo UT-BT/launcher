@@ -16,7 +16,8 @@ gate goes red. Commands and the pre-commit gate are in [build.md](build.md).
 | `e2e/*.broadcast.spec.ts` | Playwright specs for OBS scene pages, run only in `broadcast` |
 | `e2e/__screenshots__/` | committed screenshot baselines, one folder per spec file |
 | `e2e/streamHarness.ts` | fake API plus open, settle and screenshot helpers for scene specs |
-| `e2e/sidebarRail.ts`, `e2e/layout.ts`, `e2e/streamPanels.ts` | shared spec helpers: the catch-all `mockApi`, `horizontalOverflow`, `openStreamPanel` |
+| `e2e/sidebarRail.ts`, `e2e/layout.ts`, `e2e/streamPanels.ts`, `e2e/mapDownload.ts` | shared spec helpers: the catch-all `mockApi`, `horizontalOverflow`, `openStreamPanel`, the map-download mock `serveMapDownloadRoutes` |
+| `e2e/desktopPromo.ts` | desktop promotion helpers: storage seeds, `/users/me` variants, the installer download mock, the telemetry reader ([Desktop promotion specs](#desktop-promotion-specs)) |
 | `e2e/<name>Harness.html` + `.ts` | standalone pages that mount one component tree outside the app |
 | `playwright.config.ts`, `vitest.config.ts`, `.github/workflows/` | runner config and CI |
 | `tsconfig.e2e.json` | the TypeScript project for `e2e/` and the two runner configs: `typecheck:e2e` and ESLint read it |
@@ -146,9 +147,18 @@ the website, and desktop-only UI is reached through harness pages.
 The file name picks the project, and app specs run in both app projects. A test that fits only one
 size skips with `test.skip(isMobile, '<reason>')` or `test.skip(!isMobile)`. Specs that sweep
 widths set `test.use({ viewport })` per `describe` (copy `e2e/event-stats-responsive.spec.ts`) and
-expect `horizontalOverflow(page)` from `e2e/layout.ts` to be at most 1. Both app projects preload
-`utbt:seasonalThemes:v1 = "off"` so seasonal decor stays out of layout checks; `seasonal.spec.ts`
-turns it on itself.
+expect `horizontalOverflow(page)` from `e2e/layout.ts` to be at most 1. Both app projects share
+one storage state (`APP_STORAGE_STATE` in `playwright.config.ts`) that preloads:
+
+- `utbt:seasonalThemes:v1 = "off"`, so seasonal decor stays out of layout checks;
+  `seasonal.spec.ts` turns it on itself.
+- `utbt:desktopSeen:v1` = the time the config loaded (the key comes from
+  `DESKTOP_SEEN_STORAGE_KEY`). This is the **quiet default**: `desktop-chromium`'s user agent is
+  Windows 10, so without it every signed-out spec would show the desktop promotion. Signed-in
+  specs stay quiet because their `/users/me` mocks have no `last_desktop_seen_at` (unknown, so not
+  eligible). A spec that pins the page clock more than 90 days after the run date needs its own
+  seed. Promo specs opt in through `e2e/desktopPromo.ts` ([Desktop promotion
+  specs](#desktop-promotion-specs)); never change the default to make a spec promote.
 
 The config runs 2 workers, spec files in parallel and the tests inside a file in order, with the
 default 30 s test timeout, `trace: 'retain-on-failure'` and `screenshot: 'only-on-failure'`.
@@ -177,6 +187,33 @@ Seed browser state with `page.addInitScript` before `goto`:
 - A signed-in web user: `utbt:webAuth:v1` with `accessToken`, `refreshToken` and an `expiresAt`
   computed inside the script, more than 5 minutes ahead of the page clock; a closer expiry makes the
   app refresh the session first.
+
+### Desktop promotion specs
+
+The promotion ([web-target.md](web-target.md#desktop-promotion)) has one spec per surface:
+`desktop-promo.spec.ts` (sidebar row and modal), `desktop-promo-servers.spec.ts`,
+`desktop-promo-downloads.spec.ts` (map and demo result lines), `desktop-promo-settings.spec.ts`
+and `desktop-promo-stream.spec.ts`. The older Stream specs (`stream-tab`, `stream-guide-panel`,
+`stream-cams-panel`) stay unpromoted and assert the fallback line. A promo spec builds on
+`e2e/desktopPromo.ts`, and a helper only one spec needs stays in that spec:
+
+- `seedDesktopPromo(page, { consent?, signedIn?, desktopSeen?, dismissed? })` overrides the quiet
+  default in an init script: consent `denied`, signed out and both keys cleared unless given;
+  `desktopSeen` is `'cleared' | 'null' | 'fresh' | 'stale'`, `dismissed` is
+  `'cleared' | 'fresh' | 'stale'` (fresh is 1 day old, stale 91). It runs once per tab, so a
+  reload keeps what the page wrote; to change storage mid-test, `page.evaluate`, then reload.
+- `routeUsersMe(page, variant)` and `routeDelayedUsersMe(page, variant)` (`{ data, requested,
+  release }`) answer `/users/me` with `last_desktop_seen_at` `'absent' | 'null' | 'recent' |
+  'stale'`, and `/launcher/activity/latest` with 404. Register them after the catch-all.
+- `routeDesktopAppDownload(page)` answers `DESKTOP_APP_DOWNLOAD_URL` with a small `.exe`
+  attachment, so no spec downloads the real installer.
+- `recordTelemetryFlushes(page).flushedOutcomes()` forces a flush and returns the last payload's
+  `outcomes`; poll it with `expect.poll` (consent `granted`).
+- `WINDOWS_11_USER_AGENT` and `MACOS_USER_AGENT` set the user agent per `describe`. Windows tests
+  skip `mobile-chromium` (Android), which expects no promotion; every spec also has a macOS
+  `describe` that expects none.
+- The promo UI is lazy, so a "nothing shows" check first waits for the page's anchor and
+  `networkidle`, then asserts the count is 0. Locate inline lines with `[data-desktop-app-notice]`.
 
 ### Live tests
 
@@ -270,7 +307,7 @@ nondeterminism: pin it (table above) instead of updating.
 | `.github/workflows/ci.yml`, job `Fast gate` | pull request into `staging` or `main`, push to `staging` | Windows, Node 20: `npm ci`, `typecheck:web`, `typecheck:e2e`, `lint`, `test` (Windows-only suites included), `docs:check`, `build:web`, `check:bundle`, one step each |
 | `.github/workflows/ci.yml`, jobs `Playwright (1/4)` to `Playwright (4/4)` | the same | Windows, Node 20: `npm ci`, `npx playwright install chromium`, `npm run test:e2e -- --shard=<n>/4` (all three projects, against the `-win32` baselines, split across four parallel jobs); on failure each shard uploads its `playwright-report/` and `test-results/` as artifacts |
 | `.github/workflows/web.yml` | push to `main`, manual | Ubuntu, Node 20: `npm ci`, `npm run quality:web` (`typecheck:web`, `typecheck:e2e`, `lint`, `test`, `build:web`, `check:bundle`), then a deploy that waits for approval |
-| `.github/workflows/release.yml` | push to `main` | Windows: builds and publishes the installer when the `package.json` version has no tag yet; no tests |
+| `.github/workflows/release.yml` | push to `main` | Windows: builds and publishes the installer when the `package.json` version has no tag yet, plus a copy under the stable name `utbt-launcher-setup.exe` that `DESKTOP_APP_DOWNLOAD_URL` points at; no tests |
 
 `ci.yml` turns off `core.autocrlf` before checkout, so the runner gets each file's committed line
 endings, as a local checkout does. A newer push to the same pull request cancels its run in
