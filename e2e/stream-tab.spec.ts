@@ -1,5 +1,4 @@
 import { expect, test, type Page } from '@playwright/test'
-import { DESKTOP_APP_DOWNLOAD_URL } from '../app/constants/desktopApp'
 import { horizontalOverflow } from './layout'
 import { openStreamPanel, streamPanelNav } from './streamPanels'
 
@@ -293,8 +292,8 @@ test('the website Cams panel sends a streamer to the desktop launcher', async ({
 
     const cams = page.getByRole('region', { name: 'Cams' })
     await expect(cams.getByText('The cam tool needs the desktop launcher.')).toBeVisible()
-    await expect(cams.getByRole('link', { name: 'Get the desktop launcher' }))
-        .toHaveAttribute('href', DESKTOP_APP_DOWNLOAD_URL)
+    await expect(cams.getByText('Use the desktop launcher (Windows) for this.')).toBeVisible()
+    await expect(cams.getByRole('link', { name: 'Download', exact: true })).toHaveCount(0)
     await expect(cams.getByText('Coming soon.')).toHaveCount(0)
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1)
 })
@@ -373,6 +372,6 @@ test('the Stream tab fits a 360 px phone', async ({ page }) => {
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1)
 
     await openStreamPanel(page, 'Cams')
-    await expect(page.getByRole('link', { name: 'Get the desktop launcher' })).toBeVisible()
+    await expect(page.getByText('Use the desktop launcher (Windows) for this.')).toBeVisible()
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1)
 })
