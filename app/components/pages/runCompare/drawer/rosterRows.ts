@@ -1,9 +1,9 @@
 import type { SoloRun } from '../loading/soloRuns'
-import type { CompareModel } from '../model/compareModel'
+import { stateOf, type CompareModel } from '../model/compareModel'
 import { formatRaceTime, NO_VIDEO, type LoadedVideos } from '../model/raceModel'
 import { isSideReference } from '../model/referenceModel'
+import type { TeamRow } from '../model/teamModel'
 import { FALLBACK_FPS } from '../playback/playbackConstants'
-import { parseCompareQuery } from '../url/compareUrl'
 
 export const NOT_FRAME_SYNCED = 'Not frame-synced'
 
@@ -41,7 +41,7 @@ function rowOrder(model: CompareModel): string[] {
 }
 
 export function rosterRows({ model, videos, failedVideos }: RosterInput): RosterRow[] {
-    const state = parseCompareQuery(model.query).state
+    const state = stateOf(model)
     const raceRuns = new Map(model.race.runs.map(raceRun => [raceRun.run.capId, raceRun]))
     const lanes = new Map(model.lanes.lanes.map(lane => [lane.capId, lane]))
     const pins = new Set(state.refs)
@@ -64,4 +64,25 @@ export function rosterRows({ model, videos, failedVideos }: RosterInput): Roster
             fps: raceRun.fps ?? FALLBACK_FPS,
         }]
     })
+}
+
+export interface TeamRosterMember {
+    roster: RosterRow
+    index: number
+}
+
+export interface TeamRosterGroup {
+    row: TeamRow
+    members: TeamRosterMember[]
+}
+
+export function teamRosterGroups(model: CompareModel, rows: readonly RosterRow[]): TeamRosterGroup[] {
+    const { seats } = model.teams
+    return model.teams.rows.map(row => ({
+        row,
+        members: rows.flatMap(roster => {
+            const seat = seats.get(roster.capId)
+            return seat?.teamCapId === row.teamCapId ? [{ roster, index: seat.index }] : []
+        }),
+    }))
 }

@@ -13,20 +13,22 @@ import { loadReplayVideoVolume, saveReplayVideoVolume } from '@/app/utils/replay
 import { useAfterPaint } from './analysis/useAfterPaint'
 import { AddRuns } from './drawer/AddRuns'
 import { RunsDrawer } from './drawer/RunsDrawer'
-import { rosterRows } from './drawer/rosterRows'
+import { rosterRows, teamRosterGroups } from './drawer/rosterRows'
+import { TeamAddRuns } from './drawer/TeamAddRuns'
 import type { Shortcut } from './keyboard/shortcuts'
 import { useCompareShortcuts } from './keyboard/useCompareShortcuts'
 import { useComparisons } from './loading/comparisons'
 import { useReplayVideos } from './loading/replayVideos'
 import { useSoloRuns } from './loading/soloRuns'
+import { useTeamRuns } from './loading/teamRuns'
 import { holdWhileAdding, type SetChange } from './model/addRuns'
 import { audibleRun, chooseAudio } from './model/audioModel'
 import { composeCompareModel, type CompareModel } from './model/compareModel'
 import { focusAt, nextAudio, toggleFocus } from './model/focusModel'
 import { tileOverlays } from './model/overlayModel'
 import { isPhone, povForAudio, stageAspect, stageView, stepPov } from './model/phoneStage'
-import { videoReadOrder } from './model/raceModel'
 import { editableSet, editSet, type SetEdit } from './model/setEdits'
+import { teamVideoOrder } from './model/teamModel'
 import { PovSwitcher } from './stage/PovSwitcher'
 import { RaceStage, type StageFocus, type StageOverlays } from './stage/RaceStage'
 import { useRacePlayback } from './stage/useRacePlayback'
@@ -53,20 +55,22 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
 
     const requested = useMemo(() => parseCompareQuery(compare).state, [compare])
     const loaded = useSoloRuns(requested.runs, userProfile?.accessToken ?? '')
-    const videos = useReplayVideos(useMemo(() => videoReadOrder(requested), [requested]))
+    const notCaps = useMemo(() => requested.runs.filter(capId => loaded.get(capId) === null), [requested, loaded])
+    const loadedTeams = useTeamRuns(notCaps, userProfile?.accessToken ?? '')
+    const videos = useReplayVideos(useMemo(() => teamVideoOrder(compare, loaded, loadedTeams), [compare, loaded, loadedTeams]))
     const [failedVideos, setFailedVideos] = useState<ReadonlySet<string>>(() => new Set())
     const [theater, setTheater] = useState<HTMLElement | null>(null)
     const [stage, setStage] = useState<HTMLElement | null>(null)
     const theaterHeight = useTheaterHeight(theater)
     const stageBox = useStageBox(stage)
     const [speedRun, setSpeedRun] = useNavState<string | null>('compare.speedRun', null)
-    const comparisons = useComparisons(useMemo(() => composeCompareModel({ query: compare, runs: loaded }).lanes.requests, [compare, loaded]))
+    const comparisons = useComparisons(useMemo(() => composeCompareModel({ query: compare, runs: loaded, teams: loadedTeams }).lanes.requests, [compare, loaded, loadedTeams]))
     const [storedFocus, setFocus] = useNavState<string | null>('compare.focus', null)
     const stageEnvironment = useStageEnvironment()
     const [storedPov, setPov] = useNavState<string | null>('compare.pov', null)
     const composed = useMemo(
-        () => composeCompareModel({ query: compare, runs: loaded, videos, failedVideos, stageBox, comparisons, focus: storedFocus, speedRun, environment: stageEnvironment, pov: storedPov }),
-        [compare, loaded, videos, failedVideos, stageBox, comparisons, storedFocus, speedRun, stageEnvironment, storedPov],
+        () => composeCompareModel({ query: compare, runs: loaded, teams: loadedTeams, videos, failedVideos, stageBox, comparisons, focus: storedFocus, speedRun, environment: stageEnvironment, pov: storedPov }),
+        [compare, loaded, loadedTeams, videos, failedVideos, stageBox, comparisons, storedFocus, speedRun, stageEnvironment, storedPov],
     )
     const settled = useRef<CompareModel | null>(null)
     const model = useMemo(() => holdWhileAdding(composed, settled.current), [composed])
@@ -93,6 +97,8 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
         if (outcome.query !== model.query) replaceParams(outcome.query ? { compare: outcome.query } : {})
     }, [model.query, replaceParams, setStoredNotice])
     const roster = useMemo(() => rosterRows({ model, videos, failedVideos }), [model, videos, failedVideos])
+    const teamRoster = useMemo(() => teamRosterGroups(model, roster), [model, roster])
+    const teamSet = model.teams.rows.length > 0
     const [audioFrom, setAudioFrom] = useNavState<string | null>('compare.audioFrom', null)
     const [volume, setVolume] = useState(loadReplayVideoVolume)
     const audible = audibleRun(model.race, audioFrom)
@@ -184,8 +190,8 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
 
     useEffect(() => {
         if (model.loading || storedDrawerOpen !== null) return
-        setDrawerOpen(model.runs.length === 1)
-    }, [model.loading, model.runs.length, storedDrawerOpen, setDrawerOpen])
+        setDrawerOpen(!teamSet && model.runs.length === 1)
+    }, [model.loading, model.runs.length, teamSet, storedDrawerOpen, setDrawerOpen])
 
     useDocumentTitle(model.title, SITE_NAME)
     useNavScrollRestore(!model.loading)
@@ -237,14 +243,17 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
                                     onVideoFailed={onVideoFailed}
                                     tileOverlays={stageOverlays}
                                     focus={stageFocus}
+                                    teamRows={model.teams.rows}
                                 />
                             )}
-                            <RunsDrawer open={drawerOpen} onClose={closeDrawer} rows={roster} note={editNote} onEdit={edit} audible={audible} onAudio={onAudio} sheet={view.form === 'phone-portrait'}>
-                                <AddRuns model={model} accessToken={userProfile?.accessToken ?? ''} userId={userProfile?.id ?? null} onChange={applySetChange} />
+                            <RunsDrawer open={drawerOpen} onClose={closeDrawer} rows={roster} teams={teamRoster} note={editNote} onEdit={edit} audible={audible} onAudio={onAudio} sheet={view.form === 'phone-portrait'}>
+                                {teamSet
+                                    ? <TeamAddRuns model={model} accessToken={userProfile?.accessToken ?? ''} userId={userProfile?.id ?? null} onChange={applySetChange} />
+                                    : <AddRuns model={model} accessToken={userProfile?.accessToken ?? ''} userId={userProfile?.id ?? null} onChange={applySetChange} />}
                             </RunsDrawer>
                         </div>
                     )}
-                    {hasTiles && view.switcher && <PovSwitcher tiles={model.race.tiles} view={view} onPov={choosePov} />}
+                    {hasTiles && view.switcher && <PovSwitcher tiles={model.race.tiles} view={view} onPov={choosePov} teams={model.teams} />}
                     <TransportBar
                         controller={controller}
                         compact={phone}
@@ -265,7 +274,7 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
                 </div>
             )}
 
-            {analysisReady && !model.loading && model.runs.length > 0 && (
+            {analysisReady && !model.loading && model.analysis.runs.length > 0 && (
                 <Suspense fallback={null}>
                     <RunAnalysis analysis={model.analysis} controller={controller} cueSync={cueSync} onSpeedRun={setSpeedRun} />
                 </Suspense>

@@ -17,6 +17,7 @@ export interface TileOverlay {
     pinned: boolean
     badges: string[]
     teamColour: string | null
+    teamIndex: number | null
     removable: boolean
     lane: Lane | null
 }
@@ -41,18 +42,22 @@ export function tileOverlays(model: CompareModel): ReadonlyMap<string, TileOverl
     const pins = new Set(parseCompareQuery(model.query).state.refs)
     const lanes = new Map(model.lanes.lanes.map(lane => [lane.capId, lane]))
     const sources = new Map(model.race.runs.map(raceRun => [raceRun.run.capId, raceRun.source]))
+    const { seats, rows } = model.teams
+    const removable = rows.length > 0 ? rows.length > 1 : model.runs.length > 1
     return new Map(model.race.tiles.map(tile => {
         const lane = lanes.get(tile.id) ?? null
         const source = sources.get(tile.id) ?? null
+        const seat = seats.get(tile.id) ?? null
         return [tile.id, {
             capId: tile.id,
             run: tile.run,
             time: formatRaceTime(tile.run.timeSeconds),
             reference: lane?.reference ?? false,
-            pinned: pins.has(tile.id),
+            pinned: pins.has(seat?.teamCapId ?? tile.id),
             badges: [...tile.badges, ...(source !== null && source !== 'utrecorder' ? [NOT_FRAME_SYNCED] : [])],
-            teamColour: null,
-            removable: model.runs.length > 1,
+            teamColour: seat?.colour ?? null,
+            teamIndex: seat?.index ?? null,
+            removable,
             lane,
         }]
     }))

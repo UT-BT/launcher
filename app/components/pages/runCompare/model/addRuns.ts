@@ -195,6 +195,6 @@ export function toggleRunEdit(model: CompareModel, capId: string, videos: Loaded
 export function holdWhileAdding(composed: CompareModel, settled: CompareModel | null): CompareModel {
     if (!composed.loading || !settled || settled.loading || settled.runs.length === 0) return composed
     const requested = new Set(parseCompareQuery(composed.query).state.runs)
-    if (!settled.runs.every(run => requested.has(run.capId))) return composed
+    if (!parseCompareQuery(settled.query).state.runs.every(capId => requested.has(capId))) return composed
     return { ...settled, query: composed.query }
 }

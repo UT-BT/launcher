@@ -3,6 +3,7 @@ import { RUN_COMPARE_FIXTURES, runCompareErrors, runCompareFixture } from '../ap
 import { displayMapName } from '../app/utils/format'
 import type { CapDetail, LeaderboardEntry } from '../app/utils/api'
 import { replayVideoUrl, serveReplayVideos } from './replayVideos'
+import { ALPHA, BRAVO, mockTeamRuns, TEAM_POVS } from './teamRuns'
 
 const AVATAR = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64')
 const BASE = runCompareFixture('capDetailCandidates')
@@ -1065,5 +1066,80 @@ test.describe('solo analysis', () => {
         for (const table of await analysis(page).locator('table').all()) {
             expect(await table.evaluate(element => element.getBoundingClientRect().right)).toBeLessThanOrEqual(390)
         }
+    })
+})
+
+function teamHeaders(page: Page): Locator {
+    return page.getByRole('region', { name: 'Stage' }).locator('.run-compare-team-header')
+}
+
+function crossings(page: Page, alias: string): Locator {
+    return lane(page, alias).getByRole('list', { name: 'Crossings' }).getByRole('listitem')
+}
+
+test.describe('team runs', () => {
+    test('a single team run plays its members in one row on one clock, with every member crossing on the timeline', async ({ page }) => {
+        await mockApi(page, { videos: TEAM_POVS })
+        await mockTeamRuns(page, [ALPHA, BRAVO])
+        await page.goto(`/compare?runs=${ALPHA.teamCapId}`)
+
+        const [one, two] = [tile(page, 'Alpha One'), tile(page, 'Alpha Two')]
+        await expect(one.locator('video')).toHaveCount(1)
+        await expect(two.locator('video')).toHaveCount(1)
+        await expect(teamHeaders(page)).toHaveCount(1)
+        await expect(teamHeaders(page)).toContainText('Alpha One & Alpha Two')
+        await expect(teamHeaders(page)).toContainText('0:13.500')
+        const [left, right] = [await one.boundingBox(), await two.boundingBox()]
+        expect(right!.y).toBeCloseTo(left!.y, 0)
+        expect(right!.x).toBeGreaterThanOrEqual(left!.x + left!.width)
+        await expect(page).toHaveTitle(/^Alpha One & Alpha Two on /)
+        await expect(drawer(page)).toHaveCount(0)
+
+        await expect(crossings(page, 'Alpha One')).toHaveText(['Gate at 0:03.000', 'Crane at 0:07.500', 'CAP at 0:12.000'])
+        await expect(crossings(page, 'Alpha Two')).toHaveText(['Gate at 0:03.400', 'CAP at 0:13.500'])
+        await expect(lane(page, 'Alpha One')).toContainText('Zones')
+        await expect(lane(page, 'Alpha Two')).toContainText('Replay')
+        await expect(page.getByRole('region', { name: 'Stage' }).locator('.run-compare-tile-delta')).toHaveCount(0)
+
+        await playButton(page).click()
+
+        await expect.poll(async () => Math.min(...(await clocksOf(page)).map(clock => clock.time)), { timeout: 15_000 }).toBeGreaterThan(1)
+        const clocks = await clocksOf(page)
+        expect(clocks.map(clock => clock.paused)).toEqual([false, false])
+        expect(Math.abs(clocks[0].time - clocks[1].time)).toBeLessThan(0.1)
+    })
+
+    test('adding a second team run from the drawer adds a row, and a member POV hides from the roster', async ({ page }) => {
+        await mockApi(page, { videos: TEAM_POVS })
+        await mockTeamRuns(page, [ALPHA, BRAVO])
+        await page.goto(`/compare?runs=${ALPHA.teamCapId}`)
+        await expect(tile(page, 'Alpha One').locator('video')).toHaveCount(1)
+
+        await runsButton(page).click()
+        await expect(drawer(page)).toBeVisible()
+        const lengthBefore = await historyLength(page)
+        const bravo = leaderboard(page).locator(':scope > li').filter({ hasText: 'Bravo One' })
+        const members = bravo.getByRole('list', { name: 'Members' }).getByRole('listitem')
+        await expect(members).toHaveCount(2)
+        await expect(members.first()).toContainText('Zones')
+        await expect(members.first()).toContainText('Set on Red')
+        await bravo.getByRole('button', { name: 'Add', exact: true }).click()
+
+        await expect(teamHeaders(page)).toHaveCount(2)
+        await expect(tile(page, 'Bravo Two').locator('video')).toHaveCount(1)
+        await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${ALPHA.teamCapId},${BRAVO.teamCapId}`)
+        expect(await historyLength(page)).toBe(lengthBefore)
+        const [alpha, bravoTile] = [await tile(page, 'Alpha One').boundingBox(), await tile(page, 'Bravo One').boundingBox()]
+        expect(bravoTile!.y).toBeGreaterThan(alpha!.y + alpha!.height - 1)
+        expect(bravoTile!.x).toBeCloseTo(alpha!.x, 0)
+        await expect(page).toHaveTitle(/^Alpha One & Alpha Two vs Bravo One & Bravo Two on /)
+
+        const roster = drawer(page).getByRole('list', { name: 'Roster' })
+        await expect(roster.locator(':scope > li')).toHaveCount(2)
+        await roster.getByRole('list', { name: 'Members' }).getByRole('listitem').filter({ hasText: 'Bravo Two' }).getByRole('button', { name: 'POV' }).click()
+
+        await expect(tile(page, 'Bravo Two')).toHaveCount(0)
+        await expect(lane(page, 'Bravo Two')).toContainText('No video')
+        await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${ALPHA.teamCapId},${BRAVO.teamCapId}&data=${BRAVO.members[1].capId}`)
     })
 })

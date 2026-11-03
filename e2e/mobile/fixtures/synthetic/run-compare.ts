@@ -4,6 +4,7 @@ import { replyFor } from '../data'
 import { recordedFixtureSet } from '../recording'
 import type { FixtureRoute, FixtureSet } from '../types'
 import { person, syntheticId } from './people'
+import { teamDetail, teamEntry, TEAM_MAP, type TeamFixture } from '../../../teamRuns'
 
 const RECORDED = recordedFixtureSet('cap-detail')
 const DONOR_ID = '258021df-51b1-4ed3-99cc-62d4e75892a7'
@@ -12,6 +13,28 @@ const PLAYABLE_VIDEO = `data:video/webm;base64,${readFileSync(resolve(__dirname,
 
 export const EXTRA_RUN_IDS: readonly string[] = Array.from({ length: 5 }, (_, i) => `c0ffee0${i}-0000-4000-8000-00000000000${i}`)
 export const EIGHT_RUN_IDS: readonly string[] = [...RECORDED_RUNS, ...EXTRA_RUN_IDS]
+
+const TEAMS: readonly TeamFixture[] = [1, 2].map(t => ({
+    teamCapId: `c0ffee${t}0-0000-4000-8000-0000000000${t}0`,
+    members: [1, 2].map(m => {
+        const someone = person(50 + t * 2 + m)
+        return {
+            capId: `c0ffee${t}${m}-0000-4000-8000-0000000000${t}${m}`,
+            user: syntheticId(50 + t * 2 + m),
+            alias: someone.alias,
+            seconds: 40 + t + m * 1.5,
+            zones: `Gate-${8 + t + m};Crane-${20 + t + m};`,
+            ghost: m === 1,
+        }
+    }),
+}))
+
+export const TEAM_RUN_IDS: readonly string[] = TEAMS.map(team => team.teamCapId)
+const TEAM_POV_IDS = TEAMS.flatMap(team => team.members.map(member => member.capId))
+
+function teamDetailRoute(team: TeamFixture): FixtureRoute {
+    return { host: 'api', path: `/caps/team_caps/${team.teamCapId}/detail`, reply: { json: { success: true, data: teamDetail(team) } } }
+}
 
 type Detail = { cap: Record<string, unknown>; checkpoints: { cumulative: number; segment: number }[] } & Record<string, unknown>
 
@@ -56,6 +79,9 @@ export const RUN_COMPARE_SET: FixtureSet = {
     routes: [
         ...EIGHT_RUN_IDS.map(playableReplay),
         ...EXTRA_RUN_IDS.map(extraDetail),
+        ...TEAM_POV_IDS.map(playableReplay),
+        ...TEAMS.map(teamDetailRoute),
+        { host: 'api', path: `/caps/leaderboard/team/map/${TEAM_MAP}`, reply: { json: { success: true, data: TEAMS.map(teamEntry) } } },
         ...RECORDED.routes,
     ],
 }

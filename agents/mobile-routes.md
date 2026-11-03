@@ -31,7 +31,7 @@ doesn't run on the surfaces it names.
 | `achievements` | `achievements` | public | `/achievements` | `achievements` | 0 | 0 |
 | `news` | `news` | public | `/news` | `news` | 0 | 0 |
 | `news-detail` | `news-detail` | public | `/news/15` | `news-detail` | 0 | 0 |
-| `run-compare` | `run-compare` | public | `/compare?runs=258021df-51b1-4ed3-99cc-62d4e75892a7,418b0aec-34c5-40e7-acf4-f2bc33373063` | `run-compare` | 1 | 2 |
+| `run-compare` | `run-compare` | public | `/compare?runs=258021df-51b1-4ed3-99cc-62d4e75892a7,418b0aec-34c5-40e7-acf4-f2bc33373063` | `run-compare` | 2 | 3 |
 | `home:signed-in` | `home` | role-gated | `/` | `home-signed-in` | 0 | 2 |
 | `maps:signed-in` | `maps` | role-gated | `/maps` | `maps-signed-in` | 0 | 0 |
 | `admin` | `admin` | role-gated | `/admin` | `admin` | 19 | 4 |
@@ -512,6 +512,7 @@ No skipped rules.
 | Surface | Label | Reached by | Stress variant (PR subset) |
 |---|---|---|---|
 | `run-compare/pov` | POV switcher, eight runs | URL `/compare?runs=258021df-51b1-4ed3-99cc-62d4e75892a7,418b0aec-34c5-40e7-acf4-f2bc33373063,8d742df9-2f14-4998-835c-3c16c1d1ee92,c0ffee00-0000-4000-8000-000000000000,c0ffee01-0000-4000-8000-000000000001,c0ffee02-0000-4000-8000-000000000002,c0ffee03-0000-4000-8000-000000000003,c0ffee04-0000-4000-8000-000000000004` | `long-text` |
+| `run-compare/teams` | Two team runs, POVs grouped by team | URL `/compare?runs=c0ffee10-0000-4000-8000-000000000010,c0ffee20-0000-4000-8000-000000000020` | `long-text` |
 
 ### Modals
 
@@ -519,6 +520,7 @@ No skipped rules.
 |---|---|---|
 | `run-compare/runs` | Runs drawer sheet | `run-compare` |
 | `run-compare/pov/runs` | Runs drawer sheet | `run-compare/pov` |
+| `run-compare/teams/runs` | Runs drawer sheet | `run-compare/teams` |
 
 ### Skipped rules
 

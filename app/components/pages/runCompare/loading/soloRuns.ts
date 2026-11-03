@@ -39,20 +39,22 @@ export async function loadSoloRun(accessToken: string, capId: string, signal?: A
     return detail && detail.cap.id === capId ? soloRunFromDetail(detail) : null
 }
 
-export function useSoloRuns(capIds: readonly string[], accessToken: string): LoadedSoloRuns {
-    const [loaded, setLoaded] = useState<LoadedSoloRuns>(() => new Map())
-    const requested = useRef({ accessToken, capIds: new Set<string>() })
-    const key = capIds.join(',')
+type LoadRun<T> = (accessToken: string, id: string, signal?: AbortSignal) => Promise<T | null>
+
+export function useRunReads<T>(ids: readonly string[], accessToken: string, load: LoadRun<T>): ReadonlyMap<string, T | null> {
+    const [loaded, setLoaded] = useState<ReadonlyMap<string, T | null>>(() => new Map())
+    const requested = useRef({ accessToken, ids: new Set<string>() })
+    const key = ids.join(',')
 
     useEffect(() => {
-        if (requested.current.accessToken !== accessToken) requested.current = { accessToken, capIds: new Set() }
-        const inFlight = requested.current.capIds
-        const missing = key.split(',').filter(capId => capId && !inFlight.has(capId))
+        if (requested.current.accessToken !== accessToken) requested.current = { accessToken, ids: new Set() }
+        const inFlight = requested.current.ids
+        const missing = key.split(',').filter(id => id && !inFlight.has(id))
         if (missing.length === 0) return
-        for (const capId of missing) inFlight.add(capId)
+        for (const id of missing) inFlight.add(id)
         const controller = new AbortController()
         let settled = false
-        Promise.all(missing.map(async capId => [capId, await loadSoloRun(accessToken, capId, controller.signal)] as const))
+        Promise.all(missing.map(async id => [id, await load(accessToken, id, controller.signal).catch(() => null)] as const))
             .then(results => {
                 if (controller.signal.aborted) return
                 settled = true
@@ -61,9 +63,13 @@ export function useSoloRuns(capIds: readonly string[], accessToken: string): Loa
         return () => {
             if (settled) return
             controller.abort()
-            for (const capId of missing) inFlight.delete(capId)
+            for (const id of missing) inFlight.delete(id)
         }
-    }, [key, accessToken])
+    }, [key, accessToken, load])
 
     return loaded
+}
+
+export function useSoloRuns(capIds: readonly string[], accessToken: string): LoadedSoloRuns {
+    return useRunReads(capIds, accessToken, loadSoloRun)
 }

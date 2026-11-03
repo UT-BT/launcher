@@ -42,7 +42,14 @@ export interface SectorTick {
     endMs: number
 }
 
+export interface LaneMark {
+    kind: 'zone' | 'cap'
+    label: string
+    atMs: number
+}
+
 type LaneTrace =
+    | { kind: 'none' }
     | { kind: 'flat' }
     | { kind: 'strip'; strip: VideoStrip }
     | { kind: 'steps'; steps: CapComparisonPoint[] }
@@ -62,6 +69,7 @@ export interface Lane {
     bands: DeltaBand[]
     splits: LaneSplit[]
     trace: LaneTrace
+    marks?: LaneMark[]
 }
 
 export interface LiveDelta {
@@ -289,6 +297,7 @@ function stepAt(steps: CapComparisonPoint[], timeMs: number): number {
 }
 
 export function liveDelta(lane: Lane, seconds: number): LiveDelta | null {
+    if (lane.trace.kind === 'none') return null
     const timeMs = seconds * 1000
     if (timeMs >= lane.capMs) return { gap: lane.finalGap, differentLine: false, atCap: true }
     switch (lane.trace.kind) {

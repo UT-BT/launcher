@@ -4,7 +4,7 @@ import type { LeaderboardEntry, ReplayVideo } from '@/app/utils/api'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { Spinner } from '@/app/components/ui/spinner'
 import { cn } from '@/lib/utils'
-import { addRunsEdit, addRunsModel, listedEntries, NO_FILTERS, toggleRunEdit, type AddRow, type AddRunsFilters, type SetChange, type TeamColour } from '../model/addRuns'
+import { addRunsEdit, addRunsModel, listedEntries, NO_FILTERS, toggleRunEdit, type AddChip, type AddRow, type AddRunsFilters, type SetChange, type TeamColour } from '../model/addRuns'
 import type { CompareModel } from '../model/compareModel'
 import type { LoadedVideos } from '../model/raceModel'
 import { useMapRuns } from './mapRuns'
@@ -18,7 +18,7 @@ const COLOURS: { value: TeamColour; label: string }[] = [
     { value: 'blue', label: 'Blue' },
 ]
 
-interface AddRunsProps {
+export interface AddRunsProps {
     model: CompareModel
     accessToken: string
     userId: string | null
@@ -30,6 +30,55 @@ function FilterToggle({ pressed, onPress, children }: { pressed: boolean; onPres
         <button type="button" aria-pressed={pressed} className="run-compare-roster-action run-compare-filter" onClick={onPress}>
             {children}
         </button>
+    )
+}
+
+interface AddRunsControlsProps {
+    chips: readonly AddChip[]
+    onChip: (chip: AddChip) => void
+    filters: AddRunsFilters
+    onFilters: (change: Partial<AddRunsFilters>) => void
+}
+
+export function AddRunsControls({ chips, onChip, filters, onFilters }: AddRunsControlsProps) {
+    return (
+        <>
+            <div role="group" aria-label="Quick Add" className="run-compare-chips">
+                {chips.map(chip => (
+                    <button
+                        key={chip.id}
+                        type="button"
+                        disabled={chip.disabled}
+                        className="run-compare-roster-action run-compare-chip"
+                        onClick={() => onChip(chip)}
+                    >
+                        {chip.label}
+                    </button>
+                ))}
+            </div>
+            <div className="run-compare-search-field">
+                <Search className="run-compare-search-icon" />
+                <input
+                    type="search"
+                    aria-label="Search Players"
+                    placeholder="Search players"
+                    value={filters.search}
+                    onChange={event => onFilters({ search: event.target.value })}
+                    className="run-compare-search"
+                />
+            </div>
+            <div role="group" aria-label="Filters" className="run-compare-filters">
+                <FilterToggle pressed={filters.hasVideo} onPress={() => onFilters({ hasVideo: !filters.hasVideo })}>Has video</FilterToggle>
+                <FilterToggle pressed={filters.hasReplay} onPress={() => onFilters({ hasReplay: !filters.hasReplay })}>Has replay</FilterToggle>
+                <div role="group" aria-label="Team Colour" className="run-compare-filters">
+                    {COLOURS.map(colour => (
+                        <FilterToggle key={colour.value} pressed={filters.colour === colour.value} onPress={() => onFilters({ colour: colour.value })}>
+                            {colour.label}
+                        </FilterToggle>
+                    ))}
+                </div>
+            </div>
+        </>
     )
 }
 
@@ -75,41 +124,7 @@ function AddRunsList({ model, entries, userId, onChange }: Omit<AddRunsProps, 'a
 
     return (
         <>
-            <div role="group" aria-label="Quick Add" className="run-compare-chips">
-                {view.chips.map(chip => (
-                    <button
-                        key={chip.id}
-                        type="button"
-                        disabled={chip.disabled}
-                        className="run-compare-roster-action run-compare-chip"
-                        onClick={() => onChange(addRunsEdit(model, chip.capIds, videos))}
-                    >
-                        {chip.label}
-                    </button>
-                ))}
-            </div>
-            <div className="run-compare-search-field">
-                <Search className="run-compare-search-icon" />
-                <input
-                    type="search"
-                    aria-label="Search Players"
-                    placeholder="Search players"
-                    value={filters.search}
-                    onChange={event => updateFilters({ search: event.target.value })}
-                    className="run-compare-search"
-                />
-            </div>
-            <div role="group" aria-label="Filters" className="run-compare-filters">
-                <FilterToggle pressed={filters.hasVideo} onPress={() => updateFilters({ hasVideo: !filters.hasVideo })}>Has video</FilterToggle>
-                <FilterToggle pressed={filters.hasReplay} onPress={() => updateFilters({ hasReplay: !filters.hasReplay })}>Has replay</FilterToggle>
-                <div role="group" aria-label="Team Colour" className="run-compare-filters">
-                    {COLOURS.map(colour => (
-                        <FilterToggle key={colour.value} pressed={filters.colour === colour.value} onPress={() => updateFilters({ colour: colour.value })}>
-                            {colour.label}
-                        </FilterToggle>
-                    ))}
-                </div>
-            </div>
+            <AddRunsControls chips={view.chips} onChip={chip => onChange(addRunsEdit(model, chip.capIds, videos))} filters={filters} onFilters={updateFilters} />
             {view.rows.length === 0 ? (
                 <p className="run-compare-add-empty">
                     {listed.length === 0 ? 'No runs on this map yet' : 'No runs match these filters'}

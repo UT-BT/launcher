@@ -24,8 +24,9 @@ export function useRacePlayback(runs: readonly RaceRun[], seed: number | null): 
 
     useEffect(() => {
         if (!controller || runs.length === 0) return
-        controller.setRuns(runs.map(({ run, cap, offset, fps, tile, hidden }) => ({
+        controller.setRuns(runs.map(({ run, cap, offset, fps, tile, hidden, group }) => ({
             id: run.capId,
+            group,
             cap,
             offset,
             fps,

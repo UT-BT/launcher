@@ -8,9 +8,11 @@ import type { StageView } from '../model/phoneStage'
 import type { TileSlot, VideoSlot } from '../model/raceModel'
 import type { SetEdit } from '../model/setEdits'
 import type { SlotRect, StageLayout } from '../model/stageLayout'
+import type { TeamRow } from '../model/teamModel'
 import type { PlaybackController } from '../playback/playbackController'
 import { createVideoMedia } from '../playback/videoMedia'
 import { DeltaChips } from './DeltaChips'
+import { TeamLabel } from './TeamLabel'
 import { TileOverlay } from './TileOverlay'
 import type { AttachMedia } from './useRacePlayback'
 import { useOverlayIdle } from './useOverlayIdle'
@@ -125,6 +127,17 @@ function VideoTile({ slot, rect, frozen, attachMedia, onVideoFailed, controller,
     )
 }
 
+function TeamRowHeader({ row, rect }: { row: TeamRow; rect: SlotRect }) {
+    return (
+        <div className="run-compare-team-header run-compare-row" style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }}>
+            <span className="run-compare-team-bar" style={{ background: row.colour }} />
+            <TeamLabel row={row} className="min-w-0" />
+            <span className="font-mono tabular-nums text-foreground">{row.time}</span>
+            {row.reference && <span className="run-compare-badge is-reference">REF</span>}
+        </div>
+    )
+}
+
 function frozenKey(frozen: readonly string[]): string {
     return frozen.join(',')
 }
@@ -140,9 +153,10 @@ interface RaceStageProps {
     onVideoFailed: (capId: string) => void
     tileOverlays: StageOverlays
     focus: StageFocus
+    teamRows?: readonly TeamRow[]
 }
 
-export function RaceStage({ layout, tiles, view, onSwipe, controller, stageRef, attachMedia, onVideoFailed, tileOverlays, focus }: RaceStageProps) {
+export function RaceStage({ layout, tiles, view, onSwipe, controller, stageRef, attachMedia, onVideoFailed, tileOverlays, focus, teamRows = [] }: RaceStageProps) {
     const frozen = new Set(usePlaybackSelector(controller, state => frozenKey(state.frozen)).split(','))
     const shown = useOverlayIdle(controller)
     const still = usePrefersReducedMotion()
@@ -179,6 +193,7 @@ export function RaceStage({ layout, tiles, view, onSwipe, controller, stageRef, 
                     others={slot.id === view.pov ? others : []}
                 />
             ))}
+            {teamRows.map(row => row.header && <TeamRowHeader key={row.teamCapId} row={row} rect={row.header} />)}
         </section>
     )
 }

@@ -3,6 +3,7 @@ import { runCompareErrors, runCompareFixture } from '../app/utils/fixtures/runCo
 import type { CapDetail } from '../app/utils/api'
 import { horizontalOverflow } from './layout'
 import { MEDIA_HOST, replayVideoUrl, serveReplayVideos } from './replayVideos'
+import { ALPHA, BRAVO, mockTeamRuns, TEAM_POVS } from './teamRuns'
 
 const AVATAR = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64')
 const BASE = runCompareFixture('capDetailCandidates')
@@ -302,6 +303,38 @@ test.describe('the compare page on a phone', () => {
         expect(right.y).toBeCloseTo(left.y, 0)
         await expect(switcher(page)).toHaveCount(0)
         expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0)
+    })
+})
+
+test.describe('team runs on a phone', () => {
+    test.beforeEach(({ isMobile }) => {
+        test.skip(!isMobile, 'the phone layout follows the touch screen of the phone project')
+    })
+
+    test('at 390 px the POV switcher groups the member POVs by team run', async ({ page }) => {
+        await page.setViewportSize({ width: 390, height: 844 })
+        await mockApi(page)
+        await mockTeamRuns(page, [ALPHA, BRAVO], { videos: TEAM_POVS })
+        await page.goto(`/compare?runs=${ALPHA.teamCapId},${BRAVO.teamCapId}`)
+
+        await expect(tiles(page)).toHaveCount(1)
+        await expect(tile(page, 'Alpha One')).toBeVisible()
+        const teams = switcher(page).getByRole('group')
+        await expect(teams).toHaveCount(2)
+        await expect(teams.nth(0)).toHaveAccessibleName('Alpha One & Alpha Two')
+        await expect(teams.nth(1)).toHaveAccessibleName('Bravo One & Bravo Two')
+        await expect(teams.nth(0).getByRole('button')).toHaveCount(2)
+        await expect(teams.nth(1).getByRole('button')).toHaveCount(2)
+        for (const chip of await switcher(page).getByRole('button').all()) {
+            expect((await chip.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+        }
+        expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0)
+
+        await teams.nth(1).getByRole('button', { name: 'Bravo Two' }).click()
+
+        await expect(tile(page, 'Bravo Two')).toBeVisible()
+        await expect(tiles(page)).toHaveCount(1)
+        await expect(teams.nth(1).getByRole('button', { name: 'Bravo Two' })).toHaveAttribute('aria-pressed', 'true')
     })
 })
 

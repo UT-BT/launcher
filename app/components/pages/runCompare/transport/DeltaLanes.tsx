@@ -2,6 +2,7 @@ import { useRef, type PointerEvent } from 'react'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { HAIRLINE, TONE_AREA, TONE_STROKE } from '@/app/components/pages/capDetail/runDelta/deltaStyles'
 import type { CapComparisonPoint } from '@/app/utils/api'
+import { cn } from '@/lib/utils'
 import type { Lane } from '../model/laneModel'
 import { formatRaceTime } from '../model/raceModel'
 import type { PlaybackController } from '../playback/playbackController'
@@ -139,6 +140,19 @@ function LanePlot({ lane, controller, end }: PlotProps) {
                     />
                 ))}
             </svg>
+            {lane.marks && lane.marks.length > 0 && (
+                <ol aria-label="Crossings" className="run-compare-lane-marks">
+                    {lane.marks.map(mark => (
+                        <li
+                            key={`${mark.kind}:${mark.label}`}
+                            className={cn('run-compare-lane-mark', mark.kind === 'cap' && 'is-cap')}
+                            style={{ left: percent(scale.x(mark.atMs), VIEW_WIDTH) }}
+                        >
+                            <span className="sr-only">{`${mark.label} at ${formatRaceTime(mark.atMs / 1000)}`}</span>
+                        </li>
+                    ))}
+                </ol>
+            )}
             {capped && (
                 <span
                     className="run-compare-lane-cap"

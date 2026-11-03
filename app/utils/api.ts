@@ -2237,6 +2237,9 @@ export interface TeamRunMember {
     verified: boolean
     disallowed?: boolean
     active_title?: ActiveTitle | null
+    team?: number | null
+    has_ghost?: boolean
+    has_zones?: boolean
 }
 
 export type TeamRunState = 'incomplete' | 'pending' | 'verified' | 'disallowed'

@@ -35,6 +35,7 @@ export interface RaceRun {
     badges: string[]
     result: string
     hidden?: boolean
+    group?: string
 }
 
 export interface RaceModel {

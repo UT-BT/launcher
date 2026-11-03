@@ -1,4 +1,4 @@
-import { EIGHT_RUN_IDS } from '../fixtures/synthetic/run-compare'
+import { EIGHT_RUN_IDS, TEAM_RUN_IDS } from '../fixtures/synthetic/run-compare'
 import { CAP_ID } from './cap-detail'
 import { tap } from './steps'
 import type { MobileModal, MobileRouteEntry, PageStep } from './types'
@@ -47,6 +47,14 @@ export const runCompare: MobileRouteEntry = {
             modals: [runsDrawer],
             stress: { pr: 'long-text' },
             skip: [{ rule: 'table-shows-every-column', reason: 'with eight runs the sector matrix shows the run columns that fit and a run picker for the others' }],
+        },
+        {
+            id: 'teams',
+            label: 'Two team runs, POVs grouped by team',
+            path: `/compare?runs=${TEAM_RUN_IDS.join(',')}`,
+            ready: settledStage,
+            modals: [runsDrawer],
+            stress: { pr: 'long-text' },
         },
     ],
 }
