@@ -7,15 +7,18 @@ import { SITE_NAME } from '@/app/components/navigation/titles'
 import { Spinner } from '@/app/components/ui/spinner'
 import { displayMapName } from '@/app/utils/format'
 import type { UserProfile } from '@/app/utils/api'
+import { loadReplayVideoVolume, saveReplayVideoVolume } from '@/app/utils/replayVideoVolume'
 import { RunsDrawer } from './drawer/RunsDrawer'
 import { rosterRows } from './drawer/rosterRows'
 import { useComparisons } from './loading/comparisons'
 import { useReplayVideos } from './loading/replayVideos'
 import { useSoloRuns } from './loading/soloRuns'
+import { audibleRun, chooseAudio } from './model/audioModel'
 import { composeCompareModel } from './model/compareModel'
+import { tileOverlays } from './model/overlayModel'
 import { videoReadOrder } from './model/raceModel'
 import { editableSet, editSet, type SetEdit } from './model/setEdits'
-import { RaceStage } from './stage/RaceStage'
+import { RaceStage, type StageOverlays } from './stage/RaceStage'
 import { useRacePlayback } from './stage/useRacePlayback'
 import { useStageBox, useTheaterHeight } from './stage/useStageMeasure'
 import { TransportBar } from './transport/TransportBar'
@@ -58,6 +61,18 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
         if (outcome.query !== model.query) replaceParams(outcome.query ? { compare: outcome.query } : {})
     }, [model, replaceParams, setStoredNotice])
     const roster = useMemo(() => rosterRows({ model, videos, failedVideos }), [model, videos, failedVideos])
+    const [audioFrom, setAudioFrom] = useNavState<string | null>('compare.audioFrom', null)
+    const [volume, setVolume] = useState(loadReplayVideoVolume)
+    const audible = audibleRun(model.race, audioFrom)
+    const onAudio = useCallback((capId: string) => setAudioFrom(chooseAudio(model.race, audible, capId)), [model.race, audible, setAudioFrom])
+    const onVolume = useCallback((next: number) => {
+        setVolume(next)
+        saveReplayVideoVolume(next)
+    }, [])
+    const stageOverlays = useMemo<StageOverlays>(
+        () => ({ overlays: tileOverlays(model), audio: { audible, volume, onAudio, onVolume }, onEdit: edit }),
+        [model, audible, volume, onAudio, onVolume, edit],
+    )
     const onVideoFailed = useCallback((capId: string) => {
         setFailedVideos(previous => (previous.has(capId) ? previous : new Set(previous).add(capId)))
     }, [])
@@ -115,9 +130,10 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
                                     stageRef={setStage}
                                     attachMedia={attachMedia}
                                     onVideoFailed={onVideoFailed}
+                                    tileOverlays={stageOverlays}
                                 />
                             )}
-                            <RunsDrawer open={drawerOpen} onClose={closeDrawer} rows={roster} note={editNote} onEdit={edit} />
+                            <RunsDrawer open={drawerOpen} onClose={closeDrawer} rows={roster} note={editNote} onEdit={edit} audible={audible} onAudio={onAudio} />
                         </div>
                     )}
                     <TransportBar

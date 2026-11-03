@@ -10,7 +10,7 @@ export function usePlaybackSelector<T>(
     select: (state: PlaybackState) => T,
     equal: (a: T, b: T) => boolean = Object.is,
 ): T {
-    const cache = useRef<{ state: PlaybackState; value: T } | null>(null)
+    const cache = useRef<{ state: PlaybackState; select: (state: PlaybackState) => T; value: T } | null>(null)
     const subscribe = useCallback(
         (listener: () => void) => (controller ? controller.subscribe(listener) : noSubscription()),
         [controller],
@@ -18,10 +18,10 @@ export function usePlaybackSelector<T>(
     const snapshot = () => {
         const state = controller?.getState() ?? IDLE
         const cached = cache.current
-        if (cached?.state === state) return cached.value
+        if (cached?.state === state && cached.select === select) return cached.value
         const selected = select(state)
         const value = cached && equal(cached.value, selected) ? cached.value : selected
-        cache.current = { state, value }
+        cache.current = { state, select, value }
         return value
     }
     return useSyncExternalStore(subscribe, snapshot)

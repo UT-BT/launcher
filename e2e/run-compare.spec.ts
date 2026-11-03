@@ -467,3 +467,115 @@ test.describe('the runs drawer', () => {
         await expect(runsButton(page)).toHaveAttribute('aria-expanded', 'false')
     })
 })
+
+function overlayOf(scope: Locator): Locator {
+    return scope.locator('.run-compare-overlay')
+}
+
+function mutedOf(page: Page): Promise<{ muted: boolean; volume: number }[]> {
+    return page.getByRole('region', { name: 'Stage' }).locator('video').evaluateAll(videos => videos.map(video => {
+        const { muted, volume } = video as HTMLVideoElement
+        return { muted, volume }
+    }))
+}
+
+test.describe('tile overlays and audio', () => {
+    test('each tile shows its player, final time, live delta and the reference pin', async ({ page }) => {
+        await mockApi(page, { videos: [DECL, SHX] })
+        await page.goto(`/compare?runs=${DECL},${SHX}&t=14.250`)
+        const [decl, shx] = [tile(page, 'Decl'), tile(page, 'ShX')]
+        await expect.poll(async () => (await clocksOf(page)).map(clock => clock.time)).toEqual([13, 14.25])
+
+        await expect(overlayOf(decl)).toContainText('0:13.000')
+        await expect(overlayOf(decl).getByText('REF', { exact: true })).toBeVisible()
+        await expect(overlayOf(decl).locator('.run-compare-tile-delta')).toHaveCount(0)
+        await expect(overlayOf(shx)).toContainText('0:14.250')
+        await expect(overlayOf(shx).getByText('REF', { exact: true })).toHaveCount(0)
+        await expect(overlayOf(shx).locator('.run-compare-tile-delta')).toHaveText('+1.250')
+        await expect(overlayOf(shx).locator('.run-compare-tile-delta')).toHaveClass(/text-red-300/)
+        await expect(overlayOf(shx)).toContainText('Zones')
+    })
+
+    test('while playing the overlays hide after 2 s idle and return on a pointer move; paused they stay', async ({ page, isMobile }) => {
+        await mockApi(page, { videos: [DECL, SHX] })
+        await page.goto(`/compare?runs=${DECL},${SHX}`)
+        const shx = tile(page, 'ShX')
+        await expect.poll(async () => (await clocksOf(page)).length).toBe(2)
+        await expect(overlayOf(shx)).toBeVisible()
+
+        await playButton(page).click()
+
+        await expect(overlayOf(shx)).toBeVisible()
+        await expect(overlayOf(shx)).toBeHidden({ timeout: 6_000 })
+        const box = (await shx.boundingBox())!
+        if (isMobile) await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2)
+        else await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+        await expect(overlayOf(shx)).toBeVisible()
+        await expect(overlayOf(shx)).toBeHidden({ timeout: 6_000 })
+
+        await page.getByRole('region', { name: 'Playback' }).getByRole('button', { name: 'Pause', exact: true }).click()
+
+        await expect(overlayOf(shx)).toBeVisible()
+        await page.waitForTimeout(2_500)
+        await expect(overlayOf(shx)).toBeVisible()
+    })
+
+    test('every video starts muted and choosing audio on one tile unmutes it and mutes the other', async ({ page }) => {
+        await page.addInitScript(() => { localStorage.setItem('utbt:replayVideoVolume:v1', '0.4') })
+        await mockApi(page, { videos: [DECL, SHX] })
+        await page.goto(`/compare?runs=${DECL},${SHX}`)
+        const [decl, shx] = [tile(page, 'Decl'), tile(page, 'ShX')]
+        await expect.poll(async () => (await mutedOf(page)).map(video => video.muted)).toEqual([true, true])
+
+        await shx.getByRole('button', { name: 'Audio' }).click()
+
+        await expect.poll(() => mutedOf(page)).toEqual([{ muted: true, volume: 0.4 }, { muted: false, volume: 0.4 }])
+        await expect(shx.getByRole('button', { name: 'Audio' })).toHaveAttribute('aria-pressed', 'true')
+        await expect(decl.getByRole('slider', { name: 'Volume' })).toHaveCount(0)
+
+        await decl.getByRole('button', { name: 'Audio' }).click()
+
+        await expect.poll(async () => (await mutedOf(page)).map(video => video.muted)).toEqual([false, true])
+        await expect(shx.getByRole('button', { name: 'Audio' })).toHaveAttribute('aria-pressed', 'false')
+        await decl.getByRole('slider', { name: 'Volume' }).fill('0.7')
+        await expect.poll(async () => (await mutedOf(page))[0].volume).toBeCloseTo(0.7)
+        expect(await page.evaluate(() => localStorage.getItem('utbt:replayVideoVolume:v1'))).toBe('0.7')
+
+        await runsButton(page).click()
+        await expect(rosterRow(page, 'Decl').getByRole('button', { name: 'Audio' })).toHaveAttribute('aria-pressed', 'true')
+        await rosterRow(page, 'ShX').getByRole('button', { name: 'Audio' }).click()
+        await expect.poll(async () => (await mutedOf(page)).map(video => video.muted)).toEqual([true, false])
+
+        await rosterRow(page, 'ShX').getByRole('button', { name: 'Video' }).click()
+        await expect(tile(page, 'ShX')).toHaveCount(0)
+        await expect(rosterRow(page, 'ShX').getByRole('button', { name: 'Audio' })).toBeDisabled()
+        await expect.poll(async () => (await mutedOf(page)).map(video => video.muted)).toEqual([true])
+    })
+
+    test('removing and pinning from a tile change the set and replace the address in place', async ({ page, isMobile }) => {
+        await mockApi(page, { videos: [DECL, SHX, PATRIK] })
+        await page.goto(`/compare?runs=${DECL},${SHX},${PATRIK}`)
+        await expect(tile(page, 'PatriK').locator('video')).toHaveCount(1)
+        if (isMobile) {
+            for (const name of ['Audio', 'Pin', 'Remove']) {
+                const target = (await tile(page, 'ShX').getByRole('button', { name }).boundingBox())!
+                expect(Math.min(target.width, target.height)).toBeGreaterThanOrEqual(44)
+            }
+        }
+        const lengthBefore = await historyLength(page)
+
+        await tile(page, 'ShX').getByRole('button', { name: 'Pin' }).click()
+
+        await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${DECL},${SHX},${PATRIK}&ref=${SHX}`)
+        await expect(overlayOf(tile(page, 'ShX')).getByText('REF', { exact: true })).toBeVisible()
+        await expect(overlayOf(tile(page, 'Decl')).getByText('REF', { exact: true })).toHaveCount(0)
+        await expect(tile(page, 'ShX').getByRole('button', { name: 'Pin' })).toHaveAttribute('aria-pressed', 'true')
+
+        await tile(page, 'PatriK').getByRole('button', { name: 'Remove' }).click()
+
+        await expect(tile(page, 'PatriK')).toHaveCount(0)
+        await expect(lane(page, 'PatriK')).toHaveCount(0)
+        await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${DECL},${SHX}&ref=${SHX}`)
+        expect(await historyLength(page)).toBe(lengthBefore)
+    })
+})

@@ -1,5 +1,5 @@
 import { useRef, type KeyboardEvent, type ReactNode } from 'react'
-import { Pin, SlidersHorizontal, Trash2, Video, VideoOff, X } from 'lucide-react'
+import { Pin, SlidersHorizontal, Trash2, Video, VideoOff, Volume2, VolumeX, X } from 'lucide-react'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import {
     DropdownMenu,
@@ -51,9 +51,26 @@ interface RosterItemProps {
     row: RosterRow
     only: boolean
     onEdit: (edit: SetEdit) => void
+    audible: boolean
+    onAudio: (capId: string) => void
 }
 
-function RosterItem({ row, only, onEdit }: RosterItemProps) {
+function AudioToggle({ row, audible, onAudio }: Pick<RosterItemProps, 'row' | 'audible' | 'onAudio'>) {
+    return (
+        <button
+            type="button"
+            aria-pressed={audible}
+            disabled={row.video !== 'on'}
+            className="run-compare-roster-action"
+            onClick={() => onAudio(row.capId)}
+        >
+            {audible ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
+            <span>Audio</span>
+        </button>
+    )
+}
+
+function RosterItem({ row, only, onEdit, audible, onAudio }: RosterItemProps) {
     const { run, capId } = row
     const videoOn = row.video === 'on'
     return (
@@ -88,6 +105,7 @@ function RosterItem({ row, only, onEdit }: RosterItemProps) {
                     {videoOn ? <Video className="size-4" /> : <VideoOff className="size-4" />}
                     <span>Video</span>
                 </button>
+                <AudioToggle row={row} audible={audible} onAudio={onAudio} />
                 {!row.frameSynced && <OffsetMenu row={row} onEdit={onEdit} />}
                 <button
                     type="button"
@@ -109,10 +127,12 @@ interface RunsDrawerProps {
     rows: readonly RosterRow[]
     note: string | null
     onEdit: (edit: SetEdit) => void
+    audible: string | null
+    onAudio: (capId: string) => void
     children?: ReactNode
 }
 
-export function RunsDrawer({ open, onClose, rows, note, onEdit, children }: RunsDrawerProps) {
+export function RunsDrawer({ open, onClose, rows, note, onEdit, audible, onAudio, children }: RunsDrawerProps) {
     const panelRef = useRef<HTMLElement>(null)
     useModalBehaviour(panelRef, open, onClose, false)
 
@@ -135,7 +155,7 @@ export function RunsDrawer({ open, onClose, rows, note, onEdit, children }: Runs
                 </header>
                 <p aria-live="polite" className={cn('run-compare-drawer-note text-sm text-muted-foreground', !note && 'sr-only')}>{note}</p>
                 <ol aria-label="Roster" className="run-compare-roster">
-                    {rows.map(row => <RosterItem key={row.capId} row={row} only={rows.length === 1} onEdit={onEdit} />)}
+                    {rows.map(row => <RosterItem key={row.capId} row={row} only={rows.length === 1} onEdit={onEdit} audible={audible === row.capId} onAudio={onAudio} />)}
                 </ol>
                 {children}
             </section>
