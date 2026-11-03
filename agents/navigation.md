@@ -100,9 +100,11 @@ Forward and a multi-entry jump with and without unsaved work.
 ## renderView: page-views and detail pages
 
 `renderView()` switches on `currentView` and returns exactly one element, inside a
-per-view `ErrorBoundary` (`variant="view"`, keyed on `entry.id`) around `Suspense`. A page
-crash shows an inline error card with the shell intact, and any navigation resets the
-boundary. Unknown views render `Home`.
+per-view `ErrorBoundary` (`variant="view"`, keyed on `entry.id` and the view's re-mount
+count) around `Suspense`. A page crash shows an inline error card with the shell intact, and
+any navigation resets the boundary. The count rises when pull-to-refresh hits a page with no
+refresh handler ([Page refresh registry](#page-refresh-registry-and-freshness)). Unknown views
+render `Home`.
 
 | Kind | Views | Keyed | Why |
 |---|---|---|---|
@@ -127,8 +129,9 @@ content, on both targets. A page never fills the shell's height with a scroller 
 page root may clip sideways (`overflow-hidden`) and an inner wrapper may scroll sideways
 (`overflow-x-auto`, as a wide table does), but the page grows with its content and `main`
 scrolls it. Anything that follows page scrolling attaches to `main`: the modal scroll lock
-([shared-components.md](shared-components.md#modal)), and pull to refresh and the
-hide-on-scroll bars once they exist. Both of those wrappers are still scroll containers, so a
+([shared-components.md](shared-components.md#modal)), pull-to-refresh
+([below](#page-refresh-registry-and-freshness)), and the hide-on-scroll bars once they exist.
+Both of those wrappers are still scroll containers, so a
 `sticky` element inside one sticks to it rather than to `main`. Where a page has a sticky
 element below `lg`, its wrappers clip with `max-lg:overflow-x-clip max-lg:overflow-y-visible`
 instead. The event page does this for the bracket's round headings
@@ -469,11 +472,22 @@ skips `draft` rows, which the count excludes). The hook parses naive
 
 ## Page refresh registry and freshness
 
-`PageRefreshContext` (`app/components/navigation/PageRefreshContext.tsx`) is a registry for
-the one shared Refresh button. A page calls
-`useRegisterPageRefresh({ onRefresh, refreshing, disabled, tooltip })` and
-`NavHistoryBar` renders the button beside Back/Forward. That bar is desktop-only, so on web
-freshness comes from the mount rule below plus the browser's reload.
+`PageRefreshContext` (`app/components/navigation/PageRefreshContext.tsx`) is the registry
+for a page's refresh. A page calls
+`useRegisterPageRefresh({ onRefresh, refreshing, disabled, tooltip })`, and two controls
+call it through the registry's `trigger()`:
+
+- `NavHistoryBar` renders the Refresh button beside Back/Forward, on desktop only.
+- **Pull-to-refresh**, on any touch device: a pull past about 70 px at the top of the shell
+  scroller ([web-target.md](web-target.md), the gesture). Its spinner stays while the page
+  reports `refreshing`, and for at least 600 ms. A page in its `disabled` cooldown spins
+  without being called.
+
+`trigger()` on a page that registered no handler dispatches `REMOUNT_VIEW_EVENT`. `Main`
+counts it into the view's `ErrorBoundary` key, so the current view re-mounts in place and
+fetches again. What survives a re-mount is in
+[state-patterns.md](state-patterns.md#refresh-handlers-and-pull-to-refresh). On web without
+a touch screen, freshness comes from the mount rule below plus the browser's reload.
 
 **Every page-view revalidates on mount**, on both targets. The `caches` singleton is a
 render cache for instant revisits, not an authority: render the cached data, fetch anyway,

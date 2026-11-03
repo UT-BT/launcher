@@ -104,6 +104,7 @@ import { isStaff } from '@/app/utils/roles'
 import { capabilities, IS_WEB } from '@/app/platform'
 import { pushUrlForEntry, seedEntriesFromUrl, useUrlSync } from '@/app/components/navigation/useUrlSync'
 import { useDocumentMeta } from '@/app/components/navigation/useDocumentMeta'
+import { REMOUNT_VIEW_EVENT } from '@/app/components/navigation/PageRefreshContext'
 import { createPoller } from '@/app/utils/poller'
 
 
@@ -240,6 +241,13 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   const [serverPresets, setServerPresets] = useState<ServerPreset[]>(loadPersistedServerPresets)
   const achievementsInFlightRef = useRef<Promise<void> | null>(null)
   const [loginRequest, setLoginRequest] = useState<LoginRequest | null>(null)
+  const [viewMounts, setViewMounts] = useState(0)
+
+  useEffect(() => {
+    const onRemountView = () => setViewMounts(count => count + 1)
+    window.addEventListener(REMOUNT_VIEW_EVENT, onRemountView)
+    return () => window.removeEventListener(REMOUNT_VIEW_EVENT, onRemountView)
+  }, [])
 
   useEffect(() => {
     const onLoginRequired = (event: Event) => setLoginRequest((event as CustomEvent<LoginRequest>).detail)
@@ -947,7 +955,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
             userProfile={userProfile}
             installationStatus={installationStatus}
           >
-            <ErrorBoundary key={entry.id} variant="view" context={currentView} onNavigateHome={currentView === 'home' ? undefined : () => navigate('home')}>
+            <ErrorBoundary key={`${entry.id}:${viewMounts}`} variant="view" context={currentView} onNavigateHome={currentView === 'home' ? undefined : () => navigate('home')}>
               <Suspense fallback={
                 <div className="space-y-4 pt-2">
                   <div className="h-10 w-64 bg-hairline/5 rounded-lg animate-pulse" />

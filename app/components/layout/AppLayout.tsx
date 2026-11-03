@@ -8,6 +8,7 @@ import type { NavParams } from '@/app/components/navigation/NavigationContext'
 import { useNavigation } from '@/app/components/navigation/NavigationContext'
 import { ShellScrollRestore, useShellScroller } from '@/app/components/navigation/useNavScrollRestore'
 import { useViewportRecovery } from '@/app/components/layout/useViewportRecovery'
+import { PullToRefresh } from '@/app/components/layout/PullToRefresh'
 
 const loadSettingsModal = () => IS_WEB
     ? import('@/app/components/modals/SettingsModalWeb').then(m => ({ default: m.SettingsModalWeb }))
@@ -302,8 +303,9 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
             </aside>
 
             {/* Main Content */}
-            <main ref={shellScrollerRef} className="shell-main flex-1 overflow-y-auto relative z-10">
+            <main ref={shellScrollerRef} className="shell-main flex-1 overflow-y-auto touch:overscroll-contain relative z-10">
                 <PageRefreshProvider>
+                    <PullToRefresh scrollerRef={shellScrollerRef} />
                     <div ref={shellContentRef} className="p-4 sm:p-6 lg:p-8 min-h-full">
                         <NavHistoryBar />
                         {children}

@@ -589,6 +589,19 @@ spec that is red today is marked `test.fail()`, with a note naming the ticket th
   after it closes `main` takes a swipe again. A multi-filter dropdown and a `modal={false}` menu
   fit the visible area and hold the page still too. Signed-in overlays sign in by seeding the
   stored login and answering the profile request.
+- `pull-to-refresh.spec.ts`: on Maps with the New maps filter set, a short pull shows the
+  indicator and refreshes nothing. A pull past the threshold shows the spinner below the top
+  bar while the refetch is held, refetches the maps' data, and keeps the filter. The event
+  team page, which registers no refresh, re-mounts in place and fetches again. No indicator
+  and no request follow a pull while `main` is scrolled down, while the Maps tutorial or a
+  dropdown menu holds the scroll lock (the page heading still takes the touch), or when the
+  pull starts on an injected `touch-action: none` strip or sideways scroller. Each of these
+  tests ends with a pull that does refresh. On Chromium the pull is real touch input
+  (`Input.dispatchTouchEvent`), so it also proves the native pan is cancelled. WebKit has no
+  touch-drag input, so there the pull is synthetic touch pointer events on the element under
+  the start point. `e2e/pull-to-refresh.spec.ts` checks that on desktop, at 1280 and 1920, a
+  mouse drag or a touch-type pointer drag (a touchscreen laptop) down at the top of Maps shows
+  no indicator and refreshes nothing.
 - `screenshot-viewer.spec.ts`: at 390×844 and 844×390, tapping the map hero opens the screenshot
   viewer, which fetches its chunk only on that tap. Its close is in view and on top, a swipe over
   it moves neither `main` nor the window, and a two-finger spread and a double tap zoom the

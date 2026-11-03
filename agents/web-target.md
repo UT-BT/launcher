@@ -236,6 +236,25 @@ cap (owner decision).
   grow with their content and never scroll on their own. Back/Forward restore its position
   and a new page starts at the top
   ([navigation.md](navigation.md#scroll-position-and-the-shell-scroller)).
+- **Pull-to-refresh** (any touch device, at any width). `PullToRefresh`
+  (`app/components/layout/PullToRefresh.tsx`), mounted by `AppLayout` inside the main element,
+  renders nothing without touch. On touch it listens to the main element's pointer events;
+  there is no gesture library. It is not a lazy chunk: it is always on for touch, and a
+  chunk of its own would cost more of the app JS budget than the same code in the entry.
+  - **A drag arms** only with a touch at the top of the main element while the scroll-lock
+    count is 0, so a modal, sheet, tutorial or menu that holds the page also holds it off. It
+    doesn't arm on or inside a box that scrolls sideways, an element whose `touch-action`
+    leaves out vertical panning (the `touch-none` scrubbers), a range input, or an inner list
+    scrolled down.
+  - **The first move decides:** down makes it a pull, up or sideways leaves the drag to the
+    browser. During a pull, a non-passive `touchmove` listener cancels the native pan, so the
+    page neither scrolls nor rubber-bands.
+  - **The indicator** follows the finger at 0.6× from under the top bar. A release past
+    70 px calls the page's refresh
+    ([navigation.md](navigation.md#page-refresh-registry-and-freshness)) and spins.
+  - The main element has `touch:overscroll-contain`, so an overscroll never chains to the
+    document or starts the browser's own pull-to-reload. The guards and the threshold are
+    pure (`pullGesture.ts`, with Vitest).
 - **Viewport recovery.** `useViewportRecovery` (`app/components/layout/useViewportRecovery.ts`,
   mounted by `AppLayout`) subscribes to the device environment below (`visualViewport` resize
   and scroll, window resize and scroll, orientation change), to focus leaving a field and to

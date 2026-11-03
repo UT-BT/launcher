@@ -129,6 +129,28 @@ const [sortDir, setSortDir] = useNavState<'asc' | 'desc'>('wrs.sortDir', 'desc')
 - Detail cases in `renderView` carry `key={entry.id}`, so each visit remounts and reads its
   own bag ([navigation.md](navigation.md)).
 
+## Refresh handlers and pull-to-refresh
+
+The handler a page registers with `useRegisterPageRefresh` runs from the desktop Refresh
+button and from pull-to-refresh on touch devices
+([navigation.md](navigation.md#page-refresh-registry-and-freshness)):
+
+```tsx
+useRegisterPageRefresh({ onRefresh: refresh, refreshing: loading, disabled: !cooldown.canRefresh })
+```
+
+- **`onRefresh` refetches and keeps state.** Clear the cache layers the page owns
+  (page-cache refs, its `caches` slices) and fetch again. Never reset `state`, `useNavState`
+  keys or other UI state: filters, sort, page, tab and expansion stay as the user left them.
+- **`refreshing`** is true while that refetch runs. The pull spinner stays up while it is
+  true, and for at least 600 ms, so a page that never reports it shows only the minimum spin.
+- **`disabled`** (a cooldown) greys out the desktop button; a pull spins without calling the
+  handler.
+- **No registration:** a pull re-mounts the current view. Per-entry state (`usePageState`,
+  `useNavState`) and the scroll position survive, but the page's own `useState` and anything
+  a child fetched for itself start over. Register a handler when that would lose something
+  the user cares about.
+
 ## Account-synced state (`app/utils/userState.ts`)
 
 Preferences that follow the signed-in account across the desktop app and the website.
