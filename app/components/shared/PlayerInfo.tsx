@@ -65,7 +65,7 @@ export function PlayerAvatar({ userId, alias, title, sizePx, isLight, priority =
     )
 }
 
-function openPlayer(userId: string | number) {
+export function openPlayer(userId: string | number) {
     window.dispatchEvent(new CustomEvent('open-player', { detail: { userId } }))
 }
 

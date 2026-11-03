@@ -23,14 +23,16 @@ export function TableControls({ table, showFilters = true }: { table: AdminTable
           <SlidersHorizontal className="size-4" /> Filters
         </button>
       )}
-      <ColumnsMenu<string>
-        columnOrder={table.columnOrder}
-        columnVisibility={table.visibility}
-        columnLabels={table.columnLabels}
-        onToggle={table.toggle}
-        onReorder={table.onReorder}
-        requiredColumns={table.requiredColumns}
-      />
+      {!table.cards && (
+        <ColumnsMenu<string>
+          columnOrder={table.columnOrder}
+          columnVisibility={table.visibility}
+          columnLabels={table.columnLabels}
+          onToggle={table.toggle}
+          onReorder={table.onReorder}
+          requiredColumns={table.requiredColumns}
+        />
+      )}
     </>
   )
 }

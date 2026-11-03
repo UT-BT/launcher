@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DoorOpen, ExternalLink, Link as LinkIcon, Radio } from 'lucide-react'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow, DataTableCell,
-    DataTableEmpty, DataTableSkeletonRow, type ResponsiveColumn,
+    DataTableEmpty, DataTableSkeletonRow, type ColumnTier, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { Button } from '@/app/components/ui/button'
 import { NavLink } from '@/app/components/navigation/NavLink'
@@ -24,15 +24,19 @@ import { streamerChoices, toQueueRow, withQueueStreamer, type PickBanQueueRow } 
 const QUEUE_POLL_MS = 20_000
 const SKELETON_ROWS = 4
 
-const COLUMNS: ResponsiveColumn[] = [
-    { id: 'match', width: '14rem', priority: 70, required: true },
-    { id: 'stage', width: '10rem', priority: 40 },
-    { id: 'scheduled', width: '9rem', priority: 50 },
-    { id: 'streamer', width: '10rem', priority: 55 },
-    { id: 'status', width: '10rem', priority: 65, required: true },
-    { id: 'presence', width: '8rem', priority: 30 },
-    { id: 'actions', width: '15rem', priority: 60, required: true },
+type QueueColumnId = 'match' | 'stage' | 'scheduled' | 'streamer' | 'status' | 'presence' | 'actions'
+
+const COLUMNS: (ResponsiveColumn & { id: QueueColumnId; tier: ColumnTier; label: string })[] = [
+    { id: 'match', width: '14rem', priority: 70, required: true, tier: 'essential', label: 'Match' },
+    { id: 'stage', width: '10rem', priority: 40, tier: 'detail', label: 'Stage / Round' },
+    { id: 'scheduled', width: '9rem', priority: 50, tier: 'detail', label: 'Scheduled' },
+    { id: 'streamer', width: '10rem', priority: 55, tier: 'detail', label: 'Streamer' },
+    { id: 'status', width: '10rem', priority: 65, required: true, tier: 'essential', label: 'Status' },
+    { id: 'presence', width: '8rem', priority: 30, tier: 'detail', label: 'Ready / Online' },
+    { id: 'actions', width: '15rem', priority: 60, required: true, tier: 'essential', label: 'Actions' },
 ]
+
+const CELL_ALIGN: Partial<Record<QueueColumnId, 'right'>> = { presence: 'right', actions: 'right' }
 
 interface PickBanQueuePanelProps {
     accessToken: string
@@ -137,35 +141,64 @@ export function PickBanQueuePanel({ accessToken, slug }: PickBanQueuePanelProps)
 
     const scheduledLabel = (row: PickBanQueueRow) => (row.scheduledAt ? formatSlotTime(row.scheduledAt, timezone) : 'Unscheduled')
 
-    const compactRows = loading ? (
-        Array.from({ length: SKELETON_ROWS }).map((_, i) => (
-            <div key={i} role="listitem" className="p-3 border-b border-hairline/5 last:border-0 animate-pulse">
-                <div className="h-16 rounded bg-hairline/5" />
+    const queueCell = (id: QueueColumnId, row: PickBanQueueRow): React.ReactNode => {
+        switch (id) {
+            case 'match':
+                return (
+                    <div className="min-w-0">
+                        <div className="text-sm font-semibold text-foreground truncate">{row.teamAName} vs {row.teamBName}</div>
+                        {row.blockingReasonLabel && <div className="text-xs text-amber-300 truncate">{row.blockingReasonLabel}</div>}
+                    </div>
+                )
+            case 'stage':
+                return (
+                    <>
+                        <span className="text-foreground truncate block">{row.stageName}</span>
+                        <span className="text-xs text-muted-foreground truncate block">{row.roundLabel}</span>
+                    </>
+                )
+            case 'scheduled':
+                return <span className="text-xs text-muted-foreground">{scheduledLabel(row)}</span>
+            case 'streamer':
+                return streamerPicker(row)
+            case 'status':
+                return <PickBanStatusChip status={row.status} />
+            case 'presence':
+                return <span className="text-xs text-muted-foreground tabular-nums">{row.readyCount}/2 · {row.onlineCount} online</span>
+            case 'actions':
+                return (
+                    <RowActions
+                        row={row} eventSlug={slug} openingId={openingId} copiedKey={copiedKey}
+                        onOpenLobby={openLobby} onOpenPage={() => openPage(row.matchId)} onCopy={copy}
+                    />
+                )
+        }
+    }
+
+    const columns: ResponsiveColumn<PickBanQueueRow>[] = COLUMNS.map(column => ({
+        ...column,
+        cell: row => <div className="min-w-0 flex-1">{queueCell(column.id, row)}</div>,
+    }))
+
+    const queueFace = (row: PickBanQueueRow) => (
+        <div className="flex flex-col gap-2">
+            <div className="flex items-start justify-between gap-2">
+                {queueCell('match', row)}
+                {queueCell('status', row)}
             </div>
+            {queueCell('actions', row)}
+        </div>
+    )
+
+    const cardPlaceholder = loading ? (
+        Array.from({ length: SKELETON_ROWS }).map((_, i) => (
+            <div key={i} className="h-16 mx-3 my-2 rounded-lg bg-hairline/5 animate-pulse" />
         ))
     ) : rows.length === 0 ? (
-        <div role="listitem" className="px-4 py-12 text-center text-sm text-muted-foreground">
+        <div className="px-4 py-12 text-center text-sm text-muted-foreground">
             No matches in this event yet.
         </div>
-    ) : rows.map(row => (
-        <div key={row.matchId} role="listitem" className="p-3 border-b border-hairline/5 last:border-0 flex flex-col gap-2">
-            <div className="flex items-start justify-between gap-2">
-                <span className="text-sm font-semibold text-foreground truncate">{row.teamAName} vs {row.teamBName}</span>
-                <PickBanStatusChip status={row.status} />
-            </div>
-            <div className="text-xs text-muted-foreground">{row.stageName} · {row.roundLabel} · {scheduledLabel(row)}</div>
-            <div className="text-xs text-muted-foreground">Ready {row.readyCount}/2 · {row.onlineCount} online</div>
-            {row.blockingReasonLabel && <div className="text-xs text-amber-300">{row.blockingReasonLabel}</div>}
-            <div className="flex items-center gap-2 min-w-0 text-xs text-muted-foreground">
-                Streamer
-                {streamerPicker(row)}
-            </div>
-            <RowActions
-                row={row} eventSlug={slug} openingId={openingId} copiedKey={copiedKey}
-                onOpenLobby={openLobby} onOpenPage={() => openPage(row.matchId)} onCopy={copy}
-            />
-        </div>
-    ))
+    ) : undefined
 
     return (
         <section aria-label="Match queue" className="flex flex-col gap-3">
@@ -180,10 +213,16 @@ export function PickBanQueuePanel({ accessToken, slug }: PickBanQueuePanelProps)
             <DataTableShell
                 className="!flex-none"
                 responsive={{
-                    columns: COLUMNS,
+                    columns,
                     onResolve: handleResolve,
-                    compactContent: compactRows,
                     compactAriaLabel: 'Match queue',
+                    cards: {
+                        rows,
+                        rowKey: row => row.matchId,
+                        face: queueFace,
+                        onOpen: row => openPage(row.matchId),
+                        placeholder: cardPlaceholder,
+                    },
                 }}
             >
                 <DataTableHeaderRow>
@@ -202,36 +241,9 @@ export function PickBanQueuePanel({ accessToken, slug }: PickBanQueuePanelProps)
                         <DataTableEmpty colSpan={visibleCount} message="No matches in this event yet." />
                     ) : rows.map(row => (
                         <DataTableRow key={row.matchId}>
-                            <DataTableCell>
-                                <div className="min-w-0">
-                                    <div className="text-sm font-semibold text-foreground truncate">{row.teamAName} vs {row.teamBName}</div>
-                                    {row.blockingReasonLabel && <div className="text-xs text-amber-300 truncate">{row.blockingReasonLabel}</div>}
-                                </div>
-                            </DataTableCell>
-                            {isVisible('stage') && (
-                                <DataTableCell>
-                                    <span className="text-foreground truncate block">{row.stageName}</span>
-                                    <span className="text-xs text-muted-foreground truncate block">{row.roundLabel}</span>
-                                </DataTableCell>
-                            )}
-                            {isVisible('scheduled') && (
-                                <DataTableCell>
-                                    <span className="text-xs text-muted-foreground">{scheduledLabel(row)}</span>
-                                </DataTableCell>
-                            )}
-                            {isVisible('streamer') && <DataTableCell>{streamerPicker(row)}</DataTableCell>}
-                            <DataTableCell><PickBanStatusChip status={row.status} /></DataTableCell>
-                            {isVisible('presence') && (
-                                <DataTableCell align="right">
-                                    <span className="text-xs text-muted-foreground tabular-nums">{row.readyCount}/2 · {row.onlineCount} online</span>
-                                </DataTableCell>
-                            )}
-                            <DataTableCell align="right">
-                                <RowActions
-                                    row={row} eventSlug={slug} openingId={openingId} copiedKey={copiedKey}
-                                    onOpenLobby={openLobby} onOpenPage={() => openPage(row.matchId)} onCopy={copy}
-                                />
-                            </DataTableCell>
+                            {COLUMNS.filter(column => isVisible(column.id)).map(column => (
+                                <DataTableCell key={column.id} align={CELL_ALIGN[column.id]}>{queueCell(column.id, row)}</DataTableCell>
+                            ))}
                         </DataTableRow>
                     ))}
                 </tbody>

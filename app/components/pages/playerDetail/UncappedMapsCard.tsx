@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Search } from 'lucide-react'
 import { fetchUncappedMaps, fetchUncappedMapsCount, type Map as ApiMap } from '@/app/utils/api'
 import { usePaginatedQuery } from '@/app/hooks/useAsync'
@@ -12,7 +12,7 @@ import { MapNavLink } from '@/app/components/shared/MapNavLink'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell,
     DataTableRow, DataTableCell, DataTableEmpty, DataTableSkeletonRow,
-    type SortDirection, type ResponsiveColumn,
+    type ColumnTier, type SortDirection, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { PaginationBar } from '@/app/components/ui/pagination'
 
@@ -33,6 +33,10 @@ const COLUMNS: ColumnId[] = ['name', 'author', 'difficulty']
 const COLUMN_WIDTH: Partial<Record<ColumnId, string>> = { difficulty: '7rem' }
 const COLUMN_PRIORITY: Partial<Record<ColumnId, number>> = { difficulty: 80, author: 30 }
 const REQUIRED_COLUMNS = new Set<ColumnId>(['name', 'difficulty'])
+const COLUMN_TIER: Record<ColumnId, ColumnTier> = { name: 'essential', author: 'detail', difficulty: 'essential' }
+const COLUMN_LABEL: Record<ColumnId, string> = { name: 'Map', author: 'Author', difficulty: 'Difficulty' }
+const SORT_KEY: Partial<Record<ColumnId, SortField>> = { name: 'name', difficulty: 'difficulty' }
+const CELL_ALIGN: Partial<Record<ColumnId, 'center'>> = { difficulty: 'center' }
 
 function difficultyChip(difficulty: number | null | undefined) {
     if (difficulty == null) return <span className="text-xs text-muted-foreground">—</span>
@@ -107,15 +111,6 @@ export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }:
     }
     const dir = (field: SortField): SortDirection => sortField === field ? sortDir : null
 
-    const responsiveColumns = useMemo<ResponsiveColumn[]>(
-        () => COLUMNS.map(id => ({
-            id,
-            width: COLUMN_WIDTH[id],
-            priority: COLUMN_PRIORITY[id],
-            required: REQUIRED_COLUMNS.has(id),
-        })),
-        [],
-    )
     const [resolved, setResolved] = useState<Set<ColumnId> | null>(null)
     const handleResolve = useCallback((ids: Set<string>) => {
         setResolved(ids as Set<ColumnId>)
@@ -125,32 +120,57 @@ export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }:
 
     const emptyMessage = query ? 'No uncapped maps match that search.' : 'All caught up — no uncapped maps.'
 
-    const compactRows = loading ? (
+    const uncappedCell = (id: ColumnId, m: ApiMap): React.ReactNode => {
+        switch (id) {
+            case 'name':
+                return (
+                    <div className="flex items-center gap-2 min-w-0">
+                        <MapThumbnail mapName={m.name} className="size-8 shrink-0" />
+                        <MapNavLink mapName={m.name} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate">{displayMapName(m.name)}</MapNavLink>
+                    </div>
+                )
+            case 'author':
+                return (
+                    <span className="text-xs text-muted-foreground truncate">
+                        {mapAuthorName(m) || '—'}
+                    </span>
+                )
+            case 'difficulty':
+                return difficultyChip(m.difficulty)
+        }
+    }
+
+    const responsiveColumns: ResponsiveColumn<ApiMap>[] = COLUMNS.map(id => ({
+        id,
+        width: COLUMN_WIDTH[id],
+        priority: COLUMN_PRIORITY[id],
+        required: REQUIRED_COLUMNS.has(id),
+        tier: COLUMN_TIER[id],
+        label: COLUMN_LABEL[id],
+        sortKey: SORT_KEY[id],
+        cell: m => uncappedCell(id, m),
+    }))
+
+    const uncappedFace = (m: ApiMap) => (
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+            <div className="flex items-center min-w-0">
+                <MapNavLink mapName={m.name} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate min-w-0">{displayMapName(m.name)}</MapNavLink>
+            </div>
+            {difficultyChip(m.difficulty)}
+        </div>
+    )
+
+    const cardPlaceholder = loading ? (
         Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} role="listitem" className="p-3 border-b border-hairline/5 last:border-0 animate-pulse">
+            <div key={i} className="p-3 border-b border-hairline/5 last:border-0 animate-pulse">
                 <div className="h-10 rounded bg-hairline/5" />
             </div>
         ))
     ) : items.length === 0 ? (
-        <div role="listitem" className="px-4 py-12 text-center text-sm text-muted-foreground">
+        <div className="px-4 py-12 text-center text-sm text-muted-foreground">
             {emptyMessage}
         </div>
-    ) : items.map(m => (
-        <div
-            key={m.name}
-            role="listitem"
-            className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-3 border-b border-hairline/5 last:border-0 cursor-pointer"
-            onClick={() => onMapSelect?.(m.name)}
-        >
-            <div className="min-w-0 space-y-1">
-                <div className="flex items-center min-w-0">
-                    <MapNavLink mapName={m.name} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate min-w-0">{displayMapName(m.name)}</MapNavLink>
-                </div>
-                <div className="text-xs text-muted-foreground truncate">{mapAuthorName(m) || '—'}</div>
-            </div>
-            {difficultyChip(m.difficulty)}
-        </div>
-    ))
+    ) : undefined
 
     return (
         <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col overflow-hidden">
@@ -189,8 +209,19 @@ export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }:
                     columns: responsiveColumns,
                     nameFloorRem: 14,
                     onResolve: handleResolve,
-                    compactContent: compactRows,
                     compactAriaLabel: 'Uncapped maps',
+                    cards: {
+                        rows: items,
+                        rowKey: m => m.name,
+                        face: uncappedFace,
+                        onOpen: m => onMapSelect?.(m.name),
+                        placeholder: cardPlaceholder,
+                        sort: {
+                            key: sortField,
+                            direction: sortDir,
+                            onSort: key => handleSort(key as SortField),
+                        },
+                    },
                 }}
             >
                 <DataTableHeaderRow>
@@ -212,26 +243,11 @@ export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }:
                                 className="cursor-pointer"
                                 onClick={() => onMapSelect?.(m.name)}
                             >
-                                {isVisible('name') && (
-                                    <DataTableCell>
-                                        <div className="flex items-center gap-2 min-w-0">
-                                            <MapThumbnail mapName={m.name} className="size-8 shrink-0" />
-                                            <MapNavLink mapName={m.name} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate">{displayMapName(m.name)}</MapNavLink>
-                                        </div>
+                                {COLUMNS.filter(isVisible).map(id => (
+                                    <DataTableCell key={id} align={CELL_ALIGN[id]}>
+                                        {uncappedCell(id, m)}
                                     </DataTableCell>
-                                )}
-                                {isVisible('author') && (
-                                    <DataTableCell>
-                                        <span className="text-xs text-muted-foreground truncate">
-                                            {mapAuthorName(m) || '—'}
-                                        </span>
-                                    </DataTableCell>
-                                )}
-                                {isVisible('difficulty') && (
-                                    <DataTableCell align="center">
-                                        {difficultyChip(m.difficulty)}
-                                    </DataTableCell>
-                                )}
+                                ))}
                             </DataTableRow>
                         ))
                     )}

@@ -79,6 +79,7 @@ const eventHeading = (page: Page) => page.getByRole('heading', { name: EVENT_NAM
 const leaveConfirm = (page: Page) => page.getByRole('heading', { name: 'Leave without saving?' })
 const unsavedNotice = (page: Page) => page.getByText('Unsaved changes.')
 const historyLength = (page: Page) => page.evaluate(() => window.history.length)
+const settingsModal = (page: Page) => page.locator('[data-modal-backdrop]').filter({ has: page.getByRole('heading', { name: 'Settings', exact: true }) })
 
 async function openEventFromList(page: Page) {
     await page.goto('/events')
@@ -124,6 +125,33 @@ test('browser Back from unsaved work asks first: No keeps the page and its URL, 
     await expect(eventHeading(page)).toBeVisible()
     await expect(unsavedNotice(page)).toHaveCount(0)
     await expect(leaveConfirm(page)).toHaveCount(0)
+})
+
+test('with unsaved work and an open modal, browser Back closes the modal first and asks on the next Back', async ({ page }) => {
+    await mockApi(page)
+    await openEventFromList(page)
+    await editFormat(page)
+    const entries = await historyLength(page)
+
+    const menu = page.getByRole('button', { name: 'Open navigation' })
+    if (await menu.isVisible()) await menu.click()
+    await page.locator('aside [aria-haspopup="menu"]').click()
+    await page.getByRole('menuitem', { name: 'Settings' }).click()
+    await expect(settingsModal(page)).toBeVisible()
+    await expect.poll(() => historyLength(page)).toBe(entries + 1)
+
+    await page.goBack()
+    await expect(settingsModal(page)).toHaveCount(0)
+    await expect(leaveConfirm(page)).toHaveCount(0)
+    await expect(page).toHaveURL(`/events/${SLUG}`)
+    await expect(unsavedNotice(page)).toBeVisible()
+
+    await page.goBack()
+    await expect(leaveConfirm(page)).toBeVisible()
+    await expect(page).toHaveURL(`/events/${SLUG}`)
+    await page.getByRole('button', { name: 'Leave', exact: true }).click()
+    await expect(page).toHaveURL('/events')
+    await expect(eventCard(page)).toBeVisible()
 })
 
 test('browser Forward from unsaved work asks first the same way', async ({ page }) => {

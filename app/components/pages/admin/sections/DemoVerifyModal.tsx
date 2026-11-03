@@ -39,6 +39,7 @@ export function DemoVerifyModal({ open, onClose, token, cap, onVerified }: {
     <Modal
       isOpen={open}
       onClose={onClose}
+      closeOnBackdrop={false}
       title="Verify cap with demo"
       offsetSidebar
       maxWidth="36rem"

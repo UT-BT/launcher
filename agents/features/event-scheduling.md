@@ -24,6 +24,7 @@ Paths starting `events/` are under `app/components/pages/`.
 | `app/utils/timezone.ts`, `app/utils/signupWindow.ts` | display zone, slot formatting and `parseApiInstant`; the signups-closed rule |
 | `app/utils/api.ts` | the schedule, proposal, oversight and staff-assignment fetchers |
 | `e2e/schedule-responsive.spec.ts`, `e2e/manage-matches.spec.ts` | Playwright for the Schedule tab and Manage → Matches |
+| `e2e/mobile/team-manage-cards.spec.ts` | Playwright mobile suite: the Manage → Matches and pick/ban queue cards at 390×844 ([testing.md](../testing.md)) |
 
 ## Contract
 
@@ -278,6 +279,11 @@ a match-admin and a streamer `StaffPicker`, the status chip, the series score on
 (the bracket's `MatchEditorModal`, see [events.md](events.md)) and a Picks & Bans link. The streamer
 control also lives in the pick/ban match queue ([pick-ban-ui.md](pick-ban-ui.md)).
 
+- **Phone cards.** The table is tiered ([shared-components.md](../shared-components.md), Column tiers
+  and phone cards). A card shows the match, its status and the actions (Edit, Picks & Bans), so an
+  event manager can run the event from a phone; stage and round, scheduled time and both staff
+  pickers are in the card's panel. The card body opens the match page, as Picks & Bans does. No
+  sort control: the table has no sortable column.
 - Filters (`filterMatchRows`: stage, open / finished / all, needs a match admin / needs a streamer, search
   over team and staff names) persist in nav state `event.manage.matches.filter`; open matches by default.
 - Summary pills (`matchesSummary`) count open matches and those missing an admin or streamer; a click

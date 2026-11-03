@@ -228,6 +228,7 @@ export function ConfirmDialog({ open, title, message, confirmLabel = 'Confirm', 
     <Modal
       isOpen={open}
       onClose={onCancel}
+      closeOnBackdrop={false}
       title={title}
       offsetSidebar
       maxWidth="30rem"

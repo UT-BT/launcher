@@ -55,7 +55,6 @@ export interface MapsPageState {
     currentPage: number
     pageSizePreference: number | 'auto'
     filtersPanelOpen: boolean
-    scrollTop: number
 }
 
 export interface MapsPageCaches {
@@ -100,7 +99,6 @@ export const DEFAULT_MAPS_STATE: MapsPageState = {
     currentPage: 1,
     pageSizePreference: 'auto',
     filtersPanelOpen: false,
-    scrollTop: 0,
 }
 
 export const DEFAULT_MAPS_CACHES: MapsPageCaches = {

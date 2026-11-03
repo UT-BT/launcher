@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { cn } from '@/lib/utils'
+import { useNavigation } from '@/app/components/navigation/NavigationContext'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { EMPTY_STAT, mapProfileView, type MapProfileRowView, type MapRankView } from '@/app/components/pages/events/stats/statsView'
 import type { EventRun, EventTeamMapProfileRow } from '@/app/utils/api'
@@ -8,15 +9,15 @@ import { RESULT_FILLS, SECTION_LABEL } from './teamShared'
 import { MapName, TeamTable, type TeamTableHeader } from './TeamTable'
 
 const HEADERS: Record<string, TeamTableHeader> = {
-    map: { label: 'Map', align: 'left' },
-    picked: { label: 'Picked', align: 'right' },
-    bannedBy: { label: 'Banned', align: 'right' },
-    bannedAgainst: { label: 'Banned vs', align: 'right' },
-    played: { label: 'Played', align: 'right' },
-    wdl: { label: 'W-D-L', align: 'left', required: true },
-    caps: { label: 'Caps', align: 'right' },
-    best: { label: 'Best time', align: 'right' },
-    rank: { label: 'Rank', align: 'right' },
+    map: { align: 'left' },
+    picked: { align: 'right' },
+    bannedBy: { align: 'right' },
+    bannedAgainst: { align: 'right' },
+    played: { align: 'right' },
+    wdl: { align: 'left', required: true },
+    caps: { align: 'right' },
+    best: { align: 'right' },
+    rank: { align: 'right' },
 }
 
 interface ProfileEntry {
@@ -82,9 +83,9 @@ function cellContent(id: string, { row, best }: ProfileEntry) {
     }
 }
 
-function CompactProfileRow({ entry }: { entry: ProfileEntry }) {
+function ProfileFace({ entry }: { entry: ProfileEntry }) {
     return (
-        <div role="listitem" className="flex flex-col gap-3 border-b border-hairline/5 p-3 last:border-0">
+        <div className="flex flex-col gap-2">
             <div className="flex items-center gap-3">
                 <span className="min-w-0 flex-1"><MapName row={entry.row} /></span>
                 <span className="flex shrink-0 flex-col items-end gap-0.5">
@@ -92,15 +93,9 @@ function CompactProfileRow({ entry }: { entry: ProfileEntry }) {
                     {entry.row.rank && <Rank rank={entry.row.rank} />}
                 </span>
             </div>
-            <div className="grid grid-cols-3 gap-2">
-                {entry.row.compact.map(cell => (
-                    <div key={cell.label} className="min-w-0">
-                        <div className={SECTION_LABEL}>{cell.label}</div>
-                        {cell.label === HEADERS.wdl.label
-                            ? <WdlCell row={entry.row} />
-                            : <div className="font-mono text-sm tabular-nums text-foreground">{cell.value}</div>}
-                    </div>
-                ))}
+            <div className="flex items-center gap-3">
+                <span className={SECTION_LABEL}>W-D-L</span>
+                <span className="w-28"><WdlCell row={entry.row} /></span>
             </div>
         </div>
     )
@@ -109,6 +104,7 @@ function CompactProfileRow({ entry }: { entry: ProfileEntry }) {
 export function MapProfileTable({ rows, teamName }: { rows: EventTeamMapProfileRow[]; teamName: string }) {
     const view = useMemo(() => mapProfileView(rows), [rows])
     const entries = view.rows.map((row, index): ProfileEntry => ({ row, best: rows[index].best_run }))
+    const { navigate } = useNavigation()
 
     return (
         <TeamTable
@@ -121,7 +117,8 @@ export function MapProfileTable({ rows, teamName }: { rows: EventTeamMapProfileR
             rows={entries}
             rowKey={entry => entry.row.map}
             cell={cellContent}
-            compactRows={entries.map(entry => <CompactProfileRow key={entry.row.map} entry={entry} />)}
+            face={entry => <ProfileFace entry={entry} />}
+            onOpen={entry => navigate('maps-detail', { mapName: entry.row.map })}
         />
     )
 }

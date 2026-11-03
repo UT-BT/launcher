@@ -205,7 +205,7 @@ export function ManagePanel({ canManageEvent, ...props }: ManagePanelProps) {
                         key={entry.id}
                         onClick={() => setTab(entry.id)}
                         className={cn(
-                            'px-3 py-2 text-xs font-medium whitespace-nowrap border-b-2 -mb-px transition-colors cursor-pointer',
+                            'px-3 py-2 text-xs font-medium whitespace-nowrap border-b transition-colors cursor-pointer',
                             activeTab.id === entry.id
                                 ? 'border-accent-400 text-white'
                                 : 'border-transparent text-muted-foreground hover:text-white',

@@ -131,6 +131,16 @@ is `'Unsupported'`.
 - **Ping.** `pingServer` accepts IPv4 only (schema) and runs one `ping` with a 1 s
   timeout; `999` means failed. The server browser pings unique IPs six at a time after
   each fetch, behind `capabilities.ping`.
+- **Server browser phone cards.** The table is tiered
+  ([shared-components.md](../shared-components.md#column-tiers-and-phone-cards)). The face holds
+  the favourite, the type icon, the server name, players n/max, the region flag, the map, the
+  status and, with `capabilities.game`, Join and Spec. The expand panel holds the type in words,
+  ping (desktop), and the player and spectator lists: each shows its count, then every name in
+  the same rows as the desktop dropdowns (`PlayerInfo`, or the spectator bot's Twitch row). Players and spectators are detail
+  columns for that reason, although the n/max count is on the face too; the thumbnail is
+  decorative. The body has no tap action, as there is no server page. The panel and the card
+  sort control list every column, including those hidden in Columns (`hiddenByUser`). `e2e/mobile/player-server-cards.spec.ts` checks the
+  cards.
 
 ### The game already running
 
@@ -299,8 +309,9 @@ through `app.setDemoWatcherConfig`, and the game's own recording switch `AutoDem
 - Buttons that open UI living under `App` dispatch a `window` event instead: Settings sends
   `open-settings` ([navigation.md](../navigation.md)), Impersonate sends
   `DEV_IMPERSONATE_EVENT` for `DevImpersonateModal`. Game Profiles and Demo Uploads render
-  their own `ui/modal.tsx` modals in place (`offsetSidebar`, no portal, so their
-  `ConfirmModal`s stay on top). Links and the About page open URLs through `web-open-url`.
+  their own `ui/modal.tsx` modals (`offsetSidebar`), which portal to `document.body` like
+  every shared modal; Game Profiles' `ConfirmModal`s (`.modal-overlay`, z-index 1000) still
+  stack above it. Links and the About page open URLs through `web-open-url`.
 - `--window-titlebar-height` (26 px in `app/styles/window.css`, 0 px on web) is the top
   offset of full-window overlays (`top-[var(--window-titlebar-height)]` in
   `app/components/ui/modal.tsx`, `ErrorModal`, the settings fallback), which keeps the

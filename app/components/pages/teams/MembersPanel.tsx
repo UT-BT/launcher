@@ -17,6 +17,7 @@ import {
 import { ErrorBanner, SectionCard, StatusBadge, memberTitle, teamErrorMessage, teamInputClass } from './teamsShared'
 import { memberNumberValidationError } from './tagFormat'
 import { PlayerSearchInput } from './PlayerSearchInput'
+import { useDeviceEnvironment } from '@/app/device/useDeviceEnvironment'
 
 interface MembersPanelProps {
     accessToken: string
@@ -72,6 +73,7 @@ export function MembersPanel({ accessToken, team, isOwner, isManager, onTeamChan
     const [error, setError] = useState<string | null>(null)
     const [requestsOpen, setRequestsOpen] = useState(false)
     const [manageOpen, setManageOpen] = useState(false)
+    const touch = useDeviceEnvironment(env => env.touch)
     const [numbersOpen, setNumbersOpen] = useState(false)
     const [historyOpen, setHistoryOpen] = useState(false)
     const [audit, setAudit] = useState<TeamAuditEntry[]>([])
@@ -243,12 +245,12 @@ export function MembersPanel({ accessToken, team, isOwner, isManager, onTeamChan
                                 {manageable.map(member => {
                                     const busy = busyUser === member.user
                                     return (
-                                        <div key={member.user} className="flex items-center gap-3 px-3 py-2.5 bg-white/5 border border-white/5 rounded-lg">
+                                        <div key={member.user} className={cn('flex items-center gap-3 px-3 py-2.5 bg-white/5 border border-white/5 rounded-lg', touch && 'flex-wrap')}>
                                             <div className="min-w-0 flex-1 flex items-center gap-2">
                                                 <RoleSlot role={member.role} />
                                                 <PlayerInfo userId={member.user} alias={member.alias} title={memberTitle(member.title)} size="sm" />
                                             </div>
-                                            <div className="flex items-center gap-1.5 shrink-0">
+                                            <div className={cn('flex items-center gap-1.5 shrink-0', touch && 'basis-full flex-wrap justify-end')}>
                                                 {isOwner && member.role === 'member' && (
                                                     <ActionButton tooltip="Promote to moderator" icon={ShieldCheck} tone="emerald" busy={busy} onClick={() => run(member.user, () => setTeamMemberRole(accessToken, team.id, member.user, 'admin'))} />
                                                 )}
@@ -400,11 +402,13 @@ function ActionButton({ tooltip, icon: Icon, tone, busy, onClick }: {
     busy: boolean
     onClick: () => void
 }) {
-    return (
-        <Tooltip content={tooltip}>
-            <Button size="sm" variant="ghost" disabled={busy} onClick={onClick} className={`px-2 ${TONE_CLASS[tone]}`}>
-                <Icon className="size-4" />
-            </Button>
-        </Tooltip>
+    const touch = useDeviceEnvironment(env => env.touch)
+    const button = (
+        <Button size="sm" variant="ghost" disabled={busy} onClick={onClick} className={`px-2 ${TONE_CLASS[tone]}`}>
+            <Icon className="size-4" />
+            {touch && tooltip}
+        </Button>
     )
+    if (touch) return button
+    return <Tooltip content={tooltip}>{button}</Tooltip>
 }

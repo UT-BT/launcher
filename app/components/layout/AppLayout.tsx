@@ -1,11 +1,20 @@
 import { ReactNode, lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { LogOut, Menu } from 'lucide-react'
+import { Menu } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Button } from '@/app/components/ui/button'
+import { Modal } from '@/app/components/ui/modal'
 import { NavHistoryBar } from '@/app/components/navigation/NavHistoryBar'
 import { buildNavSections, isEventLinkLive, isNavItemActive, navItemDestination, type NavBadge } from '@/app/components/navigation/nav-items'
 import type { NavParams } from '@/app/components/navigation/NavigationContext'
 import { useNavigation } from '@/app/components/navigation/NavigationContext'
+import { ShellScrollRestore, useShellScroller } from '@/app/components/navigation/useNavScrollRestore'
+import { useOverlayHistory } from '@/app/components/navigation/useUrlSync'
+import { useViewportRecovery } from '@/app/components/layout/useViewportRecovery'
+import { useDrawerSwipe } from '@/app/components/layout/useDrawerSwipe'
+import { BottomTabBar } from '@/app/components/layout/BottomTabBar'
+import { showsBottomTabs } from '@/app/components/navigation/bottomTabs'
+import { useDeviceEnvironment } from '@/app/device/useDeviceEnvironment'
+import type { DeviceEnvironment } from '@/app/device/deviceEnvironment'
+import { PullToRefresh } from '@/app/components/layout/PullToRefresh'
 
 const loadSettingsModal = () => IS_WEB
     ? import('@/app/components/modals/SettingsModalWeb').then(m => ({ default: m.SettingsModalWeb }))
@@ -13,6 +22,8 @@ const loadSettingsModal = () => IS_WEB
 const SettingsModal = lazy(loadSettingsModal)
 const ChangeTitleModal = lazy(() => import('@/app/components/modals/ChangeTitleModal').then(m => ({ default: m.ChangeTitleModal })))
 const DesktopPromoNavRow = lazy(() => import('@/app/components/desktopPromo/DesktopPromoNavRow').then(m => ({ default: m.DesktopPromoNavRow })))
+const SignOutConfirm = lazy(() => import('@/app/components/layout/SignOutConfirm').then(m => ({ default: m.SignOutConfirm })))
+const HideOnScrollBars = lazy(() => import('@/app/components/layout/HideOnScrollBars').then(m => ({ default: m.HideOnScrollBars })))
 import { PageRefreshProvider } from '@/app/components/navigation/PageRefreshContext'
 
 import { UserProfile } from '@/app/utils/api'
@@ -25,12 +36,23 @@ import { SidebarActions } from '@/app/components/layout/sidebar/SidebarActions'
 import { SidebarBrand } from '@/app/components/layout/sidebar/SidebarBrand'
 import { SidebarCollapseToggle } from '@/app/components/layout/sidebar/SidebarCollapseToggle'
 import { SidebarNavItem } from '@/app/components/layout/sidebar/SidebarNavItem'
+import { SidebarReloadApp } from '@/app/components/layout/sidebar/SidebarReloadApp'
 import { SidebarUserCard } from '@/app/components/layout/sidebar/SidebarUserCard'
+import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { readSidebarCollapsed, writeSidebarCollapsed } from '@/app/components/layout/sidebarPreference'
 import { useDesktopPromo } from '@/app/components/desktopPromo/useDesktopPromo'
+import { DiagnosticOverlayTrigger } from '@/app/device/diagnostics/DiagnosticOverlayTrigger'
 
 const SIDEBAR_WIDTH_EXPANDED = '16rem'
 const SIDEBAR_WIDTH_COLLAPSED = '5rem'
+
+function isBelowLg(environment: DeviceEnvironment): boolean {
+    return environment.belowLg
+}
+
+function hidesBarsOnScroll(environment: DeviceEnvironment): boolean {
+    return environment.touch && environment.belowLg
+}
 
 function isTypingTarget(target: EventTarget | null): boolean {
     return target instanceof HTMLElement && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
@@ -57,20 +79,33 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
     const [loginError, setLoginError] = useState<string | null>(() => auth.consumeLoginError())
     const [mobileNavOpen, setMobileNavOpen] = useState(false)
-    const [isMobileViewport, setIsMobileViewport] = useState(
-        () => window.matchMedia('(max-width: 1023px)').matches,
-    )
+    const isMobileViewport = useDeviceEnvironment(isBelowLg)
     const [collapsePreference, setCollapsePreference] = useState(readSidebarCollapsed)
     const collapsed = collapsePreference && !isMobileViewport
     const mobileMenuButtonRef = useRef<HTMLButtonElement>(null)
+    const drawerOpenerRef = useRef<HTMLElement | null>(null)
     const sidebarRef = useRef<HTMLElement>(null)
+    const shellScrollerRef = useRef<HTMLElement>(null)
+    const shellContentRef = useRef<HTMLDivElement>(null)
 
     const changeView = (view: string, params?: NavParams) => {
         setMobileNavOpen(false)
         onViewChange(view, params)
     }
+    const closeDrawer = useCallback(() => setMobileNavOpen(false), [])
+    const openDrawerFrom = (opener: HTMLElement) => {
+        drawerOpenerRef.current = opener
+        setMobileNavOpen(true)
+    }
+    const showTabBar = useDeviceEnvironment(showsBottomTabs)
+    useDrawerSwipe(sidebarRef, isMobileViewport && mobileNavOpen, closeDrawer)
+    useOverlayHistory(isMobileViewport && mobileNavOpen, closeDrawer)
     const { entry } = useNavigation()
     const currentParams = entry.params
+    useShellScroller(shellScrollerRef, shellContentRef)
+    useViewportRecovery(shellScrollerRef)
+    const hideBarsOnScroll = useDeviceEnvironment(hidesBarsOnScroll)
+    const [barsHidden, setBarsHidden] = useState(false)
     const [isSettingsOpen, setIsSettingsOpen] = useState(false)
     const [isChangeTitleOpen, setIsChangeTitleOpen] = useState(false)
     const [settingsInitialSection, setSettingsInitialSection] = useState<string | undefined>(undefined)
@@ -100,15 +135,6 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
             window.removeEventListener('open-settings', handleOpenSettings)
             window.removeEventListener('open-change-title', handleOpenChangeTitle)
         }
-    }, [])
-
-    useEffect(() => {
-        const mobileQuery = window.matchMedia('(max-width: 1023px)')
-        const handleViewportChange = (event: MediaQueryListEvent) => setIsMobileViewport(event.matches)
-
-        setIsMobileViewport(mobileQuery.matches)
-        mobileQuery.addEventListener('change', handleViewportChange)
-        return () => mobileQuery.removeEventListener('change', handleViewportChange)
     }, [])
 
     useLayoutEffect(() => {
@@ -151,11 +177,13 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
         }
 
         sidebar.removeAttribute('inert')
+        const opener = drawerOpenerRef.current
+        drawerOpenerRef.current = null
         const menuButton = mobileMenuButtonRef.current
         const focusable = () => Array.from(sidebar.querySelectorAll<HTMLElement>(
             'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
         ))
-        focusable()[0]?.focus()
+        focusable()[0]?.focus({ preventScroll: true })
 
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
@@ -167,7 +195,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
             const nodes = focusable()
             if (nodes.length === 0) {
                 event.preventDefault()
-                sidebar.focus()
+                sidebar.focus({ preventScroll: true })
                 return
             }
             const first = nodes[0]
@@ -184,7 +212,8 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
         return () => {
             document.removeEventListener('keydown', handleKeyDown)
             sidebar.setAttribute('inert', '')
-            menuButton?.focus()
+            const returnTo = opener?.isConnected ? opener : menuButton
+            returnTo?.focus({ preventScroll: true })
         }
     }, [isMobileViewport, mobileNavOpen])
 
@@ -196,7 +225,11 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
             {currentView === 'home' && <SeasonalAmbient />}
 
             {/* Mobile top bar */}
-            <div className="lg:hidden fixed top-0 inset-x-0 h-14 z-30 flex items-center gap-3 px-4 bg-card/80 backdrop-blur-xl border-b border-hairline/10">
+            <div
+                inert={barsHidden}
+                style={barsHidden ? { translate: '0 -100%' } : undefined}
+                className="lg:hidden shell-top-bar fixed top-0 inset-x-0 z-30 flex items-center gap-3 bg-card/80 backdrop-blur-xl touch:bg-card touch:backdrop-filter-none border-b border-hairline/10 transition-transform duration-200"
+            >
                 <button
                     ref={mobileMenuButtonRef}
                     type="button"
@@ -204,11 +237,11 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                     aria-controls="app-navigation"
                     aria-expanded={mobileNavOpen}
                     onClick={() => setMobileNavOpen(true)}
-                    className="inline-flex items-center justify-center size-10 -ml-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-hairline/10 transition-colors cursor-pointer"
+                    className="inline-flex items-center justify-center size-11 rounded-lg text-muted-foreground hover:text-foreground hover:bg-hairline/10 transition-colors cursor-pointer"
                 >
                     <Menu className="size-5" />
                 </button>
-                <img src={logo} alt="UTBT Logo" className="size-8 object-contain" />
+                <img src={logo} alt="UTBT Logo" data-diagnostic-trigger style={{ WebkitTouchCallout: 'none' }} className="size-8 object-contain select-none" />
                 <span className="font-bold tracking-tight">UTBT.net</span>
             </div>
 
@@ -217,7 +250,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                 <button
                     type="button"
                     aria-label="Close navigation"
-                    className="lg:hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
+                    className="lg:hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm touch:bg-black/80 touch:backdrop-filter-none"
                     onClick={() => setMobileNavOpen(false)}
                 />
             )}
@@ -229,8 +262,8 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                 aria-label="Primary navigation"
                 tabIndex={-1}
                 className={cn(
-                "w-[var(--sidebar-width,0px)] bg-card/50 backdrop-blur-xl border-r border-hairline/10 flex flex-col relative z-20",
-                "max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:z-50 max-lg:w-72 max-lg:max-w-[85vw] max-lg:bg-card/95 max-lg:transition-transform max-lg:duration-200",
+                "shell-drawer w-[var(--sidebar-width,0px)] bg-card/50 backdrop-blur-xl border-r border-hairline/10 flex flex-col relative z-20",
+                "max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:z-50 max-lg:max-w-[85vw] max-lg:[touch-action:pan-y_pinch-zoom] max-lg:bg-card/95 max-lg:touch:bg-card max-lg:touch:backdrop-filter-none max-lg:transition-transform max-lg:duration-200",
                 mobileNavOpen ? "max-lg:translate-x-0" : "max-lg:-translate-x-full"
                 )}
             >
@@ -250,7 +283,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                 />
 
                 <nav className={cn(
-                    "flex-1 min-h-0 overflow-y-auto relative z-10",
+                    "flex-1 min-h-0 overflow-y-auto relative z-10 max-lg:[touch-action:pan-y_pinch-zoom]",
                     collapsed
                         ? "overflow-x-hidden [scrollbar-width:none] px-1.5 space-y-2"
                         : "px-4 max-lg:pt-6 space-y-6 [@media(max-height:800px)]:space-y-3"
@@ -280,6 +313,8 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                     ))}
                 </nav>
 
+                {isMobileViewport && <SidebarReloadApp />}
+
                 <SidebarUserCard
                     userProfile={userProfile}
                     collapsed={collapsed}
@@ -287,25 +322,27 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                     loginError={loginError}
                     promo={capabilities.desktopPromo && desktopPromo.ambientVisible && (
                         <Suspense fallback={null}>
-                            <DesktopPromoNavRow collapsed={collapsed} onActivate={() => setMobileNavOpen(false)} />
+                            <DesktopPromoNavRow collapsed={collapsed} onActivate={closeDrawer} />
                         </Suspense>
                     )}
                     onLogin={() => { setLoginError(null); void auth.login() }}
-                    onChangeTitle={() => setIsChangeTitleOpen(true)}
+                    onChangeTitle={() => { closeDrawer(); setIsChangeTitleOpen(true) }}
                     onSettingsIntent={() => void loadSettingsModal()}
-                    onOpenSettings={() => setIsSettingsOpen(true)}
-                    onSignOut={() => setShowLogoutConfirm(true)}
+                    onOpenSettings={() => { closeDrawer(); setIsSettingsOpen(true) }}
+                    onSignOut={() => { closeDrawer(); setShowLogoutConfirm(true) }}
                 />
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 overflow-y-auto relative z-10 pr-1 max-lg:pt-14">
+            <main ref={shellScrollerRef} className="shell-main flex-1 overflow-y-auto touch:overscroll-contain relative z-10">
                 <PageRefreshProvider>
-                    <div className="p-4 sm:p-6 lg:p-8 min-h-full">
+                    <PullToRefresh scrollerRef={shellScrollerRef} />
+                    <div ref={shellContentRef} className="p-4 sm:p-6 lg:p-8 min-h-full">
                         <NavHistoryBar />
                         {children}
                     </div>
                 </PageRefreshProvider>
+                <ShellScrollRestore entryId={entry.id} />
 
                 {isChangeTitleOpen && (
                     <Suspense fallback={null}>
@@ -321,57 +358,47 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                 )}
             </main>
 
-            {/* Logout Confirmation Modal */}
-            {
-                showLogoutConfirm && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                        <div className="w-full max-w-md bg-card border border-border rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-                            <div className="p-6 space-y-4">
-                                <div className="flex flex-col items-center text-center gap-2">
-                                    <div className="p-3 rounded-full bg-red-500/10 text-red-500 mb-2">
-                                        <LogOut className="size-8" />
-                                    </div>
-                                    <h3 className="text-xl font-bold">Sign Out</h3>
-                                    <p className="text-muted-foreground">
-                                        Are you sure you want to sign out?
-                                        <br />
-                                        <br />
-                                        You will need to sign in again to access UTBT.
-                                    </p>
-                                </div>
-                                <div className="flex gap-3 justify-center pt-4">
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => setShowLogoutConfirm(false)}
-                                        className="min-w-[100px]"
-                                    >
-                                        Cancel
-                                    </Button>
-                                    <Button
-                                        variant="destructive"
-                                        onClick={() => auth.logout().then(() => window.location.reload())}
-                                        className="min-w-[100px]"
-                                    >
-                                        Sign Out
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )
-            }
+            {hideBarsOnScroll && (
+                <Suspense fallback={null}>
+                    <HideOnScrollBars
+                        scrollerRef={shellScrollerRef}
+                        entryId={entry.id}
+                        drawerOpen={mobileNavOpen}
+                        onHiddenChange={setBarsHidden}
+                    />
+                </Suspense>
+            )}
+
+            {showTabBar && (
+                <BottomTabBar
+                    currentView={currentView}
+                    visible={!barsHidden}
+                    menuOpen={mobileNavOpen}
+                    onNavigate={changeView}
+                    onOpenMenu={openDrawerFrom}
+                />
+            )}
+
+            {showLogoutConfirm && (
+                <LazyModalGate open>
+                    <SignOutConfirm
+                        onCancel={() => setShowLogoutConfirm(false)}
+                        onConfirm={() => auth.logout().then(() => window.location.reload())}
+                    />
+                </LazyModalGate>
+            )}
 
             {capabilities.settingsModal && isSettingsOpen && (
                 <Suspense fallback={
-                    <div className="fixed top-[var(--window-titlebar-height)] right-0 bottom-0 left-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-                        <div className="w-[95%] lg:w-[70%] max-w-7xl h-[90vh] rounded-xl border border-border bg-card shadow-2xl p-6 animate-pulse" aria-label="Loading settings">
+                    <Modal isOpen onClose={() => setIsSettingsOpen(false)} title="Settings" backdropClassName="z-[100]" className="w-[95%] lg:w-[95%] max-w-[1400px] max-h-[90vh] h-full p-0 overflow-hidden">
+                        <div role="status" aria-label="Loading settings" className="animate-pulse">
                             <div className="h-7 w-32 rounded bg-hairline/10" />
-                            <div className="mt-8 grid grid-cols-[14rem_1fr] gap-8">
+                            <div className="mt-8 grid grid-cols-[14rem_1fr] gap-8 max-sm:grid-cols-1">
                                 <div className="h-64 rounded-xl bg-hairline/5" />
                                 <div className="h-48 rounded-xl bg-hairline/5" />
                             </div>
                         </div>
-                    </div>
+                    </Modal>
                 }>
                     <SettingsModal
                         isOpen={isSettingsOpen}
@@ -383,6 +410,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                 </Suspense>
             )}
 
+            <DiagnosticOverlayTrigger />
         </div>
     )
 }

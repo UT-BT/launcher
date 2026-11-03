@@ -22,6 +22,8 @@ interface PageRefreshContextValue {
 
 const PageRefreshContext = createContext<PageRefreshContextValue | null>(null)
 
+export const REMOUNT_VIEW_EVENT = 'remount-view'
+
 const INACTIVE: PageRefreshDisplay = { active: false, refreshing: false, disabled: false, tooltip: undefined }
 
 export function PageRefreshProvider({ children }: { children: ReactNode }) {
@@ -47,7 +49,11 @@ export function PageRefreshProvider({ children }: { children: ReactNode }) {
         })
     }, [])
 
-    const trigger = useCallback(() => handlerRef.current?.(), [])
+    const trigger = useCallback(() => {
+        const handler = handlerRef.current
+        if (handler) handler()
+        else window.dispatchEvent(new CustomEvent(REMOUNT_VIEW_EVENT))
+    }, [])
 
     return (
         <PageRefreshContext.Provider value={{ display, register, trigger }}>

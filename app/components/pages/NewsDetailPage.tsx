@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { AlertTriangle, ExternalLink, User } from 'lucide-react'
 import { Spinner } from '@/app/components/ui/spinner'
 import { useAsync } from '@/app/hooks/useAsync'
@@ -21,7 +21,6 @@ export function NewsDetailPage({ newsId, userProfile }: NewsDetailPageProps) {
     const accessToken = userProfile?.accessToken ?? ''
     const refreshCooldown = useRefreshCooldown()
     const [refreshKey, setRefreshKey] = useState(0)
-    const scrollRef = useRef<HTMLDivElement>(null)
 
     const { data, loading, error } = useAsync<{ article: NewsArticle; categories: NewsCategoryDef[] }>(
         async (signal) => {
@@ -37,7 +36,7 @@ export function NewsDetailPage({ newsId, userProfile }: NewsDetailPageProps) {
 
     useDocumentTitle(data?.article?.title, SITE_NAME)
 
-    const onScroll = useNavScrollRestore(scrollRef, !loading && !!data)
+    useNavScrollRestore(!loading && !!data)
 
     useRegisterPageRefresh({
         onRefresh: () => refreshCooldown.trigger(() => setRefreshKey(k => k + 1)),
@@ -50,7 +49,7 @@ export function NewsDetailPage({ newsId, userProfile }: NewsDetailPageProps) {
     const category = article ? (data?.categories.find(c => c.key === article.category) ?? null) : null
 
     return (
-        <div ref={scrollRef} onScroll={onScroll} className="h-full overflow-y-auto">
+        <div className="overflow-hidden">
             <div className="p-6">
                 {loading && !article && (
                     <div className="flex items-center justify-center py-24 text-muted-foreground">

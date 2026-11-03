@@ -132,6 +132,9 @@ Show the server's `message`, `reason` and `detail` as they are. `reportLabels.ts
 ## Drafts and the report
 
 - The list keeps the API's order (newest first) and polls while any draft is `analyzing`.
+- On phones the list is DataTable cards ([admin.md](admin.md#tables-on-phones)): map, status
+  and Discard / Open on the face; issues, uploader and expiry in the panel. Tapping the card
+  opens the draft, as a row click does.
 - **Discard** asks first (`DiscardDraftDialog`, shared by the list and the report) and works
   on every draft. Without a publish the draft is deleted with its files. With a publish it
   leaves the list and its files are deleted, but the server keeps it with its publish
@@ -231,6 +234,8 @@ other findings.
 
 - The selected publish (`publishId` from the shell, or a row clicked in the list) shows above
   the recent list, with **Close** and **Open draft**. The list keeps the API's order.
+- On phones the recent list is DataTable cards: map and state on the face; hosts, created and
+  went live in the panel. Tapping the card selects the publish.
 - The publish view (`PublishDetail`, `@container/publish`) shows its state, start time, the
   map it replaces and how, the step tracker (`publishSteps`), the status line, Force live,
   and the Hosts panel (`hostProgress`, one card per host; conflict and error tinted red).
@@ -281,9 +286,15 @@ per location with its state, short sha256 (`shortSha`, full value on hover), siz
 seen. Rows not `present` are tinted red. `filterDriftRows` matches part of the file name,
 ignoring case. No actions; the report is read once when the tab opens.
 
+On phones each file is one card: the file and every location with its state on the face, and
+sha256, size and last seen in the panel, each listed per location. The table keeps one row per
+location, so its cells render per location and the panel cells list them all.
+
 ## Tests
 
 API functions against the fixtures: `app/utils/api.mapUploads.test.ts`,
 `api.mapUploadDraftForm.test.ts`, `api.mapPublishes.test.ts`. Pure modules: the `*.test.ts`
 files in `mapUploads/`. Fixture integrity: `app/utils/fixtures/mapUploadFixtures.test.ts`.
-Section visibility: `app/components/pages/admin/registry.test.ts`.
+Section visibility: `app/components/pages/admin/registry.test.ts`. Phone cards for the three
+lists: `e2e/mobile/admin-cards.spec.ts`; the mobile crawl covers each tab (`admin/map-uploads`,
+`admin/map-uploads-publishing`, `admin/map-uploads-drift`).

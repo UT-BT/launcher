@@ -1,0 +1,475 @@
+{
+  "set": "teams",
+  "responses": [
+    {
+      "host": "api",
+      "path": "/teams",
+      "query": "limit=0&order=desc&sort=world_records",
+      "status": 200,
+      "body": {
+        "data": {
+          "ranked_teams": 13,
+          "teams": [
+            {
+              "added": "2026-07-20 19:10:03",
+              "avatar_updated": "2026-07-21 16:38:28",
+              "has_avatar": true,
+              "id": "9ca5c141-f968-4bf1-b05f-2bd2af0611b3",
+              "is_open": false,
+              "member_count": 5,
+              "name": "fierd_",
+              "owner": "290062867452133377",
+              "owner_alias": "fierd_1",
+              "owner_title": {
+                "color": "205,127,50",
+                "color_b": 50,
+                "color_g": 127,
+                "color_r": 205,
+                "id": "846334653656203275",
+                "name": "World Cup '21 | Division 1: 3rd Place",
+                "rarity": 4
+              },
+              "stats": {
+                "caps": 71793,
+                "playtime_seconds": 16798842,
+                "ranks": {
+                  "caps": 1,
+                  "playtime": 1,
+                  "world_records": 1
+                },
+                "spectator_seconds": 5428433,
+                "world_records": 1519
+              },
+              "tag": "fierd_",
+              "tag_position": "prefix",
+              "tag_spaced": false,
+              "tag_style": "number_only"
+            },
+            {
+              "added": "2026-07-21 10:28:16",
+              "avatar_updated": "2026-08-30 00:23:57",
+              "has_avatar": true,
+              "id": "ffc3701f-a23d-4d38-8162-5ae26a5271d1",
+              "is_open": true,
+              "member_count": 3,
+              "name": "OwyFans",
+              "owner": "684851153095360533",
+              "owner_alias": "OwYeaW #OF",
+              "owner_title": {
+                "color": "247,223,156",
+                "color_b": 156,
+                "color_g": 223,
+                "color_r": 247,
+                "id": "1508462332689387563",
+                "name": "OnlyCUp! | Peak Conqueror",
+                "rarity": 4
+              },
+              "stats": {
+                "caps": 48026,
+                "playtime_seconds": 7012456,
+                "ranks": {
+                  "caps": 3,
+                  "playtime": 4,
+                  "world_records": 2
+                },
+                "spectator_seconds": 1430194,
+                "world_records": 388
+              },
+              "tag": "#OF",
+              "tag_position": "suffix",
+              "tag_spaced": true,
+              "tag_style": "plain"
+            },
+            {
+              "added": "2026-07-20 21:06:37",
+              "avatar_updated": "2026-07-21 20:29:26",
+              "has_avatar": true,
+              "id": "7758a3b6-4415-4fac-bacd-ad430fe1417c",
+              "is_open": false,
+              "member_count": 4,
+              "name": "PhalanX",
+              "owner": "668134009682919460",
+              "owner_alias": "PatriK.pX3",
+              "owner_title": {
+                "color": "235,200,25",
+                "color_b": 25,
+                "color_g": 200,
+                "color_r": 235,
+                "id": "1000000000000000009",
+                "name": "Master Cartographer",
+                "rarity": 4
+              },
+              "stats": {
+                "caps": 12256,
+                "playtime_seconds": 11606824,
+                "ranks": {
+                  "caps": 4,
+                  "playtime": 3,
+                  "world_records": 3
+                },
+                "spectator_seconds": 1156703,
+                "world_records": 125
+              },
+              "tag": ".pX",
+              "tag_position": "suffix",
+              "tag_spaced": false,
+              "tag_style": "numbered"
+            },
+            {
+              "added": "2026-07-21 22:23:59",
+              "avatar_updated": null,
+              "has_avatar": false,
+              "id": "0b44335e-72ac-453f-9448-8d09e62c46a0",
+              "is_open": false,
+              "member_count": 3,
+              "name": "Autism Spectrum Gang",
+              "owner": "203755218804932608",
+              "owner_alias": "ASG.PHILLIP",
+              "owner_title": {
+                "color": "70,175,205",
+                "color_b": 205,
+                "color_g": 175,
+                "color_r": 70,
+                "id": "1000000000000000056",
+                "name": "Untouchable",
+                "rarity": 4
+              },
+              "stats": {
+                "caps": 50843,
+                "playtime_seconds": 11670434,
+                "ranks": {
+                  "caps": 2,
+                  "playtime": 2,
+                  "world_records": 4
+                },
+                "spectator_seconds": 1373690,
+                "world_records": 76
+              },
+              "tag": "ASG.",
+              "tag_position": "prefix",
+              "tag_spaced": false,
+              "tag_style": "plain"
+            },
+            {
+              "added": "2026-07-21 10:48:59",
+              "avatar_updated": "2026-07-21 17:41:14",
+              "has_avatar": true,
+              "id": "72e56565-f71c-4f53-8f96-3dd061225205",
+              "is_open": true,
+              "member_count": 6,
+              "name": "Army Of Bunnytrackers",
+              "owner": "385522602552328214",
+              "owner_alias": "[AoB] (bar)Code",
+              "owner_title": {
+                "color": "92,235,158",
+                "color_b": 158,
+                "color_g": 235,
+                "color_r": 92,
+                "id": "1000000000000000096",
+                "name": "World Builder",
+                "rarity": 5
+              },
+              "stats": {
+                "caps": 10520,
+                "playtime_seconds": 5076435,
+                "ranks": {
+                  "caps": 5,
+                  "playtime": 5,
+                  "world_records": 5
+                },
+                "spectator_seconds": 1068825,
+                "world_records": 17
+              },
+              "tag": "[AoB]",
+              "tag_position": "prefix",
+              "tag_spaced": true,
+              "tag_style": "plain"
+            },
+            {
+              "added": "2026-07-21 16:02:57",
+              "avatar_updated": null,
+              "has_avatar": false,
+              "id": "2fcb97a5-ff84-44f0-9593-036d7ccd6417",
+              "is_open": false,
+              "member_count": 3,
+              "name": "Smederevo",
+              "owner": "1254416467160596565",
+              "owner_alias": "Bakica026",
+              "owner_title": {
+                "color": "192,192,192",
+                "color_b": 192,
+                "color_g": 192,
+                "color_r": 192,
+                "id": "1232191019324276756",
+                "name": "Time Attack 1v1 | Second Place",
+                "rarity": 3
+              },
+              "stats": {
+                "caps": 4029,
+                "playtime_seconds": 1668134,
+                "ranks": {
+                  "caps": 9,
+                  "playtime": 8,
+                  "world_records": 5
+                },
+                "spectator_seconds": 317673,
+                "world_records": 17
+              },
+              "tag": "026",
+              "tag_position": "suffix",
+              "tag_spaced": false,
+              "tag_style": "plain"
+            },
+            {
+              "added": "2026-07-21 14:59:44",
+              "avatar_updated": "2026-07-25 01:15:34",
+              "has_avatar": true,
+              "id": "efa44e42-9e23-4102-b52e-b3d1a59b49dc",
+              "is_open": false,
+              "member_count": 7,
+              "name": "Team Trials",
+              "owner": "247671958571843585",
+              "owner_alias": "[TT] Vernon",
+              "owner_title": {
+                "color": "128,128,128",
+                "color_b": 128,
+                "color_g": 128,
+                "color_r": 128,
+                "id": "1000000000000000026",
+                "name": "Going for Gold",
+                "rarity": 1
+              },
+              "stats": {
+                "caps": 9618,
+                "playtime_seconds": 4915154,
+                "ranks": {
+                  "caps": 6,
+                  "playtime": 6,
+                  "world_records": 7
+                },
+                "spectator_seconds": 764324,
+                "world_records": 11
+              },
+              "tag": "[TT]",
+              "tag_position": "prefix",
+              "tag_spaced": true,
+              "tag_style": "plain"
+            },
+            {
+              "added": "2026-09-18 14:58:40",
+              "avatar_updated": "2026-09-20 11:36:45",
+              "has_avatar": true,
+              "id": "8986be3d-7d3e-4236-a4e3-721e26614abe",
+              "is_open": false,
+              "member_count": 1,
+              "name": "Accident Tempted Bunnies",
+              "owner": "553356218609958923",
+              "owner_alias": "At[3*ATB",
+              "owner_title": {},
+              "stats": {
+                "caps": 7061,
+                "playtime_seconds": 2769530,
+                "ranks": {
+                  "caps": 7,
+                  "playtime": 7,
+                  "world_records": 8
+                },
+                "spectator_seconds": 755998,
+                "world_records": 7
+              },
+              "tag": "At[3*",
+              "tag_position": "prefix",
+              "tag_spaced": false,
+              "tag_style": "plain"
+            },
+            {
+              "added": "2026-07-20 20:17:51",
+              "avatar_updated": "2026-07-22 21:27:10",
+              "has_avatar": true,
+              "id": "3059e580-ef39-4cd4-9759-48dd6bda72c4",
+              "is_open": false,
+              "member_count": 1,
+              "name": "The Veterans",
+              "owner": "238598150888095744",
+              "owner_alias": "VRN|Ron",
+              "owner_title": {
+                "color": "255,138,108",
+                "color_b": 108,
+                "color_g": 138,
+                "color_r": 255,
+                "id": "1000000000000000118",
+                "name": "Evergreen",
+                "rarity": 5
+              },
+              "stats": {
+                "caps": 6292,
+                "playtime_seconds": 1380586,
+                "ranks": {
+                  "caps": 8,
+                  "playtime": 9,
+                  "world_records": 9
+                },
+                "spectator_seconds": 895886,
+                "world_records": 3
+              },
+              "tag": "[VRN]",
+              "tag_position": "prefix",
+              "tag_spaced": true,
+              "tag_style": "plain"
+            },
+            {
+              "added": "2026-10-29 18:17:43",
+              "avatar_updated": "2026-11-01 15:13:39",
+              "has_avatar": true,
+              "id": "efae63f3-716d-4396-a466-ed7bf32d4fb9",
+              "is_open": true,
+              "member_count": 1,
+              "name": "Balls of Steel Squad",
+              "owner": "203227772447883265",
+              "owner_alias": "BoSS~ LoSaH",
+              "owner_title": {
+                "color": "128,128,128",
+                "color_b": 128,
+                "color_g": 128,
+                "color_r": 128,
+                "id": "1000000000000000064",
+                "name": "First Contact",
+                "rarity": 1
+              },
+              "stats": {
+                "caps": 102,
+                "playtime_seconds": 102847,
+                "ranks": {
+                  "caps": 13,
+                  "playtime": 12,
+                  "world_records": 10
+                },
+                "spectator_seconds": 1465,
+                "world_records": 0
+              },
+              "tag": "BoSS~",
+              "tag_position": "prefix",
+              "tag_spaced": true,
+              "tag_style": "plain"
+            },
+            {
+              "added": "2026-07-29 15:06:56",
+              "avatar_updated": "2026-07-29 15:06:57",
+              "has_avatar": true,
+              "id": "0c9f430c-9314-4cf4-b7a9-4ff8b1284d6e",
+              "is_open": false,
+              "member_count": 2,
+              "name": "Hop n' Twerk",
+              "owner": "308196478449483778",
+              "owner_alias": "ShX",
+              "owner_title": {},
+              "stats": {
+                "caps": 1142,
+                "playtime_seconds": 666890,
+                "ranks": {
+                  "caps": 11,
+                  "playtime": 11,
+                  "world_records": 10
+                },
+                "spectator_seconds": 88448,
+                "world_records": 0
+              },
+              "tag": "HnT.",
+              "tag_position": "prefix",
+              "tag_spaced": false,
+              "tag_style": "plain"
+            },
+            {
+              "added": "2026-07-21 16:43:14",
+              "avatar_updated": "2026-07-21 16:43:14",
+              "has_avatar": true,
+              "id": "b09cbe06-2f11-440b-88b7-4dda5e6e56e9",
+              "is_open": true,
+              "member_count": 1,
+              "name": "SUP NULL",
+              "owner": "298541977933316097",
+              "owner_alias": "SUP slade",
+              "owner_title": {
+                "color": "192,192,192",
+                "color_b": 192,
+                "color_g": 192,
+                "color_r": 192,
+                "id": "1179915432623354007",
+                "name": "MSE Mapping Competition | Second Place",
+                "rarity": 3
+              },
+              "stats": {
+                "caps": 360,
+                "playtime_seconds": 78975,
+                "ranks": {
+                  "caps": 12,
+                  "playtime": 13,
+                  "world_records": 10
+                },
+                "spectator_seconds": 35578,
+                "world_records": 0
+              },
+              "tag": "SUP",
+              "tag_position": "prefix",
+              "tag_spaced": true,
+              "tag_style": "plain"
+            },
+            {
+              "added": "2026-07-21 13:11:35",
+              "avatar_updated": "2026-08-14 13:33:56",
+              "has_avatar": true,
+              "id": "004b4c0d-3bad-4d6e-a76c-63cc347ee7d8",
+              "is_open": false,
+              "member_count": 2,
+              "name": "UT World",
+              "owner": "688002451005374476",
+              "owner_alias": "[UTW]Nettlez",
+              "owner_title": {},
+              "stats": {
+                "caps": 1296,
+                "playtime_seconds": 1208974,
+                "ranks": {
+                  "caps": 10,
+                  "playtime": 10,
+                  "world_records": 10
+                },
+                "spectator_seconds": 47098,
+                "world_records": 0
+              },
+              "tag": "[UTW]",
+              "tag_position": "prefix",
+              "tag_spaced": false,
+              "tag_style": "plain"
+            }
+          ],
+          "total": 13
+        },
+        "success": true
+      }
+    },
+    {
+      "host": "gateway",
+      "path": "/patreon",
+      "query": "",
+      "status": 200,
+      "body": {
+        "tier1": [
+          "790880165097504768",
+          "414164967999406090",
+          "270897034796466176",
+          "238598150888095744",
+          "290449564887023617"
+        ],
+        "tier2": [
+          "318842484446724106",
+          "260007417478250497",
+          "242091482541064192"
+        ],
+        "tier3": [
+          "185318594270330880",
+          "265561225428074496"
+        ]
+      }
+    }
+  ]
+}

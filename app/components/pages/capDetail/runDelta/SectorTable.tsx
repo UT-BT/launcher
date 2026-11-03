@@ -9,16 +9,17 @@ import {
     DataTableCell,
     type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
+import { NUMERIC_CELL, NUMERIC_STRONG_TEXT, NUMERIC_TABLE, NUMERIC_TEXT } from '../numericTable'
 import { TONE_TEXT } from './deltaStyles'
 import type { SectorRow } from './runDeltaCard'
 
 type SectorColumnId = 'sector' | 'split' | 'deltaSplit' | 'deltaTotal'
 
 const SECTOR_COLUMNS: ResponsiveColumn[] = [
-    { id: 'sector', width: '4.5rem', required: true },
-    { id: 'split', width: '7rem', priority: 10 },
-    { id: 'deltaSplit', width: '6.5rem', priority: 30 },
-    { id: 'deltaTotal', width: '7rem', priority: 40 },
+    { id: 'sector', width: '4.5rem', required: true, tier: 'essential', label: 'Sector' },
+    { id: 'split', width: '4rem', priority: 10, tier: 'essential', label: 'Split' },
+    { id: 'deltaSplit', width: '4.25rem', priority: 30, tier: 'essential', label: 'Δ Split' },
+    { id: 'deltaTotal', width: '4.5rem', priority: 40, tier: 'essential', label: 'Δ Total' },
 ]
 
 interface SectorTableProps {
@@ -36,20 +37,20 @@ export function SectorTable({ rows, differentLineNote }: SectorTableProps) {
     return (
         <>
             <DataTableShell
-                className="!bg-transparent !border-0 !rounded-none"
-                responsive={{ columns: SECTOR_COLUMNS, onResolve: handleResolve }}
+                className={cn('!bg-transparent !border-0 !rounded-none', NUMERIC_TABLE)}
+                responsive={{ columns: SECTOR_COLUMNS, onResolve: handleResolve, tableOnly: true }}
             >
                 <DataTableHeaderRow>
-                    <DataTableHeaderCell width="4.5rem" align="center">Sector</DataTableHeaderCell>
-                    {isVisible('split') && <DataTableHeaderCell align="right">Split</DataTableHeaderCell>}
-                    {isVisible('deltaSplit') && <DataTableHeaderCell align="right">Δ Split</DataTableHeaderCell>}
-                    {isVisible('deltaTotal') && <DataTableHeaderCell align="right">Δ Total</DataTableHeaderCell>}
+                    <DataTableHeaderCell width="4.5rem" align="center" className={NUMERIC_CELL}>Sector</DataTableHeaderCell>
+                    {isVisible('split') && <DataTableHeaderCell align="right" className={NUMERIC_CELL}>Split</DataTableHeaderCell>}
+                    {isVisible('deltaSplit') && <DataTableHeaderCell align="right" className={NUMERIC_CELL}>Δ Split</DataTableHeaderCell>}
+                    {isVisible('deltaTotal') && <DataTableHeaderCell align="right" className={NUMERIC_CELL}>Δ Total</DataTableHeaderCell>}
                 </DataTableHeaderRow>
                 <tbody>
                     {rows.map(row => (
                         <DataTableRow key={row.index} className={cn(row.flagged && 'bg-hairline/[0.025]')}>
-                            <DataTableCell align="center">
-                                <span className="inline-flex items-center gap-1 text-xs font-mono text-muted-foreground tabular-nums">
+                            <DataTableCell align="center" className={NUMERIC_CELL}>
+                                <span className={cn('inline-flex items-center gap-1 text-xs font-mono text-muted-foreground tabular-nums', NUMERIC_TEXT)}>
                                     {row.label}
                                     {row.flagged && (
                                         <Split className="size-3 shrink-0" strokeWidth={2} role="img" aria-label="different line in this sector" />
@@ -57,20 +58,20 @@ export function SectorTable({ rows, differentLineNote }: SectorTableProps) {
                                 </span>
                             </DataTableCell>
                             {isVisible('split') && (
-                                <DataTableCell align="right">
-                                    <span className="text-xs font-mono tabular-nums text-muted-foreground">{row.split.label}</span>
+                                <DataTableCell align="right" className={NUMERIC_CELL}>
+                                    <span className={cn('text-xs font-mono tabular-nums text-muted-foreground', NUMERIC_TEXT)}>{row.split.label}</span>
                                 </DataTableCell>
                             )}
                             {isVisible('deltaSplit') && (
-                                <DataTableCell align="right">
-                                    <span className={cn('text-xs font-mono tabular-nums', TONE_TEXT[row.deltaSplit.tone])}>
+                                <DataTableCell align="right" className={NUMERIC_CELL}>
+                                    <span className={cn('text-xs font-mono tabular-nums', NUMERIC_TEXT, TONE_TEXT[row.deltaSplit.tone])}>
                                         {row.deltaSplit.label}
                                     </span>
                                 </DataTableCell>
                             )}
                             {isVisible('deltaTotal') && (
-                                <DataTableCell align="right">
-                                    <span className={cn('text-sm font-mono tabular-nums', TONE_TEXT[row.deltaTotal.tone])}>
+                                <DataTableCell align="right" className={NUMERIC_CELL}>
+                                    <span className={cn('text-sm font-mono tabular-nums', NUMERIC_STRONG_TEXT, TONE_TEXT[row.deltaTotal.tone])}>
                                         {row.deltaTotal.label}
                                     </span>
                                 </DataTableCell>

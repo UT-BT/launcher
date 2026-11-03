@@ -25,11 +25,12 @@ team runs and team caps on team maps are in [api.md](../api.md).
 | `teams/PlayerSearchInput.tsx` | the app-wide player picker ([shared-components.md](../shared-components.md)) |
 | `app/utils/api.ts` | every team type (`TeamCore`, `TeamDetail`, `TeamMember`, …) and fetcher; grep `/teams/` or `/me/team` |
 | `e2e/teams.spec.ts` | Playwright: profile refresh after Join and Accept, crest validation, the cached directory on revisit |
+| `e2e/mobile/team-manage-cards.spec.ts` | Playwright mobile suite: the team world-record and activity cards, with the Manage tables' cards ([testing.md](../testing.md)) |
 
 ## Pages and navigation
 
 - **`teams`** is a lazy, controlled page-view. Per-entry state (`utbt:teamsState:v2`, no
-  preference fields): search, access filter, sort field, sort direction, scroll. Its `caches`
+  preference fields): search, access filter, sort field and sort direction. Its `caches`
   hold `myTeam` (from `/me/team`) and `invitations` (from `/me/invitations`), revalidated on
   every mount through `load(background)`, plus the directory rows `TeamGallery` revalidates.
 - **The directory rows live in the Teams caches.** `TeamGallery` fetches the whole directory
@@ -73,11 +74,16 @@ their `TeamMember.role`; on any other team it is `none`. The UI calls `admin` "M
 - A manager header button appears only when it has work: Requests when anything is pending,
   Member numbers when the tag style is not `plain`, Manage members when someone is
   manageable. Audit log is always there for managers.
+- In Manage members the promote, demote and kick buttons are icons with a tooltip on desktop. On
+  a touch device each one carries its label as text and the buttons wrap under the member, so
+  Kick and Kick & block read apart before the tap.
 
 ## Membership
 
 - **One team per player.** `/me/team` returns one team or `{ team: null }`. Join and Accept
-  stay disabled, with a "Leave your current team…" tooltip, while the viewer has a team.
+  stay disabled, with a "Leave your current team…" tooltip, while the viewer has a team. On a
+  touch device the team page shows that reason under the buttons instead. Your Invitations says
+  it in its subtitle on every device.
 - **`TeamMember.status`** is `active`, `invited` or `blocked`, and `TeamDetail.members`
   carries all three. Rosters, member counts and stats use `active`; the managers' Requests
   modal lists `invited` and `blocked`.
@@ -158,6 +164,15 @@ section covers editing it.
   `TeamStatsRow`).
 - Activity rows are `cap`, `world_record` or `playtime`. The feed is the 15 newest; its
   column sort is client-side over those rows. The viewer's own rows are highlighted.
+- **Phone cards.** Both tables are tiered ([shared-components.md](../shared-components.md),
+  Column tiers and phone cards); each column's `cell` renders the table cell and the panel value.
+  A world-record card shows holder, map and time, with difficulty and date in its panel, and its
+  body opens the cap as the table row does. An activity card shows player, type, map and when,
+  with the result (cap time or playtime) in its panel; its body opens the cap, or the player for
+  a playtime item, which has no cap. Both sort from the
+  cards through the header's `handleSort`, so the sort carries over between cards and table.
+  Activity cards key on each item's place in the fetched feed, so an open card stays open when
+  the cards re-sort.
 
 ## Audit log
 

@@ -68,7 +68,9 @@ cap detail read adds `has_demo` and the member's full `cap`.
 
 Label a run's state with `teamRunStateLabel` (`app/utils/teamRunState.ts`): Incomplete, Pending,
 Verified, Disallowed. Team Cap Detail, the team-run chip on Cap Detail and the map's team
-leaderboard all use it, so a run reads "Pending" until it is verified.
+leaderboard all use it, so a run reads "Pending" until it is verified. Each roster member on Team
+Cap Detail carries a shield for its own run (Verified, Pending demo, Disallowed): a tooltip on
+desktop, the shield and its label inline on touch devices.
 
 ## Medals
 
@@ -149,15 +151,26 @@ unlocks favourite toggling, Change Title and the screenshot actions on Maps Auth
 - **Fetch failures look empty.** The server-paged tab fetchers (caps, disallowed, PBs, WRs,
   playtime, uncapped) resolve `{ total: 0, items: [] }` (or `[]`) on a non-2xx, so a failing tab
   shows its empty state, not its error line.
-- **Phone card rows.** Every profile tab table passes `compactContent` with its own skeleton and
-  empty rows, and marks the map name and its core metric `required` at `nameFloorRem: 14`: time on
-  All Caps, Disallowed, Personal Bests and World Records, hours on Playtime, difficulty on
-  Uncapped and Maps Authored (plus the screenshot action on your own profile). At 390 px each tab
-  shows card rows: map name with time or chip on the right, then the second detail (disallow
-  reason, sessions, author, added date) below the name. World Records keeps its progression
-  button and your own Maps Authored keeps Add/Change in the card. Sorting is table-only.
-  `e2e/profile-tabs-responsive.spec.ts` checks the cards (populated, loading and empty) at 390 px and
-  the full tables at 1920 px.
+- **Phone cards.** Every profile tab table is a tiered table
+  ([shared-components.md](../shared-components.md), "Column tiers and phone cards"). Each card
+  builds its columns with `tier`, `label`, `sortKey` and a `cell` renderer that the table rows and
+  the card panel share, and passes `cards` with its own face, skeleton and empty placeholder.
+  The desktop `width`, `priority` and `required` settings are unchanged. Card faces and panels:
+
+  | Tab | Card face | Expand panel |
+  |---|---|---|
+  | All Caps, Personal Bests | map (favourite, Team badge), time with medal, date, status chip | watch and download |
+  | World Records | map (Team badge), time, set date, the progression button | none: every column is on the face, so there is no chevron |
+  | Playtime | map, time | sessions, last played |
+  | Uncapped | map, difficulty | author |
+  | Maps Authored | map, difficulty | added date, the screenshot Add/Change button (your own profile) |
+  | Disallowed | map (Team badge), time, reason | disallowed date |
+
+  All seven sort in card mode through the shared control, which drives the same `useNavState`
+  sort the headers use. On touch devices a tab shows its table only when every column fits, so
+  landscape phones get the table only where it fits whole. A card body tap opens the map, as a
+  row click does. `e2e/profile-tabs-responsive.spec.ts` checks the faces, panels, card sort,
+  skeleton and empty cards at 390 px, the full tables at 1920 px and the column drops at 1280 px.
 - **Tab state** lives in `useNavState` keys prefixed per card (`caps.*`, `disallowed.*`, `pbs.*`,
   `wrs.*`, `playtime.*`, `uncapped.*`, `achievements.*`, `authored.*`) and the active tab in
   `player.activeTab`, so Back restores tab, page, sort and search.
@@ -185,6 +198,15 @@ those rows; none fetches for itself except the version bar.
   client-side; the rank is the row's position by time within the tab. Each row's medal comes from
   `computeMedalTier`. The row whose id equals the newest WR progression entry's `cap_id` carries
   the WR history trigger.
+- **Leaderboard phone cards**: both leaderboards are tiered
+  ([shared-components.md](../shared-components.md#column-tiers-and-phone-cards)). A solo card's face
+  shows rank, player (with the WR history trigger), medal and time; its panel holds Team, Date,
+  Watch replay and Download demo. A team card's face shows rank, team, medal and time; its panel
+  holds Status and Date. Both sort through the card sort control (solo: rank, player, time, date;
+  team: rank, team time, date). The card body opens the cap (solo) or team cap. The team
+  columns stay `required`, so desktop still switches the whole team table to cards (at 1280 px the
+  map page's column is too narrow for it). `e2e/mobile/leaderboard-cards.spec.ts` checks the
+  cards, Watch and Download from the panel, the card sort and the body tap.
 - **Stat tiles**: the median is over certified caps (all team runs on a team map); "engaged
   players" count players with more than 300 s of non-spectator playtime.
 - **Your Stats**: on solo maps the PB and rank are the viewer's position among verified rows; on
@@ -198,6 +220,17 @@ those rows; none fetches for itself except the version bar.
   (`author_ref`) renders as `PlayerInfo`, so it links to the profile; a free-text author renders
   as a plain `MetaPill`. The Maps table does the same through `PlayerInfo presentation="name"`
   ([shared-components.md](../shared-components.md)).
+- **Screenshot viewer** (`modals/MapScreenshotViewer.tsx`, lazy behind `LazyModalGate` in
+  `mapDetail/HeroSection.tsx`): on a touch device (the device environment's `touch`) the hero
+  screenshot is a "View screenshot" button that opens the 1024 px screenshot in a `Modal` (a sheet
+  on phones). Pinch zooms around the fingers, one finger pans a zoomed screenshot and a double tap
+  zooms in at the tap or back out, all with pointer events on a `touch-action: none` frame, so the
+  page itself never zooms. The zoom math is `modals/screenshotZoom.ts` (`screenshotZoom.test.ts`):
+  1× to 4×, panned only as far as the screenshot still covers the frame; a rotation (the frame
+  changing width) zooms back out. Desktop renders the hero
+  as before and never loads the viewer. The Add/Change screenshot button sits beside the viewer
+  button, not inside it, so it still opens the editor. Team screenshots have no viewer: there is
+  no team screenshot component.
 - **Inactive version** (`active === false`): an amber "no longer in rotation" banner, reviews
   closed (`ReviewsCard canSubmit`), screenshot editing for staff only. The screenshot permission
   rule is in [api.md](../api.md).
@@ -241,6 +274,21 @@ target or a `null` read) or loading.
   drops a zone whose relative position (cumulative ÷ cap time) differs by more than 6 % and by
   more than 4× its neighbours' mismatch (a skipped or misread checkpoint), and renumbers the kept
   ones `CP1…` between `SPAWN` and `CAP` for the splits table, the delta chart and the scrubber.
+- **Phones.** The splits, sector and speed tables stay tables with every column: they are numeric
+  comparisons, so they have no cards: each passes `tableOnly: true`, and every column is
+  `essential`. Each `DataTableShell` is a `@container/numbers`
+  (`numericTable.tsx`). Below 28rem (448 px), cells drop to `px-1.5`, numbers switch from mono to
+  the system font's tabular digits at `text-xs` with `tracking-tight`, the CP column narrows to
+  2.25rem, and two headers shorten (`NumericHeader`: Cumulative → Cum., Avg speed → Speed, with the
+  full name as the `abbr` title). From the desktop app's 1280 px minimum window up the tables are
+  at least 474 px wide, so desktop keeps the wide look; a browser window between `lg` (1024 px)
+  and about 1230 px halves the card below 28rem and gets the tight layout with every column. The
+  `responsive` widths are the phone minimums and match the tight headers (the CP header is 4rem
+  only above 28rem): every column fits a 360 px phone, and columns drop by priority only on
+  narrower screens. Speed rows keep their sector buttons, so a tap
+  zooms. `e2e/mobile/cap-numeric-tables.spec.ts` checks every column at 360×780 and 780×360 (the
+  recorded cap and its `most-columns` variant, both engines) and the tap zoom;
+  `e2e/cap-numeric-tables-desktop.spec.ts` pins the desktop layout at 1280 and 1920 px.
 
 **Compare Run** (side-by-side video):
 
@@ -274,8 +322,8 @@ around this one (found by `team_cap_id`, else by `member_key`, the same member c
 `capDetail/videoCompare/VideoCompareModal.tsx` plays N runs in sync (two from Cap Detail, the
 roster from Team Cap Detail; lane colours cycle after eight).
 
-- The master clock is the furthest video time plus that run's nudge. Nudges move in 0.1 s steps,
-  clamped to ± the larger of 60 s and the longest video.
+- The master clock is the furthest mounted video time plus that run's nudge. Nudges move in 0.1 s
+  steps, clamped to ± the larger of 60 s and the longest video.
 - Arrow keys step one frame at the lowest `fps` among the runs (30 when unknown); J and L skip
   5 s; keys typed into an input are ignored. Videos start muted; rates run 0.25×–2×.
 - The slowest run is the reference. For every other run **on the reference's side**
@@ -285,7 +333,25 @@ roster from Team Cap Detail; lane colours cycle after eight).
   (x = `t + delta`). A run on the other side or with an unknown side gets no ticks and no delta;
   a `null` read keeps that run's checkpoint ticks, aligned against the slowest run, and the
   checkpoint delta bar (exactly two runs with a matched checkpoint).
-- Play starts only once every video reports a finite duration and none has errored.
+- Play starts only once every mounted video has reported a finite duration and none has errored.
+- **Touch devices** (`useDeviceEnvironment(env => env.touch)`) mount at most two videos
+  (`TOUCH_PLAYING_LIMIT`). They start with the reference and the first other run on its side
+  (else the first other run); the rest show a **Watch** poster (`initialPlayingRuns`,
+  `compareView.ts`). Tapping a poster swaps that run in for the one that has played longest
+  (`swapIntoPlaying`): the replaced video pauses and releases its source (`src` removed,
+  `load()`), and a run swapped in during playback seeks to the clock and plays once its
+  metadata loads. A run swapped back in keeps the duration it reported before, so Play doesn't
+  wait for it to reload; it joins the same way. While a run is joining, the clock never moves
+  back. Posters keep their readouts. Desktop mounts and plays every run.
+- **The clock lives outside React state** (`compareClock.ts`). The playback loop writes the
+  master time to `createCompareClock()`. The scrubber, both delta strips and the time label
+  paint their cursor, text and `aria-valuenow` from it every frame (`useClockFrame`), with no
+  render. The pane readouts go through `useClockValue`: they re-render only when a readout
+  changes, and at most every 100 ms (`READOUT_INTERVAL_MS`, `subscribeThrottled`), so playback
+  commits at most 10 times a second whatever the frame rate.
+- Every `<video>` here, in `ReplayVideoPlayer` and in Admin's map video preview gets
+  `playsInline`, so an iPhone never forces native fullscreen; fullscreen happens only
+  through the replay player's own controls.
 - Credit the sources with `ReplaySourceCredit`; source rules are in [api.md](../api.md).
 
 ## World Records
@@ -307,6 +373,16 @@ re-sorting reuses the total.
   ([state-patterns.md](../state-patterns.md)). Persisted prefs: column visibility and order, page
   size, filters panel open.
 - Watch and the demo download are always enabled: every row is a verified WR.
+- **Phone cards**: both tables are tiered
+  ([shared-components.md](../shared-components.md#column-tiers-and-phone-cards)). A record card's
+  face holds the favourite, the map (with New), the holder(s) and the time; difficulty, date set
+  and the Watch, Download and WR history actions sit in the expand panel. Tapping the body opens
+  the map. A Top Rushers card shows rank, rusher, WR count and share, with median and average in
+  the panel, and its body opens the rusher. Records cards sort through the card sort control (map,
+  holder, time, difficulty, date set), on the same sort state as the header; Top Rushers has no
+  sort. Switching between the two views closes every open card. `e2e/mobile/table-cards.spec.ts`
+  checks the cards; `e2e/world-records-table.spec.ts` pins the desktop header lists and priority
+  drops.
 - Arriving from the sidebar's new-records badge resets to Records sorted by date, newest first
   (`useNewItemHighlight`, [navigation.md](../navigation.md)).
 
@@ -318,12 +394,29 @@ re-sorting reuses the total.
 controls; the header shows `map_count` active maps. It pages the way World Records does (ref page
 cache, neighbour prefetch, `querySig` gate). The only persisted pref is the page size.
 
+- **Phone cards**: the table is tiered
+  ([shared-components.md](../shared-components.md#column-tiers-and-phone-cards)). The face holds
+  rank, player, total (count and percentage) and the certified percentage, so the total is never
+  hidden. Certified, non-certified and team maps (count, percentage and bar) sit in the expand
+  panel; certified is a detail column even though its percentage is on the face, because the
+  panel is the only place with its count. Tapping the body opens the player. No sort control, as
+  the table has none. `e2e/mobile/player-server-cards.spec.ts` checks the cards.
+
 ## Players list
 
 `fetchPlayers` (`/v2/players/`) and `fetchPlayersCount` (`/v2/players/count/`, search only) page
 and sort server-side. `rank` and `alias` sort ascending on first click, every other field
 descending. A `rank` of 0 means unranked and renders "—". Rank and points are the same
 server-computed values the profile hero shows.
+
+- **Phone cards**: the table is tiered
+  ([shared-components.md](../shared-components.md#column-tiers-and-phone-cards)). The face holds
+  rank, player (with the Banned badge), points and world records; role, the medal counts and
+  member since sit in the expand panel, even though the medal counts and member since are hidden
+  by default on the table (`hiddenByUser`). Tapping the body opens the player. The card sort
+  control offers every sortable column, on the same sort state as the header.
+  `e2e/mobile/player-server-cards.spec.ts` checks the cards, and that a landscape phone keeps the
+  table with the default columns instead of switching to cards for the hidden ones.
 
 ## Maps list
 
@@ -342,33 +435,55 @@ the capped filter run `computeMedalTier` on those best caps; the medal sort puts
 casual maps last in either direction. WR holders load lazily for the visible rows
 (`fetchWorldRecordsForMaps`) and accumulate in `caches.wrHolders`.
 
-Map, Difficulty, World Record and (signed in) Personal Best are the responsive table's
-`required` core columns (`CORE_COLUMNS` next to `REQUIRED_COLUMNS`), so mid widths drop the
-optional columns first; they stay hideable in Columns. When even those don't fit, the table
-becomes compact card rows (a list labelled "Maps"): favourite star, map name and New badge,
-difficulty and author on the left, WR and, signed in, medal and PB through `CapTimeLink` on the
-right, with their own skeleton and "No maps match your filters." empty state. Columns hides while
-cards show. Both views render from the same per-row context, so the tutorial's mock first row and
-the new-map highlight apply to either.
+The table is tiered ([shared-components.md](../shared-components.md#column-tiers-and-phone-cards)).
+Each column declares its tier, label and sort field (`COLUMN_TIER`, `COLUMN_LABELS`,
+`COLUMN_SORT_KEY`), and its content comes from `mapCell`, which both the table rows and the expand
+panel render. Map, Difficulty, World Record and (signed in) Personal Best are the desktop rule's
+`required` core columns (`CORE_COLUMNS` next to `REQUIRED_COLUMNS`), so mid widths drop the optional
+columns first and a window too narrow for them gets cards; they stay hideable in Columns. On touch the
+touch rule decides instead.
+
+- **Card face** (a list labelled "Maps"): a small thumbnail, the favourite star, map name and New
+  badge, difficulty, the WR and, signed in, the medal and PB through `CapTimeLink`. Tapping the
+  body opens the map.
+- **Expand panel**: Tags, Author, Added, Demos, Community Review and, signed in, Your Review.
+  Demos opens the replay picker and both reviews open the reviews modal, as from the table.
+- **Card sort**: the nine sortable columns (six signed out), on the same `sortBy` / `sortDir` as
+  the headers.
+- The thumbnail is the decorative column the touch rule may drop. Skeleton and "No maps match your
+  filters." are the card list's placeholder. Columns hides while cards show; a column hidden there
+  on a wide screen still shows in the panel and the card sort (`hiddenByUser`), and never pushes
+  the table to cards.
+- **Tutorial**: in card view the first card's panel opens when the tutorial starts, and again
+  whenever another map becomes the first card, so the Demos and ratings steps spotlight the real
+  buttons. The sort step spotlights the card sort control,
+  found inside the table shell (`tableShellRef`), and the Columns step explains the table instead
+  of pointing at a hidden button.
+- Both views render from the same per-row context, so the tutorial's mock first row and the
+  new-map highlight apply to either. `e2e/maps-responsive.spec.ts` checks the cards, the panel's
+  modals, the card sort and the tutorial on a phone, and pins the desktop header lists at 1024,
+  1280 and 1920 px. The crawl reaches Demos and the reviews through the panel (`maps/demos`,
+  `maps/reviews`), and `maps:signed-in` crawls the signed-in cards.
 
 ## Shared modals
 
 | Modal | Opened from | Rules |
 |---|---|---|
-| `shared/ReplayVideoModal.tsx` + `useReplayWatch` | every Watch button | `openReplay` turns a `null` video into "Replay video not available yet" and a thrown read into "Could not load this replay"; render `replay.error` in a `Modal` titled "Replay not available" beside it. Volume persists in `utbt:replayVideoVolume:v1`; Share copies `view_url ?? mp4_url`. |
+| `shared/ReplayVideoModal.tsx` + `useReplayWatch` | every Watch button | `openReplay` turns a `null` video into "Replay video not available yet" and a thrown read into "Could not load this replay"; render `replay.error` in a `Modal` titled "Replay not available" beside it. Volume persists in `utbt:replayVideoVolume:v1`; Share copies `view_url ?? mp4_url`. The player plays inline (`playsInline`); fullscreen is its controls' button. |
 | `modals/ReplayPickerModal.tsx` | Maps row replay, Home Medal Hunt, Cap Detail Compare Run | Lists the map's verified solo runs, or its team runs on a team map outside `compareMode`. Resolves each row's video three at a time, visible page first. Caches every run per map for 5 minutes (`replayPickerCache.ts`), and drops `excludeCapId` (the cap being compared) after the read, so compare mode never offers the cap itself and a later normal open still lists it. |
-| `modals/WorldRecordProgressionModal.tsx` | the WR history trigger on Map Detail, World Records and the profile WR tab | `lazy()`-loaded; the caller fetches `fetchWorldRecordProgression` and passes `entries`. |
+| `modals/WorldRecordProgressionModal.tsx` | the WR history trigger on Map Detail, World Records and the profile WR tab | `lazy()`-loaded behind `LazyModalGate`; the caller fetches `fetchWorldRecordProgression` and passes `entries`. |
 | `modals/CapTimeDistributionModal.tsx` | Map Detail median tile | Certified caps only on solo maps, every team run on team maps; the x-axis ends at the tightest medal boundary that holds about 95 % of caps. |
 | `modals/PlaytimeBreakdownModal.tsx` | Map Detail playtime tiles | Per-player playtime; spectator rows excluded. |
-| `modals/HistoryModal.tsx` | Home | The signed-in player's own caps (`fetchSummaryCaps`, `/v2/summary/caps`). The read has no total, so it asks for one row more than the page to know whether a next page exists. |
+| `modals/HistoryModal.tsx` | Home | The signed-in player's own caps (`fetchSummaryCaps`, `/v2/summary/caps`). The read has no total, so it asks for one row more than the page to know whether a next page exists. Its table is tiered with every column essential, so a phone card shows every column and has no panel; the card body opens the cap and closes the modal. |
 | `modals/PlayerFavoritesModal.tsx`, `PlayerReviewsModal.tsx` | profile sidebar cards | The full list behind each card's preview. |
 | `modals/ReviewModal.tsx` | Map Detail, Home | Map Detail prefills it with the viewer's existing review and refetches on success. |
 | `modals/MapScreenshotModal.tsx` | map hero, Maps Authored | [api.md](../api.md) |
+| `modals/MapScreenshotViewer.tsx` | map hero, touch devices only | Read-only pinch-zoom viewer; see Map detail above. |
 
 ## Adding a profile tab
 
 Reference instance: the Disallowed tab (`DisallowedCapsCard.tsx`), the smallest server-paged tab,
-phone card rows included.
+phone cards included.
 
 1. **Fetcher** in `app/utils/api.ts` returning `{ total, items }` (skill: consume-api-data). If
    the tab shows a count, add the field to `UserSummaryCounts` and `normaliseUserSummaryCounts`.
@@ -377,7 +492,8 @@ phone card rows included.
    `accessToken`, `userId`, `onMapSelect`, `tabsSlot`; render `tabsSlot` first in the header; keep
    query, sort, page and page size in `useNavState('<prefix>.<field>')` with a prefix no other
    card uses; page through `usePaginatedQuery`; render `DataTableShell` with `responsive`
-   including `compactContent` and the core metric `required` (as `DisallowedCapsCard` does), then
+   columns that declare `tier`, `label`, `sortKey` and `cell`, the core metric `required`, and
+   `cards` with a face, placeholder and the header's sort (as `DisallowedCapsCard` does), then
    `PaginationBar`.
 4. **Wire it**: add `{ value, label, count, hidden }` to the tab list in
    `playerDetail/playerDetailTabs.ts` in display order; if the tab can hide, add its known-empty
@@ -387,7 +503,10 @@ phone card rows included.
    `tabsSlot={<MainSectionTabs tabs={tabs} active={activeTab} onChange={setActiveTab} />}`.
 5. **Verify**: `npm run typecheck:web` passes. In `npm run dev:web`, open `/players/<id>`, switch to
    the tab, change page, open a map and go Back: tab, page and search are restored; at 390 px the
-   compact rows render with no horizontal scroll. Add the tab to `TABS` in
-   `e2e/profile-tabs-responsive.spec.ts` with its empty message, and its list read to `serveApi` and
-   `emptyTabRead`; `npm run test:e2e -- responsive-accessibility`
-   still renders `/players/1` without the error boundary.
+   cards render with no horizontal scroll. Add the tab to `TABS` in
+   `e2e/profile-tabs-responsive.spec.ts` with its headers, empty message, card face, panel and sort
+   field, and its list read to `serveApi` and `emptyTabRead`; `npm run test:e2e -- responsive-accessibility`
+   still renders `/players/1` without the error boundary. Add the tab to the `player-detail` mobile
+   manifest entry (`tableTab(…)` in `e2e/mobile/manifest/player-detail.ts`), run
+   `npm run docs:mobile-routes`, and `npm run test:mobile -- -g "player-detail/<id>"` passes
+   ([mobile.md](../mobile.md#mobile-route-manifest)).

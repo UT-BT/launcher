@@ -16,15 +16,16 @@ import { useAdminFilterPresets } from '../components/useAdminFilterPresets'
 import { TableControls } from '../components/TableControls'
 import { PANEL_LABEL, useResetOnChange, useAdminPageSize } from '../components/shared'
 import { MapLink } from '../components/MapLink'
+import { AdminCardFace, adminCardsPlaceholder } from '../components/AdminCardFace'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
-import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
+import { CapTimeLink, openCap } from '@/app/components/shared/CapTimeLink'
 import { FilterPanelRow } from '@/app/components/ui/filter-panel-row'
 import { FilterPresetsMenu } from '@/app/components/shared/FilterPresetsMenu'
 import { ActiveFilterChip } from '@/app/components/shared/ActiveFilterChip'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import {
   DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow, DataTableCell,
-  DataTableEmpty, DataTableSkeletonRow, type SortDirection, type ResponsiveColumn,
+  DataTableEmpty, DataTableSkeletonRow, type SortDirection,
 } from '@/app/components/shared/DataTable'
 import { DemoVerifyModal } from './DemoVerifyModal'
 import { Checkbox } from '@/app/components/ui/checkbox'
@@ -37,12 +38,12 @@ const STATUS_OPTIONS: { value: AdminCapStatus; label: string }[] = [
 ]
 
 const COLUMNS: AdminColumn[] = [
-  { id: 'player', label: 'Player', required: true },
-  { id: 'map', label: 'Map' },
-  { id: 'time', label: 'Time' },
-  { id: 'status', label: 'Status' },
-  { id: 'added', label: 'Added' },
-  { id: 'actions', label: 'Actions', required: true },
+  { id: 'player', label: 'Player', required: true, tier: 'essential' },
+  { id: 'map', label: 'Map', tier: 'detail' },
+  { id: 'time', label: 'Time', tier: 'detail' },
+  { id: 'status', label: 'Status', tier: 'detail' },
+  { id: 'added', label: 'Added', tier: 'detail' },
+  { id: 'actions', label: 'Actions', required: true, tier: 'essential' },
 ]
 
 const LAYOUT: Record<string, { width?: string; align?: 'left' | 'center' | 'right' }> = {
@@ -226,10 +227,6 @@ export function CapsManagementSection({ userProfile, onMapSelect }: AdminSection
     run: () => unverifyCap(token!, c.id).then(() => undefined),
   })
 
-  const responsiveColumns = useMemo<ResponsiveColumn[]>(
-    () => tbl.columnOrder.filter(tbl.isVisible).map((id) => ({ id, width: LAYOUT[id]?.width, priority: PRIORITY[id], required: tbl.requiredColumns.has(id) })),
-    [tbl.columnOrder, tbl.isVisible, tbl.requiredColumns],
-  )
   const [resolved, setResolved] = useState<Set<string> | null>(null)
   const handleResolve = useCallback((ids: Set<string>) => { setResolved(ids) }, [])
   const isShown = useCallback((id: string) => tbl.isVisible(id) && (!resolved || resolved.has(id)), [tbl, resolved])
@@ -250,53 +247,68 @@ export function CapsManagementSection({ userProfile, onMapSelect }: AdminSection
     return <DataTableHeaderCell key={id} width={layout.width} align={layout.align}>{tbl.columnLabels[id]}</DataTableHeaderCell>
   }
 
-  const renderCell = (id: string, c: AdminCapRow): ReactNode => {
-    if (!isShown(id)) return null
-    const align = LAYOUT[id].align
+  const capCell = (id: string, c: AdminCapRow): ReactNode => {
     const busy = busyId === c.id
     switch (id) {
       case 'player':
-        return <DataTableCell key={id} align={align}><PlayerInfo userId={c.user} alias={c.alias} title={toActiveTitle(c.active_title)} size="sm" /></DataTableCell>
+        return <PlayerInfo userId={c.user} alias={c.alias} title={toActiveTitle(c.active_title)} size="sm" />
       case 'map':
-        return <DataTableCell key={id} align={align}><MapLink name={c.map} onSelect={onMapSelect} className="text-sm" /></DataTableCell>
+        return <MapLink name={c.map} onSelect={onMapSelect} className="text-sm" />
       case 'time':
-        return <DataTableCell key={id} align={align} className="font-mono tabular-nums"><CapTimeLink capId={c.id} seconds={c.cap_time_seconds ?? 0} /></DataTableCell>
+        return <CapTimeLink capId={c.id} seconds={c.cap_time_seconds ?? 0} />
       case 'status':
-        return (
-          <DataTableCell key={id} align={align}>
-            {c.disallowed ? <span className="text-red-300 text-xs">Disallowed</span>
-              : c.verified ? <span className="text-emerald-300 text-xs">Verified</span>
-              : <span className="text-muted-foreground text-xs">Unverified</span>}
-          </DataTableCell>
-        )
+        return c.disallowed ? <span className="text-red-300 text-xs">Disallowed</span>
+          : c.verified ? <span className="text-emerald-300 text-xs">Verified</span>
+          : <span className="text-muted-foreground text-xs">Unverified</span>
       case 'added':
-        return <DataTableCell key={id} align={align} className="text-muted-foreground text-xs whitespace-nowrap" title={c.added ?? ''}>{relTime(c.added)}</DataTableCell>
+        return <span className="text-muted-foreground text-xs whitespace-nowrap" title={c.added ?? ''}>{relTime(c.added)}</span>
       case 'actions':
         return (
-          <DataTableCell key={id} align={align}>
-            <div className="flex justify-center gap-1.5">
-              {c.disallowed ? (
-                <ActionButton tone="emerald" icon={Check} loading={busy} title="Reallow" onClick={() => act(c.id, () => reallowCap(token!, c.id))} />
-              ) : (
-                <ActionButton tone="red" icon={Ban} loading={busy} title="Disallow" onClick={() => confirmDisallow(c)} />
-              )}
-              {c.verified ? (
-                <ActionButton tone="amber" icon={ShieldOff} loading={busy} title="Unverify" onClick={() => confirmUnverify(c)} />
-              ) : (
-                <>
-                  <ActionButton tone="emerald" icon={ShieldCheck} loading={busy}
-                    title={c.has_demo ? 'Verify (manual flag)' : 'Upload a demo for this cap first'}
-                    onClick={() => act(c.id, () => verifyCapFlag(token!, c.id))} disabled={c.disallowed || !c.has_demo} />
-                  <ActionButton tone="accent" icon={UploadCloud} title="Verify with demo" onClick={() => setDemoCap(c)} disabled={c.disallowed} />
-                </>
-              )}
-            </div>
-          </DataTableCell>
+          <div className="flex justify-center gap-1.5">
+            {c.disallowed ? (
+              <ActionButton tone="emerald" icon={Check} loading={busy} title="Reallow" onClick={() => act(c.id, () => reallowCap(token!, c.id))} />
+            ) : (
+              <ActionButton tone="red" icon={Ban} loading={busy} title="Disallow" onClick={() => confirmDisallow(c)} />
+            )}
+            {c.verified ? (
+              <ActionButton tone="amber" icon={ShieldOff} loading={busy} title="Unverify" onClick={() => confirmUnverify(c)} />
+            ) : (
+              <>
+                <ActionButton tone="emerald" icon={ShieldCheck} loading={busy}
+                  title={c.has_demo ? 'Verify (manual flag)' : 'Upload a demo for this cap first'}
+                  onClick={() => act(c.id, () => verifyCapFlag(token!, c.id))} disabled={c.disallowed || !c.has_demo} />
+                <ActionButton tone="accent" icon={UploadCloud} title="Verify with demo" onClick={() => setDemoCap(c)} disabled={c.disallowed} />
+              </>
+            )}
+          </div>
         )
       default:
         return null
     }
   }
+
+  const renderCell = (id: string, c: AdminCapRow): ReactNode => {
+    if (!isShown(id)) return null
+    const align = LAYOUT[id].align
+    switch (id) {
+      case 'time':
+        return <DataTableCell key={id} align={align} className="font-mono tabular-nums">{capCell(id, c)}</DataTableCell>
+      case 'added':
+        return <DataTableCell key={id} align={align} className="text-muted-foreground text-xs whitespace-nowrap" title={c.added ?? ''}>{relTime(c.added)}</DataTableCell>
+      default:
+        return <DataTableCell key={id} align={align}>{capCell(id, c)}</DataTableCell>
+    }
+  }
+
+  const columns = tbl.responsiveColumns<AdminCapRow>((id) => ({
+    width: LAYOUT[id]?.width, priority: PRIORITY[id], sortKey: SORTABLE[id], cell: (c) => capCell(id, c),
+  }))
+
+  const selectCap = (c: AdminCapRow) => (
+    <label className="-m-2 flex size-11 shrink-0 items-center justify-center cursor-pointer">
+      <Checkbox checked={selected.has(c.id)} onCheckedChange={() => toggleOne(c.id)} aria-label={`Select cap on ${c.map}`} />
+    </label>
+  )
 
   return (
     <SectionShell title="Caps Management" icon={Flag}>
@@ -350,7 +362,30 @@ export function CapsManagementSection({ userProfile, onMapSelect }: AdminSection
         </div>
       )}
 
-      <DataTableShell className="flex-none" responsive={{ columns: responsiveColumns, nameFloorRem: 14, extraRem: 3, onResolve: handleResolve }}>
+      {tbl.cards && rows.length > 0 && (
+        <label className="flex h-11 items-center gap-3 self-start px-1 text-sm text-muted-foreground cursor-pointer">
+          <Checkbox checked={allOnPageSelected ? true : someSelected ? 'indeterminate' : false}
+            onCheckedChange={toggleAll} aria-label="Select all caps on this page" />
+          Select all on this page
+        </label>
+      )}
+
+      <DataTableShell
+        className="flex-none"
+        responsive={{
+          columns, nameFloorRem: 14, extraRem: 3, onResolve: handleResolve,
+          compactAriaLabel: 'Caps', onCompactChange: tbl.onCompactChange,
+          cards: {
+            rows,
+            rowKey: (c) => c.id,
+            face: (c) => <AdminCardFace columns={columns} row={c} lead={selectCap(c)} />,
+            onOpen: (c) => openCap(c.id),
+            rowClassName: (c) => selected.has(c.id) ? 'bg-accent-500/[0.06]' : undefined,
+            placeholder: adminCardsPlaceholder(loading || total === null, rows.length === 0, 'No caps match these filters.'),
+            sort: { key: sort, direction: order, onSort: (key) => toggleSort(key as AdminCapSort) },
+          },
+        }}
+      >
         <DataTableHeaderRow>
           <DataTableHeaderCell width="3rem" align="center">
             <Checkbox checked={allOnPageSelected ? true : someSelected ? 'indeterminate' : false}

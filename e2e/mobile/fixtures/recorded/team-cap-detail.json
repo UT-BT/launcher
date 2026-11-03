@@ -1,0 +1,5693 @@
+{
+  "set": "team-cap-detail",
+  "responses": [
+    {
+      "host": "api",
+      "path": "/caps/649d11b7-ea8e-44c3-a357-09a6131ef5be/detail",
+      "query": "",
+      "status": 200,
+      "body": {
+        "data": {
+          "cap": {
+            "active_title": {
+              "color_b": 156,
+              "color_g": 223,
+              "color_r": 247,
+              "name": "OnlyCUp! | Peak Conqueror",
+              "rarity": 4
+            },
+            "added": "2026-10-10 23:13:48.508224",
+            "alias": "OwYeaW #OF",
+            "cap_time_seconds": 79.222,
+            "cap_type": 2,
+            "disallowed": false,
+            "dodge_after_landing_50pc": 0.162,
+            "dodge_bind_uses": 0,
+            "dodge_block_count": 32,
+            "dodge_init_after_landing_50pc": 0.052,
+            "engine": "469e - Release",
+            "fps_1pc": 217,
+            "fps_25pc": 344,
+            "fps_50pc": 357,
+            "fps_5pc": 312,
+            "has_ghost": true,
+            "id": "649d11b7-ea8e-44c3-a357-09a6131ef5be",
+            "map": "CTF-BT-II-SkaarjInvasion-vF2",
+            "medal": 6,
+            "netspeed_max": 25000,
+            "netspeed_min": 25000,
+            "ping_1pc": 15,
+            "ping_25pc": 21,
+            "ping_50pc": 22,
+            "ping_5pc": 20,
+            "renderer": "D3D11Drv",
+            "spawn_count": 97,
+            "team": 0,
+            "team_run_id": "B02E5AF15A8089F132078672A5B43548",
+            "time_between_dodges_50pc": 0.506,
+            "user": "684851153095360533",
+            "verified": true
+          },
+          "checkpoints": [
+            {
+              "cumulative": 20.617,
+              "segment": 20.617,
+              "zone": "43"
+            },
+            {
+              "cumulative": 21.282,
+              "segment": 0.665,
+              "zone": "36"
+            },
+            {
+              "cumulative": 44.724,
+              "segment": 23.442,
+              "zone": "24"
+            },
+            {
+              "cumulative": 56.72,
+              "segment": 11.996,
+              "zone": "28"
+            },
+            {
+              "cumulative": 57.205,
+              "segment": 0.485,
+              "zone": "11"
+            }
+          ],
+          "compare_candidates": [
+            {
+              "alias": "Bun` #OF",
+              "cap_time_seconds": 80.002,
+              "has_ghost": true,
+              "id": "ac506aed-4b80-4fd6-a409-d005ed89902a",
+              "user": "778035658224697377"
+            },
+            {
+              "alias": "kleps",
+              "cap_time_seconds": 80.228,
+              "has_ghost": true,
+              "id": "b7f27e99-32d9-464e-bea1-22da74e4048e",
+              "user": "424992398657978370"
+            },
+            {
+              "alias": "fierd_1",
+              "cap_time_seconds": 80.548,
+              "has_ghost": true,
+              "id": "46f88a48-35ee-4b70-a43d-eadeac9c79f0",
+              "user": "290062867452133377"
+            },
+            {
+              "alias": "Arturek ;)",
+              "cap_time_seconds": 83.749,
+              "has_ghost": true,
+              "id": "7221a9c8-0be2-4550-8ac7-984500cedf98",
+              "user": "265561225428074496"
+            },
+            {
+              "alias": "fierd_2",
+              "cap_time_seconds": 85.044,
+              "has_ghost": true,
+              "id": "da7b50c4-a6d3-4660-93d7-be6ac76d67b6",
+              "user": "290449564887023617"
+            },
+            {
+              "alias": "At[3*ATB",
+              "cap_time_seconds": 85.089,
+              "has_ghost": true,
+              "id": "5c971e39-10e4-44d6-9534-c71f4605facc",
+              "user": "553356218609958923"
+            },
+            {
+              "alias": "Bakica026",
+              "cap_time_seconds": 85.826,
+              "has_ghost": true,
+              "id": "a6d9a7f5-1f81-44ff-9ba2-2524bb718168",
+              "user": "1254416467160596565"
+            },
+            {
+              "alias": "dsn",
+              "cap_time_seconds": 89.69,
+              "has_ghost": true,
+              "id": "7d5fbda2-9917-4a2b-8d85-5e4f71c1ac42",
+              "user": "1403482874728022078"
+            },
+            {
+              "alias": "TriGGeR",
+              "cap_time_seconds": 90.238,
+              "has_ghost": true,
+              "id": "c6e822f1-6c45-4088-9c33-4c16c0e1b118",
+              "user": "1494797673407189112"
+            },
+            {
+              "alias": "ASG.Naru",
+              "cap_time_seconds": 96.621,
+              "has_ghost": true,
+              "id": "337542b6-fd77-4ff1-a3af-39fda415c542",
+              "user": "1044388201135087656"
+            },
+            {
+              "alias": "[TT] Vernon",
+              "cap_time_seconds": 101.432,
+              "has_ghost": true,
+              "id": "588bbef3-e280-49a1-8154-e39d50ad0f34",
+              "user": "247671958571843585"
+            },
+            {
+              "alias": "[TT] Bugatti",
+              "cap_time_seconds": 102.462,
+              "has_ghost": true,
+              "id": "811ec6c2-c6d1-42f2-ba9b-3309e826bf59",
+              "user": "287350843639070742"
+            },
+            {
+              "alias": "Xclusive",
+              "cap_time_seconds": 102.928,
+              "has_ghost": true,
+              "id": "c1788996-e642-47d3-baf4-607ec27da033",
+              "user": "260007417478250497"
+            },
+            {
+              "alias": "Alexxeh.pX7",
+              "cap_time_seconds": 106.91,
+              "has_ghost": true,
+              "id": "442b16d5-9b12-486c-b734-d167d3309728",
+              "user": "763081904563552298"
+            },
+            {
+              "alias": "PatriK.pX3",
+              "cap_time_seconds": 107.686,
+              "has_ghost": true,
+              "id": "1f2d06ad-cd26-4809-9a42-db0d072d4701",
+              "user": "668134009682919460"
+            },
+            {
+              "alias": "ch3kz",
+              "cap_time_seconds": 126.604,
+              "has_ghost": true,
+              "id": "63713671-c1db-42cb-abfa-b622c7e5cb8d",
+              "user": "223422402950987777"
+            },
+            {
+              "alias": "[UTW]TekuMiles",
+              "cap_time_seconds": 128.804,
+              "has_ghost": true,
+              "id": "2fda10da-3203-4160-873d-6c567d4b8253",
+              "user": "572805627731247144"
+            },
+            {
+              "alias": "[UTW]Nettlez",
+              "cap_time_seconds": 132.34,
+              "has_ghost": true,
+              "id": "949cb530-87ab-41e6-a130-22dd78969e2f",
+              "user": "688002451005374476"
+            },
+            {
+              "alias": "[AoB] Riddick",
+              "cap_time_seconds": 133.64,
+              "has_ghost": false,
+              "id": "dda048bd-0dd6-48ff-8a61-0f5dd347102a",
+              "user": "596462369698349176"
+            },
+            {
+              "alias": "Some_Dude",
+              "cap_time_seconds": 134.971,
+              "has_ghost": false,
+              "id": "1919d9f3-b8f3-4023-be74-c307d7078ac8",
+              "user": "510627247263055874"
+            },
+            {
+              "alias": "BoSS~ LoSaH",
+              "cap_time_seconds": 177.68,
+              "has_ghost": true,
+              "id": "42336340-b897-4ee7-85f4-b2de63274232",
+              "user": "203227772447883265"
+            },
+            {
+              "alias": "slet",
+              "cap_time_seconds": 180.778,
+              "has_ghost": true,
+              "id": "365a19f4-e2df-4d9e-9ec1-5bf6fe2c0b9b",
+              "user": "255047503664119808"
+            }
+          ],
+          "deltas": {
+            "bronze": -47.533,
+            "champion": -1.981,
+            "gold": -9.903,
+            "silver": -23.767,
+            "wr": 0
+          },
+          "has_checkpoints": true,
+          "medals": {
+            "bronze": 126.755,
+            "champion": 81.203,
+            "gold": 89.125,
+            "silver": 102.989,
+            "world_record": 79.222
+          },
+          "neighbors": {
+            "above": [],
+            "below": []
+          },
+          "rank_on_map": 1,
+          "server": {
+            "name": "UTBT Public NL - Certified Server",
+            "region": "Netherlands"
+          },
+          "total_on_map": 0,
+          "wr_cap_id": null,
+          "wr_checkpoints": [],
+          "wr_time_seconds": null
+        },
+        "success": true
+      }
+    },
+    {
+      "host": "api",
+      "path": "/caps/ac506aed-4b80-4fd6-a409-d005ed89902a/detail",
+      "query": "",
+      "status": 200,
+      "body": {
+        "data": {
+          "cap": {
+            "active_title": {
+              "color_b": 108,
+              "color_g": 138,
+              "color_r": 255,
+              "name": "Evergreen",
+              "rarity": 5
+            },
+            "added": "2026-10-10 23:13:48.529369",
+            "alias": "Bun` #OF",
+            "cap_time_seconds": 80.002,
+            "cap_type": 2,
+            "disallowed": false,
+            "dodge_after_landing_50pc": 0.143,
+            "dodge_bind_uses": 14,
+            "dodge_block_count": 30,
+            "dodge_init_after_landing_50pc": 0.078,
+            "engine": "469e - Release",
+            "fps_1pc": 131,
+            "fps_25pc": 312,
+            "fps_50pc": 344,
+            "fps_5pc": 217,
+            "has_ghost": true,
+            "id": "ac506aed-4b80-4fd6-a409-d005ed89902a",
+            "map": "CTF-BT-II-SkaarjInvasion-vF2",
+            "medal": 5,
+            "netspeed_max": 25000,
+            "netspeed_min": 25000,
+            "ping_1pc": 35,
+            "ping_25pc": 41,
+            "ping_50pc": 42,
+            "ping_5pc": 36,
+            "renderer": "D3D9Drv",
+            "spawn_count": 113,
+            "team": 0,
+            "team_run_id": "B02E5AF15A8089F132078672A5B43548",
+            "time_between_dodges_50pc": 0.475,
+            "user": "778035658224697377",
+            "verified": true
+          },
+          "checkpoints": [
+            {
+              "cumulative": 44.397,
+              "segment": 44.397,
+              "zone": "24"
+            },
+            {
+              "cumulative": 56.325,
+              "segment": 11.928,
+              "zone": "28"
+            },
+            {
+              "cumulative": 56.843,
+              "segment": 0.518,
+              "zone": "11"
+            }
+          ],
+          "compare_candidates": [
+            {
+              "alias": "OwYeaW #OF",
+              "cap_time_seconds": 79.222,
+              "has_ghost": true,
+              "id": "649d11b7-ea8e-44c3-a357-09a6131ef5be",
+              "user": "684851153095360533"
+            },
+            {
+              "alias": "kleps",
+              "cap_time_seconds": 80.228,
+              "has_ghost": true,
+              "id": "b7f27e99-32d9-464e-bea1-22da74e4048e",
+              "user": "424992398657978370"
+            },
+            {
+              "alias": "fierd_1",
+              "cap_time_seconds": 80.548,
+              "has_ghost": true,
+              "id": "46f88a48-35ee-4b70-a43d-eadeac9c79f0",
+              "user": "290062867452133377"
+            },
+            {
+              "alias": "Arturek ;)",
+              "cap_time_seconds": 83.749,
+              "has_ghost": true,
+              "id": "7221a9c8-0be2-4550-8ac7-984500cedf98",
+              "user": "265561225428074496"
+            },
+            {
+              "alias": "fierd_2",
+              "cap_time_seconds": 85.044,
+              "has_ghost": true,
+              "id": "da7b50c4-a6d3-4660-93d7-be6ac76d67b6",
+              "user": "290449564887023617"
+            },
+            {
+              "alias": "At[3*ATB",
+              "cap_time_seconds": 85.089,
+              "has_ghost": true,
+              "id": "5c971e39-10e4-44d6-9534-c71f4605facc",
+              "user": "553356218609958923"
+            },
+            {
+              "alias": "Bakica026",
+              "cap_time_seconds": 85.826,
+              "has_ghost": true,
+              "id": "a6d9a7f5-1f81-44ff-9ba2-2524bb718168",
+              "user": "1254416467160596565"
+            },
+            {
+              "alias": "dsn",
+              "cap_time_seconds": 89.69,
+              "has_ghost": true,
+              "id": "7d5fbda2-9917-4a2b-8d85-5e4f71c1ac42",
+              "user": "1403482874728022078"
+            },
+            {
+              "alias": "TriGGeR",
+              "cap_time_seconds": 90.238,
+              "has_ghost": true,
+              "id": "c6e822f1-6c45-4088-9c33-4c16c0e1b118",
+              "user": "1494797673407189112"
+            },
+            {
+              "alias": "ASG.Naru",
+              "cap_time_seconds": 96.621,
+              "has_ghost": true,
+              "id": "337542b6-fd77-4ff1-a3af-39fda415c542",
+              "user": "1044388201135087656"
+            },
+            {
+              "alias": "[TT] Vernon",
+              "cap_time_seconds": 101.432,
+              "has_ghost": true,
+              "id": "588bbef3-e280-49a1-8154-e39d50ad0f34",
+              "user": "247671958571843585"
+            },
+            {
+              "alias": "[TT] Bugatti",
+              "cap_time_seconds": 102.462,
+              "has_ghost": true,
+              "id": "811ec6c2-c6d1-42f2-ba9b-3309e826bf59",
+              "user": "287350843639070742"
+            },
+            {
+              "alias": "Xclusive",
+              "cap_time_seconds": 102.928,
+              "has_ghost": true,
+              "id": "c1788996-e642-47d3-baf4-607ec27da033",
+              "user": "260007417478250497"
+            },
+            {
+              "alias": "Alexxeh.pX7",
+              "cap_time_seconds": 106.91,
+              "has_ghost": true,
+              "id": "442b16d5-9b12-486c-b734-d167d3309728",
+              "user": "763081904563552298"
+            },
+            {
+              "alias": "PatriK.pX3",
+              "cap_time_seconds": 107.686,
+              "has_ghost": true,
+              "id": "1f2d06ad-cd26-4809-9a42-db0d072d4701",
+              "user": "668134009682919460"
+            },
+            {
+              "alias": "ch3kz",
+              "cap_time_seconds": 126.604,
+              "has_ghost": true,
+              "id": "63713671-c1db-42cb-abfa-b622c7e5cb8d",
+              "user": "223422402950987777"
+            },
+            {
+              "alias": "[UTW]TekuMiles",
+              "cap_time_seconds": 128.804,
+              "has_ghost": true,
+              "id": "2fda10da-3203-4160-873d-6c567d4b8253",
+              "user": "572805627731247144"
+            },
+            {
+              "alias": "[UTW]Nettlez",
+              "cap_time_seconds": 132.34,
+              "has_ghost": true,
+              "id": "949cb530-87ab-41e6-a130-22dd78969e2f",
+              "user": "688002451005374476"
+            },
+            {
+              "alias": "[AoB] Riddick",
+              "cap_time_seconds": 133.64,
+              "has_ghost": false,
+              "id": "dda048bd-0dd6-48ff-8a61-0f5dd347102a",
+              "user": "596462369698349176"
+            },
+            {
+              "alias": "Some_Dude",
+              "cap_time_seconds": 134.971,
+              "has_ghost": false,
+              "id": "1919d9f3-b8f3-4023-be74-c307d7078ac8",
+              "user": "510627247263055874"
+            },
+            {
+              "alias": "BoSS~ LoSaH",
+              "cap_time_seconds": 177.68,
+              "has_ghost": true,
+              "id": "42336340-b897-4ee7-85f4-b2de63274232",
+              "user": "203227772447883265"
+            },
+            {
+              "alias": "slet",
+              "cap_time_seconds": 180.778,
+              "has_ghost": true,
+              "id": "365a19f4-e2df-4d9e-9ec1-5bf6fe2c0b9b",
+              "user": "255047503664119808"
+            }
+          ],
+          "deltas": {
+            "bronze": -46.753,
+            "champion": -1.201,
+            "gold": -9.123,
+            "silver": -22.987,
+            "wr": 0.78
+          },
+          "has_checkpoints": true,
+          "medals": {
+            "bronze": 126.755,
+            "champion": 81.203,
+            "gold": 89.125,
+            "silver": 102.989,
+            "world_record": 79.222
+          },
+          "neighbors": {
+            "above": [],
+            "below": []
+          },
+          "rank_on_map": 1,
+          "server": {
+            "name": "UTBT Public NL - Certified Server",
+            "region": "Netherlands"
+          },
+          "total_on_map": 0,
+          "wr_cap_id": null,
+          "wr_checkpoints": [],
+          "wr_time_seconds": null
+        },
+        "success": true
+      }
+    },
+    {
+      "host": "api",
+      "path": "/caps/leaderboard/team/map/CTF-BT-II-SkaarjInvasion-vF2",
+      "query": "",
+      "status": 200,
+      "body": {
+        "data": [
+          {
+            "added": "2026-10-10 23:13:48.529369",
+            "alias": "OwYeaW, Bun`",
+            "cap_time_seconds": 80.002,
+            "cap_type": 2,
+            "complete": true,
+            "disallowed": false,
+            "id": "2ac2a87f-1030-45ed-b281-bdcbf926717d",
+            "map": "CTF-BT-II-SkaarjInvasion-vF2",
+            "medal": 6,
+            "members": [
+              {
+                "active_title": {
+                  "color": "247,223,156",
+                  "color_b": 156,
+                  "color_g": 223,
+                  "color_r": 247,
+                  "id": "1508462332689387563",
+                  "name": "OnlyCUp! | Peak Conqueror",
+                  "rarity": 4
+                },
+                "alias": "OwYeaW",
+                "cap_id": "649d11b7-ea8e-44c3-a357-09a6131ef5be",
+                "cap_time_seconds": 79.222,
+                "user": "684851153095360533",
+                "verified": true
+              },
+              {
+                "active_title": {
+                  "color": "255,138,108",
+                  "color_b": 108,
+                  "color_g": 138,
+                  "color_r": 255,
+                  "id": "1000000000000000118",
+                  "name": "Evergreen",
+                  "rarity": 5
+                },
+                "alias": "Bun`",
+                "cap_id": "ac506aed-4b80-4fd6-a409-d005ed89902a",
+                "cap_time_seconds": 80.002,
+                "user": "778035658224697377",
+                "verified": true
+              }
+            ],
+            "state": "verified",
+            "team_size": 2,
+            "user": "684851153095360533;778035658224697377",
+            "verified": true
+          },
+          {
+            "added": "2026-10-05 20:03:11.034137",
+            "alias": "soupy, kleps",
+            "cap_time_seconds": 80.548,
+            "cap_type": 2,
+            "complete": true,
+            "disallowed": false,
+            "id": "295a6562-f1d5-4883-8014-8519ea0dca28",
+            "map": "CTF-BT-II-SkaarjInvasion-vF2",
+            "medal": 5,
+            "members": [
+              {
+                "active_title": {
+                  "color": "205,127,50",
+                  "color_b": 50,
+                  "color_g": 127,
+                  "color_r": 205,
+                  "id": "846334653656203275",
+                  "name": "World Cup '21 | Division 1: 3rd Place",
+                  "rarity": 4
+                },
+                "alias": "soupy",
+                "cap_id": "46f88a48-35ee-4b70-a43d-eadeac9c79f0",
+                "cap_time_seconds": 80.548,
+                "user": "290062867452133377",
+                "verified": true
+              },
+              {
+                "active_title": {
+                  "color": "158,84,196",
+                  "color_b": 196,
+                  "color_g": 84,
+                  "color_r": 158,
+                  "id": "1508462332689387571",
+                  "name": "Against the Odds",
+                  "rarity": 3
+                },
+                "alias": "kleps",
+                "cap_id": "b7f27e99-32d9-464e-bea1-22da74e4048e",
+                "cap_time_seconds": 80.228,
+                "user": "424992398657978370",
+                "verified": true
+              }
+            ],
+            "state": "verified",
+            "team_size": 2,
+            "user": "290062867452133377;424992398657978370",
+            "verified": true
+          },
+          {
+            "added": "2026-09-25 18:49:02.657654",
+            "alias": "Arturek ;), ATB",
+            "cap_time_seconds": 85.089,
+            "cap_type": 2,
+            "complete": true,
+            "disallowed": false,
+            "id": "c27f6a53-c2e6-4d66-815f-5117e488a453",
+            "map": "CTF-BT-II-SkaarjInvasion-vF2",
+            "medal": 4,
+            "members": [
+              {
+                "active_title": {
+                  "color": "200,150,248",
+                  "color_b": 248,
+                  "color_g": 150,
+                  "color_r": 200,
+                  "id": "1448458783238918144",
+                  "name": "Puzzle Master",
+                  "rarity": 4
+                },
+                "alias": "Arturek ;)",
+                "cap_id": "7221a9c8-0be2-4550-8ac7-984500cedf98",
+                "cap_time_seconds": 83.749,
+                "user": "265561225428074496",
+                "verified": true
+              },
+              {
+                "active_title": null,
+                "alias": "ATB",
+                "cap_id": "5c971e39-10e4-44d6-9534-c71f4605facc",
+                "cap_time_seconds": 85.089,
+                "user": "553356218609958923",
+                "verified": true
+              }
+            ],
+            "state": "verified",
+            "team_size": 2,
+            "user": "265561225428074496;553356218609958923",
+            "verified": true
+          },
+          {
+            "added": "2026-09-23 22:07:25.624483",
+            "alias": "Bakica, Dylanbroo",
+            "cap_time_seconds": 85.826,
+            "cap_type": 2,
+            "complete": true,
+            "disallowed": false,
+            "id": "6816ca77-eb41-4402-b7aa-1e73df231b89",
+            "map": "CTF-BT-II-SkaarjInvasion-vF2",
+            "medal": 4,
+            "members": [
+              {
+                "active_title": {
+                  "color": "192,192,192",
+                  "color_b": 192,
+                  "color_g": 192,
+                  "color_r": 192,
+                  "id": "1232191019324276756",
+                  "name": "Time Attack 1v1 | Second Place",
+                  "rarity": 3
+                },
+                "alias": "Bakica",
+                "cap_id": "a6d9a7f5-1f81-44ff-9ba2-2524bb718168",
+                "cap_time_seconds": 85.826,
+                "user": "1254416467160596565",
+                "verified": true
+              },
+              {
+                "active_title": {
+                  "color": "230,45,45",
+                  "color_b": 45,
+                  "color_g": 45,
+                  "color_r": 230,
+                  "id": "1000000000000000034",
+                  "name": "Grand Champion",
+                  "rarity": 4
+                },
+                "alias": "Dylanbroo",
+                "cap_id": "da7b50c4-a6d3-4660-93d7-be6ac76d67b6",
+                "cap_time_seconds": 85.044,
+                "user": "290449564887023617",
+                "verified": true
+              }
+            ],
+            "state": "verified",
+            "team_size": 2,
+            "user": "1254416467160596565;290449564887023617",
+            "verified": true
+          },
+          {
+            "added": "2026-10-28 23:40:04.538485",
+            "alias": "Naru, PHILLIP",
+            "cap_time_seconds": 90.126,
+            "cap_type": 2,
+            "complete": true,
+            "disallowed": false,
+            "id": "15e47c8a-5a0f-401b-a36d-ceba91890218",
+            "map": "CTF-BT-II-SkaarjInvasion-vF2",
+            "medal": 3,
+            "members": [
+              {
+                "active_title": {
+                  "color": "255,215,0",
+                  "color_b": 0,
+                  "color_g": 215,
+                  "color_r": 255,
+                  "id": "1311645023078711318",
+                  "name": "2024 World Champion",
+                  "rarity": 5
+                },
+                "alias": "Naru",
+                "cap_id": "d3123c7d-94ae-4fbb-b80b-520561dd3eae",
+                "cap_time_seconds": 88.236,
+                "user": "1044388201135087656",
+                "verified": false
+              },
+              {
+                "active_title": {
+                  "color": "70,175,205",
+                  "color_b": 205,
+                  "color_g": 175,
+                  "color_r": 70,
+                  "id": "1000000000000000056",
+                  "name": "Untouchable",
+                  "rarity": 4
+                },
+                "alias": "PHILLIP",
+                "cap_id": "7e2a0ef5-0f47-41f2-b764-5b6372c94ddb",
+                "cap_time_seconds": 90.126,
+                "user": "203755218804932608",
+                "verified": false
+              }
+            ],
+            "state": "pending",
+            "team_size": 2,
+            "user": "1044388201135087656;203755218804932608",
+            "verified": false
+          },
+          {
+            "added": "2026-09-20 00:08:27.923614",
+            "alias": "dsn, TriGGeR",
+            "cap_time_seconds": 90.238,
+            "cap_type": 2,
+            "complete": true,
+            "disallowed": false,
+            "id": "deda437b-8890-4d1e-b9c7-d5cb7fc103b8",
+            "map": "CTF-BT-II-SkaarjInvasion-vF2",
+            "medal": 3,
+            "members": [
+              {
+                "active_title": {
+                  "color": "158,84,196",
+                  "color_b": 196,
+                  "color_g": 84,
+                  "color_r": 158,
+                  "id": "1508462332689387571",
+                  "name": "Against the Odds",
+                  "rarity": 3
+                },
+                "alias": "dsn",
+                "cap_id": "7d5fbda2-9917-4a2b-8d85-5e4f71c1ac42",
+                "cap_time_seconds": 89.69,
+                "user": "1403482874728022078",
+                "verified": true
+              },
+              {
+                "active_title": {
+                  "color": "158,84,196",
+                  "color_b": 196,
+                  "color_g": 84,
+                  "color_r": 158,
+                  "id": "1508462332689387571",
+                  "name": "Against the Odds",
+                  "rarity": 3
+                },
+                "alias": "TriGGeR",
+                "cap_id": "c6e822f1-6c45-4088-9c33-4c16c0e1b118",
+                "cap_time_seconds": 90.238,
+                "user": "1494797673407189112",
+                "verified": true
+              }
+            ],
+            "state": "verified",
+            "team_size": 2,
+            "user": "1403482874728022078;1494797673407189112",
+            "verified": true
+          },
+          {
+            "added": "2026-10-20 18:28:06.562940",
+            "alias": "Xclusive, Arturek ;)",
+            "cap_time_seconds": 94.234,
+            "cap_type": 2,
+            "complete": true,
+            "disallowed": false,
+            "id": "57bb0fa9-12cd-4c01-a020-3ce299f6df2e",
+            "map": "CTF-BT-II-SkaarjInvasion-vF2",
+            "medal": 3,
+            "members": [
+              {
+                "active_title": {
+                  "color": "200,150,248",
+                  "color_b": 248,
+                  "color_g": 150,
+                  "color_r": 200,
+                  "id": "1448458783238918144",
+                  "name": "Puzzle Master",
+                  "rarity": 4
+                },
+                "alias": "Xclusive",
+                "cap_id": "5c1fe0ed-b2c3-4a9b-aa06-f9adda8ddccd",
+                "cap_time_seconds": 94.019,
+                "user": "260007417478250497",
+                "verified": true
+              },
+              {
+                "active_title": {
+                  "color": "200,150,248",
+                  "color_b": 248,
+                  "color_g": 150,
+                  "color_r": 200,
+                  "id": "1448458783238918144",
+                  "name": "Puzzle Master",
+                  "rarity": 4
+                },
+                "alias": "Arturek ;)",
+                "cap_id": "8b7a780a-b3aa-4e07-83da-58704ea6a4ab",
+                "cap_time_seconds": 94.234,
+                "user": "265561225428074496",
+                "verified": true
+              }
+            ],
+            "state": "verified",
+            "team_size": 2,
+            "user": "260007417478250497;265561225428074496",
+            "verified": true
+          },
+          {
+            "added": "2026-08-08 17:44:40.210084",
+            "alias": "Arturek ;), Bun`",
+            "cap_time_seconds": 95.054,
+            "cap_type": 2,
+            "complete": true,
+            "disallowed": false,
+            "id": "ef285657-d541-47dd-8375-b8c145ed19c4",
+            "map": "CTF-BT-II-SkaarjInvasion-vF2",
+            "medal": 3,
+            "members": [
+              {
+                "active_title": {
+                  "color": "200,150,248",
+                  "color_b": 248,
+                  "color_g": 150,
+                  "color_r": 200,
+                  "id": "1448458783238918144",
+                  "name": "Puzzle Master",
+                  "rarity": 4
+                },
+                "alias": "Arturek ;)",
+                "cap_id": "dfd15740-1ba3-46f6-819a-f90e74800c1d",
+                "cap_time_seconds": 95.054,
+                "user": "265561225428074496",
+                "verified": true
+              },
+              {
+                "active_title": {
+                  "color": "255,138,108",
+                  "color_b": 108,
+                  "color_g": 138,
+                  "color_r": 255,
+                  "id": "1000000000000000118",
+                  "name": "Evergreen",
+                  "rarity": 5
+                },
+                "alias": "Bun`",
+                "cap_id": "97220e46-815c-4b68-ace0-43b9c4e134ff",
+                "cap_time_seconds": 94.87,
+                "user": "778035658224697377",
+                "verified": true
+              }
+            ],
+            "state": "verified",
+            "team_size": 2,
+            "user": "265561225428074496;778035658224697377",
+            "verified": true
+          },
+          {
+            "added": "2026-10-27 00:21:17.824354",
+            "alias": "Vernon, Bugatti",
+            "cap_time_seconds": 95.389,
+            "cap_type": 2,
+            "complete": true,
+            "disallowed": false,
+            "id": "6db237a6-1cfb-4447-9aa1-d3e2358eced3",
+            "map": "CTF-BT-II-SkaarjInvasion-vF2",
+            "medal": 3,
+            "members": [
+              {
+                "active_title": {
+                  "color": "128,128,128",
+                  "color_b": 128,
+                  "color_g": 128,
+                  "color_r": 128,
+                  "id": "1000000000000000026",
+                  "name": "Going for Gold",
+                  "rarity": 1
+                },
+                "alias": "Vernon",
+                "cap_id": "d23b18de-41b9-4d64-af18-5d1ff68ede1b",
+                "cap_time_seconds": 93.346,
+                "user": "247671958571843585",
+                "verified": false
+              },
+              {
+                "active_title": {
+                  "color": "206,137,70",
+                  "color_b": 70,
+                  "color_g": 137,
+                  "color_r": 206,
+                  "id": "1314949593699454986",
+                  "name": "World Cup '24 | Division 2: 3rd Place",
+                  "rarity": 3
+                },
+                "alias": "Bugatti",
+                "cap_id": "b8cee34a-c460-40a1-8e49-ab2fda249338",
+                "cap_time_seconds": 95.389,
+                "user": "287350843639070742",
+                "verified": false
+              }
+            ],
+            "state": "pending",
+            "team_size": 2,
+            "user": "247671958571843585;287350843639070742",
+            "verified": false
+          },
+          {
+            "added": "2026-10-18 16:20:27.415545",
+            "alias": "NinThomas, gxls",
+            "cap_time_seconds": 96.682,
+            "cap_type": 2,
+            "complete": true,
+            "disallowed": false,
+            "id": "9f34a345-7bc6-4fbd-ab3e-6bff44b6419c",
+            "map": "CTF-BT-II-SkaarjInvasion-vF2",
+            "medal": 3,
+            "members": [
+              {
+                "active_title": {
+                  "color": "0,200,0",
+                  "color_b": 0,
+                  "color_g": 200,
+                  "color_r": 0,
+                  "id": "1018722481193889854",
+                  "name": "Summer Rush 2022 | Most Improved",
+                  "rarity": 2
+                },
+                "alias": "NinThomas",
+                "cap_id": "0fc0ae3d-5c40-43bb-8247-4db4e3599865",
+                "cap_time_seconds": 96.682,
+                "user": "315881722375831553",
+                "verified": false
+              },
+              {
+                "active_title": {
+                  "color": "150,235,255",
+                  "color_b": 255,
+                  "color_g": 235,
+                  "color_r": 150,
+                  "id": "1000000000000000015",
+                  "name": "Faster Than Light",
+                  "rarity": 5
+                },
+                "alias": "gxls",
+                "cap_id": "39fca184-aa0b-4d14-a364-ba9a06cba9e7",
+                "cap_time_seconds": 95.126,
+                "user": "414164967999406090",
+                "verified": false
+              }
+            ],
+            "state": "pending",
+            "team_size": 2,
+            "user": "315881722375831553;414164967999406090",
+            "verified": false
+          },
+          {
+            "added": "2026-10-24 03:14:30.981880",
+            "alias": "GiorgiO.pX5, PatriK.pX3",
+            "cap_time_seconds": 99.597,
+            "cap_type": 2,
+            "complete": true,
+            "disallowed": false,
+            "id": "fda8222e-3178-421f-9650-422bb1ce848d",
+            "map": "CTF-BT-II-SkaarjInvasion-vF2",
+            "medal": 3,
+            "members": [
+              {
+                "active_title": {
+                  "color": "92,235,158",
+                  "color_b": 158,
+                  "color_g": 235,
+                  "color_r": 92,
+                  "id": "1000000000000000096",
+                  "name": "World Builder",
+                  "rarity": 5
+                },
+                "alias": "GiorgiO.pX5",
+                "cap_id": "be957008-2194-4f00-b5c1-9fea681adc5d",
+                "cap_time_seconds": 96.984,
+                "user": "648734832783785995",
+                "verified": false
+              },
+              {
+                "active_title": {
+                  "color": "235,200,25",
+                  "color_b": 25,
+                  "color_g": 200,
+                  "color_r": 235,
+                  "id": "1000000000000000009",
+                  "name": "Master Cartographer",
+                  "rarity": 4
+                },
+                "alias": "PatriK.pX3",
+                "cap_id": "f3372fb4-3f9b-4bd7-bba2-fe701ffdde38",
+                "cap_time_seconds": 99.597,
+                "user": "668134009682919460",
+                "verified": true
+              }
+            ],
+            "state": "pending",
+            "team_size": 2,
+            "user": "648734832783785995;668134009682919460",
+            "verified": false
+          },
+          {
+            "added": "2026-07-23 22:42:57.127807",
+            "alias": "Vernon, Bugatti",
+            "cap_time_seconds": 102.462,
+            "cap_type": 2,
+            "complete": true,
+            "disallowed": false,
+            "id": "0c86111b-a5f2-499f-a559-aa2eda73826d",
+            "map": "CTF-BT-II-SkaarjInvasion-vF2",
+            "medal": 3,
+            "members": [
+              {
+                "active_title": {
+                  "color": "128,128,128",
+                  "color_b": 128,
+                  "color_g": 128,
+                  "color_r": 128,
+                  "id": "1000000000000000026",
+                  "name": "Going for Gold",
+                  "rarity": 1
+                },
+                "alias": "Vernon",
+                "cap_id": "588bbef3-e280-49a1-8154-e39d50ad0f34",
+                "cap_time_seconds": 101.432,
+                "user": "247671958571843585",
+                "verified": true
+              },
+              {
+                "active_title": {
+                  "color": "206,137,70",
+                  "color_b": 70,
+                  "color_g": 137,
+                  "color_r": 206,
+                  "id": "1314949593699454986",
+                  "name": "World Cup '24 | Division 2: 3rd Place",
+                  "rarity": 3
+                },
+                "alias": "Bugatti",
+                "cap_id": "811ec6c2-c6d1-42f2-ba9b-3309e826bf59",
+                "cap_time_seconds": 102.462,
+                "user": "287350843639070742",
+                "verified": true
+              }
+            ],
+            "state": "verified",
+            "team_size": 2,
+            "user": "247671958571843585;287350843639070742",
+            "verified": true
+          },
+          {
+            "added": "2026-10-27 20:41:14.984494",
+            "alias": "Slati Jnr, Alexxeh.pX7",
+            "cap_time_seconds": 103.904,
+            "cap_type": 2,
+            "complete": true,
+            "disallowed": false,
+            "id": "028d7041-1d7a-4f97-a1a7-8989b58f26cd",
+            "map": "CTF-BT-II-SkaarjInvasion-vF2",
+            "medal": 3,
+            "members": [
+              {
+                "active_title": null,
+                "alias": "Slati Jnr",
+                "cap_id": "0a41d7fa-b736-4276-99b2-eb49dbef8a17",
+                "cap_time_seconds": 103.904,
+                "user": "173864542856544256",
+                "verified": false
+              },
+              {
+                "active_title": {
+                  "color": "230,45,45",
+                  "color_b": 45,
+                  "color_g": 45,
+                  "color_r": 230,
+                  "id": "1000000000000000090",
+                  "name": "Grand Alliance",
+                  "rarity": 4
+                },
+                "alias": "Alexxeh.pX7",
+                "cap_id": "8de0a2b4-818a-42c5-bc2a-0fa6d1e05790",
+                "cap_time_seconds": 99.921,
+                "user": "763081904563552298",
+                "verified": false
+              }
+            ],
+            "state": "pending",
+            "team_size": 2,
+            "user": "173864542856544256;763081904563552298",
+            "verified": false
+          },
+          {
+            "added": "2026-09-22 19:42:53.213107",
+            "alias": "ToxXic, Nightmare9202",
+            "cap_time_seconds": 122.81,
+            "cap_type": 2,
+            "complete": true,
+            "disallowed": false,
+            "id": "73026c55-cf33-4195-85bc-c3c3fe9d981f",
+            "map": "CTF-BT-II-SkaarjInvasion-vF2",
+            "medal": 2,
+            "members": [
+              {
+                "active_title": null,
+                "alias": "ToxXic",
+                "cap_id": "85709797-b41a-4622-a025-e9f5ff3fce75",
+                "cap_time_seconds": 122.81,
+                "user": "108314475337113600",
+                "verified": false
+              },
+              {
+                "active_title": {
+                  "color": "255,215,0",
+                  "color_b": 0,
+                  "color_g": 215,
+                  "color_r": 255,
+                  "id": "1314949260944343254",
+                  "name": "World Cup '24 | Division 3: 1st Place",
+                  "rarity": 2
+                },
+                "alias": "Nightmare9202",
+                "cap_id": "7ad52e57-14d1-4ff9-ac42-02a21320c2f0",
+                "cap_time_seconds": 122.232,
+                "user": "339440110745419807",
+                "verified": false
+              }
+            ],
+            "state": "pending",
+            "team_size": 2,
+            "user": "108314475337113600;339440110745419807",
+            "verified": false
+          },
+          {
+            "added": "2026-10-06 21:52:50.231734",
+            "alias": "WHO SPYZ, ch3kz",
+            "cap_time_seconds": 127.671,
+            "cap_type": 2,
+            "complete": true,
+            "disallowed": false,
+            "id": "6172d2d9-6fb8-427c-9c1f-50568c3ee7d1",
+            "map": "CTF-BT-II-SkaarjInvasion-vF2",
+            "medal": 2,
+            "members": [
+              {
+                "active_title": {
+                  "color": "50,107,225",
+                  "color_b": 225,
+                  "color_g": 107,
+                  "color_r": 50,
+                  "id": "1232191050534092832",
+                  "name": "Time Attack 1v1 | Third Place",
+                  "rarity": 3
+                },
+                "alias": "WHO SPYZ",
+                "cap_id": "d75c4b66-4264-49b8-9672-68af575c028c",
+                "cap_time_seconds": 127.671,
+                "user": "105027580880535552",
+                "verified": false
+              },
+              {
+                "active_title": {
+                  "color": "255,215,0",
+                  "color_b": 0,
+                  "color_g": 215,
+                  "color_r": 255,
+                  "id": "1166428122414063696",
+                  "name": "Capped 'em All",
+                  "rarity": 5
+                },
+                "alias": "ch3kz",
+                "cap_id": "a9173c11-5fb8-4a8c-b9f8-1dd4c56ff59f",
+                "cap_time_seconds": 127.035,
+                "user": "223422402950987777",
+                "verified": true
+              }
+            ],
+            "state": "pending",
+            "team_size": 2,
+            "user": "105027580880535552;223422402950987777",
+            "verified": false
+          },
+          {
+            "added": "2026-10-19 20:37:20.821099",
+            "alias": "Some_Dude, Riddick",
+            "cap_time_seconds": 131.762,
+            "cap_type": 2,
+            "complete": true,
+            "disallowed": false,
+            "id": "bac55787-faaf-499c-8c08-3729f6a014cf",
+            "map": "CTF-BT-II-SkaarjInvasion-vF2",
+            "medal": 1,
+            "members": [
+              {
+                "active_title": {
+                  "color": "128,128,128",
+                  "color_b": 128,
+                  "color_g": 128,
+                  "color_r": 128,
+                  "id": "1000000000000000046",
+                  "name": "Quick Feet",
+                  "rarity": 1
+                },
+                "alias": "Some_Dude",
+                "cap_id": "5c1d2405-f790-4a12-82ee-3658b338b90c",
+                "cap_time_seconds": 129.073,
+                "user": "510627247263055874",
+                "verified": true
+              },
+              {
+                "active_title": {
+                  "color": "160,153,189",
+                  "color_b": 189,
+                  "color_g": 153,
+                  "color_r": 160,
+                  "id": "1508462332689387565",
+                  "name": "OnlyCUp! | Cloudwalker",
+                  "rarity": 2
+                },
+                "alias": "Riddick",
+                "cap_id": "31b2faaf-6fd9-452d-b97a-a464dd7a8c0a",
+                "cap_time_seconds": 131.762,
+                "user": "596462369698349176",
+                "verified": true
+              }
+            ],
+            "state": "verified",
+            "team_size": 2,
+            "user": "510627247263055874;596462369698349176",
+            "verified": true
+          },
+          {
+            "added": "2026-11-01 01:17:19.458492",
+            "alias": "TekuMiles, Nettlez",
+            "cap_time_seconds": 132.34,
+            "cap_type": 2,
+            "complete": true,
+            "disallowed": false,
+            "id": "4ea92d6b-4862-4cf7-8e4d-4f2b0788b6cd",
+            "map": "CTF-BT-II-SkaarjInvasion-vF2",
+            "medal": 1,
+            "members": [
+              {
+                "active_title": null,
+                "alias": "TekuMiles",
+                "cap_id": "a7853d45-3e61-4d11-8df6-997c86fbbb13",
+                "cap_time_seconds": 130.432,
+                "user": "572805627731247144",
+                "verified": true
+              },
+              {
+                "active_title": null,
+                "alias": "Nettlez",
+                "cap_id": "949cb530-87ab-41e6-a130-22dd78969e2f",
+                "cap_time_seconds": 132.34,
+                "user": "688002451005374476",
+                "verified": true
+              }
+            ],
+            "state": "verified",
+            "team_size": 2,
+            "user": "572805627731247144;688002451005374476",
+            "verified": true
+          },
+          {
+            "added": "2026-10-02 18:30:13.167953",
+            "alias": "Decl, ShX",
+            "cap_time_seconds": 132.451,
+            "cap_type": 2,
+            "complete": true,
+            "disallowed": false,
+            "id": "d008c8a2-89e1-4610-9e8f-54758fcdfa75",
+            "map": "CTF-BT-II-SkaarjInvasion-vF2",
+            "medal": 1,
+            "members": [
+              {
+                "active_title": {
+                  "color": "206,137,70",
+                  "color_b": 70,
+                  "color_g": 137,
+                  "color_r": 206,
+                  "id": "1314949433078710374",
+                  "name": "World Cup '24 | Division 4: 3rd Place",
+                  "rarity": 1
+                },
+                "alias": "Decl",
+                "cap_id": "28869c1a-7960-4f61-b493-b50848e90a4d",
+                "cap_time_seconds": 132.451,
+                "user": "179255742677647361",
+                "verified": true
+              },
+              {
+                "active_title": null,
+                "alias": "ShX",
+                "cap_id": "243642d0-b78a-4877-b88c-b55677d3751d",
+                "cap_time_seconds": 131.281,
+                "user": "308196478449483778",
+                "verified": true
+              }
+            ],
+            "state": "verified",
+            "team_size": 2,
+            "user": "179255742677647361;308196478449483778",
+            "verified": true
+          },
+          {
+            "added": "2026-10-30 19:31:06.574754",
+            "alias": "tOmy`, HumaK",
+            "cap_time_seconds": 135.378,
+            "cap_type": 2,
+            "complete": true,
+            "disallowed": false,
+            "id": "4e8ab6d2-6106-4e1f-8cef-6120452fce60",
+            "map": "CTF-BT-II-SkaarjInvasion-vF2",
+            "medal": 1,
+            "members": [
+              {
+                "active_title": null,
+                "alias": "tOmy`",
+                "cap_id": "a4ef24d1-ce25-4457-b7d2-1c43951e8988",
+                "cap_time_seconds": 133.99,
+                "user": "196638210741239808",
+                "verified": false
+              },
+              {
+                "active_title": null,
+                "alias": "HumaK",
+                "cap_id": "4b2a6804-54b9-4de5-812f-71f8bc9a03fd",
+                "cap_time_seconds": 135.378,
+                "user": "281921401039093760",
+                "verified": false
+              }
+            ],
+            "state": "pending",
+            "team_size": 2,
+            "user": "196638210741239808;281921401039093760",
+            "verified": false
+          },
+          {
+            "added": "2026-09-06 19:12:51.927498",
+            "alias": "GiorgiO.pX5, <Krad.pX4",
+            "cap_time_seconds": 135.892,
+            "cap_type": 2,
+            "complete": true,
+            "disallowed": false,
+            "id": "e5c327c5-0603-4591-9ecd-0bc0c01e7b54",
+            "map": "CTF-BT-II-SkaarjInvasion-vF2",
+            "medal": 1,
+            "members": [
+              {
+                "active_title": {
+                  "color": "92,235,158",
+                  "color_b": 158,
+                  "color_g": 235,
+                  "color_r": 92,
+                  "id": "1000000000000000096",
+                  "name": "World Builder",
+                  "rarity": 5
+                },
+                "alias": "GiorgiO.pX5",
+                "cap_id": "d5c8c66f-6fb2-4da0-be25-e4778a8381d5",
+                "cap_time_seconds": 131.78,
+                "user": "648734832783785995",
+                "verified": false
+              },
+              {
+                "active_title": {
+                  "color": "255,38,38",
+                  "color_b": 38,
+                  "color_g": 38,
+                  "color_r": 255,
+                  "id": "1000000000000000091",
+                  "name": "Legendary Lineup",
+                  "rarity": 5
+                },
+                "alias": "<Krad.pX4",
+                "cap_id": "9c73225f-c2df-4dc1-9885-377ac04538d1",
+                "cap_time_seconds": 135.892,
+                "user": "700566293702770709",
+                "verified": false
+              }
+            ],
+            "state": "pending",
+            "team_size": 2,
+            "user": "648734832783785995;700566293702770709",
+            "verified": false
+          },
+          {
+            "added": "2026-10-30 19:28:32.546904",
+            "alias": "twistytank, Rob-Bot",
+            "cap_time_seconds": 138.619,
+            "cap_type": 2,
+            "complete": true,
+            "disallowed": false,
+            "id": "9e1b283e-37d1-4f19-9085-c2dd03e62daf",
+            "map": "CTF-BT-II-SkaarjInvasion-vF2",
+            "medal": 1,
+            "members": [
+              {
+                "active_title": {
+                  "color": "26,240,255",
+                  "color_b": 255,
+                  "color_g": 240,
+                  "color_r": 26,
+                  "id": "1508462332689387567",
+                  "name": "OnlyCUp! | Participant",
+                  "rarity": 1
+                },
+                "alias": "twistytank",
+                "cap_id": "6b2595df-8a43-4b03-bc73-ff4e7fdd2d0b",
+                "cap_time_seconds": 138.619,
+                "user": "238721704501706753",
+                "verified": false
+              },
+              {
+                "active_title": {
+                  "color": "168,90,150",
+                  "color_b": 150,
+                  "color_g": 90,
+                  "color_r": 168,
+                  "id": "1000000000000000042",
+                  "name": "Title Hunter",
+                  "rarity": 2
+                },
+                "alias": "Rob-Bot",
+                "cap_id": "ecfec982-45ae-45ad-bf69-17bca4e89c95",
+                "cap_time_seconds": 138.301,
+                "user": "797641111560650762",
+                "verified": false
+              }
+            ],
+            "state": "pending",
+            "team_size": 2,
+            "user": "238721704501706753;797641111560650762",
+            "verified": false
+          },
+          {
+            "added": "2026-10-22 22:10:10.225082",
+            "alias": "k2, nchris",
+            "cap_time_seconds": 150.033,
+            "cap_type": 2,
+            "complete": true,
+            "disallowed": false,
+            "id": "3385a630-e3ed-42c3-9675-884e993841ca",
+            "map": "CTF-BT-II-SkaarjInvasion-vF2",
+            "medal": 1,
+            "members": [
+              {
+                "active_title": null,
+                "alias": "k2",
+                "cap_id": "91973e9f-5f94-4573-8687-5c6001806f59",
+                "cap_time_seconds": 150.033,
+                "user": "220951242338336768",
+                "verified": false
+              },
+              {
+                "active_title": null,
+                "alias": "nchris",
+                "cap_id": "2ca13b89-4398-48d3-8d60-19a35d61a6e3",
+                "cap_time_seconds": 148.426,
+                "user": "347446178331230209",
+                "verified": false
+              }
+            ],
+            "state": "pending",
+            "team_size": 2,
+            "user": "220951242338336768;347446178331230209",
+            "verified": false
+          },
+          {
+            "added": "2026-10-04 19:22:34.092310",
+            "alias": "twistytank, Rob-bot",
+            "cap_time_seconds": 178.427,
+            "cap_type": 2,
+            "complete": true,
+            "disallowed": false,
+            "id": "171a64e4-127c-4ee6-8be4-4fa8b4951c74",
+            "map": "CTF-BT-II-SkaarjInvasion-vF2",
+            "medal": 1,
+            "members": [
+              {
+                "active_title": {
+                  "color": "26,240,255",
+                  "color_b": 255,
+                  "color_g": 240,
+                  "color_r": 26,
+                  "id": "1508462332689387567",
+                  "name": "OnlyCUp! | Participant",
+                  "rarity": 1
+                },
+                "alias": "twistytank",
+                "cap_id": "ed8b55b8-fd52-48e3-9102-f54a4846823e",
+                "cap_time_seconds": 178.427,
+                "user": "238721704501706753",
+                "verified": false
+              },
+              {
+                "active_title": null,
+                "alias": "Rob-bot",
+                "cap_id": "2eca101a-5c76-4fc5-af58-0ee3f8cc4b8d",
+                "cap_time_seconds": 178.338,
+                "user": "359449085733765120",
+                "verified": false
+              }
+            ],
+            "state": "pending",
+            "team_size": 2,
+            "user": "238721704501706753;359449085733765120",
+            "verified": false
+          },
+          {
+            "added": "2026-10-15 17:42:04.461581",
+            "alias": "LoSaH, slet",
+            "cap_time_seconds": 180.778,
+            "cap_type": 2,
+            "complete": true,
+            "disallowed": false,
+            "id": "2c3d31f0-9aac-48ff-b400-014f69d4d0e5",
+            "map": "CTF-BT-II-SkaarjInvasion-vF2",
+            "medal": 1,
+            "members": [
+              {
+                "active_title": {
+                  "color": "128,128,128",
+                  "color_b": 128,
+                  "color_g": 128,
+                  "color_r": 128,
+                  "id": "1000000000000000064",
+                  "name": "First Contact",
+                  "rarity": 1
+                },
+                "alias": "LoSaH",
+                "cap_id": "42336340-b897-4ee7-85f4-b2de63274232",
+                "cap_time_seconds": 177.68,
+                "user": "203227772447883265",
+                "verified": true
+              },
+              {
+                "active_title": null,
+                "alias": "slet",
+                "cap_id": "365a19f4-e2df-4d9e-9ec1-5bf6fe2c0b9b",
+                "cap_time_seconds": 180.778,
+                "user": "255047503664119808",
+                "verified": true
+              }
+            ],
+            "state": "verified",
+            "team_size": 2,
+            "user": "203227772447883265;255047503664119808",
+            "verified": true
+          }
+        ],
+        "success": true
+      }
+    },
+    {
+      "host": "api",
+      "path": "/caps/team_caps/2ac2a87f-1030-45ed-b281-bdcbf926717d/detail",
+      "query": "",
+      "status": 200,
+      "body": {
+        "data": {
+          "added": "2026-10-10T23:13:48.511811+00:00",
+          "cap_type": 2,
+          "complete": true,
+          "completed_at": "2026-10-10T23:13:48.529369+00:00",
+          "deltas": {
+            "bronze": -48.001,
+            "champion": -2,
+            "gold": -10,
+            "silver": -24.001,
+            "world_record": 0
+          },
+          "disallowed": false,
+          "id": "2ac2a87f-1030-45ed-b281-bdcbf926717d",
+          "invalid_reason": null,
+          "is_combination_best_unverified": false,
+          "is_combination_best_verified": true,
+          "is_world_record": true,
+          "map": "CTF-BT-II-SkaarjInvasion-vF2",
+          "medal": 6,
+          "medals": {
+            "bronze": 128.0032,
+            "champion": 82.00205,
+            "gold": 90.00225,
+            "silver": 104.0026,
+            "world_record": 80.002
+          },
+          "member_key": "684851153095360533;778035658224697377",
+          "members": [
+            {
+              "active_title": {
+                "color": "247,223,156",
+                "color_b": 156,
+                "color_g": 223,
+                "color_r": 247,
+                "id": "1508462332689387563",
+                "name": "OnlyCUp! | Peak Conqueror",
+                "rarity": 4
+              },
+              "alias": "OwYeaW",
+              "cap": {
+                "active_title": {
+                  "color_b": 156,
+                  "color_g": 223,
+                  "color_r": 247,
+                  "name": "OnlyCUp! | Peak Conqueror",
+                  "rarity": 4
+                },
+                "added": "2026-10-10 23:13:48.508224",
+                "alias": "OwYeaW #OF",
+                "cap_time_seconds": 79.222,
+                "cap_type": 2,
+                "disallowed": false,
+                "dodge_after_landing_50pc": 0.162,
+                "dodge_bind_uses": 0,
+                "dodge_block_count": 32,
+                "dodge_init_after_landing_50pc": 0.052,
+                "engine": "469e - Release",
+                "fps_1pc": 217,
+                "fps_25pc": 344,
+                "fps_50pc": 357,
+                "fps_5pc": 312,
+                "has_ghost": true,
+                "id": "649d11b7-ea8e-44c3-a357-09a6131ef5be",
+                "map": "CTF-BT-II-SkaarjInvasion-vF2",
+                "medal": 6,
+                "netspeed_max": 25000,
+                "netspeed_min": 25000,
+                "ping_1pc": 15,
+                "ping_25pc": 21,
+                "ping_50pc": 22,
+                "ping_5pc": 20,
+                "renderer": "D3D11Drv",
+                "spawn_count": 97,
+                "team": 0,
+                "team_run_id": "B02E5AF15A8089F132078672A5B43548",
+                "time_between_dodges_50pc": 0.506,
+                "user": "684851153095360533",
+                "verified": true,
+                "zone_checkpoints": "43-20.617;36-21.282;11-24.955;24-44.724;11-45.076;28-56.720;11-57.205;"
+              },
+              "cap_id": "649d11b7-ea8e-44c3-a357-09a6131ef5be",
+              "cap_time_seconds": 79.222,
+              "disallowed": false,
+              "has_demo": true,
+              "user": "684851153095360533",
+              "verified": true
+            },
+            {
+              "active_title": {
+                "color": "255,138,108",
+                "color_b": 108,
+                "color_g": 138,
+                "color_r": 255,
+                "id": "1000000000000000118",
+                "name": "Evergreen",
+                "rarity": 5
+              },
+              "alias": "Bun`",
+              "cap": {
+                "active_title": {
+                  "color_b": 108,
+                  "color_g": 138,
+                  "color_r": 255,
+                  "name": "Evergreen",
+                  "rarity": 5
+                },
+                "added": "2026-10-10 23:13:48.529369",
+                "alias": "Bun` #OF",
+                "cap_time_seconds": 80.002,
+                "cap_type": 2,
+                "disallowed": false,
+                "dodge_after_landing_50pc": 0.143,
+                "dodge_bind_uses": 14,
+                "dodge_block_count": 30,
+                "dodge_init_after_landing_50pc": 0.078,
+                "engine": "469e - Release",
+                "fps_1pc": 131,
+                "fps_25pc": 312,
+                "fps_50pc": 344,
+                "fps_5pc": 217,
+                "has_ghost": true,
+                "id": "ac506aed-4b80-4fd6-a409-d005ed89902a",
+                "map": "CTF-BT-II-SkaarjInvasion-vF2",
+                "medal": 5,
+                "netspeed_max": 25000,
+                "netspeed_min": 25000,
+                "ping_1pc": 35,
+                "ping_25pc": 41,
+                "ping_50pc": 42,
+                "ping_5pc": 36,
+                "renderer": "D3D9Drv",
+                "spawn_count": 113,
+                "team": 0,
+                "team_run_id": "B02E5AF15A8089F132078672A5B43548",
+                "time_between_dodges_50pc": 0.475,
+                "user": "778035658224697377",
+                "verified": true,
+                "zone_checkpoints": "11-24.410;24-44.397;11-44.784;28-56.325;11-56.843;"
+              },
+              "cap_id": "ac506aed-4b80-4fd6-a409-d005ed89902a",
+              "cap_time_seconds": 80.002,
+              "disallowed": false,
+              "has_demo": true,
+              "user": "778035658224697377",
+              "verified": true
+            }
+          ],
+          "public_server": "2479a5c5-e963-4a46-bc9a-7ff2040c738e",
+          "rank_on_map": 1,
+          "server": {
+            "name": "UTBT Public NL - Certified Server",
+            "region": "Netherlands"
+          },
+          "state": "verified",
+          "team_cap_id": "2ac2a87f-1030-45ed-b281-bdcbf926717d",
+          "team_run_id": "B02E5AF15A8089F132078672A5B43548",
+          "team_size": 2,
+          "team_time_seconds": 80.002,
+          "total_on_map": 12,
+          "verified": true,
+          "verified_at": "2026-10-10T23:13:52.711715+00:00",
+          "wr_time_seconds": 80.002
+        },
+        "success": true
+      }
+    },
+    {
+      "host": "api",
+      "path": "/ghosts/compare",
+      "query": "reference=ac506aed-4b80-4fd6-a409-d005ed89902a&runner=649d11b7-ea8e-44c3-a357-09a6131ef5be&v=2",
+      "status": 200,
+      "body": {
+        "data": {
+          "algo_version": 1,
+          "coverage": 1,
+          "duration_ms": 80002,
+          "final_delta_ms": -780,
+          "reference": {
+            "alias": "Bun` #OF",
+            "cap_id": "ac506aed-4b80-4fd6-a409-d005ed89902a",
+            "cap_time_ms": 80002,
+            "team": 0,
+            "user": "778035658224697377"
+          },
+          "runner": {
+            "alias": "OwYeaW #OF",
+            "cap_id": "649d11b7-ea8e-44c3-a357-09a6131ef5be",
+            "cap_time_ms": 79222,
+            "team": 0,
+            "user": "684851153095360533"
+          },
+          "sectors": [
+            {
+              "delta_line_ms": -4391,
+              "delta_speed_ms": 6707,
+              "delta_split_ms": 2316,
+              "delta_total_ms": 2316,
+              "end_ms": 8000,
+              "index": 1,
+              "reference_distance_uu": 5553,
+              "reference_speed_uu_s": 631,
+              "runner_distance_uu": 3538,
+              "runner_speed_uu_s": 312,
+              "separated": true,
+              "split_ms": 10316
+            },
+            {
+              "delta_line_ms": -6000,
+              "delta_speed_ms": 2246,
+              "delta_split_ms": -3754,
+              "delta_total_ms": -1438,
+              "end_ms": 16000,
+              "index": 2,
+              "reference_distance_uu": 3723,
+              "reference_speed_uu_s": 423,
+              "runner_distance_uu": 1404,
+              "runner_speed_uu_s": 301,
+              "separated": true,
+              "split_ms": 4246
+            },
+            {
+              "delta_line_ms": 236,
+              "delta_speed_ms": 1637,
+              "delta_split_ms": 1873,
+              "delta_total_ms": 435,
+              "end_ms": 24001,
+              "index": 3,
+              "reference_distance_uu": 4902,
+              "reference_speed_uu_s": 557,
+              "runner_distance_uu": 5034,
+              "runner_speed_uu_s": 463,
+              "separated": false,
+              "split_ms": 9874
+            },
+            {
+              "delta_line_ms": -4460,
+              "delta_speed_ms": 2094,
+              "delta_split_ms": -2366,
+              "delta_total_ms": -1931,
+              "end_ms": 32001,
+              "index": 4,
+              "reference_distance_uu": 4458,
+              "reference_speed_uu_s": 507,
+              "runner_distance_uu": 2337,
+              "runner_speed_uu_s": 377,
+              "separated": true,
+              "split_ms": 5634
+            },
+            {
+              "delta_line_ms": 2478,
+              "delta_speed_ms": -151,
+              "delta_split_ms": 2327,
+              "delta_total_ms": 396,
+              "end_ms": 40001,
+              "index": 5,
+              "reference_distance_uu": 3077,
+              "reference_speed_uu_s": 350,
+              "runner_distance_uu": 4037,
+              "runner_speed_uu_s": 355,
+              "separated": true,
+              "split_ms": 10327
+            },
+            {
+              "delta_line_ms": -157,
+              "delta_speed_ms": 1342,
+              "delta_split_ms": 1185,
+              "delta_total_ms": 1581,
+              "end_ms": 48001,
+              "index": 6,
+              "reference_distance_uu": 3568,
+              "reference_speed_uu_s": 405,
+              "runner_distance_uu": 3504,
+              "runner_speed_uu_s": 347,
+              "separated": false,
+              "split_ms": 9185
+            },
+            {
+              "delta_line_ms": 2134,
+              "delta_speed_ms": -826,
+              "delta_split_ms": 1308,
+              "delta_total_ms": 2889,
+              "end_ms": 56001,
+              "index": 7,
+              "reference_distance_uu": 3118,
+              "reference_speed_uu_s": 354,
+              "runner_distance_uu": 3989,
+              "runner_speed_uu_s": 390,
+              "separated": true,
+              "split_ms": 9308
+            },
+            {
+              "delta_line_ms": -3554,
+              "delta_speed_ms": -394,
+              "delta_split_ms": -3948,
+              "delta_total_ms": -1059,
+              "end_ms": 64002,
+              "index": 8,
+              "reference_distance_uu": 3514,
+              "reference_speed_uu_s": 399,
+              "runner_distance_uu": 1902,
+              "runner_speed_uu_s": 427,
+              "separated": true,
+              "split_ms": 4053
+            },
+            {
+              "delta_line_ms": 8255,
+              "delta_speed_ms": -973,
+              "delta_split_ms": 7282,
+              "delta_total_ms": 6223,
+              "end_ms": 72002,
+              "index": 9,
+              "reference_distance_uu": 3349,
+              "reference_speed_uu_s": 381,
+              "runner_distance_uu": 6946,
+              "runner_speed_uu_s": 413,
+              "separated": true,
+              "split_ms": 15282
+            },
+            {
+              "delta_line_ms": -6894,
+              "delta_speed_ms": -109,
+              "delta_split_ms": -7003,
+              "delta_total_ms": -780,
+              "end_ms": 80002,
+              "index": 10,
+              "reference_distance_uu": 3587,
+              "reference_speed_uu_s": 408,
+              "runner_distance_uu": 458,
+              "runner_speed_uu_s": 418,
+              "separated": true,
+              "split_ms": 997
+            }
+          ],
+          "segments": [
+            [
+              [
+                0,
+                0
+              ],
+              [
+                11,
+                26
+              ],
+              [
+                136,
+                107
+              ],
+              [
+                234,
+                185
+              ],
+              [
+                406,
+                347
+              ],
+              [
+                445,
+                386
+              ],
+              [
+                510,
+                453
+              ],
+              [
+                546,
+                490
+              ],
+              [
+                616,
+                560
+              ],
+              [
+                657,
+                599
+              ],
+              [
+                740,
+                674
+              ],
+              [
+                778,
+                705
+              ],
+              [
+                814,
+                733
+              ],
+              [
+                857,
+                765
+              ],
+              [
+                992,
+                853
+              ],
+              [
+                1098,
+                913
+              ],
+              [
+                1288,
+                1014
+              ],
+              [
+                1380,
+                1063
+              ],
+              [
+                1546,
+                1155
+              ],
+              [
+                1600,
+                1187
+              ],
+              [
+                1750,
+                1286
+              ],
+              [
+                1811,
+                1332
+              ],
+              [
+                1836,
+                1352
+              ],
+              [
+                1873,
+                1384
+              ],
+              [
+                1946,
+                1450
+              ],
+              [
+                1977,
+                1481
+              ],
+              [
+                2128,
+                1646
+              ],
+              [
+                2202,
+                1738
+              ],
+              [
+                2321,
+                1899
+              ],
+              [
+                2353,
+                1945
+              ],
+              [
+                2438,
+                2072
+              ],
+              [
+                2475,
+                2130
+              ],
+              [
+                2545,
+                2243
+              ],
+              [
+                2556,
+                2261
+              ],
+              [
+                2587,
+                2312
+              ],
+              [
+                2636,
+                2394
+              ],
+              [
+                2711,
+                2522
+              ],
+              [
+                2749,
+                2587
+              ],
+              [
+                2807,
+                2685
+              ],
+              [
+                2837,
+                2736
+              ],
+              [
+                2908,
+                2855
+              ],
+              [
+                2946,
+                2917
+              ],
+              [
+                3059,
+                3097
+              ],
+              [
+                3132,
+                3209
+              ],
+              [
+                3201,
+                3312
+              ],
+              [
+                3219,
+                3338
+              ],
+              [
+                3293,
+                3444
+              ],
+              [
+                3364,
+                3543
+              ],
+              [
+                3390,
+                3579
+              ]
+            ],
+            [
+              [
+                7537,
+                2304
+              ],
+              [
+                7538,
+                2304
+              ],
+              [
+                7760,
+                2339
+              ],
+              [
+                7806,
+                2341
+              ],
+              [
+                8900,
+                2202
+              ],
+              [
+                9037,
+                2188
+              ],
+              [
+                9184,
+                2195
+              ],
+              [
+                11141,
+                359
+              ]
+            ],
+            [
+              [
+                15841,
+                -1438
+              ],
+              [
+                15934,
+                -1437
+              ],
+              [
+                16045,
+                -1438
+              ],
+              [
+                16134,
+                -1439
+              ],
+              [
+                16245,
+                -1441
+              ],
+              [
+                16441,
+                -1448
+              ],
+              [
+                16536,
+                -1453
+              ],
+              [
+                16632,
+                -1458
+              ],
+              [
+                16743,
+                -1464
+              ],
+              [
+                16919,
+                -1470
+              ],
+              [
+                17094,
+                -1459
+              ],
+              [
+                17308,
+                -1421
+              ],
+              [
+                17395,
+                -1392
+              ],
+              [
+                17586,
+                -1289
+              ],
+              [
+                17661,
+                -1230
+              ],
+              [
+                17884,
+                -965
+              ],
+              [
+                17903,
+                -936
+              ],
+              [
+                17963,
+                -840
+              ],
+              [
+                18009,
+                -760
+              ],
+              [
+                18077,
+                -637
+              ],
+              [
+                18105,
+                -586
+              ],
+              [
+                18174,
+                -459
+              ],
+              [
+                18208,
+                -397
+              ],
+              [
+                18288,
+                -254
+              ],
+              [
+                18347,
+                -153
+              ],
+              [
+                18601,
+                252
+              ],
+              [
+                18637,
+                306
+              ],
+              [
+                18763,
+                489
+              ],
+              [
+                18807,
+                552
+              ],
+              [
+                18841,
+                600
+              ],
+              [
+                18869,
+                639
+              ],
+              [
+                18936,
+                733
+              ],
+              [
+                18973,
+                785
+              ],
+              [
+                19177,
+                992
+              ],
+              [
+                20530,
+                13
+              ],
+              [
+                20716,
+                122
+              ],
+              [
+                20829,
+                221
+              ],
+              [
+                21005,
+                393
+              ],
+              [
+                21055,
+                439
+              ],
+              [
+                21100,
+                479
+              ],
+              [
+                21235,
+                577
+              ],
+              [
+                21425,
+                666
+              ],
+              [
+                21529,
+                692
+              ],
+              [
+                21784,
+                716
+              ],
+              [
+                21873,
+                715
+              ],
+              [
+                22116,
+                703
+              ],
+              [
+                22208,
+                697
+              ],
+              [
+                22427,
+                679
+              ],
+              [
+                22548,
+                670
+              ],
+              [
+                22738,
+                657
+              ],
+              [
+                22847,
+                648
+              ],
+              [
+                22948,
+                638
+              ],
+              [
+                23051,
+                624
+              ],
+              [
+                23259,
+                585
+              ],
+              [
+                23383,
+                558
+              ],
+              [
+                23809,
+                464
+              ],
+              [
+                23960,
+                439
+              ],
+              [
+                24075,
+                428
+              ],
+              [
+                24141,
+                426
+              ],
+              [
+                24275,
+                430
+              ],
+              [
+                24337,
+                434
+              ],
+              [
+                24478,
+                440
+              ],
+              [
+                24586,
+                442
+              ],
+              [
+                24918,
+                440
+              ],
+              [
+                25111,
+                442
+              ],
+              [
+                25200,
+                445
+              ],
+              [
+                25338,
+                455
+              ],
+              [
+                25405,
+                461
+              ],
+              [
+                25596,
+                485
+              ],
+              [
+                25671,
+                495
+              ],
+              [
+                25908,
+                532
+              ],
+              [
+                25977,
+                545
+              ],
+              [
+                26171,
+                587
+              ],
+              [
+                26223,
+                602
+              ]
+            ],
+            [
+              [
+                28431,
+                672
+              ],
+              [
+                28459,
+                730
+              ],
+              [
+                28500,
+                815
+              ],
+              [
+                28527,
+                871
+              ],
+              [
+                28559,
+                937
+              ]
+            ],
+            [
+              [
+                32300,
+                -2180
+              ],
+              [
+                32509,
+                -2138
+              ],
+              [
+                32690,
+                -2094
+              ],
+              [
+                32731,
+                -2085
+              ],
+              [
+                32765,
+                -2077
+              ],
+              [
+                32990,
+                -2038
+              ],
+              [
+                33088,
+                -2026
+              ],
+              [
+                33320,
+                -1992
+              ],
+              [
+                33423,
+                -1972
+              ],
+              [
+                33520,
+                -1947
+              ],
+              [
+                33605,
+                -1918
+              ],
+              [
+                33790,
+                -1813
+              ],
+              [
+                33891,
+                -1722
+              ],
+              [
+                34057,
+                -1503
+              ],
+              [
+                34121,
+                -1398
+              ],
+              [
+                34186,
+                -1284
+              ],
+              [
+                34362,
+                -970
+              ],
+              [
+                34452,
+                -821
+              ],
+              [
+                34600,
+                -605
+              ],
+              [
+                34842,
+                -337
+              ],
+              [
+                35010,
+                -209
+              ],
+              [
+                35035,
+                -194
+              ],
+              [
+                35074,
+                -174
+              ],
+              [
+                35181,
+                -123
+              ],
+              [
+                35244,
+                -101
+              ],
+              [
+                35355,
+                -68
+              ],
+              [
+                35471,
+                -46
+              ],
+              [
+                35716,
+                -26
+              ],
+              [
+                35807,
+                -28
+              ],
+              [
+                35983,
+                -48
+              ],
+              [
+                36097,
+                -69
+              ],
+              [
+                36260,
+                -105
+              ],
+              [
+                36576,
+                -188
+              ],
+              [
+                36714,
+                -225
+              ],
+              [
+                36831,
+                -255
+              ],
+              [
+                37064,
+                -316
+              ],
+              [
+                37500,
+                -434
+              ],
+              [
+                38700,
+                661
+              ],
+              [
+                38900,
+                607
+              ],
+              [
+                39674,
+                330
+              ],
+              [
+                39700,
+                332
+              ],
+              [
+                39819,
+                352
+              ],
+              [
+                39917,
+                376
+              ],
+              [
+                40016,
+                400
+              ],
+              [
+                40042,
+                406
+              ],
+              [
+                40091,
+                416
+              ],
+              [
+                40181,
+                431
+              ],
+              [
+                40412,
+                453
+              ],
+              [
+                40505,
+                457
+              ],
+              [
+                40648,
+                459
+              ],
+              [
+                40852,
+                455
+              ],
+              [
+                41050,
+                445
+              ],
+              [
+                41065,
+                444
+              ],
+              [
+                41388,
+                420
+              ],
+              [
+                41492,
+                412
+              ],
+              [
+                41584,
+                405
+              ],
+              [
+                41694,
+                397
+              ],
+              [
+                41930,
+                382
+              ],
+              [
+                42027,
+                377
+              ],
+              [
+                42258,
+                367
+              ],
+              [
+                42360,
+                364
+              ],
+              [
+                42518,
+                359
+              ],
+              [
+                42629,
+                356
+              ],
+              [
+                42846,
+                348
+              ],
+              [
+                42958,
+                344
+              ],
+              [
+                43171,
+                336
+              ],
+              [
+                43273,
+                333
+              ],
+              [
+                43371,
+                330
+              ],
+              [
+                43476,
+                328
+              ],
+              [
+                43694,
+                325
+              ],
+              [
+                43776,
+                325
+              ],
+              [
+                43875,
+                324
+              ],
+              [
+                44070,
+                323
+              ],
+              [
+                44281,
+                320
+              ],
+              [
+                44365,
+                318
+              ],
+              [
+                44600,
+                311
+              ],
+              [
+                44685,
+                308
+              ],
+              [
+                44777,
+                306
+              ],
+              [
+                44892,
+                305
+              ],
+              [
+                45160,
+                316
+              ],
+              [
+                45257,
+                328
+              ],
+              [
+                45438,
+                372
+              ],
+              [
+                45480,
+                387
+              ],
+              [
+                45650,
+                468
+              ],
+              [
+                45713,
+                505
+              ],
+              [
+                45828,
+                570
+              ],
+              [
+                45864,
+                588
+              ],
+              [
+                45972,
+                633
+              ],
+              [
+                46149,
+                676
+              ],
+              [
+                46536,
+                731
+              ],
+              [
+                46660,
+                745
+              ],
+              [
+                46792,
+                760
+              ],
+              [
+                46838,
+                767
+              ],
+              [
+                46995,
+                805
+              ],
+              [
+                47095,
+                841
+              ],
+              [
+                47285,
+                933
+              ],
+              [
+                47333,
+                961
+              ],
+              [
+                47435,
+                1029
+              ],
+              [
+                47504,
+                1081
+              ],
+              [
+                47551,
+                1119
+              ],
+              [
+                47617,
+                1176
+              ],
+              [
+                47735,
+                1289
+              ],
+              [
+                47799,
+                1355
+              ],
+              [
+                47911,
+                1478
+              ],
+              [
+                47928,
+                1497
+              ],
+              [
+                47989,
+                1567
+              ],
+              [
+                48051,
+                1638
+              ],
+              [
+                48116,
+                1715
+              ],
+              [
+                48167,
+                1775
+              ],
+              [
+                48289,
+                1919
+              ],
+              [
+                48344,
+                1983
+              ],
+              [
+                48474,
+                2135
+              ],
+              [
+                48536,
+                2208
+              ],
+              [
+                48588,
+                2268
+              ],
+              [
+                48616,
+                2301
+              ],
+              [
+                48720,
+                2422
+              ],
+              [
+                48787,
+                2500
+              ],
+              [
+                48903,
+                2634
+              ],
+              [
+                48982,
+                2725
+              ],
+              [
+                49011,
+                2758
+              ]
+            ],
+            [
+              [
+                53375,
+                -576
+              ],
+              [
+                53493,
+                -575
+              ],
+              [
+                53570,
+                -575
+              ],
+              [
+                53768,
+                -577
+              ],
+              [
+                53864,
+                -578
+              ],
+              [
+                53983,
+                -577
+              ],
+              [
+                54083,
+                -573
+              ],
+              [
+                54297,
+                -530
+              ],
+              [
+                54405,
+                -480
+              ],
+              [
+                54595,
+                -328
+              ],
+              [
+                54700,
+                -189
+              ],
+              [
+                54838,
+                74
+              ],
+              [
+                54907,
+                243
+              ],
+              [
+                55118,
+                922
+              ],
+              [
+                55140,
+                1006
+              ],
+              [
+                55346,
+                1882
+              ],
+              [
+                55400,
+                2134
+              ],
+              [
+                55405,
+                2158
+              ],
+              [
+                55518,
+                2698
+              ],
+              [
+                55600,
+                3087
+              ]
+            ],
+            [
+              [
+                65000,
+                -1552
+              ],
+              [
+                65200,
+                -986
+              ],
+              [
+                65295,
+                -783
+              ],
+              [
+                65343,
+                -696
+              ],
+              [
+                65398,
+                -607
+              ],
+              [
+                65504,
+                -473
+              ],
+              [
+                65604,
+                -381
+              ],
+              [
+                65776,
+                -284
+              ],
+              [
+                65888,
+                -253
+              ],
+              [
+                65982,
+                -242
+              ],
+              [
+                66101,
+                -248
+              ],
+              [
+                66309,
+                -291
+              ],
+              [
+                66546,
+                -365
+              ],
+              [
+                66922,
+                -505
+              ],
+              [
+                67061,
+                -558
+              ],
+              [
+                67362,
+                -663
+              ],
+              [
+                67716,
+                -762
+              ],
+              [
+                67850,
+                -782
+              ],
+              [
+                67900,
+                -784
+              ],
+              [
+                68008,
+                -776
+              ],
+              [
+                68049,
+                -767
+              ]
+            ],
+            [
+              [
+                71800,
+                6400
+              ]
+            ],
+            [
+              [
+                80002,
+                -780
+              ]
+            ]
+          ],
+          "separations": [
+            {
+              "end_delta_ms": 2304,
+              "end_ms": 7537,
+              "rejoined": true,
+              "start_delta_ms": 3579,
+              "start_ms": 3390
+            },
+            {
+              "end_delta_ms": -1438,
+              "end_ms": 15841,
+              "rejoined": true,
+              "start_delta_ms": 359,
+              "start_ms": 11141
+            },
+            {
+              "end_delta_ms": 672,
+              "end_ms": 28431,
+              "rejoined": true,
+              "start_delta_ms": 602,
+              "start_ms": 26223
+            },
+            {
+              "end_delta_ms": -2180,
+              "end_ms": 32300,
+              "rejoined": true,
+              "start_delta_ms": 937,
+              "start_ms": 28559
+            },
+            {
+              "end_delta_ms": -576,
+              "end_ms": 53375,
+              "rejoined": true,
+              "start_delta_ms": 2758,
+              "start_ms": 49011
+            },
+            {
+              "end_delta_ms": -1552,
+              "end_ms": 65000,
+              "rejoined": true,
+              "start_delta_ms": 3087,
+              "start_ms": 55600
+            },
+            {
+              "end_delta_ms": 6400,
+              "end_ms": 71800,
+              "rejoined": true,
+              "start_delta_ms": -767,
+              "start_ms": 68049
+            },
+            {
+              "end_delta_ms": -780,
+              "end_ms": 80002,
+              "rejoined": false,
+              "start_delta_ms": 6400,
+              "start_ms": 71800
+            }
+          ],
+          "speed": {
+            "reference": [
+              [
+                [
+                  0,
+                  388
+                ],
+                [
+                  100,
+                  433
+                ],
+                [
+                  500,
+                  592
+                ],
+                [
+                  600,
+                  615
+                ],
+                [
+                  1100,
+                  634
+                ],
+                [
+                  1200,
+                  647
+                ],
+                [
+                  1600,
+                  792
+                ],
+                [
+                  1700,
+                  836
+                ],
+                [
+                  2200,
+                  963
+                ],
+                [
+                  2400,
+                  974
+                ],
+                [
+                  2800,
+                  962
+                ],
+                [
+                  2900,
+                  954
+                ],
+                [
+                  3300,
+                  902
+                ],
+                [
+                  3400,
+                  887
+                ],
+                [
+                  3900,
+                  813
+                ],
+                [
+                  4000,
+                  796
+                ],
+                [
+                  4400,
+                  688
+                ],
+                [
+                  4500,
+                  649
+                ],
+                [
+                  5000,
+                  462
+                ],
+                [
+                  5100,
+                  439
+                ],
+                [
+                  5600,
+                  401
+                ],
+                [
+                  5700,
+                  401
+                ],
+                [
+                  6100,
+                  404
+                ],
+                [
+                  6200,
+                  407
+                ],
+                [
+                  6700,
+                  446
+                ],
+                [
+                  6800,
+                  459
+                ],
+                [
+                  7100,
+                  481
+                ],
+                [
+                  7300,
+                  467
+                ],
+                [
+                  7800,
+                  377
+                ],
+                [
+                  7900,
+                  367
+                ],
+                [
+                  8000,
+                  363
+                ],
+                [
+                  8100,
+                  363
+                ],
+                [
+                  8600,
+                  427
+                ],
+                [
+                  8700,
+                  453
+                ],
+                [
+                  9100,
+                  568
+                ],
+                [
+                  9300,
+                  594
+                ],
+                [
+                  9700,
+                  532
+                ],
+                [
+                  9800,
+                  503
+                ],
+                [
+                  10200,
+                  434
+                ],
+                [
+                  10300,
+                  438
+                ],
+                [
+                  10800,
+                  502
+                ],
+                [
+                  10900,
+                  496
+                ],
+                [
+                  11400,
+                  297
+                ],
+                [
+                  11500,
+                  248
+                ],
+                [
+                  11800,
+                  172
+                ],
+                [
+                  12000,
+                  196
+                ],
+                [
+                  12500,
+                  358
+                ],
+                [
+                  12600,
+                  377
+                ],
+                [
+                  12800,
+                  391
+                ],
+                [
+                  13100,
+                  369
+                ],
+                [
+                  13600,
+                  323
+                ],
+                [
+                  13700,
+                  321
+                ],
+                [
+                  14200,
+                  360
+                ],
+                [
+                  14300,
+                  371
+                ],
+                [
+                  14700,
+                  406
+                ],
+                [
+                  14800,
+                  417
+                ],
+                [
+                  15300,
+                  570
+                ],
+                [
+                  15400,
+                  632
+                ],
+                [
+                  15800,
+                  965
+                ],
+                [
+                  15900,
+                  1049
+                ],
+                [
+                  16000,
+                  1123
+                ],
+                [
+                  16200,
+                  1217
+                ],
+                [
+                  16300,
+                  1230
+                ],
+                [
+                  16700,
+                  1037
+                ],
+                [
+                  16800,
+                  944
+                ],
+                [
+                  17300,
+                  541
+                ],
+                [
+                  17400,
+                  504
+                ],
+                [
+                  17600,
+                  473
+                ],
+                [
+                  18000,
+                  483
+                ],
+                [
+                  18400,
+                  449
+                ],
+                [
+                  18600,
+                  434
+                ],
+                [
+                  18900,
+                  441
+                ],
+                [
+                  19000,
+                  444
+                ],
+                [
+                  19500,
+                  428
+                ],
+                [
+                  19600,
+                  433
+                ],
+                [
+                  20100,
+                  568
+                ],
+                [
+                  20200,
+                  600
+                ],
+                [
+                  20500,
+                  647
+                ],
+                [
+                  20700,
+                  630
+                ],
+                [
+                  21200,
+                  490
+                ],
+                [
+                  21300,
+                  465
+                ],
+                [
+                  21600,
+                  435
+                ],
+                [
+                  21800,
+                  450
+                ],
+                [
+                  22200,
+                  490
+                ],
+                [
+                  22400,
+                  480
+                ],
+                [
+                  22900,
+                  414
+                ],
+                [
+                  23100,
+                  404
+                ],
+                [
+                  23400,
+                  409
+                ],
+                [
+                  23500,
+                  416
+                ],
+                [
+                  24000,
+                  493
+                ],
+                [
+                  24100,
+                  511
+                ],
+                [
+                  24200,
+                  526
+                ],
+                [
+                  24400,
+                  540
+                ],
+                [
+                  24700,
+                  518
+                ],
+                [
+                  24800,
+                  509
+                ],
+                [
+                  25100,
+                  498
+                ],
+                [
+                  25400,
+                  497
+                ],
+                [
+                  25900,
+                  447
+                ],
+                [
+                  26000,
+                  437
+                ],
+                [
+                  26400,
+                  391
+                ],
+                [
+                  26500,
+                  376
+                ],
+                [
+                  27000,
+                  321
+                ],
+                [
+                  27100,
+                  318
+                ],
+                [
+                  27400,
+                  313
+                ],
+                [
+                  27700,
+                  319
+                ],
+                [
+                  28100,
+                  388
+                ],
+                [
+                  28200,
+                  423
+                ],
+                [
+                  28700,
+                  673
+                ],
+                [
+                  28800,
+                  721
+                ],
+                [
+                  29100,
+                  795
+                ],
+                [
+                  29300,
+                  768
+                ],
+                [
+                  29800,
+                  529
+                ],
+                [
+                  29900,
+                  490
+                ],
+                [
+                  30200,
+                  452
+                ],
+                [
+                  30500,
+                  477
+                ],
+                [
+                  30900,
+                  499
+                ],
+                [
+                  31000,
+                  509
+                ],
+                [
+                  31500,
+                  581
+                ],
+                [
+                  31600,
+                  584
+                ],
+                [
+                  32000,
+                  546
+                ],
+                [
+                  32100,
+                  535
+                ],
+                [
+                  32200,
+                  528
+                ],
+                [
+                  32300,
+                  523
+                ],
+                [
+                  32700,
+                  516
+                ],
+                [
+                  32900,
+                  520
+                ],
+                [
+                  33400,
+                  551
+                ],
+                [
+                  33500,
+                  551
+                ],
+                [
+                  33900,
+                  534
+                ],
+                [
+                  34000,
+                  530
+                ],
+                [
+                  34500,
+                  500
+                ],
+                [
+                  34700,
+                  493
+                ],
+                [
+                  35000,
+                  507
+                ],
+                [
+                  35100,
+                  511
+                ],
+                [
+                  35600,
+                  433
+                ],
+                [
+                  35700,
+                  397
+                ],
+                [
+                  36200,
+                  208
+                ],
+                [
+                  36300,
+                  184
+                ],
+                [
+                  36500,
+                  164
+                ],
+                [
+                  36800,
+                  190
+                ],
+                [
+                  37100,
+                  216
+                ],
+                [
+                  37400,
+                  184
+                ],
+                [
+                  37800,
+                  92
+                ],
+                [
+                  37900,
+                  73
+                ],
+                [
+                  38200,
+                  46
+                ],
+                [
+                  38300,
+                  47
+                ],
+                [
+                  38600,
+                  89
+                ],
+                [
+                  39100,
+                  272
+                ],
+                [
+                  39200,
+                  315
+                ],
+                [
+                  39600,
+                  458
+                ],
+                [
+                  39700,
+                  482
+                ],
+                [
+                  40000,
+                  516
+                ],
+                [
+                  40100,
+                  516
+                ],
+                [
+                  40200,
+                  514
+                ],
+                [
+                  40500,
+                  508
+                ],
+                [
+                  40900,
+                  490
+                ],
+                [
+                  41000,
+                  480
+                ],
+                [
+                  41300,
+                  456
+                ],
+                [
+                  41600,
+                  473
+                ],
+                [
+                  41900,
+                  490
+                ],
+                [
+                  42200,
+                  458
+                ],
+                [
+                  42600,
+                  371
+                ],
+                [
+                  42700,
+                  347
+                ],
+                [
+                  43200,
+                  204
+                ],
+                [
+                  43300,
+                  177
+                ],
+                [
+                  43700,
+                  104
+                ],
+                [
+                  44100,
+                  85
+                ],
+                [
+                  44300,
+                  96
+                ],
+                [
+                  44400,
+                  107
+                ],
+                [
+                  44900,
+                  217
+                ],
+                [
+                  45000,
+                  244
+                ],
+                [
+                  45400,
+                  320
+                ],
+                [
+                  45500,
+                  328
+                ],
+                [
+                  46000,
+                  351
+                ],
+                [
+                  46100,
+                  358
+                ],
+                [
+                  46500,
+                  396
+                ],
+                [
+                  46600,
+                  409
+                ],
+                [
+                  47100,
+                  560
+                ],
+                [
+                  47200,
+                  613
+                ],
+                [
+                  47700,
+                  880
+                ],
+                [
+                  47900,
+                  928
+                ],
+                [
+                  48000,
+                  932
+                ],
+                [
+                  48100,
+                  923
+                ],
+                [
+                  48400,
+                  821
+                ],
+                [
+                  48500,
+                  766
+                ],
+                [
+                  49000,
+                  456
+                ],
+                [
+                  49100,
+                  406
+                ],
+                [
+                  49500,
+                  275
+                ],
+                [
+                  49600,
+                  257
+                ],
+                [
+                  50100,
+                  184
+                ],
+                [
+                  50200,
+                  166
+                ],
+                [
+                  50700,
+                  77
+                ],
+                [
+                  50800,
+                  66
+                ],
+                [
+                  51100,
+                  50
+                ],
+                [
+                  51300,
+                  58
+                ],
+                [
+                  51800,
+                  147
+                ],
+                [
+                  51900,
+                  172
+                ],
+                [
+                  52300,
+                  245
+                ],
+                [
+                  52400,
+                  255
+                ],
+                [
+                  52900,
+                  306
+                ],
+                [
+                  53000,
+                  323
+                ],
+                [
+                  53500,
+                  416
+                ],
+                [
+                  53600,
+                  436
+                ],
+                [
+                  54000,
+                  491
+                ],
+                [
+                  54100,
+                  492
+                ],
+                [
+                  54600,
+                  427
+                ],
+                [
+                  54700,
+                  415
+                ],
+                [
+                  54900,
+                  401
+                ],
+                [
+                  55300,
+                  428
+                ],
+                [
+                  55700,
+                  505
+                ],
+                [
+                  55900,
+                  527
+                ],
+                [
+                  56000,
+                  525
+                ],
+                [
+                  56100,
+                  512
+                ],
+                [
+                  56500,
+                  401
+                ],
+                [
+                  56600,
+                  376
+                ],
+                [
+                  56900,
+                  350
+                ],
+                [
+                  57100,
+                  363
+                ],
+                [
+                  57600,
+                  395
+                ],
+                [
+                  57700,
+                  397
+                ],
+                [
+                  58200,
+                  402
+                ],
+                [
+                  58300,
+                  408
+                ],
+                [
+                  58700,
+                  460
+                ],
+                [
+                  59000,
+                  487
+                ],
+                [
+                  59300,
+                  464
+                ],
+                [
+                  59400,
+                  450
+                ],
+                [
+                  59800,
+                  411
+                ],
+                [
+                  59900,
+                  406
+                ],
+                [
+                  60400,
+                  356
+                ],
+                [
+                  60500,
+                  340
+                ],
+                [
+                  60900,
+                  303
+                ],
+                [
+                  61100,
+                  313
+                ],
+                [
+                  61500,
+                  351
+                ],
+                [
+                  61600,
+                  360
+                ],
+                [
+                  62100,
+                  420
+                ],
+                [
+                  62200,
+                  438
+                ],
+                [
+                  62600,
+                  497
+                ],
+                [
+                  62700,
+                  502
+                ],
+                [
+                  63200,
+                  452
+                ],
+                [
+                  63500,
+                  431
+                ],
+                [
+                  63800,
+                  456
+                ],
+                [
+                  63900,
+                  471
+                ],
+                [
+                  64000,
+                  488
+                ],
+                [
+                  64100,
+                  502
+                ],
+                [
+                  64300,
+                  512
+                ],
+                [
+                  64600,
+                  461
+                ],
+                [
+                  65100,
+                  333
+                ],
+                [
+                  65200,
+                  327
+                ],
+                [
+                  65600,
+                  358
+                ],
+                [
+                  65700,
+                  370
+                ],
+                [
+                  66200,
+                  422
+                ],
+                [
+                  66300,
+                  436
+                ],
+                [
+                  66800,
+                  526
+                ],
+                [
+                  67000,
+                  543
+                ],
+                [
+                  67300,
+                  532
+                ],
+                [
+                  67400,
+                  525
+                ],
+                [
+                  67900,
+                  497
+                ],
+                [
+                  68000,
+                  483
+                ],
+                [
+                  68400,
+                  389
+                ],
+                [
+                  68500,
+                  360
+                ],
+                [
+                  69000,
+                  232
+                ],
+                [
+                  69100,
+                  214
+                ],
+                [
+                  69600,
+                  172
+                ],
+                [
+                  69700,
+                  169
+                ],
+                [
+                  70100,
+                  188
+                ],
+                [
+                  70200,
+                  203
+                ],
+                [
+                  70700,
+                  287
+                ],
+                [
+                  70800,
+                  301
+                ],
+                [
+                  71200,
+                  352
+                ],
+                [
+                  71300,
+                  369
+                ],
+                [
+                  71800,
+                  469
+                ],
+                [
+                  72000,
+                  498
+                ],
+                [
+                  72100,
+                  503
+                ],
+                [
+                  72200,
+                  502
+                ],
+                [
+                  72600,
+                  448
+                ],
+                [
+                  72700,
+                  433
+                ],
+                [
+                  73100,
+                  388
+                ],
+                [
+                  73200,
+                  377
+                ],
+                [
+                  73700,
+                  264
+                ],
+                [
+                  73800,
+                  228
+                ],
+                [
+                  74200,
+                  111
+                ],
+                [
+                  74300,
+                  102
+                ],
+                [
+                  74800,
+                  225
+                ],
+                [
+                  74900,
+                  269
+                ],
+                [
+                  75400,
+                  430
+                ],
+                [
+                  75500,
+                  443
+                ],
+                [
+                  75900,
+                  459
+                ],
+                [
+                  76000,
+                  460
+                ],
+                [
+                  76500,
+                  491
+                ],
+                [
+                  76600,
+                  504
+                ],
+                [
+                  76900,
+                  533
+                ],
+                [
+                  77100,
+                  529
+                ],
+                [
+                  77600,
+                  505
+                ],
+                [
+                  77800,
+                  507
+                ],
+                [
+                  78200,
+                  473
+                ],
+                [
+                  78300,
+                  458
+                ],
+                [
+                  78700,
+                  413
+                ],
+                [
+                  78900,
+                  407
+                ],
+                [
+                  79300,
+                  411
+                ],
+                [
+                  79400,
+                  413
+                ],
+                [
+                  79900,
+                  418
+                ],
+                [
+                  80000,
+                  418
+                ]
+              ]
+            ],
+            "runner": [
+              [
+                [
+                  0,
+                  176
+                ],
+                [
+                  11,
+                  228
+                ],
+                [
+                  136,
+                  256
+                ],
+                [
+                  234,
+                  283
+                ],
+                [
+                  406,
+                  331
+                ],
+                [
+                  445,
+                  351
+                ],
+                [
+                  510,
+                  378
+                ],
+                [
+                  546,
+                  387
+                ],
+                [
+                  616,
+                  396
+                ],
+                [
+                  657,
+                  398
+                ],
+                [
+                  740,
+                  401
+                ],
+                [
+                  778,
+                  403
+                ],
+                [
+                  814,
+                  405
+                ],
+                [
+                  857,
+                  409
+                ],
+                [
+                  992,
+                  423
+                ],
+                [
+                  1098,
+                  434
+                ],
+                [
+                  1288,
+                  462
+                ],
+                [
+                  1380,
+                  478
+                ],
+                [
+                  1546,
+                  502
+                ],
+                [
+                  1600,
+                  509
+                ],
+                [
+                  1674,
+                  512
+                ],
+                [
+                  1811,
+                  511
+                ],
+                [
+                  1873,
+                  514
+                ],
+                [
+                  1906,
+                  520
+                ],
+                [
+                  1946,
+                  526
+                ],
+                [
+                  2056,
+                  533
+                ],
+                [
+                  2128,
+                  529
+                ],
+                [
+                  2202,
+                  516
+                ],
+                [
+                  2321,
+                  470
+                ],
+                [
+                  2353,
+                  438
+                ],
+                [
+                  2438,
+                  372
+                ],
+                [
+                  2475,
+                  341
+                ],
+                [
+                  2545,
+                  298
+                ],
+                [
+                  2556,
+                  289
+                ],
+                [
+                  2636,
+                  313
+                ],
+                [
+                  2675,
+                  330
+                ],
+                [
+                  2711,
+                  348
+                ],
+                [
+                  2749,
+                  367
+                ],
+                [
+                  2807,
+                  406
+                ],
+                [
+                  2837,
+                  426
+                ],
+                [
+                  2908,
+                  460
+                ],
+                [
+                  3007,
+                  473
+                ],
+                [
+                  3059,
+                  467
+                ],
+                [
+                  3132,
+                  453
+                ],
+                [
+                  3219,
+                  402
+                ],
+                [
+                  3258,
+                  369
+                ],
+                [
+                  3293,
+                  332
+                ],
+                [
+                  3364,
+                  253
+                ],
+                [
+                  3390,
+                  213
+                ]
+              ],
+              [
+                [
+                  7537,
+                  256
+                ],
+                [
+                  7538,
+                  305
+                ],
+                [
+                  7710,
+                  348
+                ],
+                [
+                  7806,
+                  397
+                ],
+                [
+                  8900,
+                  427
+                ],
+                [
+                  9037,
+                  440
+                ],
+                [
+                  9184,
+                  433
+                ],
+                [
+                  11141,
+                  408
+                ]
+              ],
+              [
+                [
+                  15841,
+                  934
+                ],
+                [
+                  15934,
+                  1032
+                ],
+                [
+                  16045,
+                  1115
+                ],
+                [
+                  16134,
+                  1179
+                ],
+                [
+                  16336,
+                  1235
+                ],
+                [
+                  16441,
+                  1223
+                ],
+                [
+                  16536,
+                  1185
+                ],
+                [
+                  16632,
+                  1123
+                ],
+                [
+                  16919,
+                  949
+                ],
+                [
+                  17011,
+                  850
+                ],
+                [
+                  17094,
+                  753
+                ],
+                [
+                  17175,
+                  664
+                ],
+                [
+                  17395,
+                  524
+                ],
+                [
+                  17500,
+                  474
+                ],
+                [
+                  17661,
+                  404
+                ],
+                [
+                  17789,
+                  376
+                ],
+                [
+                  17903,
+                  318
+                ],
+                [
+                  17963,
+                  285
+                ],
+                [
+                  18044,
+                  213
+                ],
+                [
+                  18077,
+                  135
+                ],
+                [
+                  18134,
+                  182
+                ],
+                [
+                  18174,
+                  200
+                ],
+                [
+                  18208,
+                  214
+                ],
+                [
+                  18248,
+                  224
+                ],
+                [
+                  18347,
+                  235
+                ],
+                [
+                  18537,
+                  242
+                ],
+                [
+                  18637,
+                  285
+                ],
+                [
+                  18715,
+                  307
+                ],
+                [
+                  18807,
+                  357
+                ],
+                [
+                  18841,
+                  441
+                ],
+                [
+                  18910,
+                  501
+                ],
+                [
+                  18936,
+                  531
+                ],
+                [
+                  18973,
+                  560
+                ],
+                [
+                  19073,
+                  583
+                ],
+                [
+                  19177,
+                  600
+                ],
+                [
+                  20530,
+                  565
+                ],
+                [
+                  20829,
+                  495
+                ],
+                [
+                  20919,
+                  456
+                ],
+                [
+                  21005,
+                  379
+                ],
+                [
+                  21100,
+                  398
+                ],
+                [
+                  21335,
+                  419
+                ],
+                [
+                  21425,
+                  431
+                ],
+                [
+                  21637,
+                  457
+                ],
+                [
+                  21784,
+                  470
+                ],
+                [
+                  21873,
+                  479
+                ],
+                [
+                  21956,
+                  484
+                ],
+                [
+                  22208,
+                  476
+                ],
+                [
+                  22308,
+                  465
+                ],
+                [
+                  22548,
+                  440
+                ],
+                [
+                  22642,
+                  432
+                ],
+                [
+                  22738,
+                  429
+                ],
+                [
+                  22948,
+                  441
+                ],
+                [
+                  23171,
+                  470
+                ],
+                [
+                  23259,
+                  484
+                ],
+                [
+                  23616,
+                  502
+                ],
+                [
+                  23809,
+                  503
+                ],
+                [
+                  23960,
+                  500
+                ],
+                [
+                  24075,
+                  496
+                ],
+                [
+                  24141,
+                  492
+                ],
+                [
+                  24225,
+                  490
+                ],
+                [
+                  24337,
+                  495
+                ],
+                [
+                  24383,
+                  500
+                ],
+                [
+                  24586,
+                  507
+                ],
+                [
+                  24690,
+                  507
+                ],
+                [
+                  25050,
+                  501
+                ],
+                [
+                  25111,
+                  499
+                ],
+                [
+                  25200,
+                  498
+                ],
+                [
+                  25338,
+                  499
+                ],
+                [
+                  25488,
+                  494
+                ],
+                [
+                  25671,
+                  474
+                ],
+                [
+                  25854,
+                  459
+                ],
+                [
+                  25977,
+                  429
+                ],
+                [
+                  26171,
+                  397
+                ],
+                [
+                  26223,
+                  389
+                ]
+              ],
+              [
+                [
+                  28431,
+                  377
+                ],
+                [
+                  28459,
+                  418
+                ],
+                [
+                  28500,
+                  453
+                ],
+                [
+                  28527,
+                  479
+                ],
+                [
+                  28559,
+                  496
+                ]
+              ],
+              [
+                [
+                  32300,
+                  472
+                ],
+                [
+                  32607,
+                  455
+                ],
+                [
+                  32728,
+                  441
+                ],
+                [
+                  32731,
+                  439
+                ],
+                [
+                  32765,
+                  442
+                ],
+                [
+                  32865,
+                  450
+                ],
+                [
+                  33088,
+                  473
+                ],
+                [
+                  33155,
+                  483
+                ],
+                [
+                  33320,
+                  487
+                ],
+                [
+                  33520,
+                  480
+                ],
+                [
+                  33667,
+                  454
+                ],
+                [
+                  33790,
+                  440
+                ],
+                [
+                  33980,
+                  417
+                ],
+                [
+                  34057,
+                  409
+                ],
+                [
+                  34153,
+                  398
+                ],
+                [
+                  34186,
+                  393
+                ],
+                [
+                  34362,
+                  438
+                ],
+                [
+                  34397,
+                  457
+                ],
+                [
+                  34600,
+                  481
+                ],
+                [
+                  34700,
+                  483
+                ],
+                [
+                  35010,
+                  471
+                ],
+                [
+                  35035,
+                  459
+                ],
+                [
+                  35125,
+                  431
+                ],
+                [
+                  35181,
+                  418
+                ],
+                [
+                  35309,
+                  396
+                ],
+                [
+                  35355,
+                  385
+                ],
+                [
+                  35471,
+                  373
+                ],
+                [
+                  35587,
+                  359
+                ],
+                [
+                  35807,
+                  322
+                ],
+                [
+                  35894,
+                  302
+                ],
+                [
+                  36097,
+                  266
+                ],
+                [
+                  36576,
+                  251
+                ],
+                [
+                  36651,
+                  256
+                ],
+                [
+                  36714,
+                  268
+                ],
+                [
+                  36978,
+                  303
+                ],
+                [
+                  37064,
+                  320
+                ],
+                [
+                  37500,
+                  335
+                ],
+                [
+                  38700,
+                  244
+                ],
+                [
+                  38900,
+                  274
+                ],
+                [
+                  39633,
+                  373
+                ],
+                [
+                  39700,
+                  425
+                ],
+                [
+                  39733,
+                  442
+                ],
+                [
+                  39917,
+                  459
+                ],
+                [
+                  40016,
+                  463
+                ],
+                [
+                  40042,
+                  467
+                ],
+                [
+                  40091,
+                  473
+                ],
+                [
+                  40312,
+                  494
+                ],
+                [
+                  40412,
+                  506
+                ],
+                [
+                  40648,
+                  522
+                ],
+                [
+                  40761,
+                  521
+                ],
+                [
+                  40961,
+                  505
+                ],
+                [
+                  41050,
+                  493
+                ],
+                [
+                  41065,
+                  483
+                ],
+                [
+                  41306,
+                  477
+                ],
+                [
+                  41492,
+                  485
+                ],
+                [
+                  41584,
+                  496
+                ],
+                [
+                  41835,
+                  520
+                ],
+                [
+                  41930,
+                  525
+                ],
+                [
+                  42121,
+                  513
+                ],
+                [
+                  42258,
+                  495
+                ],
+                [
+                  42432,
+                  441
+                ],
+                [
+                  42518,
+                  409
+                ],
+                [
+                  42629,
+                  376
+                ],
+                [
+                  42739,
+                  341
+                ],
+                [
+                  42958,
+                  274
+                ],
+                [
+                  43075,
+                  241
+                ],
+                [
+                  43273,
+                  182
+                ],
+                [
+                  43371,
+                  158
+                ],
+                [
+                  43576,
+                  124
+                ],
+                [
+                  43694,
+                  115
+                ],
+                [
+                  43776,
+                  111
+                ],
+                [
+                  43875,
+                  111
+                ],
+                [
+                  44070,
+                  121
+                ],
+                [
+                  44281,
+                  146
+                ],
+                [
+                  44365,
+                  162
+                ],
+                [
+                  44468,
+                  182
+                ],
+                [
+                  44600,
+                  205
+                ],
+                [
+                  44777,
+                  256
+                ],
+                [
+                  44892,
+                  280
+                ],
+                [
+                  45160,
+                  319
+                ],
+                [
+                  45348,
+                  332
+                ],
+                [
+                  45438,
+                  326
+                ],
+                [
+                  45480,
+                  312
+                ],
+                [
+                  45650,
+                  271
+                ],
+                [
+                  45713,
+                  249
+                ],
+                [
+                  45828,
+                  219
+                ],
+                [
+                  45864,
+                  215
+                ],
+                [
+                  45937,
+                  297
+                ],
+                [
+                  45972,
+                  320
+                ],
+                [
+                  46536,
+                  360
+                ],
+                [
+                  46660,
+                  375
+                ],
+                [
+                  46792,
+                  398
+                ],
+                [
+                  46838,
+                  408
+                ],
+                [
+                  46995,
+                  432
+                ],
+                [
+                  47095,
+                  447
+                ],
+                [
+                  47285,
+                  484
+                ],
+                [
+                  47333,
+                  504
+                ],
+                [
+                  47375,
+                  522
+                ],
+                [
+                  47435,
+                  535
+                ],
+                [
+                  47504,
+                  543
+                ],
+                [
+                  47617,
+                  533
+                ],
+                [
+                  47735,
+                  491
+                ],
+                [
+                  47799,
+                  463
+                ],
+                [
+                  47911,
+                  414
+                ],
+                [
+                  47928,
+                  407
+                ],
+                [
+                  47989,
+                  449
+                ],
+                [
+                  48051,
+                  474
+                ],
+                [
+                  48116,
+                  496
+                ],
+                [
+                  48167,
+                  513
+                ],
+                [
+                  48226,
+                  520
+                ],
+                [
+                  48344,
+                  508
+                ],
+                [
+                  48399,
+                  490
+                ],
+                [
+                  48474,
+                  466
+                ],
+                [
+                  48588,
+                  359
+                ],
+                [
+                  48616,
+                  335
+                ],
+                [
+                  48720,
+                  294
+                ],
+                [
+                  48787,
+                  277
+                ],
+                [
+                  48903,
+                  250
+                ],
+                [
+                  48982,
+                  238
+                ],
+                [
+                  49011,
+                  240
+                ]
+              ],
+              [
+                [
+                  53375,
+                  407
+                ],
+                [
+                  53493,
+                  424
+                ],
+                [
+                  53570,
+                  441
+                ],
+                [
+                  53768,
+                  473
+                ],
+                [
+                  53864,
+                  485
+                ],
+                [
+                  53983,
+                  492
+                ],
+                [
+                  54083,
+                  492
+                ],
+                [
+                  54297,
+                  472
+                ],
+                [
+                  54405,
+                  453
+                ],
+                [
+                  54595,
+                  406
+                ],
+                [
+                  54700,
+                  381
+                ],
+                [
+                  54838,
+                  331
+                ],
+                [
+                  54907,
+                  308
+                ],
+                [
+                  55118,
+                  271
+                ],
+                [
+                  55140,
+                  363
+                ],
+                [
+                  55255,
+                  364
+                ],
+                [
+                  55346,
+                  370
+                ],
+                [
+                  55405,
+                  389
+                ],
+                [
+                  55479,
+                  394
+                ],
+                [
+                  55518,
+                  410
+                ],
+                [
+                  55600,
+                  416
+                ]
+              ],
+              [
+                [
+                  65000,
+                  406
+                ],
+                [
+                  65295,
+                  538
+                ],
+                [
+                  65343,
+                  519
+                ],
+                [
+                  65398,
+                  498
+                ],
+                [
+                  65504,
+                  461
+                ],
+                [
+                  65691,
+                  451
+                ],
+                [
+                  65776,
+                  461
+                ],
+                [
+                  65888,
+                  483
+                ],
+                [
+                  65982,
+                  516
+                ],
+                [
+                  66101,
+                  559
+                ],
+                [
+                  66309,
+                  669
+                ],
+                [
+                  66546,
+                  729
+                ],
+                [
+                  66922,
+                  839
+                ],
+                [
+                  67061,
+                  883
+                ],
+                [
+                  67362,
+                  938
+                ],
+                [
+                  67716,
+                  949
+                ],
+                [
+                  67850,
+                  936
+                ],
+                [
+                  67900,
+                  912
+                ],
+                [
+                  68008,
+                  831
+                ],
+                [
+                  68049,
+                  779
+                ]
+              ],
+              [
+                [
+                  71800,
+                  430
+                ]
+              ]
+            ]
+          },
+          "state": "aligned"
+        },
+        "success": true
+      }
+    },
+    {
+      "host": "gateway",
+      "path": "/patreon",
+      "query": "",
+      "status": 200,
+      "body": {
+        "tier1": [
+          "790880165097504768",
+          "414164967999406090",
+          "270897034796466176",
+          "238598150888095744",
+          "290449564887023617"
+        ],
+        "tier2": [
+          "260007417478250497",
+          "242091482541064192",
+          "318842484446724106"
+        ],
+        "tier3": [
+          "185318594270330880",
+          "265561225428074496"
+        ]
+      }
+    },
+    {
+      "host": "gateway",
+      "path": "/replays/649d11b7-ea8e-44c3-a357-09a6131ef5be",
+      "query": "",
+      "status": 200,
+      "body": {
+        "source": "utrecorder",
+        "mp4_url": "https://recorder.utbt.net/mp4/649d11b7-ea8e-44c3-a357-09a6131ef5be",
+        "view_url": "https://recorder.utbt.net/view/649d11b7-ea8e-44c3-a357-09a6131ef5be",
+        "fps": 60
+      }
+    },
+    {
+      "host": "gateway",
+      "path": "/replays/ac506aed-4b80-4fd6-a409-d005ed89902a",
+      "query": "",
+      "status": 200,
+      "body": {
+        "source": "utrecorder",
+        "mp4_url": "https://recorder.utbt.net/mp4/ac506aed-4b80-4fd6-a409-d005ed89902a",
+        "view_url": "https://recorder.utbt.net/view/ac506aed-4b80-4fd6-a409-d005ed89902a",
+        "fps": 60
+      }
+    }
+  ]
+}

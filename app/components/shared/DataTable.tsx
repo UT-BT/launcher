@@ -1,9 +1,11 @@
 import {
-    createContext, forwardRef, useCallback, useContext, useLayoutEffect, useMemo, useRef,
+    createContext, forwardRef, Fragment, useCallback, useContext, useId, useLayoutEffect, useMemo, useRef,
+    useState,
 } from 'react'
-import { ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useElementWidth } from '@/app/hooks/useElementWidth'
+import { useDeviceEnvironment } from '@/app/device/useDeviceEnvironment'
 
 /**
  * Shared visual primitives for tabular pages (Maps, Servers, etc).
@@ -14,17 +16,25 @@ import { useElementWidth } from '@/app/hooks/useElementWidth'
 
 export type SortDirection = 'asc' | 'desc' | null
 
-export type ResponsiveColumn = {
+export type ColumnTier = 'essential' | 'detail' | 'decorative'
+
+export type ResponsiveColumn<Row = never> = {
     id: string
+    tier: ColumnTier
+    label: string
     width?: string
     priority?: number
     required?: boolean
+    hiddenByUser?: boolean
+    sortKey?: string
+    cell?: (row: Row) => React.ReactNode
 }
 
 const DEFAULT_PRIORITY = 50
 const HYSTERESIS_REM = 1.5
 const SCROLLBAR_GUTTER_REM = 1
 const CONDENSE_BELOW_REM = 58
+const TWO_CARDS_PER_ROW_PX = 600
 
 export function widthToRem(width: string | undefined, floorRem: number): number {
     if (!width) return floorRem
@@ -46,7 +56,7 @@ interface ResolveOpts {
 }
 
 export function resolveResponsiveColumns(
-    cols: ResponsiveColumn[],
+    cols: readonly Pick<ResponsiveColumn, 'id' | 'width' | 'priority' | 'required'>[],
     measuredRem: number,
     opts: ResolveOpts = {},
 ): { visibleIds: Set<string>; hiddenIds: Set<string>; minWidth: string; requiredFits: boolean } {
@@ -91,32 +101,93 @@ export function resolveResponsiveColumns(
     return { visibleIds, hiddenIds, minWidth: `${minWidthRem + extraRem}rem`, requiredFits }
 }
 
+interface TableLayoutOpts extends ResolveOpts {
+    touch: boolean
+    cards: boolean
+}
+
+export function resolveTableLayout<Row>(
+    cols: readonly ResponsiveColumn<Row>[],
+    measuredRem: number,
+    { touch, cards, ...opts }: TableLayoutOpts,
+): { visibleIds: Set<string>; hiddenIds: Set<string>; minWidth: string; table: boolean } {
+    const inTable = cols.filter(c => !c.hiddenByUser)
+    const ruled = touch && cards
+        ? inTable.map(c => c.tier === 'decorative' ? c : { ...c, required: true })
+        : inTable
+    const { requiredFits, ...res } = resolveResponsiveColumns(ruled, measuredRem, opts)
+    return { ...res, table: requiredFits }
+}
+
+export function cardsPerRow(containerPx: number): 1 | 2 {
+    return containerPx >= TWO_CARDS_PER_ROW_PX ? 2 : 1
+}
+
+export function cardPanelColumns<Row>(cols: readonly ResponsiveColumn<Row>[]): ResponsiveColumn<Row>[] {
+    return cols.filter(c => c.tier === 'detail')
+}
+
+export interface CardSortField {
+    key: string
+    label: string
+}
+
+export function cardSortFields<Row>(cols: readonly ResponsiveColumn<Row>[]): CardSortField[] {
+    return cols.flatMap(c => c.sortKey ? [{ key: c.sortKey, label: c.label }] : [])
+}
+
 type Density = 'comfortable' | 'condensed'
 
 const DataTableDensityContext = createContext<Density>('comfortable')
 
-export interface ResponsiveConfig {
-    columns: ResponsiveColumn[]
+export interface DataTableCardSort {
+    key: string | null
+    direction: 'asc' | 'desc'
+    onSort: (key: string) => void
+}
+
+export interface DataTableCards<Row> {
+    rows: readonly Row[]
+    rowKey: (row: Row) => string
+    face: (row: Row) => React.ReactNode
+    onOpen?: (row: Row) => void
+    rowClassName?: (row: Row) => string | undefined
+    placeholder?: React.ReactNode
+    sort?: DataTableCardSort
+    panel?: (row: Row) => React.ReactNode
+}
+
+interface ResponsiveBase<Row> {
+    columns: ResponsiveColumn<Row>[]
     nameFloorRem?: number
     extraRem?: number
     onResolve?: (visibleIds: Set<string>) => void
     density?: boolean
-    /** Mobile-first representation used when even the required columns cannot fit. */
-    compactContent?: React.ReactNode
-    compactAriaLabel?: string
-    /** Fires when the shell switches between table and compact-card rendering.
-     *  Use it to hide table-only controls (ColumnsMenu, sort headers) while cards show. */
-    onCompactChange?: (compact: boolean) => void
 }
 
-interface DataTableShellProps {
+export interface CardsResponsiveConfig<Row> extends ResponsiveBase<Row> {
+    cards: DataTableCards<Row>
+    compactAriaLabel?: string
+    /** Fires when the shell switches between the table and the cards.
+     *  Use it to hide table-only controls (ColumnsMenu, sort headers) while cards show. */
+    onCompactChange?: (compact: boolean) => void
+    tableOnly?: never
+}
+
+export interface TableOnlyResponsiveConfig<Row> extends ResponsiveBase<Row> {
+    tableOnly: true
+    cards?: never
+}
+
+export type ResponsiveConfig<Row = never> = CardsResponsiveConfig<Row> | TableOnlyResponsiveConfig<Row>
+
+interface DataTableShellProps<Row = never> {
     scrollRef?: React.RefObject<HTMLDivElement | null>
     onScroll?: () => void
     children: React.ReactNode
     className?: string
     theadDataAttr?: string
-    minWidth?: string
-    responsive?: ResponsiveConfig
+    responsive: ResponsiveConfig<Row>
 }
 
 /**
@@ -124,41 +195,20 @@ interface DataTableShellProps {
  * <thead>/<tbody> elements rendered by the page.
  *
  * Usage:
- *   <DataTableShell scrollRef={ref} onScroll={onScroll}>
+ *   <DataTableShell scrollRef={ref} onScroll={onScroll} responsive={{ columns, cards }}>
  *     <DataTableHeaderRow>...</DataTableHeaderRow>
  *     <tbody>...</tbody>
  *   </DataTableShell>
  */
-export function DataTableShell(props: DataTableShellProps) {
-    if (props.responsive) return <ResponsiveDataTableShell {...props} responsive={props.responsive} />
-
-    const { scrollRef, onScroll, children, className, theadDataAttr, minWidth } = props
-    return (
-        <div
-            ref={scrollRef}
-            onScroll={onScroll}
-            className={cn(
-                'flex-1 min-h-0 bg-card/30 border border-hairline/5 rounded-xl overflow-auto',
-                className,
-            )}
-            data-utbt-table-thead={theadDataAttr}
-        >
-            <table className="w-full table-fixed text-sm" style={minWidth ? { minWidth } : undefined}>
-                {children}
-            </table>
-        </div>
-    )
-}
-
-function ResponsiveDataTableShell({
-    scrollRef, onScroll, children, className, theadDataAttr,
-    responsive,
-}: DataTableShellProps & { responsive: ResponsiveConfig }) {
+export function DataTableShell<Row = never>({
+    scrollRef, onScroll, children, className, theadDataAttr, responsive,
+}: DataTableShellProps<Row>) {
     const {
-        columns, nameFloorRem = 12, extraRem = 0, onResolve,
-        density: densityEnabled = true, compactContent, compactAriaLabel,
-        onCompactChange,
+        columns, nameFloorRem = 12, extraRem = 0, onResolve, density: densityEnabled = true,
     } = responsive
+    const cards = responsive.cards
+    const compactAriaLabel = responsive.cards ? responsive.compactAriaLabel : undefined
+    const onCompactChange = responsive.cards ? responsive.onCompactChange : undefined
 
     const internalRef = useRef<HTMLDivElement | null>(null)
     const setRef = useCallback((node: HTMLDivElement | null) => {
@@ -167,22 +217,25 @@ function ResponsiveDataTableShell({
     }, [scrollRef])
 
     const widthPx = useElementWidth(internalRef)
+    const touch = useDeviceEnvironment(env => env.touch)
+    const hasCards = !!cards
+    const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set())
     const prevVisibleRef = useRef<Set<string> | undefined>(undefined)
     const lastKeyRef = useRef<string>('')
 
-    const { visibleIds, minWidth, requiredFits, density, key } = useMemo(() => {
+    const { visibleIds, minWidth, table, density, key } = useMemo(() => {
         const measuredRem = widthPx > 0 ? widthPx / 16 - SCROLLBAR_GUTTER_REM : 0
-        const res = resolveResponsiveColumns(columns, measuredRem, {
-            nameFloorRem, extraRem, prevVisible: prevVisibleRef.current,
+        const res = resolveTableLayout(columns, measuredRem, {
+            nameFloorRem, extraRem, prevVisible: prevVisibleRef.current, touch, cards: hasCards,
         })
         const k = [...res.visibleIds].sort().join('|')
         const d: Density = densityEnabled && measuredRem > 0 && measuredRem < CONDENSE_BELOW_REM
             ? 'condensed' : 'comfortable'
         return {
             visibleIds: res.visibleIds, minWidth: res.minWidth,
-            requiredFits: res.requiredFits, density: d, key: k,
+            table: res.table, density: d, key: k,
         }
-    }, [columns, widthPx, nameFloorRem, extraRem, densityEnabled])
+    }, [columns, widthPx, nameFloorRem, extraRem, densityEnabled, touch, hasCards])
 
     useLayoutEffect(() => {
         if (key === lastKeyRef.current) return
@@ -191,7 +244,7 @@ function ResponsiveDataTableShell({
         onResolve?.(visibleIds)
     }, [key, visibleIds, onResolve])
 
-    const compactActive = !requiredFits && !!compactContent
+    const compactActive = !table && hasCards
     const lastCompactRef = useRef<boolean | null>(null)
     useLayoutEffect(() => {
         if (widthPx <= 0 || lastCompactRef.current === compactActive) return
@@ -206,13 +259,20 @@ function ResponsiveDataTableShell({
                 onScroll={onScroll}
                 className={cn(
                     'flex-1 min-h-0 bg-card/30 border border-hairline/5 rounded-xl',
-                    requiredFits || !compactContent ? 'overflow-auto' : 'overflow-y-auto overflow-x-hidden',
+                    compactActive ? 'overflow-y-auto overflow-x-hidden' : 'overflow-auto',
                     className,
                 )}
                 data-utbt-table-thead={theadDataAttr}
             >
-                {!requiredFits && compactContent ? (
-                    <div role="list" aria-label={compactAriaLabel}>{compactContent}</div>
+                {compactActive && cards ? (
+                    <DataTableCardList
+                        cards={cards}
+                        columns={columns}
+                        ariaLabel={compactAriaLabel}
+                        perRow={cardsPerRow(widthPx)}
+                        expanded={expanded}
+                        onExpandedChange={setExpanded}
+                    />
                 ) : (
                     <table className="w-full table-fixed text-sm" style={{ minWidth }}>
                         {children}
@@ -220,6 +280,133 @@ function ResponsiveDataTableShell({
                 )}
             </div>
         </DataTableDensityContext.Provider>
+    )
+}
+
+const CARD_CONTROLS = 'a, button, input, select, textarea, label, summary, [role="button"], [role="link"]'
+
+function fromControl(event: React.MouseEvent<HTMLElement>): boolean {
+    const control = (event.target as Element).closest(CARD_CONTROLS)
+    return !!control && event.currentTarget.contains(control)
+}
+
+interface DataTableCardListProps<Row> {
+    cards: DataTableCards<Row>
+    columns: readonly ResponsiveColumn<Row>[]
+    ariaLabel?: string
+    perRow: 1 | 2
+    expanded: ReadonlySet<string>
+    onExpandedChange: React.Dispatch<React.SetStateAction<ReadonlySet<string>>>
+}
+
+function DataTableCardList<Row>({
+    cards, columns, ariaLabel, perRow, expanded, onExpandedChange,
+}: DataTableCardListProps<Row>) {
+    const panelIdBase = useId()
+    const panel = cardPanelColumns(columns)
+    const sortFields = cardSortFields(columns)
+    const { rows, rowKey, face, onOpen, rowClassName, placeholder, sort, panel: extra } = cards
+    const expandable = panel.length > 0 || !!extra
+
+    const toggle = (key: string) => onExpandedChange(prev => {
+        const next = new Set(prev)
+        if (!next.delete(key)) next.add(key)
+        return next
+    })
+
+    return (
+        <>
+            {sort && sortFields.length > 0 && <DataTableCardSortControl fields={sortFields} sort={sort} />}
+            <div role="list" aria-label={ariaLabel} className={cn('grid', perRow === 2 && 'grid-cols-2')}>
+                {placeholder ? (
+                    <div role="listitem" className="col-span-full">{placeholder}</div>
+                ) : rows.map((row, index) => {
+                    const key = rowKey(row)
+                    const open = expanded.has(key)
+                    const panelId = `${panelIdBase}-${index}`
+                    return (
+                        <div
+                            key={key}
+                            role="listitem"
+                            className={cn(
+                                'min-w-0 border-b border-hairline/5 last:border-b-0',
+                                perRow === 2 && 'odd:border-r',
+                                rowClassName?.(row),
+                            )}
+                        >
+                            <div className="flex items-center">
+                                <div
+                                    className={cn('min-w-0 flex-1 p-3', onOpen && 'cursor-pointer')}
+                                    onClick={onOpen ? event => { if (!fromControl(event)) onOpen(row) } : undefined}
+                                >
+                                    {face(row)}
+                                </div>
+                                {expandable && (
+                                    <button
+                                        type="button"
+                                        aria-label="Details"
+                                        aria-expanded={open}
+                                        aria-controls={open ? panelId : undefined}
+                                        onClick={() => toggle(key)}
+                                        className="mr-1 flex size-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-hairline/5 hover:text-foreground transition-colors cursor-pointer"
+                                    >
+                                        <ChevronDown className={cn('size-5 transition-transform', open && 'rotate-180')} />
+                                    </button>
+                                )}
+                            </div>
+                            {open && (
+                                <div id={panelId} className="space-y-3 px-3 pb-3">
+                                    {panel.length > 0 && (
+                                        <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-2">
+                                            {panel.map(column => (
+                                                <Fragment key={column.id}>
+                                                    <dt className="text-xs text-muted-foreground">{column.label}</dt>
+                                                    <dd className="flex min-w-0 items-center text-sm">{column.cell?.(row)}</dd>
+                                                </Fragment>
+                                            ))}
+                                        </dl>
+                                    )}
+                                    {extra?.(row)}
+                                </div>
+                            )}
+                        </div>
+                    )
+                })}
+            </div>
+        </>
+    )
+}
+
+function DataTableCardSortControl({ fields, sort }: { fields: CardSortField[]; sort: DataTableCardSort }) {
+    const selectId = useId()
+    const active = fields.some(field => field.key === sort.key) ? sort.key : null
+    const ascending = sort.direction === 'asc'
+    const Arrow = ascending ? ArrowUp : ArrowDown
+    return (
+        <div className="flex items-center gap-2 border-b border-hairline/10 p-3">
+            <label htmlFor={selectId} className="shrink-0 text-xs text-muted-foreground">Sort by</label>
+            <select
+                id={selectId}
+                value={active ?? ''}
+                onChange={e => sort.onSort(e.target.value)}
+                style={{ colorScheme: 'dark' }}
+                className="h-11 min-w-0 flex-1 px-3 bg-card/50 border border-hairline/10 rounded-lg text-sm text-foreground hover:border-hairline/20 focus:outline-none focus:border-accent-500/50 cursor-pointer"
+            >
+                {!active && <option value="" disabled className="bg-popover text-foreground">Choose a field</option>}
+                {fields.map(field => (
+                    <option key={field.key} value={field.key} className="bg-popover text-foreground">{field.label}</option>
+                ))}
+            </select>
+            <button
+                type="button"
+                disabled={!active}
+                onClick={() => { if (active) sort.onSort(active) }}
+                className="inline-flex h-11 shrink-0 items-center gap-1.5 px-3 rounded-lg text-sm font-medium border bg-card/50 border-hairline/10 text-muted-foreground hover:text-foreground hover:border-hairline/20 transition-colors cursor-pointer disabled:cursor-default disabled:opacity-50"
+            >
+                <Arrow className="size-4" aria-hidden />
+                {ascending ? 'Ascending' : 'Descending'}
+            </button>
+        </div>
     )
 }
 
@@ -282,8 +469,9 @@ export function DataTableHeaderCell({
     }
 
     const justify = align === 'center' ? 'justify-center' : align === 'right' ? 'justify-end' : ''
+    const ariaSort = sortDirection === 'asc' ? 'ascending' : sortDirection === 'desc' ? 'descending' : undefined
     return (
-        <th className={thClass} style={style}>
+        <th className={thClass} style={style} aria-sort={ariaSort}>
             <button
                 ref={buttonRef}
                 type="button"

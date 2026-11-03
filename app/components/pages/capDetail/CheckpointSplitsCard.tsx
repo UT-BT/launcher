@@ -10,6 +10,7 @@ import {
     type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { buildDeltaPoints, buildSyncAnchors, formatSignedDelta, deltaClass } from './capStats'
+import { NUMERIC_CELL, NUMERIC_STRONG_TEXT, NUMERIC_TABLE, NUMERIC_TEXT, NumericHeader } from './numericTable'
 import type { CapCheckpoint, CapCompareCandidate } from '@/app/utils/api'
 import { checkpointCardView, type ComparisonResult } from './runDelta/checkpointCardView'
 import type { ReplayCard } from './runDelta/runDeltaCard'
@@ -57,11 +58,11 @@ interface ZonetimeViewProps {
 type SplitsColumnId = 'cp' | 'split' | 'cumulative' | 'splitDelta' | 'cumDelta'
 
 const COLUMN_WIDTH: Record<SplitsColumnId, string> = {
-    cp: '4rem',
-    split: '5.5rem',
-    cumulative: '7rem',
-    splitDelta: '6rem',
-    cumDelta: '6rem',
+    cp: '2.25rem',
+    split: '3.75rem',
+    cumulative: '4.25rem',
+    splitDelta: '4rem',
+    cumDelta: '4rem',
 }
 
 const COLUMN_PRIORITY: Partial<Record<SplitsColumnId, number>> = {
@@ -72,6 +73,14 @@ const COLUMN_PRIORITY: Partial<Record<SplitsColumnId, number>> = {
 }
 
 const REQUIRED_COLUMNS = new Set<SplitsColumnId>(['cp'])
+
+const COLUMN_LABEL: Record<SplitsColumnId, string> = {
+    cp: 'CP',
+    split: 'Split',
+    cumulative: 'Cumulative',
+    splitDelta: 'Δ Split',
+    cumDelta: 'Δ Total',
+}
 
 function NoSplits({ message }: { message: string }) {
     return (
@@ -281,6 +290,8 @@ function ZonetimeView({
             width: COLUMN_WIDTH[id],
             priority: COLUMN_PRIORITY[id],
             required: REQUIRED_COLUMNS.has(id),
+            tier: 'essential',
+            label: COLUMN_LABEL[id],
         })),
         [presentColumns],
     )
@@ -297,48 +308,54 @@ function ZonetimeView({
         <div className="flex flex-col lg:flex-row lg:h-[460px]">
             <div className="lg:w-1/2 h-[320px] lg:h-full lg:border-r border-hairline/5 min-h-0 flex flex-col">
                 <DataTableShell
-                    className="!bg-transparent !border-0 !rounded-none"
-                    responsive={{ columns: responsiveColumns, onResolve: handleResolve }}
+                    className={cn('!bg-transparent !border-0 !rounded-none', NUMERIC_TABLE)}
+                    responsive={{ columns: responsiveColumns, onResolve: handleResolve, tableOnly: true }}
                 >
                     <DataTableHeaderRow>
-                        {isVisible('cp') && <DataTableHeaderCell width="4rem" align="center">CP</DataTableHeaderCell>}
-                        {isVisible('split') && <DataTableHeaderCell align="right">Split</DataTableHeaderCell>}
-                        {isVisible('cumulative') && <DataTableHeaderCell align="right">Cumulative</DataTableHeaderCell>}
-                        {isVisible('splitDelta') && <DataTableHeaderCell align="right">Δ Split</DataTableHeaderCell>}
-                        {isVisible('cumDelta') && <DataTableHeaderCell align="right">Δ Total</DataTableHeaderCell>}
+                        {isVisible('cp') && (
+                            <DataTableHeaderCell align="center" className={cn('w-16 @max-md/numbers:w-9', NUMERIC_CELL)}>CP</DataTableHeaderCell>
+                        )}
+                        {isVisible('split') && <DataTableHeaderCell align="right" className={NUMERIC_CELL}>Split</DataTableHeaderCell>}
+                        {isVisible('cumulative') && (
+                            <DataTableHeaderCell align="right" className={NUMERIC_CELL}>
+                                <NumericHeader full="Cumulative" short="Cum." />
+                            </DataTableHeaderCell>
+                        )}
+                        {isVisible('splitDelta') && <DataTableHeaderCell align="right" className={NUMERIC_CELL}>Δ Split</DataTableHeaderCell>}
+                        {isVisible('cumDelta') && <DataTableHeaderCell align="right" className={NUMERIC_CELL}>Δ Total</DataTableHeaderCell>}
                     </DataTableHeaderRow>
                     <tbody>
                         {rows.map(({ key, n, segment, cumulative, cumDelta, splitDelta }) => (
                             <DataTableRow key={key}>
                                 {isVisible('cp') && (
-                                    <DataTableCell align="center">
-                                        <span className="text-xs font-mono text-muted-foreground tabular-nums">{n}</span>
+                                    <DataTableCell align="center" className={NUMERIC_CELL}>
+                                        <span className={cn('text-xs font-mono text-muted-foreground tabular-nums', NUMERIC_TEXT)}>{n}</span>
                                     </DataTableCell>
                                 )}
                                 {isVisible('split') && (
-                                    <DataTableCell align="right">
-                                        <span className="text-xs font-mono tabular-nums text-muted-foreground">
+                                    <DataTableCell align="right" className={NUMERIC_CELL}>
+                                        <span className={cn('text-xs font-mono tabular-nums text-muted-foreground', NUMERIC_TEXT)}>
                                             {segment != null ? segment.toFixed(3) : '—'}
                                         </span>
                                     </DataTableCell>
                                 )}
                                 {isVisible('cumulative') && (
-                                    <DataTableCell align="right">
-                                        <span className="text-sm font-mono tabular-nums text-foreground">
+                                    <DataTableCell align="right" className={NUMERIC_CELL}>
+                                        <span className={cn('text-sm font-mono tabular-nums text-foreground', NUMERIC_STRONG_TEXT)}>
                                             {formatCapTime(cumulative)}
                                         </span>
                                     </DataTableCell>
                                 )}
                                 {isVisible('splitDelta') && (
-                                    <DataTableCell align="right">
-                                        <span className={cn('text-xs font-mono tabular-nums', deltaClass(splitDelta))}>
+                                    <DataTableCell align="right" className={NUMERIC_CELL}>
+                                        <span className={cn('text-xs font-mono tabular-nums', NUMERIC_TEXT, deltaClass(splitDelta))}>
                                             {splitDelta != null ? formatSignedDelta(splitDelta) : '—'}
                                         </span>
                                     </DataTableCell>
                                 )}
                                 {isVisible('cumDelta') && (
-                                    <DataTableCell align="right">
-                                        <span className={cn('text-xs font-mono tabular-nums', deltaClass(cumDelta))}>
+                                    <DataTableCell align="right" className={NUMERIC_CELL}>
+                                        <span className={cn('text-xs font-mono tabular-nums', NUMERIC_TEXT, deltaClass(cumDelta))}>
                                             {cumDelta != null ? formatSignedDelta(cumDelta) : '—'}
                                         </span>
                                     </DataTableCell>

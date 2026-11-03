@@ -10,10 +10,12 @@ import type { AdminSectionProps } from '../types'
 import { SectionShell } from '../components/SectionShell'
 import { SearchInput, Feedback, ActionButton, AdminSelect, ConfirmDialog, relTime, errMessage } from '../components/controls'
 import { PANEL_LABEL } from '../components/shared'
+import { AdminCardFace, adminCardsPlaceholder } from '../components/AdminCardFace'
 import { Modal } from '@/app/components/ui/modal'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
 import { useNavState } from '@/app/components/navigation/useNavState'
+import { openNews } from '@/app/components/navigation/openNews'
 import {
   DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow, DataTableCell,
   DataTableEmpty, DataTableSkeletonRow, type ResponsiveColumn,
@@ -31,14 +33,14 @@ const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: 'inactive', label: 'Inactive' },
 ]
 
-const NEWS_COLUMNS: ResponsiveColumn[] = [
-  { id: 'category', width: '11rem', priority: 30 },
-  { id: 'title', required: true },
-  { id: 'status', width: '6rem', priority: 60 },
-  { id: 'pinned', width: '5rem', priority: 30 },
-  { id: 'published', width: '8rem', priority: 30 },
-  { id: 'expires', width: '8rem', priority: 30 },
-  { id: 'actions', width: '9rem', required: true },
+const NEWS_COLUMNS: ResponsiveColumn<AdminNews>[] = [
+  { id: 'category', width: '11rem', priority: 30, tier: 'detail', label: 'Category' },
+  { id: 'title', required: true, tier: 'essential', label: 'Title' },
+  { id: 'status', width: '6rem', priority: 60, tier: 'detail', label: 'Status' },
+  { id: 'pinned', width: '5rem', priority: 30, tier: 'detail', label: 'Pinned' },
+  { id: 'published', width: '8rem', priority: 30, tier: 'detail', label: 'Published' },
+  { id: 'expires', width: '8rem', priority: 30, tier: 'detail', label: 'Expires' },
+  { id: 'actions', width: '9rem', required: true, tier: 'essential', label: 'Actions' },
 ]
 
 const TEXTAREA_CLASS = 'flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50'
@@ -140,6 +142,7 @@ function CategoriesModal({ open, onClose, token, categories, onChanged }: {
     <Modal
       isOpen={open}
       onClose={onClose}
+      closeOnBackdrop={false}
       title={mode === 'form' ? (editing ? `Edit category — ${editing.label}` : 'New category') : 'News categories'}
       offsetSidebar
       maxWidth="34rem"
@@ -336,6 +339,7 @@ function NewsFormModal({ open, onClose, token, editing, categories, onSaved }: {
     <Modal
       isOpen={open}
       onClose={onClose}
+      closeOnBackdrop={false}
       title={isEdit ? `Edit news — ${editing?.title}` : 'Post news'}
       offsetSidebar
       maxWidth="60rem"
@@ -507,36 +511,48 @@ export function NewsManagementSection({ userProfile }: AdminSectionProps) {
     } catch (e) { setError(errMessage(e)) } finally { setActionBusy(false) }
   }, [token, deleteTarget, load])
 
-  const renderRow = (n: AdminNews): ReactNode => {
-    const st = statusOf(n)
-    return (
-      <DataTableRow key={n.id}>
-        {isShown('category') && <DataTableCell key="category"><CategoryChip category={categoryMap.get(n.category) ?? null} /></DataTableCell>}
-        {isShown('title') && (
-          <DataTableCell key="title" className="font-medium text-sm">
-            <div className="truncate" title={n.title}>{n.title}</div>
-          </DataTableCell>
-        )}
-        {isShown('status') && <DataTableCell key="status" align="center"><span className={cn('text-xs', st.tone)}>{st.label}</span></DataTableCell>}
-        {isShown('pinned') && (
-          <DataTableCell key="pinned" align="center">
-            {n.pinned ? <Pin className="size-3.5 text-accent-300 inline" /> : <span className="text-muted-foreground/40">—</span>}
-          </DataTableCell>
-        )}
-        {isShown('published') && <DataTableCell key="published" className="text-xs text-muted-foreground whitespace-nowrap" title={n.publishedAt}>{relTime(n.publishedAt)}</DataTableCell>}
-        {isShown('expires') && <DataTableCell key="expires" className="text-xs text-muted-foreground whitespace-nowrap" title={n.expiresAt ?? ''}>{n.expiresAt ? relTime(n.expiresAt) : '—'}</DataTableCell>}
-        {isShown('actions') && (
-          <DataTableCell key="actions" align="center">
-            <div className="flex justify-center gap-1.5">
-              <ActionButton tone="accent" icon={Pencil} onClick={() => setEditing(n)} title="Edit" />
-              <ActionButton tone={n.active ? 'amber' : 'emerald'} icon={n.active ? PowerOff : Power} onClick={() => setToggleTarget(n)} title={n.active ? 'Deactivate' : 'Activate'} />
-              <ActionButton tone="red" icon={Trash2} onClick={() => setDeleteTarget(n)} title="Delete" />
-            </div>
-          </DataTableCell>
-        )}
-      </DataTableRow>
-    )
+  const newsCell = (id: string, n: AdminNews): ReactNode => {
+    switch (id) {
+      case 'category':
+        return <CategoryChip category={categoryMap.get(n.category) ?? null} />
+      case 'title':
+        return <div className="truncate" title={n.title}>{n.title}</div>
+      case 'status': {
+        const st = statusOf(n)
+        return <span className={cn('text-xs', st.tone)}>{st.label}</span>
+      }
+      case 'pinned':
+        return n.pinned ? <Pin className="size-3.5 text-accent-300 inline" /> : <span className="text-muted-foreground/40">—</span>
+      case 'published':
+        return <span className="text-xs text-muted-foreground whitespace-nowrap" title={n.publishedAt}>{relTime(n.publishedAt)}</span>
+      case 'expires':
+        return <span className="text-xs text-muted-foreground whitespace-nowrap" title={n.expiresAt ?? ''}>{n.expiresAt ? relTime(n.expiresAt) : '—'}</span>
+      case 'actions':
+        return (
+          <div className="flex justify-center gap-1.5">
+            <ActionButton tone="accent" icon={Pencil} onClick={() => setEditing(n)} title="Edit" />
+            <ActionButton tone={n.active ? 'amber' : 'emerald'} icon={n.active ? PowerOff : Power} onClick={() => setToggleTarget(n)} title={n.active ? 'Deactivate' : 'Activate'} />
+            <ActionButton tone="red" icon={Trash2} onClick={() => setDeleteTarget(n)} title="Delete" />
+          </div>
+        )
+      default:
+        return null
+    }
   }
+
+  const columns = NEWS_COLUMNS.map((c) => ({ ...c, cell: (n: AdminNews) => newsCell(c.id, n) }))
+
+  const renderRow = (n: AdminNews): ReactNode => (
+    <DataTableRow key={n.id}>
+      {isShown('category') && <DataTableCell key="category">{newsCell('category', n)}</DataTableCell>}
+      {isShown('title') && <DataTableCell key="title" className="font-medium text-sm">{newsCell('title', n)}</DataTableCell>}
+      {isShown('status') && <DataTableCell key="status" align="center">{newsCell('status', n)}</DataTableCell>}
+      {isShown('pinned') && <DataTableCell key="pinned" align="center">{newsCell('pinned', n)}</DataTableCell>}
+      {isShown('published') && <DataTableCell key="published" className="text-xs text-muted-foreground whitespace-nowrap" title={n.publishedAt}>{relTime(n.publishedAt)}</DataTableCell>}
+      {isShown('expires') && <DataTableCell key="expires" className="text-xs text-muted-foreground whitespace-nowrap" title={n.expiresAt ?? ''}>{n.expiresAt ? relTime(n.expiresAt) : '—'}</DataTableCell>}
+      {isShown('actions') && <DataTableCell key="actions" align="center">{newsCell('actions', n)}</DataTableCell>}
+    </DataTableRow>
+  )
 
   return (
     <SectionShell
@@ -560,7 +576,19 @@ export function NewsManagementSection({ userProfile }: AdminSectionProps) {
           options={STATUS_OPTIONS} className="min-w-36" />
       </div>
 
-      <DataTableShell className="flex-none" responsive={{ columns: NEWS_COLUMNS, onResolve: handleResolve }}>
+      <DataTableShell
+        className="flex-none"
+        responsive={{
+          columns, onResolve: handleResolve, compactAriaLabel: 'News',
+          cards: {
+            rows: filtered,
+            rowKey: (n) => String(n.id),
+            face: (n) => <AdminCardFace columns={columns} row={n} />,
+            onOpen: (n) => openNews(n.id),
+            placeholder: adminCardsPlaceholder(loading && rows.length === 0, filtered.length === 0, 'No news matches these filters.'),
+          },
+        }}
+      >
         <DataTableHeaderRow>
           {isShown('category') && <DataTableHeaderCell key="category" width="11rem">Category</DataTableHeaderCell>}
           {isShown('title') && <DataTableHeaderCell key="title">Title</DataTableHeaderCell>}

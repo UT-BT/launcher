@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, lazy } from 'react'
+import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { Check, LogIn, Trash2, UserPlus, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
-import { ConfirmModal } from '@/app/components/shared/ConfirmModal'
 import { requestLogin } from '@/app/components/shared/AuthRequiredModal'
 import {
     acceptEventInvite, createEventTeam, declineEventInvite, deleteEventTeam, deleteEventVolunteer,
@@ -14,6 +14,8 @@ import { ErrorBanner, SectionCard, StatusBadge, teamInputClass } from '@/app/com
 import { PlayerSearchInput } from '@/app/components/pages/teams/PlayerSearchInput'
 import { BROWSER_TIMEZONE } from './eventsShared'
 import { emptySignupFields, SignupFieldsInputs, toSignupPayload, VolunteerCheckboxes, type SignupFieldsValue } from './SignupFieldsInputs'
+
+const ConfirmModal = lazy(() => import('@/app/components/shared/ConfirmModal').then(m => ({ default: m.ConfirmModal })))
 
 interface SignupPanelProps {
     accessToken?: string
@@ -382,32 +384,36 @@ export function SignupPanel({ accessToken, userProfile, event, my, myLoading, on
             </SectionCard>
 
             {team && (
-                <ConfirmModal
-                    isOpen={confirmDelete}
-                    onClose={() => setConfirmDelete(false)}
-                    onConfirm={() => { setConfirmDelete(false); void run(() => deleteEventTeam(accessToken, event.slug, team.id)) }}
-                    title="Delete team"
-                    message={`Delete "${team.name}" from this event?`}
-                    detail="This removes the whole team, including your partner's signup. You can sign up again while signups are open."
-                    confirmText="Delete"
-                    cancelText="Keep team"
-                    variant="error"
-                />
+                <LazyModalGate open={confirmDelete}>
+                    <ConfirmModal
+                        isOpen={confirmDelete}
+                        onClose={() => setConfirmDelete(false)}
+                        onConfirm={() => { setConfirmDelete(false); void run(() => deleteEventTeam(accessToken, event.slug, team.id)) }}
+                        title="Delete team"
+                        message={`Delete "${team.name}" from this event?`}
+                        detail="This removes the whole team, including your partner's signup. You can sign up again while signups are open."
+                        confirmText="Delete"
+                        cancelText="Keep team"
+                        variant="error"
+                    />
+                </LazyModalGate>
             )}
             {declineTarget && (
-                <ConfirmModal
-                    isOpen
-                    onClose={() => setDeclineTarget(null)}
-                    onConfirm={() => {
-                        const target = declineTarget
-                        setDeclineTarget(null)
-                        void run(() => declineEventInvite(accessToken, event.slug, target.id))
-                    }}
-                    title="Decline invitation"
-                    message={`Decline the invitation to "${declineTarget.name}"?`}
-                    confirmText="Decline"
-                    cancelText="Cancel"
-                />
+                <LazyModalGate open>
+                    <ConfirmModal
+                        isOpen
+                        onClose={() => setDeclineTarget(null)}
+                        onConfirm={() => {
+                            const target = declineTarget
+                            setDeclineTarget(null)
+                            void run(() => declineEventInvite(accessToken, event.slug, target.id))
+                        }}
+                        title="Decline invitation"
+                        message={`Decline the invitation to "${declineTarget.name}"?`}
+                        confirmText="Decline"
+                        cancelText="Cancel"
+                    />
+                </LazyModalGate>
             )}
         </div>
     )

@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, lazy } from 'react'
+import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { ImageOff, ImagePlus, RotateCcw, Trash2 } from 'lucide-react'
 import {
   fetchMapUploadScreenshot, mapUploadErrorMessage, removeMapUploadScreenshot, selectEmbeddedMapUploadScreenshot, uploadMapUploadScreenshot,
 } from '@/app/utils/api'
 import type { Draft, ScreenshotSource } from '@/app/utils/mapUploadTypes'
-import { MapScreenshotModal } from '@/app/components/modals/MapScreenshotModal'
 import { cn } from '@/lib/utils'
 import { ActionButton } from '../../components/controls'
+
+const MapScreenshotModal = lazy(() => import('@/app/components/modals/MapScreenshotModal').then(m => ({ default: m.MapScreenshotModal })))
 
 const SOURCE_LABEL: Record<ScreenshotSource, string> = {
   embedded: 'Taken from the map file',
@@ -105,19 +107,21 @@ export function DraftScreenshot({ token, draft, url, onChanged, onDraftChange, o
           )}
         </div>
       </div>
-      <MapScreenshotModal
-        open={cropping}
-        onClose={() => setCropping(false)}
-        mapName={draft.map_name}
-        previewUrl={url}
-        onCropped={async (image, filename) => {
-          try {
-            apply(await uploadMapUploadScreenshot(token, draft.id, image, filename))
-          } catch (e) {
-            throw new Error(mapUploadErrorMessage(e))
-          }
-        }}
-      />
+      <LazyModalGate open={cropping}>
+        <MapScreenshotModal
+          open={cropping}
+          onClose={() => setCropping(false)}
+          mapName={draft.map_name}
+          previewUrl={url}
+          onCropped={async (image, filename) => {
+            try {
+              apply(await uploadMapUploadScreenshot(token, draft.id, image, filename))
+            } catch (e) {
+              throw new Error(mapUploadErrorMessage(e))
+            }
+          }}
+        />
+      </LazyModalGate>
     </div>
   )
 }

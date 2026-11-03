@@ -336,7 +336,7 @@ it from a deep link. The Manage → Pick/Ban queue's Open Page is a `NavLink` to
 - **Polls are invisible.** New data changes the page in place; a 304 changes nothing. A
   fixed "Reconnecting…" toast shows only while `reconnecting` is set and no captain or
   act-for dock is shown; those docks carry their own reconnecting line so the toast never
-  covers Lock In.
+  covers Lock In. It sits `1rem` above `--tab-bar-offset`, so the phone tab bar never covers it.
 - **Fixed layout.** Nothing is ever inserted above the stage, and the stage keeps one height
   per width in every state (see the visual core below). Cancelled and voided reasons show in
   the stage's own notice; paused is an overlay over whatever the pause froze. Skipped bans

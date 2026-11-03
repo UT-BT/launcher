@@ -396,6 +396,7 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
       <Modal
         isOpen={!!linkHost}
         onClose={() => setLinkHost(null)}
+        closeOnBackdrop={false}
         title={`Servers on ${linkHost?.name ?? ''}`}
         offsetSidebar
         maxWidth="34rem"
@@ -452,6 +453,7 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
       <Modal
         isOpen={!!issuedToken}
         onClose={() => setIssuedToken(null)}
+        closeOnBackdrop={false}
         title="Host token"
         offsetSidebar
         maxWidth="34rem"
@@ -530,6 +532,7 @@ function EditHostModal({ host, busy, onCancel, onSave }: {
     <Modal
       isOpen
       onClose={onCancel}
+      closeOnBackdrop={false}
       title={`Edit ${host.name}`}
       offsetSidebar
       maxWidth="34rem"
@@ -597,6 +600,7 @@ function EditServerModal({ server, hosts, busy, onCancel, onSave }: {
     <Modal
       isOpen
       onClose={onCancel}
+      closeOnBackdrop={false}
       title={server.name}
       offsetSidebar
       maxWidth="36rem"

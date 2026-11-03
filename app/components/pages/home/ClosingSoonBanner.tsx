@@ -6,7 +6,7 @@ import { useNavigation } from '@/app/components/navigation/NavigationContext'
 import { fetchUpcomingPredictions, type UpcomingPredictionMarket } from '@/app/utils/api'
 import {
     formatCountdown, formatPercent, kickoffOf, priceOf, sidesOf, useNow,
-} from '@/app/components/pages/events/predictions/predictionsShared'
+} from '@/app/components/pages/events/predictions/marketBasics'
 import { marketTakesPredictions } from '@/app/components/pages/events/predictions/marketLock'
 
 const WITHIN_HOURS = 3

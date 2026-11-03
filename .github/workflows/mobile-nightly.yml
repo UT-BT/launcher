@@ -1,0 +1,62 @@
+name: Mobile nightly
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-nightly-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  full:
+    name: Mobile full matrix (${{ matrix.shard }}/12)
+    runs-on: windows-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    steps:
+      - name: Keep committed line endings on checkout
+        run: git config --global core.autocrlf false
+
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install WebKit and Chromium
+        run: npx playwright install webkit chromium
+
+      - name: Mobile suite (full matrix)
+        run: npm run test:mobile:full -- --workers=3 --shard=${{ matrix.shard }}/12 --reporter=list,github,html,./e2e/mobile/gallery-reporter.ts
+        env:
+          PLAYWRIGHT_HTML_OPEN: never
+
+      - name: Upload mobile gallery
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-gallery-full-${{ matrix.shard }}
+          path: test-results/mobile-gallery/
+          retention-days: 14
+
+      - name: Upload HTML report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-playwright-report-full-${{ matrix.shard }}
+          path: playwright-report/
+          retention-days: 14

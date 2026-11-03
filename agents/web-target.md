@@ -53,6 +53,7 @@ loads on first paint. Build commands are in [build.md](build.md).
 | File logging | console fallback for warn/error | `window.logging` presence in `app/hooks/use-logger.ts` |
 | Titlebar, window controls, zoom | not mounted (web entry has no `WindowContextProvider`) | `app/renderer-web.tsx` |
 | Launcher telemetry (`logLauncherStartup`) | skipped | `IS_WEB` in `app/utils/api.ts` |
+| Overlay history (Back closes the top-most modal or the drawer) | on: each open overlay owns a history entry ([navigation.md](navigation.md#overlay-history-web-build)) | `capabilities.overlayHistory` in `useOverlayHistory` (`useUrlSync.ts`) |
 | Back/Forward/Refresh bar (`NavHistoryBar`) | not rendered; browser chrome owns history and reload, pages revalidate on mount ([navigation.md](navigation.md)) | `IS_WEB` in `NavHistoryBar.tsx` |
 | Navigation triggers | real `<a href>` (new tab, copy link work); buttons on desktop | `NavLink` ([navigation.md](navigation.md)) |
 | Stream tab: Cams panel, Kit card, Guide | Cams shows the Red/Blue card then a "needs the desktop launcher" notice, and the Guide's launcher steps show the same notice: the installer Download for promo-eligible visitors, "Use the desktop launcher (Windows) for this." for everyone else. Kit takes a typed folder and downloads the ZIP instead of picking a folder and extracting | `capabilities.camTool` (`camsPanelView` in `events/stream/panels/camsGate.ts`, `KitSection`, `GuidePanel`); Download vs. fallback line on `eligible` inside `DesktopAppNotice` |
@@ -263,9 +264,95 @@ cap (owner decision).
 
 - **Drawer below `lg`.** `AppLayout` turns the same single `<aside>` into an off-canvas
   drawer (CSS `max-lg:` translate, no duplicated markup), opened from a fixed top bar
-  (hamburger + logo). The drawer hides the big logo block (`max-lg:hidden`) so nav items
-  and the profile card fit an 800px-tall phone. Every nav action goes through
-  `changeView`, which closes the drawer.
+  (a 44px hamburger + logo). The drawer hides the big logo block (`max-lg:hidden`) so nav
+  items and the profile card fit an 800px-tall phone. Every nav action goes through
+  `changeView`, which closes the drawer. The drawer opens only from the hamburger or the
+  tab bar's Menu tab; nothing opens it from the left screen edge, which stays free for the
+  system back gesture. It closes with a swipe to the left (`useDrawerSwipe`, plain pointer
+  events): past a third of its width, or on a quick fling, it closes; otherwise it springs
+  back. A fling counts only if the finger was still moving in the last 100 ms before it
+  lifted, so a flick held still springs back. A vertical drag scrolls its list instead,
+  because the drawer and its nav list are `touch-action: pan-y pinch-zoom` below `lg` (pinch-zoom
+  stays allowed). The click a swipe ends on, in the same task as the release, is swallowed;
+  a later click, such as a keyboard or screen-reader activation, goes through. Only in drawer
+  mode, a **Reload app** item (`SidebarReloadApp`) sits between the nav and the profile
+  card: it calls `location.reload()`, and URL sync brings the same route back. It is the
+  escape hatch for a standalone Home Screen app, which has no browser reload button.
+- **Bottom tab bar** (`BottomTabBar`, `app/components/layout/BottomTabBar.tsx`). On touch,
+  below `lg`, in portrait only (`showsBottomTabs` on the device environment; `AppLayout`
+  doesn't mount it anywhere else, so desktop and landscape have no tab bar in the DOM). Five
+  slots: Home, Maps, World Records (captioned "Records"), Events, and Menu, which opens the
+  drawer and gets focus back when it closes. Each tab is a `NavLink` through `changeView`. The
+  current section's tab carries `aria-current="page"` on its detail pages too
+  (`activeBottomTab`, [navigation.md](navigation.md#bottom-tab-bar)). Its height is
+  `--tab-bar-offset` (`shell.css`): `3rem` plus the bar's bottom padding, under the same
+  touch, below-`lg`, portrait query, and `0px` elsewhere.
+  - **The bottom padding** is `max(6px, var(--safe-area-bottom) - 12px)`: the bottom
+    safe-area inset less 12px, and at least 6px. The tabs stay out of the home indicator's
+    band without a tall empty strip under them.
+  - **Why it's written out twice:** it appears in full in both the bar's padding and the offset,
+    because a variable for it pushed the initial CSS over its budget.
+  - The bar pads its sides by the side insets,
+  and the main element pads its bottom by the same variable, so the last row of content
+  scrolls clear of the bar. Its `scroll-padding-bottom` is the same variable, so whatever
+  scrolls a control into view (keyboard focus, `scrollIntoView`, a test's tap) stops above the
+  bar instead of under it. Anything fixed to the bottom of the screen offsets by it too: the
+  analytics consent banner, the Tutorial card (by the larger of it and the bottom inset) and
+  the match page's Reconnecting toast. Those offsets are inline styles, not arbitrary
+  utilities, which keeps them out of the initial stylesheet's budget. `visible={false}` slides
+  the bar down and makes it `inert`; `AppLayout` passes the hide-on-scroll state (below). The
+  main element's bottom padding stays while the bar is hidden, so the last row stays reachable.
+- **Top bar height.** `--top-bar-offset` (`app/styles/shell.css`) is `3.5rem`, or `3rem` in
+  landscape below `lg`, plus the top safe-area inset. The bar (`.shell-top-bar`) and the
+  main element's top padding (`.shell-main`) both read it, so they never drift apart.
+- **Hide-on-scroll bars.** On touch below `lg` (`hidesBarsOnScroll` in `AppLayout`, read from
+  the device environment, both orientations), the top bar and the bottom tab bar slide away
+  together while the user scrolls `main` down, so content gets the whole screen. `AppLayout`
+  holds one `barsHidden` state for both bars and mounts `HideOnScrollBars`
+  (`app/components/layout/HideOnScrollBars.tsx`) only behind that gate. It is a lazy chunk:
+  the initial bundle has no room for it, and desktop never loads it. It renders nothing and
+  feeds `main`'s scroll events to the pure `barsAfterScroll` (`barVisibility.ts`, Vitest in
+  `barVisibility.test.ts`):
+  - A scroll counts as the user's only within 300 ms of a finger moving (`touchmove`), a wheel
+    or a key event on `main`, and each such scroll extends that window, so a fling keeps
+    counting. A tap is not a scroll gesture: a scroll the app or a test makes right after one
+    (scroll restore, a `scrollIntoView`, the crawl's code scrolls) moves the reference point but
+    never hides or shows the bars.
+  - The bars hide once the user has scrolled more than 16 px down from the highest point since
+    they last showed, and come back after more than 16 px up from the lowest point since they
+    hid. Smaller jitters do nothing, a scroll event that doesn't move the page changes nothing,
+    and an overscroll bounce past the bottom counts as staying at the bottom.
+  - They show whenever `main` is within 16 px of its top, however it got there, after every
+    navigation (a new nav entry), when the drawer opens or closes, and when the last
+    scroll-lock hold is released, which is when a modal, sheet or locking dropdown closes.
+    The navigation and drawer resets happen in the effect's cleanup, which also shows the bars
+    if the gate turns off.
+  - The top bar hides with an inline `translate: 0 -100%` (no new utility, for the initial CSS
+    budget) and both bars are `inert` while hidden, so focus never lands in them. `main`'s top
+    padding stays, so the top of the page is never under the bar when the bar shows.
+  - Desktop and pointer devices never hide anything: nothing is mounted unless the device is
+    touch and below `lg`.
+- **Safe areas.** `shell.css` exposes the insets as `--safe-area-top/right/bottom/left`
+  (`env(safe-area-inset-*)`, `0px` where the browser has none, so desktop is unchanged).
+  The shell classes in the same file apply them: the top bar pads by the top inset and, in
+  landscape, insets the hamburger and its right edge from the notch side; the drawer
+  (`.shell-drawer`) pads top, bottom and left; the main element pads top (at `lg`+, where
+  there is no top bar), right, bottom (by `--tab-bar-offset` instead while the tab bar
+  shows) and, below `lg`, left. Shell
+  code reads the variables, never `env()` directly, so `e2e/mobile/shell.spec.ts` can
+  simulate a notch by setting them on `<html>`. Modal sheets and the bottom tab bar
+  (`.shell-tab-bar`) pad themselves.
+- **Status bar.** A Home Screen app uses `black`: iOS gives the status bar its own black
+  strip and starts the page below it, so the top inset is `0` there and the status bar is
+  readable in every theme. Don't switch back to `black-translucent`. With it, the page drew
+  under the status bar, but iOS sized the layout viewport a status-bar height short of the
+  screen (`innerHeight` = screen height minus the top inset). So everything fixed to
+  `bottom: 0`, the tab bar and the sheets, floated above a dead strip at the bottom.
+  `body::before` still paints any top inset `#070b12` (`shell.css`), in every theme, for
+  browsers that report one.
+- **Touch chrome.** On touch devices (`hover: none`) the top bar, the drawer, the drawer
+  backdrop and the modal backdrop drop `backdrop-blur` for solid tints, and the modal panel
+  drops its blur (`touch:` variant, [styling.md](styling.md)); desktop keeps the blur.
 - **Rail at `lg` and up.** The sidebar sits beside the content, expanded (16rem) or
   collapsed (5rem, icon tiles with short captions), toggled by the button in its top-left
   corner or `Ctrl+B` / `⌘B`, on both targets. The choice is per device
@@ -277,17 +364,66 @@ cap (owner decision).
   `AppLayout` in a layout effect before paint. Anything offset beside the rail reads it
   ([styling.md](styling.md)). Never assume the sidebar is visible; anything positioned
   relative to it needs the `lg:` variant.
-- Content padding is `p-4 sm:p-6 lg:p-8`; the app root uses `h-dvh` (mobile browser
-  toolbars); the web entry sets `--window-titlebar-height` to `0px`.
-- **Modals.** `offsetSidebar` pads left by the rail width plus 1rem
-  (`pl-[calc(var(--sidebar-width,0px)_+_1rem)]`), so a modal centres on the content area
-  in both rail modes and on the viewport on phones. A modal with its own internal rail
-  sizes by container query, not viewport: see Settings in
+- Content padding is `p-4 sm:p-6 lg:p-8`, inside the main element's safe-area padding;
+  the app root uses `h-dvh` (mobile browser toolbars); the web entry sets
+  `--window-titlebar-height` to `0px`.
+- **One scroller.** The main element is the only vertical scroller for page content; pages
+  grow with their content and never scroll on their own. Back/Forward restore its position
+  and a new page starts at the top
+  ([navigation.md](navigation.md#scroll-position-and-the-shell-scroller)).
+- **Pull-to-refresh** (any touch device, at any width). `PullToRefresh`
+  (`app/components/layout/PullToRefresh.tsx`), mounted by `AppLayout` inside the main element,
+  renders nothing without touch. On touch it listens to the main element's pointer events;
+  there is no gesture library. It is not a lazy chunk: it is always on for touch, and a
+  chunk of its own would cost more of the app JS budget than the same code in the entry.
+  - **A drag arms** only with a touch at the top of the main element while the scroll-lock
+    count is 0, so a modal, sheet, tutorial or menu that holds the page also holds it off. It
+    doesn't arm on or inside a box that scrolls sideways, an element whose `touch-action`
+    leaves out vertical panning (the `touch-none` scrubbers), a range input, or an inner list
+    scrolled down.
+  - **The first move decides:** down makes it a pull, up or sideways leaves the drag to the
+    browser. During a pull, a non-passive `touchmove` listener cancels the native pan, so the
+    page neither scrolls nor rubber-bands.
+  - **The indicator** follows the finger at 0.6× from under the top bar. A release past
+    70 px calls the page's refresh
+    ([navigation.md](navigation.md#page-refresh-registry-and-freshness)) and spins.
+  - The main element has `touch:overscroll-contain`, so an overscroll never chains to the
+    document or starts the browser's own pull-to-reload. The guards and the threshold are
+    pure (`pullGesture.ts`, with Vitest).
+- **Viewport recovery.** `useViewportRecovery` (`app/components/layout/useViewportRecovery.ts`,
+  mounted by `AppLayout`) subscribes to the device environment below (`visualViewport` resize
+  and scroll, window resize and scroll, orientation change), to focus leaving a field and to
+  scrolls of the main element's ancestors. Whenever the visible area is at scale 1 and no
+  text field has focus, it puts the window and every ancestor of the main element (`html`,
+  `body`, `#app` and the shell wrappers, all `overflow: hidden`, so a user can't pan them
+  back) back to 0,0. That covers zooming back out after a pinch, a rotation, and the offset
+  iOS leaves after the keyboard closes. The reset fires the window's scroll event, so the
+  device environment re-reads the visible area and the sheet modal follows it.
+  - It leaves a zoomed-in window alone (the user is panning), and the offset under a focused
+    text field (iOS scrolls the window to keep the field above the keyboard) until focus
+    leaves it.
+  - Programmatic focus in the shell uses `preventScroll`: the drawer's first item when it
+    opens, the drawer itself when it holds nothing focusable, and the menu button when it
+    closes. The drawer's Tab wrap doesn't, so the item it wraps to scrolls into view inside
+    the drawer's own list.
+- **Form controls are 16px or more on touch**, at any width, so iOS never zooms on focus
+  ([styling.md](styling.md#form-inputs)).
+- **Modals.** `ui/modal.tsx` portals into `document.body` and, below `sm` or on a touch
+  screen under 640px tall, opens as a full-screen sheet that follows `visualViewport` and
+  pads by the safe areas ([shared-components.md](shared-components.md#modal)). As a card,
+  `offsetSidebar` pads left by the rail width plus 1rem
+  (`pl-[calc(var(--sidebar-width,0px)_+_1rem)]`), so it centres on the content area in both
+  rail modes. A modal with its own internal rail sizes by container query, not viewport:
+  see Settings in
   [app/components/pages/settings/README.md](../app/components/pages/settings/README.md).
   A `position: fixed` overlay inside a container-query ancestor must be portalled to
   `document.body`, or containment traps it.
-- **Tables** pass `responsive={{ columns, …, compactContent }}` and fall back to stacked
-  cards below the required-fit width, never horizontal scroll ([styling.md](styling.md)).
+- **Tables** pass `responsive={{ columns, …, cards }}`, with a tier and a label on every column,
+  and DataTable renders its phone cards instead of horizontal scroll: on a touch screen unless
+  every non-decorative column fits, elsewhere only when the required columns don't fit
+  ([shared-components.md](shared-components.md#column-tiers-and-phone-cards),
+  [styling.md](styling.md#responsive-columns)). Only the cap page's numeric tables pass
+  `tableOnly: true` instead.
 - **Pagination.** `PaginationBar` (`app/components/ui/pagination.tsx`) switches to a touch
   bar below `sm` on its own.
 - **Heroes and tiles**: see [styling.md](styling.md).
@@ -295,8 +431,27 @@ cap (owner decision).
   empty news feed) widens to `lg:col-span-12` when alone, so no grid row is left
   half-empty.
 
-Screenshot-verify new surfaces at 390×844, 1024×768 (the breakpoint boundary, the most
-fragile width), 1920×1080 and 3840×2160.
+- **Device environment.** `app/device/useDeviceEnvironment.ts` exposes the device facts
+  reactively: `touch` (`hover: none`), `belowLg` (below 1024px), `orientation`, `standalone`
+  (display mode or iOS Home Screen) and the current `visualViewport` (scale, offsets, page
+  offsets, width, height). Read them through `useDeviceEnvironment()`, or
+  `useDeviceEnvironment(env => env.touch)` to re-render only when that fact changes;
+  non-component code calls `getDeviceEnvironment()` / `subscribeDeviceEnvironment()`. Don't
+  write new `matchMedia` calls for these facts; CSS may use the same `(hover: none)` and `lg`
+  queries. The pure parts (`deviceEnvironmentFrom`, `sameDeviceEnvironment`, the query
+  strings) live in `deviceEnvironment.ts`.
+- **Diagnostic overlay.** `?debug=mobile`, or a long-press on the logo (top bar or sidebar,
+  anything marked `data-diagnostic-trigger`), toggles a live overlay of the device
+  environment, scroll positions, safe-area insets, open modals and the active view, with a
+  **Copy report** button. Only `DiagnosticOverlayTrigger` (mounted by `AppLayout`) is eager;
+  `DiagnosticOverlay` is a lazy chunk. The iPhone checklist and how to capture a report are in
+  [mobile.md](mobile.md).
+
+What "mobile-ready" means for a change, the gating tiers and the mobile suite are in
+[mobile.md](mobile.md). Screenshot-verify new surfaces at 390×844, 844×390, 1024×768 (the
+breakpoint boundary, the most fragile width), 1920×1080 and 3840×2160; the mobile suite's crawl
+covers every manifest surface on its own ([testing.md](testing.md#mobile-suite)). Run the manual
+iPhone checklist in [mobile.md](mobile.md#iphone-checklist) after mobile work lands.
 
 ## Performance and bundle budgets
 
@@ -315,19 +470,49 @@ Phones parse the web entry chunk on first visit, so it stays lean.
   `pageLoaders.test.ts` asserts `Main.tsx` never value-imports a lazily loaded page.
 - **Anything needed only after a user action** (a modal, a detail page, an admin surface)
   gets `lazy()` and a mount gate. Existing examples: `LoginPage`, `UpdateModal` and
-  `LegacyInstallCard` in `app.tsx`; the Settings modal and `ChangeTitleModal` in
-  `AppLayout`; per-section Settings panels; the pick/ban `ManagerDock` (fetched only when
-  the manager dock model shows it); `PrivacyPolicyBody` behind `AnalyticsConsentBanner`'s
+  `LegacyInstallCard` in `app.tsx`; the Settings modal, `ChangeTitleModal` and the
+  sign-out confirm in `AppLayout`; the diagnostic overlay behind `DiagnosticOverlayTrigger`; per-section
+  Settings panels; the pick/ban `ManagerDock` (fetched only when the manager dock model
+  shows it); `PrivacyPolicyBody` behind `AnalyticsConsentBanner`'s
   modal, which keeps react-markdown out of the entry. The banner itself stays eager: it
-  renders for every first-time visitor, exactly the cohort whose LCP matters. The medal
-  hunt `ReplayPickerModal` in `MedalHuntCard` is lazy but always mounted inside
-  `Suspense`, which keeps it and the demo result dialog out of the entry.
+  renders for every first-time visitor, exactly the cohort whose LCP matters.
+- **Modals opened by a user action mount through `LazyModalGate`**
+  (`shared/LazyModalGate.tsx`). Declare the modal with `lazy()` beside the file's other
+  module-level lazies and wrap it in `<LazyModalGate open={…}>` with the condition the modal
+  itself opens on; a modal already mounted conditionally (`{x && …}`) takes
+  `<LazyModalGate open>`. The gate renders nothing until the first open, shows
+  `ModalLoading` (a spinner on the modal backdrop, `role="status"`, portalled to
+  `document.body` above the top bar and holding the scroll lock, but with no
+  `data-modal-backdrop`, so the crawl and Escape only ever see the real modal) while the
+  chunk loads, and keeps the modal mounted after it closes, so its state and its
+  reset-on-close effects behave as before. `LazyModalGate.test.ts` lists the gated modals
+  and fails when a page, card or the shell imports one statically; imports between modal
+  modules are modal internals and exempt. `e2e/lazy-modals.spec.ts` checks on a desktop
+  and a phone project that the Map Detail distribution modal fetches its code only on the
+  first tap, behind the loading state, and not again on a reopen, and on desktop that the
+  WR progression modal no longer fetches its chunk when the page renders.
+- **`FavoritesSyncModal` is lazy behind `capabilities.ini`.** The ini favourites conflict
+  modal renders in `Main.tsx` only with that capability, from `lazy()` inside
+  `<Suspense fallback={null}>`. The web never fetches it. Desktop mounts it closed at
+  startup, so its chunk is in before a conflict opens it, and nothing shows while it loads.
+- **Which modals stay eager.** Each lazy boundary costs about 1 KiB gzip of app JS, so a
+  modal gets its own chunk when it would otherwise sit in the entry, when its module is
+  already a lazy chunk elsewhere, or when it drags a heavy dependency onto its page
+  (recharts behind `CapTimeDistributionModal`, framer-motion behind `ConfirmModal` and
+  `MatchEditorModal`). Small modals that a single lazy page opens stay in that page's chunk
+  (`PlaytimeBreakdownModal`, `MapDownloadStatusModal`, `MapReviewsModal`,
+  `PlayerReviewsModal`, `PlayerFavoritesModal`, `SlotPickerModal`, `BetModal`,
+  `BackersModal`, the admin section modals). Also eager: modals that open themselves from
+  an event or at boot (`PatreonModal`, `AuthRequiredModal`, the
+  connection `ErrorModal` in `app.tsx`), other desktop-only modals, and `VideoCompareModal`,
+  which clears its video durations in an `open` effect: mounted from a Suspense retry that
+  effect can run after the videos' `loadedmetadata`, which leaves Play disabled.
 - **Desktop promotion stays off the first-paint path.** Only the provider, the hook, the
   decision module and `desktopPromoStorage.ts` are eager. `DesktopPromoNavRow` is itself
   lazy and mounted only when `ambientVisible`, so phones, macOS and recent desktop users
-  never fetch it; `DesktopPromoModal` is a second lazy chunk, prefetched on the row's
-  `pointerenter` / `focus`. `DownloadResultPromo` lazy-loads `DesktopAppNotice` only for
-  eligible visitors, and the web Settings placeholder (`GameSettingsPlaceholder`) is a lazy
+  never fetch it; `DesktopPromoModal` is a second lazy chunk behind `LazyModalGate`,
+  prefetched on the button's `pointerenter` / `focus`. `DownloadResultPromo` lazy-loads
+  `DesktopAppNotice` only for eligible visitors, and the web Settings placeholder (`GameSettingsPlaceholder`) is a lazy
   per-section panel. The initial total has little headroom, so a new promo surface
   reachable from the entry follows the same pattern.
 - **`vendor-react` chunk.** `manualChunks` in `vite.config.web.ts` pins `react`,
@@ -342,8 +527,8 @@ Phones parse the web entry chunk on first visit, so it stays lean.
   `app/public/` stays PNG (favicons, PWA icons, OG card), which scrapers and manifests
   require.
 - **CSS runtime cost** is a separate budget (compositor, RAM, CPU): no per-row
-  `backdrop-blur`, no per-row infinite animations, compact-card renderers mount only below
-  the required-fit width. Rules in [styling.md](styling.md).
+  `backdrop-blur`, no per-row infinite animations, and card faces mount only while DataTable
+  shows cards. Rules in [styling.md](styling.md).
 
 `npm run check:bundle` (`scripts/check-web-bundle.mjs`) reads
 `dist-web/.vite/manifest.json` and measures the real initial payload (entry plus its
@@ -353,10 +538,10 @@ platform gates.
 | Budget | Limit |
 |---|---|
 | Initial JS | 190 KiB |
-| Initial CSS | 36 KiB |
+| Initial CSS | 37 KiB |
 | Initial total | 224 KiB |
 | Largest lazy chunk (and each stream scene chunk) | 120 KiB |
-| App JS (every JS file except those only the stream scene pages load) | 900 KiB |
+| App JS (every JS file except those only the stream scene pages load) | 920 KiB |
 | Stream scene JS (files reachable only from the scene root) | 120 KiB |
 
 It also asserts `dist-web/index.html`: exactly one module script, at least one
@@ -376,6 +561,18 @@ stylesheet `<link>` and modulepreload hints in the document. Behind a runtime `i
 the browser sees neither until the shim has run: two extra serial round trips before
 paint, and CSS injected by JavaScript. The 50 KiB entry floor in `check:bundle` exists to
 catch that regression.
+
+## Home Screen app (PWA)
+
+- `app/public/site.webmanifest`: `id: "/"` (stable, so a reinstall keeps the same app),
+  `display: standalone`, `orientation: any`, the name, `#070b12` colours and the 192, 512
+  and maskable icons.
+- `app/index.html` declares `apple-mobile-web-app-capable`, `mobile-web-app-capable`,
+  `apple-mobile-web-app-status-bar-style: black` (see Status bar above) and
+  `apple-mobile-web-app-title` (`UTBT`). The viewport keeps `viewport-fit=cover` and allows
+  pinch zoom: never add `maximum-scale` or `user-scalable=no`. No iOS launch-screen
+  images.
+- `e2e/mobile/shell.spec.ts` checks the served manifest and head tags.
 
 ## SEO and link previews
 

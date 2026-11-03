@@ -437,7 +437,10 @@ window. `withQueueStreamer` writes a saved assignment into the loaded entries, a
 responsive `DataTable` polling every 20 s through `createPoller`, plus `poller.refresh()`
 right after Open so the row picks up its new session at once. Its streamer picker
 (`manage/StaffPicker.tsx`, shared with Manage → Matches) re-fetches the roster each time it
-opens and applies `setMatchStreamer`'s answer without a refetch. A 422 `invalid_request`
+opens and applies `setMatchStreamer`'s answer without a refetch. The table is tiered: a phone card
+shows the match (with any blocking reason), the status and the row's actions, and its panel holds
+stage and round, scheduled time, the streamer picker and Ready / Online; its body opens the
+match page, as Open Page does. A 422 `invalid_request`
 (a user not on the roster) shows in its own banner, so the next poll doesn't clear it.
 
 ## Red/Blue outside the session

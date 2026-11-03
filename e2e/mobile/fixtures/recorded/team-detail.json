@@ -1,0 +1,775 @@
+{
+  "set": "team-detail",
+  "responses": [
+    {
+      "host": "api",
+      "path": "/teams/9ca5c141-f968-4bf1-b05f-2bd2af0611b3/activity",
+      "query": "limit=1",
+      "status": 200,
+      "body": {
+        "data": {
+          "caps": 71793,
+          "items": [
+            {
+              "added": "2026-11-01 15:59:36",
+              "alias": "fierd_2",
+              "cap_id": null,
+              "cap_time_seconds": null,
+              "map": "CTF-BT-Qamariya-v2",
+              "medal": null,
+              "time_played_seconds": 2421,
+              "title": {
+                "color": "230,45,45",
+                "color_b": 45,
+                "color_g": 45,
+                "color_r": 230,
+                "id": "1000000000000000034",
+                "name": "Grand Champion",
+                "rarity": 4
+              },
+              "type": "playtime",
+              "user": "290449564887023617",
+              "verified": null
+            }
+          ],
+          "playtime": 23602,
+          "playtime_seconds": 16798842,
+          "ranked_teams": 13,
+          "ranks": {
+            "caps": 1,
+            "playtime": 1,
+            "world_records": 1
+          },
+          "spectator_seconds": 5428433,
+          "total": 96914,
+          "world_records": 1519
+        },
+        "success": true
+      }
+    },
+    {
+      "host": "api",
+      "path": "/teams/9ca5c141-f968-4bf1-b05f-2bd2af0611b3/activity",
+      "query": "limit=15",
+      "status": 200,
+      "body": {
+        "data": {
+          "caps": 71793,
+          "items": [
+            {
+              "added": "2026-11-01 15:59:36",
+              "alias": "fierd_2",
+              "cap_id": null,
+              "cap_time_seconds": null,
+              "map": "CTF-BT-Qamariya-v2",
+              "medal": null,
+              "time_played_seconds": 2421,
+              "title": {
+                "color": "230,45,45",
+                "color_b": 45,
+                "color_g": 45,
+                "color_r": 230,
+                "id": "1000000000000000034",
+                "name": "Grand Champion",
+                "rarity": 4
+              },
+              "type": "playtime",
+              "user": "290449564887023617",
+              "verified": null
+            },
+            {
+              "added": "2026-11-01 14:59:33",
+              "alias": "fierd_2",
+              "cap_id": "416d6162-92ba-48a9-934a-a3e0870036a7",
+              "cap_time_seconds": 21.521,
+              "map": "CTF-BT-Qamariya-v2",
+              "medal": "world record",
+              "time_played_seconds": null,
+              "title": {
+                "color": "230,45,45",
+                "color_b": 45,
+                "color_g": 45,
+                "color_r": 230,
+                "id": "1000000000000000034",
+                "name": "Grand Champion",
+                "rarity": 4
+              },
+              "type": "cap",
+              "user": "290449564887023617",
+              "verified": true
+            },
+            {
+              "added": "2026-11-01 14:59:33",
+              "alias": "fierd_2",
+              "cap_id": "416d6162-92ba-48a9-934a-a3e0870036a7",
+              "cap_time_seconds": 21.521,
+              "map": "CTF-BT-Qamariya-v2",
+              "medal": null,
+              "time_played_seconds": null,
+              "title": {
+                "color": "230,45,45",
+                "color_b": 45,
+                "color_g": 45,
+                "color_r": 230,
+                "id": "1000000000000000034",
+                "name": "Grand Champion",
+                "rarity": 4
+              },
+              "type": "world_record",
+              "user": "290449564887023617",
+              "verified": true
+            },
+            {
+              "added": "2026-10-31 23:49:45",
+              "alias": "fierd_2",
+              "cap_id": null,
+              "cap_time_seconds": null,
+              "map": "CTF-BT-andACTION-dbl",
+              "medal": null,
+              "time_played_seconds": 2,
+              "title": {
+                "color": "230,45,45",
+                "color_b": 45,
+                "color_g": 45,
+                "color_r": 230,
+                "id": "1000000000000000034",
+                "name": "Grand Champion",
+                "rarity": 4
+              },
+              "type": "playtime",
+              "user": "290449564887023617",
+              "verified": null
+            },
+            {
+              "added": "2026-10-31 23:49:29",
+              "alias": "fierd_2",
+              "cap_id": null,
+              "cap_time_seconds": null,
+              "map": "CTF-BT-II-FaithCB",
+              "medal": null,
+              "time_played_seconds": 38,
+              "title": {
+                "color": "230,45,45",
+                "color_b": 45,
+                "color_g": 45,
+                "color_r": 230,
+                "id": "1000000000000000034",
+                "name": "Grand Champion",
+                "rarity": 4
+              },
+              "type": "playtime",
+              "user": "290449564887023617",
+              "verified": null
+            },
+            {
+              "added": "2026-10-31 21:13:28",
+              "alias": "Nightwolf`",
+              "cap_id": null,
+              "cap_time_seconds": null,
+              "map": "CTF-BT-Drop&Hop_Level1",
+              "medal": null,
+              "time_played_seconds": 864,
+              "title": {
+                "color": "255,215,0",
+                "color_b": 0,
+                "color_g": 215,
+                "color_r": 255,
+                "id": "846334094051770378",
+                "name": "2021 World Champion",
+                "rarity": 5
+              },
+              "type": "playtime",
+              "user": "290456398251425792",
+              "verified": null
+            },
+            {
+              "added": "2026-10-31 20:46:31",
+              "alias": "Nightwolf`",
+              "cap_id": null,
+              "cap_time_seconds": null,
+              "map": "CTF-BT-Contaminant",
+              "medal": null,
+              "time_played_seconds": 2,
+              "title": {
+                "color": "255,215,0",
+                "color_b": 0,
+                "color_g": 215,
+                "color_r": 255,
+                "id": "846334094051770378",
+                "name": "2021 World Champion",
+                "rarity": 5
+              },
+              "type": "playtime",
+              "user": "290456398251425792",
+              "verified": null
+            },
+            {
+              "added": "2026-10-31 20:43:56",
+              "alias": "Nightwolf`",
+              "cap_id": null,
+              "cap_time_seconds": null,
+              "map": "CTF-BT-andACTION-dbl",
+              "medal": null,
+              "time_played_seconds": 50,
+              "title": {
+                "color": "255,215,0",
+                "color_b": 0,
+                "color_g": 215,
+                "color_r": 255,
+                "id": "846334094051770378",
+                "name": "2021 World Champion",
+                "rarity": 5
+              },
+              "type": "playtime",
+              "user": "290456398251425792",
+              "verified": null
+            },
+            {
+              "added": "2026-10-31 20:13:26",
+              "alias": "Nightwolf`",
+              "cap_id": "5f5fdf68-c628-4603-b1c5-29526f3b1fe1",
+              "cap_time_seconds": 49.194,
+              "map": "CTF-BT-Drop&Hop_Level1",
+              "medal": "world record",
+              "time_played_seconds": null,
+              "title": {
+                "color": "255,215,0",
+                "color_b": 0,
+                "color_g": 215,
+                "color_r": 255,
+                "id": "846334094051770378",
+                "name": "2021 World Champion",
+                "rarity": 5
+              },
+              "type": "cap",
+              "user": "290456398251425792",
+              "verified": true
+            },
+            {
+              "added": "2026-10-31 20:13:26",
+              "alias": "Nightwolf`",
+              "cap_id": "5f5fdf68-c628-4603-b1c5-29526f3b1fe1",
+              "cap_time_seconds": 49.194,
+              "map": "CTF-BT-Drop&Hop_Level1",
+              "medal": null,
+              "time_played_seconds": null,
+              "title": {
+                "color": "255,215,0",
+                "color_b": 0,
+                "color_g": 215,
+                "color_r": 255,
+                "id": "846334094051770378",
+                "name": "2021 World Champion",
+                "rarity": 5
+              },
+              "type": "world_record",
+              "user": "290456398251425792",
+              "verified": true
+            },
+            {
+              "added": "2026-10-31 17:16:47",
+              "alias": "fierd_1",
+              "cap_id": null,
+              "cap_time_seconds": null,
+              "map": "CTF-BT-[T-BiG]M4xPP-fix",
+              "medal": null,
+              "time_played_seconds": 94,
+              "title": {
+                "color": "205,127,50",
+                "color_b": 50,
+                "color_g": 127,
+                "color_r": 205,
+                "id": "846334653656203275",
+                "name": "World Cup '21 | Division 1: 3rd Place",
+                "rarity": 4
+              },
+              "type": "playtime",
+              "user": "290062867452133377",
+              "verified": null
+            },
+            {
+              "added": "2026-10-31 17:15:07",
+              "alias": "fierd_1",
+              "cap_id": null,
+              "cap_time_seconds": null,
+              "map": "CTF-BT-(meg)Logout",
+              "medal": null,
+              "time_played_seconds": 26,
+              "title": {
+                "color": "205,127,50",
+                "color_b": 50,
+                "color_g": 127,
+                "color_r": 205,
+                "id": "846334653656203275",
+                "name": "World Cup '21 | Division 1: 3rd Place",
+                "rarity": 4
+              },
+              "type": "playtime",
+              "user": "290062867452133377",
+              "verified": null
+            },
+            {
+              "added": "2026-10-30 20:50:54",
+              "alias": "fierd_1",
+              "cap_id": null,
+              "cap_time_seconds": null,
+              "map": "CTF-BT-II-Extant",
+              "medal": null,
+              "time_played_seconds": 427,
+              "title": {
+                "color": "205,127,50",
+                "color_b": 50,
+                "color_g": 127,
+                "color_r": 205,
+                "id": "846334653656203275",
+                "name": "World Cup '21 | Division 1: 3rd Place",
+                "rarity": 4
+              },
+              "type": "playtime",
+              "user": "290062867452133377",
+              "verified": null
+            },
+            {
+              "added": "2026-10-30 20:43:34",
+              "alias": "fierd_1",
+              "cap_id": null,
+              "cap_time_seconds": null,
+              "map": "CTF-BT-II-(K)LegendsV4",
+              "medal": null,
+              "time_played_seconds": 478,
+              "title": {
+                "color": "205,127,50",
+                "color_b": 50,
+                "color_g": 127,
+                "color_r": 205,
+                "id": "846334653656203275",
+                "name": "World Cup '21 | Division 1: 3rd Place",
+                "rarity": 4
+              },
+              "type": "playtime",
+              "user": "290062867452133377",
+              "verified": null
+            },
+            {
+              "added": "2026-10-30 20:35:27",
+              "alias": "fierd_1",
+              "cap_id": null,
+              "cap_time_seconds": null,
+              "map": "CTF-BT-II-SkaarjInvasion-vF2",
+              "medal": null,
+              "time_played_seconds": 615,
+              "title": {
+                "color": "205,127,50",
+                "color_b": 50,
+                "color_g": 127,
+                "color_r": 205,
+                "id": "846334653656203275",
+                "name": "World Cup '21 | Division 1: 3rd Place",
+                "rarity": 4
+              },
+              "type": "playtime",
+              "user": "290062867452133377",
+              "verified": null
+            }
+          ],
+          "playtime": 23602,
+          "playtime_seconds": 16798842,
+          "ranked_teams": 13,
+          "ranks": {
+            "caps": 1,
+            "playtime": 1,
+            "world_records": 1
+          },
+          "spectator_seconds": 5428433,
+          "total": 96914,
+          "world_records": 1519
+        },
+        "success": true
+      }
+    },
+    {
+      "host": "api",
+      "path": "/teams/9ca5c141-f968-4bf1-b05f-2bd2af0611b3",
+      "query": "",
+      "status": 200,
+      "body": {
+        "data": {
+          "added": "2026-07-20 19:10:03",
+          "avatar_updated": "2026-07-21 16:38:28",
+          "has_avatar": true,
+          "id": "9ca5c141-f968-4bf1-b05f-2bd2af0611b3",
+          "is_open": false,
+          "member_count": 5,
+          "members": [
+            {
+              "alias": "fierd_2",
+              "joined_at": "2026-07-22 20:08:56",
+              "raw_alias": "Dylanbroo",
+              "role": "admin",
+              "status": "active",
+              "tag": "fierd_",
+              "tag_hidden": false,
+              "tag_number": 2,
+              "tag_position": "prefix",
+              "title": {
+                "color": "230,45,45",
+                "color_b": 45,
+                "color_g": 45,
+                "color_r": 230,
+                "id": "1000000000000000034",
+                "name": "Grand Champion",
+                "rarity": 4
+              },
+              "user": "290449564887023617"
+            },
+            {
+              "alias": "fierd_6",
+              "joined_at": "2026-08-10 05:08:47",
+              "raw_alias": "fierd_6",
+              "role": "admin",
+              "status": "active",
+              "tag": "fierd_",
+              "tag_hidden": false,
+              "tag_number": 6,
+              "tag_position": "prefix",
+              "title": {
+                "color": "150,235,255",
+                "color_b": 255,
+                "color_g": 235,
+                "color_r": 150,
+                "id": "1000000000000000015",
+                "name": "Faster Than Light",
+                "rarity": 5
+              },
+              "user": "404713576947908618"
+            },
+            {
+              "alias": "fierd_3",
+              "joined_at": "2026-07-26 20:53:20",
+              "raw_alias": "Niko",
+              "role": "admin",
+              "status": "active",
+              "tag": "fierd_",
+              "tag_hidden": false,
+              "tag_number": 3,
+              "tag_position": "prefix",
+              "title": {},
+              "user": "290466489096732673"
+            },
+            {
+              "alias": "Nightwolf`",
+              "joined_at": "2026-07-22 20:12:43",
+              "raw_alias": "Nightwolf`",
+              "role": "admin",
+              "status": "active",
+              "tag": null,
+              "tag_hidden": true,
+              "tag_number": 5,
+              "tag_position": null,
+              "title": {
+                "color": "255,215,0",
+                "color_b": 0,
+                "color_g": 215,
+                "color_r": 255,
+                "id": "846334094051770378",
+                "name": "2021 World Champion",
+                "rarity": 5
+              },
+              "user": "290456398251425792"
+            },
+            {
+              "alias": "Nick[#TeamDylan]",
+              "joined_at": null,
+              "raw_alias": "Nick[#TeamDylan]",
+              "role": "member",
+              "status": "invited",
+              "tag": null,
+              "tag_hidden": false,
+              "tag_number": null,
+              "tag_position": null,
+              "title": {},
+              "user": "248228289317961729"
+            },
+            {
+              "alias": "fierd_1",
+              "joined_at": "2026-07-20 19:10:03",
+              "raw_alias": "soupy",
+              "role": "owner",
+              "status": "active",
+              "tag": "fierd_",
+              "tag_hidden": false,
+              "tag_number": 1,
+              "tag_position": "prefix",
+              "title": {
+                "color": "205,127,50",
+                "color_b": 50,
+                "color_g": 127,
+                "color_r": 205,
+                "id": "846334653656203275",
+                "name": "World Cup '21 | Division 1: 3rd Place",
+                "rarity": 4
+              },
+              "user": "290062867452133377"
+            }
+          ],
+          "name": "fierd_",
+          "owner": "290062867452133377",
+          "tag": "fierd_",
+          "tag_position": "prefix",
+          "tag_spaced": false,
+          "tag_style": "number_only"
+        },
+        "success": true
+      }
+    },
+    {
+      "host": "api",
+      "path": "/v2/world_records",
+      "query": "count=true&users=290449564887023617%2C404713576947908618%2C290466489096732673%2C290456398251425792%2C290062867452133377",
+      "status": 200,
+      "body": {
+        "data": {
+          "count": 1519
+        },
+        "success": true
+      }
+    },
+    {
+      "host": "api",
+      "path": "/v2/world_records",
+      "query": "limit=8&offset=0&sort=desc&sort_by=added&users=290449564887023617%2C404713576947908618%2C290466489096732673%2C290456398251425792%2C290062867452133377",
+      "status": 200,
+      "body": {
+        "data": [
+          {
+            "active_title": {
+              "color": "230,45,45",
+              "color_b": 45,
+              "color_g": 45,
+              "color_r": 230,
+              "id": "1000000000000000034",
+              "name": "Grand Champion",
+              "rarity": 4
+            },
+            "added": "2026-11-01T14:59:33.545436",
+            "alias": "fierd_2",
+            "cap_id": "416d6162-92ba-48a9-934a-a3e0870036a7",
+            "cap_time_seconds": 21.521,
+            "color_b": 45,
+            "color_g": 45,
+            "color_r": 230,
+            "difficulty": 1,
+            "map": "CTF-BT-Qamariya-v2",
+            "members": null,
+            "user_id": "290449564887023617"
+          },
+          {
+            "active_title": {
+              "color": "255,215,0",
+              "color_b": 0,
+              "color_g": 215,
+              "color_r": 255,
+              "id": "846334094051770378",
+              "name": "2021 World Champion",
+              "rarity": 5
+            },
+            "added": "2026-10-31T20:13:26.331798",
+            "alias": "Nightwolf`",
+            "cap_id": "5f5fdf68-c628-4603-b1c5-29526f3b1fe1",
+            "cap_time_seconds": 49.194,
+            "color_b": 0,
+            "color_g": 215,
+            "color_r": 255,
+            "difficulty": 4,
+            "map": "CTF-BT-Drop&Hop_Level1",
+            "members": null,
+            "user_id": "290456398251425792"
+          },
+          {
+            "active_title": {
+              "color": "230,45,45",
+              "color_b": 45,
+              "color_g": 45,
+              "color_r": 230,
+              "id": "1000000000000000034",
+              "name": "Grand Champion",
+              "rarity": 4
+            },
+            "added": "2026-10-28T22:51:10.500344",
+            "alias": "fierd_2",
+            "cap_id": "329c9222-7fb4-4842-91a9-245f0006a459",
+            "cap_time_seconds": 143.939,
+            "color_b": 45,
+            "color_g": 45,
+            "color_r": 230,
+            "difficulty": 5,
+            "map": "CTF-BT-Adeon-FactoryCE2",
+            "members": null,
+            "user_id": "290449564887023617"
+          },
+          {
+            "active_title": {
+              "color": "255,215,0",
+              "color_b": 0,
+              "color_g": 215,
+              "color_r": 255,
+              "id": "846334094051770378",
+              "name": "2021 World Champion",
+              "rarity": 5
+            },
+            "added": "2026-10-28T22:08:30.481892",
+            "alias": "Nightwolf`",
+            "cap_id": "76b6e4a8-4977-4d3c-a58a-97f3e20e85da",
+            "cap_time_seconds": 20.578,
+            "color_b": 0,
+            "color_g": 215,
+            "color_r": 255,
+            "difficulty": 1,
+            "map": "CTF-BT-Tezzanator-Termoil",
+            "members": null,
+            "user_id": "290456398251425792"
+          },
+          {
+            "active_title": {
+              "color": "150,235,255",
+              "color_b": 255,
+              "color_g": 235,
+              "color_r": 150,
+              "id": "1000000000000000015",
+              "name": "Faster Than Light",
+              "rarity": 5
+            },
+            "added": "2026-10-27T18:23:58.624722",
+            "alias": "fierd_6",
+            "cap_id": "69f32db9-ffb9-47a1-a99b-eb91cf268aef",
+            "cap_time_seconds": 12.56,
+            "color_b": 255,
+            "color_g": 235,
+            "color_r": 150,
+            "difficulty": 1,
+            "map": "CTF-BT-[KAI]-ParadiseRush",
+            "members": null,
+            "user_id": "404713576947908618"
+          },
+          {
+            "active_title": {
+              "color": "150,235,255",
+              "color_b": 255,
+              "color_g": 235,
+              "color_r": 150,
+              "id": "1000000000000000015",
+              "name": "Faster Than Light",
+              "rarity": 5
+            },
+            "added": "2026-10-27T17:48:43.904670",
+            "alias": "fierd_6",
+            "cap_id": "0e46d0a5-3a2e-41be-bae5-96badb9e3b8c",
+            "cap_time_seconds": 71.111,
+            "color_b": 255,
+            "color_g": 235,
+            "color_r": 150,
+            "difficulty": 3,
+            "map": "CTF-BT-[KAI]-Seasons",
+            "members": null,
+            "user_id": "404713576947908618"
+          },
+          {
+            "active_title": {
+              "color": "150,235,255",
+              "color_b": 255,
+              "color_g": 235,
+              "color_r": 150,
+              "id": "1000000000000000015",
+              "name": "Faster Than Light",
+              "rarity": 5
+            },
+            "added": "2026-10-27T16:12:35.533178",
+            "alias": "fierd_6",
+            "cap_id": "7ac89a05-e82d-4b7b-a321-02edda16990d",
+            "cap_time_seconds": 22.915,
+            "color_b": 255,
+            "color_g": 235,
+            "color_r": 150,
+            "difficulty": 1,
+            "map": "CTF-BT-(Fran)PureJump",
+            "members": null,
+            "user_id": "404713576947908618"
+          },
+          {
+            "active_title": null,
+            "added": "2026-10-24T23:48:51.050917",
+            "alias": "Bakica, Dylanbroo",
+            "cap_id": "371f710c-0afe-49c1-8c99-05be32b399a6",
+            "cap_time_seconds": 79.026,
+            "color_b": null,
+            "color_g": null,
+            "color_r": null,
+            "difficulty": 6,
+            "map": "CTF-BT-II-Diplopia-V4",
+            "members": [
+              {
+                "active_title": {
+                  "color": "192,192,192",
+                  "color_b": 192,
+                  "color_g": 192,
+                  "color_r": 192,
+                  "id": "1232191019324276756",
+                  "name": "Time Attack 1v1 | Second Place",
+                  "rarity": 3
+                },
+                "alias": "Bakica",
+                "cap_id": "a2cf8156-e49d-4107-9e2c-c1f5de4e825c",
+                "cap_time_seconds": 79.026,
+                "user": "1254416467160596565",
+                "verified": true
+              },
+              {
+                "active_title": {
+                  "color": "230,45,45",
+                  "color_b": 45,
+                  "color_g": 45,
+                  "color_r": 230,
+                  "id": "1000000000000000034",
+                  "name": "Grand Champion",
+                  "rarity": 4
+                },
+                "alias": "Dylanbroo",
+                "cap_id": "e0728229-2de5-4ff3-9306-d86e6b7878a3",
+                "cap_time_seconds": 78.826,
+                "user": "290449564887023617",
+                "verified": true
+              }
+            ],
+            "team_size": 2,
+            "user_id": null
+          }
+        ],
+        "success": true
+      }
+    },
+    {
+      "host": "gateway",
+      "path": "/patreon",
+      "query": "",
+      "status": 200,
+      "body": {
+        "tier1": [
+          "790880165097504768",
+          "414164967999406090",
+          "270897034796466176",
+          "238598150888095744",
+          "290449564887023617"
+        ],
+        "tier2": [
+          "318842484446724106",
+          "260007417478250497",
+          "242091482541064192"
+        ],
+        "tier3": [
+          "185318594270330880",
+          "265561225428074496"
+        ]
+      }
+    }
+  ]
+}

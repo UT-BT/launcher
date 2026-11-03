@@ -17,6 +17,7 @@ export interface StepRefs {
     firstRowMyRatingRef: React.RefObject<HTMLButtonElement | null>
     firstRowNameRef: React.RefObject<HTMLElement | null>
     firstRowPbRef: React.RefObject<HTMLElement | null>
+    cardSortRef: React.RefObject<HTMLElement | null>
 }
 
 export interface StepActions {
@@ -26,7 +27,11 @@ export interface StepActions {
     setColumnsMenuOpen: (open: boolean) => void
 }
 
-export function buildSteps(refs: StepRefs, actions: StepActions): TutorialStep[] {
+export interface StepView {
+    cards: boolean
+}
+
+export function buildSteps(refs: StepRefs, actions: StepActions, { cards }: StepView): TutorialStep[] {
     return [
         {
             id: 'welcome',
@@ -60,8 +65,10 @@ export function buildSteps(refs: StepRefs, actions: StepActions): TutorialStep[]
         {
             id: 'columns',
             title: 'Customise columns',
-            body: 'Customise the table just how you like it.\n\nDrag handles to reorder columns, and checkboxes hide columns you do not want.',
-            targetRef: refs.columnsButtonRef as React.RefObject<HTMLElement | null>,
+            body: cards
+                ? 'On a wider screen the maps show as a table with a Columns button.\n\nThere, drag handles reorder columns, and checkboxes hide columns you do not want.'
+                : 'Customise the table just how you like it.\n\nDrag handles to reorder columns, and checkboxes hide columns you do not want.',
+            targetRef: cards ? undefined : refs.columnsButtonRef as React.RefObject<HTMLElement | null>,
             onEnter: () => {
                 actions.setPresetsMenuOpen(false)
                 actions.closeFilterPanel()
@@ -71,9 +78,11 @@ export function buildSteps(refs: StepRefs, actions: StepActions): TutorialStep[]
         },
         {
             id: 'sort',
-            title: 'Sort columns',
-            body: 'Click any column header to sort by that column. Click again to reverse direction.',
-            targetRef: refs.sortHeaderRef as React.RefObject<HTMLElement | null>,
+            title: cards ? 'Sort maps' : 'Sort columns',
+            body: cards
+                ? 'Pick a field to sort the maps by. The direction button next to it reverses the order.'
+                : 'Click any column header to sort by that column. Click again to reverse direction.',
+            targetRef: cards ? refs.cardSortRef : refs.sortHeaderRef as React.RefObject<HTMLElement | null>,
             onEnter: () => {
                 // Lift the table header above the tutorial dim overlay for this step.
                 document.querySelector('[data-utbt-maps-thead]')?.classList.add('!z-[60]')
@@ -103,7 +112,9 @@ export function buildSteps(refs: StepRefs, actions: StepActions): TutorialStep[]
         {
             id: 'replay',
             title: 'Watch demos',
-            body: 'Use the demos button to browse and watch every recorded run on this map, or to download a specific demo.',
+            body: cards
+                ? 'Each map\'s Details panel has a demos button. Use it to browse and watch every recorded run on this map, or to download a specific demo.'
+                : 'Use the demos button to browse and watch every recorded run on this map, or to download a specific demo.',
             targetRef: refs.firstRowReplayRef as React.RefObject<HTMLElement | null>,
         },
         {

@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, lazy } from 'react'
+import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import {
   ArrowDownWideNarrow,
   ArrowUpNarrowWide,
@@ -24,7 +25,6 @@ import { difficultyTextColor } from '@/app/utils/scoreColors'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { MapNavLink } from '@/app/components/shared/MapNavLink'
-import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import {
   DropdownMenu,
@@ -36,6 +36,7 @@ import {
 } from '@/app/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 
+const ReplayVideoModal = lazy(() => import('@/app/components/shared/ReplayVideoModal').then(m => ({ default: m.ReplayVideoModal })))
 const ReplayPickerModal = lazy(() => import('@/app/components/modals/ReplayPickerModal').then(m => ({ default: m.ReplayPickerModal })))
 
 interface MedalHuntCardProps {
@@ -442,7 +443,7 @@ export function MedalHuntCard({
           />
         ))}
       </div>
-      <Suspense fallback={null}>
+      <LazyModalGate open={replayPickerMap !== null}>
         <ReplayPickerModal
           open={replayPickerMap !== null}
           onClose={() => setReplayPickerMap(null)}
@@ -460,8 +461,10 @@ export function MedalHuntCard({
             })
           }}
         />
-      </Suspense>
-      <ReplayVideoModal state={videoModal} onClose={() => setVideoModal(null)} />
+      </LazyModalGate>
+      <LazyModalGate open={videoModal !== null}>
+        <ReplayVideoModal state={videoModal} onClose={() => setVideoModal(null)} />
+      </LazyModalGate>
     </div>
   )
 }

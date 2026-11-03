@@ -225,6 +225,7 @@ export function MatchEditorModal({
             <Modal
                 isOpen
                 onClose={onClose}
+                closeOnBackdrop={false}
                 offsetSidebar
                 maxWidth="52rem"
                 title={`${teamNames.a} vs ${teamNames.b}`}

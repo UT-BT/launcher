@@ -5,8 +5,12 @@ import {
     buildCompareView,
     comparisonKey,
     comparisonRequests,
+    initialPlayingRuns,
     paneReadout,
+    sameReadout,
+    swapIntoPlaying,
     type CompareRunTiming,
+    type PaneReadout,
 } from './compareView'
 
 const separated = runCompareFixture('separated')
@@ -187,6 +191,18 @@ describe('pane readouts', () => {
         expect(paneReadout(mixed.tracks[0], 80.5)).toEqual({ label: 'CAP', greyed: false, gap: null })
         expect(paneReadout(mixed.tracks[1], 30)).toEqual({ label: 'Side unknown', greyed: false, gap: null })
     })
+
+    it('are the same only while the label, the greying and the gap all match', () => {
+        const line = paneReadout(replay.tracks[0], 36.5)
+        const gap = { ms: -14726, label: '−14.726', tone: 'ahead' } as const
+        const readout = (changes: Partial<PaneReadout>): PaneReadout => ({ label: 'Different line', greyed: true, gap, ...changes })
+
+        expect(sameReadout(line, readout({}))).toBe(true)
+        expect(sameReadout(line, readout({ label: 'S4' }))).toBe(false)
+        expect(sameReadout(line, readout({ greyed: false }))).toBe(false)
+        expect(sameReadout(line, readout({ gap: { ...gap, ms: -14727, label: '−14.727' } }))).toBe(false)
+        expect(sameReadout(line, readout({ gap: null }))).toBe(false)
+    })
 })
 
 describe('the delta strip', () => {
@@ -238,5 +254,30 @@ describe('the delta strip', () => {
         const bare = run(RUNNER_ID, 72.876, 0)
 
         expect(buildCompareView([bare, reference], new Map()).strip).toBeNull()
+    })
+})
+
+describe('playing runs', () => {
+    it('are every run when the limit covers them all', () => {
+        expect(initialPlayingRuns([runner, reference, otherSide], 3)).toEqual([0, 1, 2])
+    })
+
+    it('start with the reference and the first other run on its side', () => {
+        expect(new Set(initialPlayingRuns([otherSide, noSide, runner, reference], 2))).toEqual(new Set([2, 3]))
+    })
+
+    it('take a tapped run in place of the one playing longest, so the reference outlasts the first swap', () => {
+        const runs = [otherSide, noSide, runner, reference]
+        const first = swapIntoPlaying(initialPlayingRuns(runs, 2), 0, 2)
+        const second = swapIntoPlaying(first, 1, 2)
+
+        expect(new Set(first)).toEqual(new Set([0, 3]))
+        expect(new Set(second)).toEqual(new Set([0, 1]))
+    })
+
+    it('stay as they are when the tapped run is already playing', () => {
+        const playing = initialPlayingRuns([otherSide, noSide, runner, reference], 2)
+
+        expect(swapIntoPlaying(playing, 3, 2)).toEqual(playing)
     })
 })

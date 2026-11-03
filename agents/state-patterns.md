@@ -10,9 +10,9 @@ adding page state, a stored preference or a poll. The history stack itself is in
 
 | Tier | Lives in | Survives | Use for |
 |---|---|---|---|
-| Per-entry page state | `usePageState` in `Main.tsx` | Back/Forward to that entry; its pref fields also restarts | a primary page's query state (search, filters, sort, page, scroll) and its preferences |
+| Per-entry page state | `usePageState` in `Main.tsx` | Back/Forward to that entry; its pref fields also restarts | a primary page's query state (search, filters, sort, page) and its preferences |
 | Page caches | `useState` singletons in `Main.tsx`, passed as `caches` | the session, shared by every entry | fetched data a revisit paints instantly |
-| Per-entry UI bag | `useNavState(key, default)` | Back/Forward to that entry | a detail page's transient UI (tab, search, sort, page, scroll, expansion) |
+| Per-entry UI bag | `useNavState(key, default)` | Back/Forward to that entry | a detail page's transient UI (tab, search, sort, page, expansion) |
 | Component state | `useState` | until unmount | everything else; a view change unmounts the page |
 | Account-synced | `app/utils/userState.ts` | restarts and devices, when signed in | whitelisted preferences that follow the account |
 | Device-local | `localStorage`, `utbt:*` keys | restarts, this device only | preferences that stay with the device |
@@ -63,7 +63,6 @@ export interface FooPageState {
   filtersPanelOpen: boolean
   columnVisibility: Record<FooColumnId, boolean>
   columnOrder: FooColumnId[]
-  scrollTop: number
 }
 export interface FooPageCaches {
   items: Foo[]
@@ -123,11 +122,34 @@ const [sortDir, setSortDir] = useNavState<'asc' | 'desc'>('wrs.sortDir', 'desc')
 - **Defaults derived from data:** store `null` and resolve the default at render; write
   only an explicit user choice. "No choice yet" then stays distinguishable from a choice,
   and the default can follow the data (`event.scheduleView`, `event.streamPanel`).
-- **Scroll:** `useNavScrollRestore(ref, loadingDone, key = 'scrollTop')` returns an
-  `onScroll` handler for the container; it restores once `loadingDone` is true. Give a
-  second scroll container on the same entry its own key.
+- **Scroll** is not page state: the shell remembers where its one scroller was for each
+  history entry and restores it on Back/Forward. A page only calls
+  `useNavScrollRestore(ready)` to hold that restore until its content is in
+  ([navigation.md](navigation.md#scroll-position-and-the-shell-scroller)).
 - Detail cases in `renderView` carry `key={entry.id}`, so each visit remounts and reads its
   own bag ([navigation.md](navigation.md)).
+
+## Refresh handlers and pull-to-refresh
+
+The handler a page registers with `useRegisterPageRefresh` runs from the desktop Refresh
+button and from pull-to-refresh on touch devices
+([navigation.md](navigation.md#page-refresh-registry-and-freshness)):
+
+```tsx
+useRegisterPageRefresh({ onRefresh: refresh, refreshing: loading, disabled: !cooldown.canRefresh })
+```
+
+- **`onRefresh` refetches and keeps state.** Clear the cache layers the page owns
+  (page-cache refs, its `caches` slices) and fetch again. Never reset `state`, `useNavState`
+  keys or other UI state: filters, sort, page, tab and expansion stay as the user left them.
+- **`refreshing`** is true while that refetch runs. The pull spinner stays up while it is
+  true, and for at least 600 ms, so a page that never reports it shows only the minimum spin.
+- **`disabled`** (a cooldown) greys out the desktop button; a pull spins without calling the
+  handler.
+- **No registration:** a pull re-mounts the current view. Per-entry state (`usePageState`,
+  `useNavState`) and the scroll position survive, but the page's own `useState` and anything
+  a child fetched for itself start over. Register a handler when that would lose something
+  the user cares about.
 
 ## Account-synced state (`app/utils/userState.ts`)
 

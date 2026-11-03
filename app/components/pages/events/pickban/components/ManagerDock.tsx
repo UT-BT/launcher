@@ -947,6 +947,7 @@ function DockModal({ title, onClose, action, dismissLabel, maxWidth = '34rem', c
         <Modal
             isOpen
             onClose={onClose}
+            closeOnBackdrop={false}
             offsetSidebar
             portal
             maxWidth={maxWidth}

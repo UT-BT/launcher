@@ -1,9 +1,32 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
+import type { ColumnTier, ResponsiveColumn } from '@/app/components/shared/DataTable'
 
 export interface AdminColumn {
   id: string
   label: string
   required?: boolean
+  tier: ColumnTier
+}
+
+export interface AdminColumnSpec<Row> {
+  width?: string
+  priority?: number
+  sortKey?: string
+  cell: (row: Row) => ReactNode
+}
+
+export function adminResponsiveColumns<Row>(
+  columns: AdminColumn[],
+  order: string[],
+  isVisible: (id: string) => boolean,
+  spec: (id: string) => AdminColumnSpec<Row>,
+): ResponsiveColumn<Row>[] {
+  const byId = new Map(columns.map((c) => [c.id, c]))
+  return order.flatMap((id) => {
+    const column = byId.get(id)
+    if (!column) return []
+    return [{ ...spec(id), id, required: !!column.required, tier: column.tier, label: column.label, hiddenByUser: !isVisible(id) }]
+  })
 }
 
 interface Prefs {
@@ -88,6 +111,13 @@ export function useAdminTable(storageKey: string, columns: AdminColumn[], opts?:
     })
   }, [columns, persist])
 
+  const [cards, setCards] = useState(false)
+
+  const responsiveColumns = useCallback(
+    <Row,>(spec: (id: string) => AdminColumnSpec<Row>) => adminResponsiveColumns(columns, columnOrder, isVisible, spec),
+    [columns, columnOrder, isVisible],
+  )
+
   const setFiltersOpen = useCallback((open: boolean) => {
     setPrefs((prev) => {
       const next = { ...prev, filtersOpen: open }
@@ -100,5 +130,6 @@ export function useAdminTable(storageKey: string, columns: AdminColumn[], opts?:
     isVisible, visibility, visibleCount, toggle, columns,
     columnOrder, columnLabels, onReorder, requiredColumns: required,
     filtersOpen: prefs.filtersOpen, setFiltersOpen,
+    responsiveColumns, cards, onCompactChange: setCards,
   }
 }

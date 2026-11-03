@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { requestLogin } from '@/app/components/shared/AuthRequiredModal'
 import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
@@ -6,6 +6,7 @@ import { useDocumentTitle } from '@/app/components/navigation/useDocumentMeta'
 import { SITE_NAME } from '@/app/components/navigation/titles'
 import { Button } from '@/app/components/ui/button'
 import { Tooltip } from '@/app/components/ui/tooltip'
+import { useDeviceEnvironment } from '@/app/device/useDeviceEnvironment'
 import {
     acceptTeamInvite, declineTeamInvite, fetchMyTeam, fetchTeam, joinTeam,
     type TeamDetail, type TeamRole, type UserProfile,
@@ -18,6 +19,18 @@ import { TeamWorldRecordsPanel } from './TeamWorldRecordsPanel'
 import { ErrorBanner, refreshUserProfile, teamErrorMessage } from './teamsShared'
 
 type ViewerRole = TeamRole | 'none'
+
+const LEAVE_TO_ACCEPT = 'Leave your current team to accept'
+const LEAVE_TO_JOIN = 'Leave your current team to join'
+
+function ReasonBelow({ reason, children }: { reason: string; children: ReactNode }) {
+    return (
+        <div className="flex flex-col items-start gap-1">
+            {children}
+            <p className="text-xs text-muted-foreground">{reason}</p>
+        </div>
+    )
+}
 
 interface TeamDetailsPageProps {
     teamId: string
@@ -37,7 +50,7 @@ export function TeamDetailsPage({ teamId, userProfile, onExitToGallery }: TeamDe
     const [error, setError] = useState<string | null>(null)
     const [joining, setJoining] = useState(false)
     const [inviteBusy, setInviteBusy] = useState(false)
-    const scrollRef = useRef<HTMLDivElement>(null)
+    const touch = useDeviceEnvironment(env => env.touch)
 
     useDocumentTitle(team?.name, SITE_NAME)
 
@@ -67,7 +80,7 @@ export function TeamDetailsPage({ teamId, userProfile, onExitToGallery }: TeamDe
         tooltip: 'Refresh',
     })
 
-    const onScroll = useNavScrollRestore(scrollRef, !loading)
+    useNavScrollRestore(!loading)
 
     const isOwnTeam = team != null && myTeamId != null && myTeamId === team.id
     const myMembership = team ? (team.members ?? []).find(m => String(m.user) === String(myUserId)) : undefined
@@ -136,14 +149,17 @@ export function TeamDetailsPage({ teamId, userProfile, onExitToGallery }: TeamDe
                     {inviteBusy ? 'Working…' : 'Accept'}
                 </Button>
             )
-            return (
+            const inviteActions = (
                 <div className="flex items-center gap-2">
-                    {hasTeam
-                        ? <Tooltip content="Leave your current team to accept">{acceptBtn}</Tooltip>
+                    {hasTeam && !touch
+                        ? <Tooltip content={LEAVE_TO_ACCEPT}>{acceptBtn}</Tooltip>
                         : acceptBtn}
                     <Button size="sm" variant="secondary" disabled={inviteBusy} onClick={decline}>Decline</Button>
                 </div>
             )
+            return hasTeam && touch
+                ? <ReasonBelow reason={LEAVE_TO_ACCEPT}>{inviteActions}</ReasonBelow>
+                : inviteActions
         }
 
         if (iBlocked) {
@@ -153,11 +169,10 @@ export function TeamDetailsPage({ teamId, userProfile, onExitToGallery }: TeamDe
         if (!team.is_open) return undefined
 
         if (hasTeam) {
-            return (
-                <Tooltip content="Leave your current team to join">
-                    <Button size="sm" disabled>Join</Button>
-                </Tooltip>
-            )
+            const joinBtn = <Button size="sm" disabled>Join</Button>
+            return touch
+                ? <ReasonBelow reason={LEAVE_TO_JOIN}>{joinBtn}</ReasonBelow>
+                : <Tooltip content={LEAVE_TO_JOIN}>{joinBtn}</Tooltip>
         }
 
         return (
@@ -168,14 +183,10 @@ export function TeamDetailsPage({ teamId, userProfile, onExitToGallery }: TeamDe
     })()
 
     return (
-        <div className="space-y-4 h-full flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
+        <div className="space-y-4 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
             {error && <div className="shrink-0"><ErrorBanner message={error} /></div>}
 
-            <div
-                ref={scrollRef}
-                onScroll={onScroll}
-                className="flex-1 min-h-0 overflow-auto px-0.5 pb-2"
-            >
+            <div className="overflow-x-auto px-0.5 pb-2">
                 {loading && !team ? (
                     <div className="py-16 text-center text-sm text-muted-foreground">Loading team…</div>
                 ) : !team ? (

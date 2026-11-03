@@ -10,6 +10,7 @@ import { useAdminFilterPresets } from '../components/useAdminFilterPresets'
 import { TableControls } from '../components/TableControls'
 import { PANEL_LABEL, useResetOnChange, useAdminPageSize } from '../components/shared'
 import { MapLink } from '../components/MapLink'
+import { AdminCardFace, adminCardsPlaceholder } from '../components/AdminCardFace'
 import { ROLE_LABELS } from '@/app/utils/roles'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { FilterPanelRow } from '@/app/components/ui/filter-panel-row'
@@ -20,8 +21,9 @@ import { NavLink } from '@/app/components/navigation/NavLink'
 import { cn } from '@/lib/utils'
 import {
   DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow, DataTableCell,
-  DataTableEmpty, DataTableSkeletonRow, type ResponsiveColumn,
+  DataTableEmpty, DataTableSkeletonRow,
 } from '@/app/components/shared/DataTable'
+import { DataTableExpandRow } from '@/app/components/shared/DataTableExpandRow'
 
 const ACTIONS = [
   '', 'user.ban', 'user.unban', 'user.warn', 'user.alias_change', 'user.title_assign', 'user.title_unassign',
@@ -42,10 +44,10 @@ const ACTORS_OPTIONS = [
 ]
 
 const COLUMNS: AdminColumn[] = [
-  { id: 'time', label: 'Time' },
-  { id: 'actor', label: 'Actor' },
-  { id: 'action', label: 'Action' },
-  { id: 'summary', label: 'Summary', required: true },
+  { id: 'time', label: 'Time', tier: 'detail' },
+  { id: 'actor', label: 'Actor', tier: 'detail' },
+  { id: 'action', label: 'Action', tier: 'detail' },
+  { id: 'summary', label: 'Summary', required: true, tier: 'essential' },
 ]
 
 const LAYOUT: Record<string, { width?: string; align?: 'left' | 'center' | 'right' }> = {
@@ -281,10 +283,16 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-function ExpandedDetail({ e, onRollback, busy, onMapSelect }: { e: AuditEntry; onRollback: (e: AuditEntry) => void; busy: boolean; onMapSelect?: (mapName: string) => void }) {
+function ExpandedDetail({ e, onRollback, busy, onMapSelect, inCard = false }: {
+  e: AuditEntry
+  onRollback: (e: AuditEntry) => void
+  busy: boolean
+  onMapSelect?: (mapName: string) => void
+  inCard?: boolean
+}) {
   const role = ROLE_LABELS[e.actor_role]
   return (
-    <div className="bg-card/30 border border-hairline/5 rounded-xl p-5 space-y-5">
+    <div className={cn('bg-card/30 border border-hairline/5 rounded-xl', inCard ? 'p-3 space-y-4' : 'p-5 space-y-5')}>
       <div className="flex items-start justify-between gap-4">
         <div className="text-sm text-foreground"><AuditDescription e={e} onMapSelect={onMapSelect} /></div>
         {e.can_rollback && (
@@ -309,7 +317,7 @@ function ExpandedDetail({ e, onRollback, busy, onMapSelect }: { e: AuditEntry; o
         <Field label="Timestamp">
           <span className="tabular-nums">{formatDateTime(e.created_at) || '—'}</span>
         </Field>
-        <Field label="Actor">
+        {!inCard && <Field label="Actor">
           <div className="flex items-center gap-2">
             {e.actor_id ? (
               <PlayerInfo userId={e.actor_id} alias={e.actor_alias ?? undefined} title={toActiveTitle(e.actor_title)} size="sm" />
@@ -322,10 +330,10 @@ function ExpandedDetail({ e, onRollback, busy, onMapSelect }: { e: AuditEntry; o
               </span>
             )}
           </div>
-        </Field>
-        <Field label="Action">
+        </Field>}
+        {!inCard && <Field label="Action">
           <span className="font-mono text-xs text-muted-foreground">{e.action}</span>
-        </Field>
+        </Field>}
         <Field label="Target">
           {e.target_type || e.target_id ? (
             <div className="flex items-center gap-2 flex-wrap">
@@ -444,10 +452,6 @@ export function AuditLogsSection({ userProfile, onMapSelect, onNavigate }: Admin
     }
   }, [token, rollbackTarget, reload])
 
-  const responsiveColumns = useMemo<ResponsiveColumn[]>(
-    () => tbl.columnOrder.filter(tbl.isVisible).map((id) => ({ id, width: LAYOUT[id]?.width, priority: PRIORITY[id], required: tbl.requiredColumns.has(id) })),
-    [tbl.columnOrder, tbl.isVisible, tbl.requiredColumns],
-  )
   const [resolved, setResolved] = useState<Set<string> | null>(null)
   const handleResolve = useCallback((ids: Set<string>) => { setResolved(ids) }, [])
   const isShown = useCallback((id: string) => tbl.isVisible(id) && (!resolved || resolved.has(id)), [tbl, resolved])
@@ -457,6 +461,39 @@ export function AuditLogsSection({ userProfile, onMapSelect, onNavigate }: Admin
     if (!isShown(id)) return null
     const layout = LAYOUT[id]
     return <DataTableHeaderCell key={id} width={layout?.width} align={layout?.align}>{tbl.columnLabels[id]}</DataTableHeaderCell>
+  }
+
+  const auditCell = (id: string, e: AuditEntry): ReactNode => {
+    switch (id) {
+      case 'time':
+        return <span className="text-muted-foreground text-xs whitespace-nowrap" title={e.created_at ?? ''}>{relTime(e.created_at)}</span>
+      case 'actor':
+        return e.actor_id ? (
+          <PlayerInfo userId={e.actor_id} alias={e.actor_alias ?? undefined} title={toActiveTitle(e.actor_title)} size="sm" />
+        ) : (
+          <span className="font-medium text-muted-foreground">{e.actor_alias || e.actor_id || 'System'}</span>
+        )
+      case 'action':
+        return <span className="font-mono text-xs text-muted-foreground">{e.action}</span>
+      case 'summary':
+        return (
+          <span className="inline-flex items-center gap-2 flex-wrap">
+            <AuditDescription e={e} onMapSelect={onMapSelect} />
+            {e.reverts && (
+              <span className="inline-flex items-center gap-1 rounded border border-amber-500/20 bg-amber-500/[0.08] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-300">
+                <Undo2 className="size-3" /> Rollback
+              </span>
+            )}
+            {e.reverted && (
+              <span className="rounded border border-hairline/15 bg-card/40 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                Rolled back
+              </span>
+            )}
+          </span>
+        )
+      default:
+        return null
+    }
   }
 
   const renderCell = (id: string, e: AuditEntry): ReactNode => {
@@ -470,39 +507,24 @@ export function AuditLogsSection({ userProfile, onMapSelect, onNavigate }: Admin
           </DataTableCell>
         )
       case 'actor':
-        return (
-          <DataTableCell key={id} align={align} className="truncate">
-            {e.actor_id ? (
-              <PlayerInfo userId={e.actor_id} alias={e.actor_alias ?? undefined} title={toActiveTitle(e.actor_title)} size="sm" />
-            ) : (
-              <span className="font-medium text-muted-foreground">{e.actor_alias || e.actor_id || 'System'}</span>
-            )}
-          </DataTableCell>
-        )
-      case 'action':
-        return <DataTableCell key={id} align={align}><span className="font-mono text-xs text-muted-foreground">{e.action}</span></DataTableCell>
+        return <DataTableCell key={id} align={align} className="truncate">{auditCell(id, e)}</DataTableCell>
       case 'summary':
-        return (
-          <DataTableCell key={id} align={align} className="text-sm" title={e.summary || ''}>
-            <span className="inline-flex items-center gap-2 flex-wrap">
-              <AuditDescription e={e} onMapSelect={onMapSelect} />
-              {e.reverts && (
-                <span className="inline-flex items-center gap-1 rounded border border-amber-500/20 bg-amber-500/[0.08] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-300">
-                  <Undo2 className="size-3" /> Rollback
-                </span>
-              )}
-              {e.reverted && (
-                <span className="rounded border border-hairline/15 bg-card/40 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                  Rolled back
-                </span>
-              )}
-            </span>
-          </DataTableCell>
-        )
+        return <DataTableCell key={id} align={align} className="text-sm" title={e.summary || ''}>{auditCell(id, e)}</DataTableCell>
       default:
-        return null
+        return <DataTableCell key={id} align={align}>{auditCell(id, e)}</DataTableCell>
     }
   }
+
+  const columns = tbl.responsiveColumns<AuditEntry>((id) => ({
+    width: LAYOUT[id]?.width, priority: PRIORITY[id], cell: (e) => auditCell(id, e),
+  }))
+
+  const detail = (e: AuditEntry, inCard = false) => (
+    <ExpandedDetail
+      e={e} onRollback={setRollbackTarget} busy={rollbackBusy && rollbackTarget?.id === e.id} onMapSelect={onMapSelect}
+      inCard={inCard}
+    />
+  )
 
   return (
     <SectionShell
@@ -558,7 +580,20 @@ export function AuditLogsSection({ userProfile, onMapSelect, onNavigate }: Admin
         </div>
       )}
 
-      <DataTableShell className="flex-none" responsive={{ columns: responsiveColumns, nameFloorRem: SUMMARY_MIN_WIDTH_REM, extraRem: CHEVRON_WIDTH_REM, onResolve: handleResolve }}>
+      <DataTableShell
+        className="flex-none"
+        responsive={{
+          columns, nameFloorRem: SUMMARY_MIN_WIDTH_REM, extraRem: CHEVRON_WIDTH_REM, onResolve: handleResolve,
+          compactAriaLabel: 'Audit entries', onCompactChange: tbl.onCompactChange,
+          cards: {
+            rows,
+            rowKey: (e) => e.id,
+            face: (e) => <AdminCardFace columns={columns} row={e} />,
+            panel: (e) => detail(e, true),
+            placeholder: adminCardsPlaceholder(loading || total === null, rows.length === 0, 'No audit entries match these filters.'),
+          },
+        }}
+      >
         <DataTableHeaderRow>
           <DataTableHeaderCell width={CHEVRON_WIDTH}> </DataTableHeaderCell>
           {tbl.columnOrder.map((id) => renderHeader(id))}
@@ -581,13 +616,7 @@ export function AuditLogsSection({ userProfile, onMapSelect, onNavigate }: Admin
                   </DataTableCell>
                   {tbl.columnOrder.map((id) => renderCell(id, e))}
                 </DataTableRow>
-                {open && (
-                  <tr className="border-b border-hairline/5 bg-hairline/[0.02]">
-                    <td colSpan={effectiveCount + 1} className="px-4 py-4">
-                      <ExpandedDetail e={e} onRollback={setRollbackTarget} busy={rollbackBusy && rollbackTarget?.id === e.id} onMapSelect={onMapSelect} />
-                    </td>
-                  </tr>
-                )}
+                {open && <DataTableExpandRow colSpan={effectiveCount + 1}>{detail(e)}</DataTableExpandRow>}
               </Fragment>
             )
           })}

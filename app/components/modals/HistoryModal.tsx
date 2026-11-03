@@ -10,7 +10,7 @@ import {
 } from '@/app/components/shared/DataTable'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { TeamHolders } from '@/app/components/shared/TeamHolders'
-import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
+import { CapTimeLink, openCap, openTeamCap } from '@/app/components/shared/CapTimeLink'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { NavLink } from '@/app/components/navigation/NavLink'
@@ -29,14 +29,20 @@ const AUTO_PAGE_SIZE_MAX_ROWS = 20
 
 type HistoryColumnId = 'thumbnail' | 'map' | 'author' | 'time' | 'capped' | 'replay' | 'review'
 
-const HISTORY_COLUMNS: ResponsiveColumn[] = [
-    { id: 'thumbnail', width: '3.5rem', required: true },
-    { id: 'map', required: true },
-    { id: 'author', width: '8rem', required: true },
-    { id: 'time', width: '9rem', required: true },
-    { id: 'capped', width: '9rem', priority: 20 },
-    { id: 'replay', width: '3rem', required: true },
-    { id: 'review', width: '3rem', required: true },
+type HistoryColumn = Omit<ResponsiveColumn, 'id'> & {
+    id: HistoryColumnId
+    align?: 'center'
+    className?: string
+}
+
+const HISTORY_COLUMNS: HistoryColumn[] = [
+    { id: 'thumbnail', width: '3.5rem', required: true, tier: 'essential', label: 'Thumbnail' },
+    { id: 'map', required: true, tier: 'essential', label: 'Map' },
+    { id: 'author', width: '8rem', required: true, tier: 'essential', label: 'Author', align: 'center', className: 'text-muted-foreground' },
+    { id: 'time', width: '9rem', required: true, tier: 'essential', label: 'Time', align: 'center', className: 'font-mono text-sm text-muted-foreground' },
+    { id: 'capped', width: '7rem', priority: 20, tier: 'essential', label: 'Capped', align: 'center', className: 'text-sm text-muted-foreground whitespace-nowrap' },
+    { id: 'replay', width: '3rem', required: true, tier: 'essential', label: 'Watch run', align: 'center', className: 'px-2' },
+    { id: 'review', width: '3rem', required: true, tier: 'essential', label: 'Review', align: 'center', className: 'px-2' },
 ]
 
 function computePageSize(): number {
@@ -108,79 +114,145 @@ export function HistoryModal({
         }
     }, [open])
 
-    const compactRows = loading && caps.length === 0 ? (
-        Array.from({ length: pageSize }).map((_, i) => (
-            <div key={i} role="listitem" className="p-3 border-b border-hairline/5 last:border-0 animate-pulse">
-                <div className="h-14 rounded bg-hairline/5" />
-            </div>
-        ))
-    ) : caps.length === 0 ? (
-        <div role="listitem" className="px-4 py-12 text-center text-sm text-muted-foreground">
-            No cap history yet. Start capping!
-        </div>
-    ) : caps.map(cap => {
-        const medalIcon = getMedalIcon(cap.medal)
-        return (
-            <div key={cap.id} role="listitem" className="grid grid-cols-[3rem_minmax(0,1fr)_auto] gap-3 p-3 border-b border-hairline/5 last:border-0">
-                <MapThumbnail mapName={cap.mapName} className="size-12" />
-                <div className="min-w-0 space-y-1.5">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                        <FavoriteStar name={cap.mapName} isFavorited={favoriteMapNames.has(cap.mapName)} onToggle={onToggleFavorite} size="md" />
-                        {onMapSelect ? (
-                            <NavLink
-                                view="maps-detail"
-                                params={{ mapName: cap.mapName }}
-                                onActivate={() => { onMapSelect(cap.mapName); onOpenChange(false) }}
-                                className="font-bold text-foreground hover:text-accent-300 text-left truncate"
-                            >
-                                {displayMapName(cap.mapName)}
-                            </NavLink>
-                        ) : <span className="font-bold text-foreground truncate">{displayMapName(cap.mapName)}</span>}
+    const openHistoryCap = (cap: SummaryCap) => {
+        if (!cap.isTeam) openCap(cap.id)
+        else if (cap.teamCapId) openTeamCap(cap.teamCapId)
+        else return
+        onOpenChange(false)
+    }
+
+    const historyCell = (id: HistoryColumnId, cap: SummaryCap): React.ReactNode => {
+        switch (id) {
+            case 'thumbnail':
+                return <MapThumbnail mapName={cap.mapName} className="w-12 h-12" />
+            case 'map':
+                return (
+                    <div className="flex items-center gap-2 min-w-0">
+                        <FavoriteStar
+                            name={cap.mapName}
+                            isFavorited={favoriteMapNames.has(cap.mapName)}
+                            onToggle={onToggleFavorite}
+                            size="md"
+                        />
+                        <div className="flex flex-col gap-1 min-w-0">
+                            <div className="flex items-center gap-2 min-w-0">
+                                {onMapSelect ? (
+                                    <NavLink
+                                        view="maps-detail"
+                                        params={{ mapName: cap.mapName }}
+                                        onActivate={() => { onMapSelect(cap.mapName); onOpenChange(false) }}
+                                        className="font-bold text-foreground hover:text-accent-300 underline-offset-4 transition-colors cursor-pointer text-left text-md truncate"
+                                    >
+                                        {displayMapName(cap.mapName)}
+                                    </NavLink>
+                                ) : (
+                                    <span className="font-bold text-foreground text-md truncate">
+                                        {displayMapName(cap.mapName)}
+                                    </span>
+                                )}
+                                {cap.isTeam && (
+                                    <span className="shrink-0 inline-flex items-center h-4 px-1.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-300 text-[9px] font-bold uppercase tracking-wider">
+                                        Team
+                                    </span>
+                                )}
+                            </div>
+                            {cap.isTeam && cap.teamMembers && cap.teamMembers.length > 0 && (
+                                <TeamHolders members={cap.teamMembers} size="sm" />
+                            )}
+                        </div>
                     </div>
-                    {cap.isTeam && cap.teamMembers?.length ? (
-                        <TeamHolders members={cap.teamMembers} size="sm" />
-                    ) : (
-                        <PlayerInfo alias={cap.author} size="sm" />
-                    )}
-                    <span className="block text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
-                        {formatAddedDate(cap.added)}
-                    </span>
-                </div>
-                <div className="flex flex-col items-end justify-between gap-2">
-                    <div className="inline-flex items-center gap-1.5">
-                        {medalIcon && <img src={medalIcon} alt={cap.medal} className="size-4 object-contain" />}
+                )
+            case 'author':
+                return <PlayerInfo alias={cap.author} size="md" className="mx-auto" />
+            case 'time': {
+                const medalIcon = getMedalIcon(cap.medal)
+                return (
+                    <div className="inline-flex items-center justify-center gap-2">
+                        {medalIcon && (
+                            <Tooltip content={cap.medal} side="top">
+                                <img
+                                    src={medalIcon}
+                                    alt={cap.medal}
+                                    className="size-4 object-contain shrink-0 max-w-none"
+                                />
+                            </Tooltip>
+                        )}
                         <CapTimeLink
                             capId={cap.isTeam ? undefined : cap.id}
                             teamCapId={cap.isTeam ? cap.teamCapId ?? undefined : undefined}
                             seconds={cap.time}
                             onNavigate={() => onOpenChange(false)}
-                            className="font-mono font-black text-foreground/90"
+                            className="font-black text-foreground/90 hover:text-foreground tracking-tight"
                         />
                     </div>
-                    <div className="flex items-center gap-1">
-                        {cap.verified && (
-                            <IconActionButton
-                                variant="replay"
-                                icon={Play}
-                                iconFill
-                                tooltip="Watch run"
-                                loading={replay.loadingCapId === cap.id}
-                                onClick={() => replay.openReplay({
-                                    capId: cap.id,
-                                    mapName: cap.mapName,
-                                    time: cap.time,
-                                    alias: userAlias ?? undefined,
-                                })}
-                            />
-                        )}
-                        {onReview && (
-                            <IconActionButton variant="review" icon={MessageSquarePlus} tooltip="Review this map" onClick={() => onReview(cap.mapName)} />
-                        )}
-                    </div>
+                )
+            }
+            case 'capped':
+                return (
+                    <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest whitespace-nowrap">
+                        {formatAddedDate(cap.added)}
+                    </span>
+                )
+            case 'replay':
+                return cap.verified && (
+                    <IconActionButton
+                        variant="replay"
+                        icon={Play}
+                        iconFill
+                        tooltip="Watch run"
+                        loading={replay.loadingCapId === cap.id}
+                        onClick={() => replay.openReplay({
+                            capId: cap.id,
+                            mapName: cap.mapName,
+                            time: cap.time,
+                            alias: userAlias ?? undefined,
+                        })}
+                    />
+                )
+            case 'review':
+                return onReview && (
+                    <IconActionButton
+                        variant="review"
+                        icon={MessageSquarePlus}
+                        tooltip="Review this map"
+                        onClick={() => onReview(cap.mapName)}
+                    />
+                )
+        }
+    }
+
+    const columns: ResponsiveColumn<SummaryCap>[] = HISTORY_COLUMNS.map(({ align: _align, className: _className, ...column }) => ({
+        ...column,
+        cell: cap => historyCell(column.id, cap),
+    }))
+
+    const historyFace = (cap: SummaryCap) => (
+        <div className="grid grid-cols-[3rem_minmax(0,1fr)_auto] gap-3">
+            {historyCell('thumbnail', cap)}
+            <div className="min-w-0 space-y-1.5">
+                {historyCell('map', cap)}
+                <PlayerInfo alias={cap.author} size="sm" />
+                <div>{historyCell('capped', cap)}</div>
+            </div>
+            <div className="flex flex-col items-end justify-between gap-2">
+                <div className="font-mono text-sm">{historyCell('time', cap)}</div>
+                <div className="flex items-center gap-1">
+                    {historyCell('replay', cap)}
+                    {historyCell('review', cap)}
                 </div>
             </div>
-        )
-    })
+        </div>
+    )
+
+    const historyPlaceholder = loading && caps.length === 0 ? (
+        Array.from({ length: pageSize }).map((_, i) => (
+            <div key={i} className="h-14 mx-3 my-2 rounded-lg bg-hairline/5 animate-pulse" />
+        ))
+    ) : caps.length === 0 ? (
+        <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+            No cap history yet. Start capping!
+        </div>
+    ) : undefined
 
     return (
         <>
@@ -196,10 +268,16 @@ export function HistoryModal({
                     <DataTableShell
                         className="flex-none"
                         responsive={{
-                            columns: HISTORY_COLUMNS,
+                            columns,
                             onResolve: handleResolve,
-                            compactContent: compactRows,
                             compactAriaLabel: 'Recent caps',
+                            cards: {
+                                rows: caps,
+                                rowKey: cap => cap.id,
+                                face: historyFace,
+                                onOpen: openHistoryCap,
+                                placeholder: historyPlaceholder,
+                            },
                         }}
                     >
                         <DataTableHeaderRow>
@@ -219,121 +297,15 @@ export function HistoryModal({
                             ) : caps.length === 0 ? (
                                 <DataTableEmpty colSpan={visibleColumnCount} message="No cap history yet. Start capping!" />
                             ) : (
-                                caps.map(cap => {
-                                    const medalIcon = getMedalIcon(cap.medal)
-                                    const isLoadingReplay = replay.loadingCapId === cap.id
-
-                                    return (
-                                        <DataTableRow key={cap.id}>
-                                            {isVisible('thumbnail') && (
-                                                <DataTableCell>
-                                                    <MapThumbnail mapName={cap.mapName} className="w-12 h-12" />
-                                                </DataTableCell>
-                                            )}
-                                            <DataTableCell>
-                                                <div className="flex items-center gap-2 min-w-0">
-                                                    <FavoriteStar
-                                                        name={cap.mapName}
-                                                        isFavorited={favoriteMapNames.has(cap.mapName)}
-                                                        onToggle={onToggleFavorite}
-                                                        size="md"
-                                                    />
-                                                    <div className="flex flex-col gap-1 min-w-0">
-                                                        <div className="flex items-center gap-2 min-w-0">
-                                                            {onMapSelect ? (
-                                                                <NavLink
-                                                                    view="maps-detail"
-                                                                    params={{ mapName: cap.mapName }}
-                                                                    onActivate={() => { onMapSelect(cap.mapName); onOpenChange(false) }}
-                                                                    className="font-bold text-foreground hover:text-accent-300 underline-offset-4 transition-colors cursor-pointer text-left text-md truncate"
-                                                                >
-                                                                    {displayMapName(cap.mapName)}
-                                                                </NavLink>
-                                                            ) : (
-                                                                <span className="font-bold text-foreground text-md truncate">
-                                                                    {displayMapName(cap.mapName)}
-                                                                </span>
-                                                            )}
-                                                            {cap.isTeam && (
-                                                                <span className="shrink-0 inline-flex items-center h-4 px-1.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-300 text-[9px] font-bold uppercase tracking-wider">
-                                                                    Team
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        {cap.isTeam && cap.teamMembers && cap.teamMembers.length > 0 && (
-                                                            <TeamHolders members={cap.teamMembers} size="sm" />
-                                                        )}
-                                                    </div>
-                                                </div>
+                                caps.map(cap => (
+                                    <DataTableRow key={cap.id}>
+                                        {HISTORY_COLUMNS.filter(column => isVisible(column.id)).map(column => (
+                                            <DataTableCell key={column.id} align={column.align} className={column.className}>
+                                                {historyCell(column.id, cap)}
                                             </DataTableCell>
-                                            {isVisible('author') && (
-                                                <DataTableCell align="center" className="text-muted-foreground">
-                                                    <PlayerInfo alias={cap.author} size="md" className="mx-auto" />
-                                                </DataTableCell>
-                                            )}
-                                            {isVisible('time') && (
-                                                <DataTableCell align="center" className="font-mono text-sm text-muted-foreground">
-                                                    <div className="inline-flex items-center justify-center gap-2">
-                                                        {medalIcon && (
-                                                            <Tooltip content={cap.medal} side="top">
-                                                                <img
-                                                                    src={medalIcon}
-                                                                    alt={cap.medal}
-                                                                    className="size-4 object-contain shrink-0 max-w-none"
-                                                                />
-                                                            </Tooltip>
-                                                        )}
-                                                        <CapTimeLink
-                                                            capId={cap.isTeam ? undefined : cap.id}
-                                                            teamCapId={cap.isTeam ? cap.teamCapId ?? undefined : undefined}
-                                                            seconds={cap.time}
-                                                            onNavigate={() => onOpenChange(false)}
-                                                            className="font-black text-foreground/90 hover:text-foreground tracking-tight"
-                                                        />
-                                                    </div>
-                                                </DataTableCell>
-                                            )}
-                                            {isVisible('capped') && (
-                                                <DataTableCell align="center" className="text-sm text-muted-foreground whitespace-nowrap">
-                                                    <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest whitespace-nowrap">
-                                                        {formatAddedDate(cap.added)}
-                                                    </span>
-                                                </DataTableCell>
-                                            )}
-                                            {isVisible('replay') && (
-                                                <DataTableCell align="center" className="px-2">
-                                                    {cap.verified && (
-                                                        <IconActionButton
-                                                            variant="replay"
-                                                            icon={Play}
-                                                            iconFill
-                                                            tooltip="Watch run"
-                                                            loading={isLoadingReplay}
-                                                            onClick={() => replay.openReplay({
-                                                                capId: cap.id,
-                                                                mapName: cap.mapName,
-                                                                time: cap.time,
-                                                                alias: userAlias ?? undefined,
-                                                            })}
-                                                        />
-                                                    )}
-                                                </DataTableCell>
-                                            )}
-                                            {isVisible('review') && (
-                                                <DataTableCell align="center" className="px-2">
-                                                    {onReview && (
-                                                        <IconActionButton
-                                                            variant="review"
-                                                            icon={MessageSquarePlus}
-                                                            tooltip="Review this map"
-                                                            onClick={() => onReview(cap.mapName)}
-                                                        />
-                                                    )}
-                                                </DataTableCell>
-                                            )}
-                                        </DataTableRow>
-                                    )
-                                })
+                                        ))}
+                                    </DataTableRow>
+                                ))
                             )}
                         </tbody>
                     </DataTableShell>

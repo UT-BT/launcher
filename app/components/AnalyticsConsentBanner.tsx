@@ -20,7 +20,7 @@ export function AnalyticsConsentBanner({ onChoice }: { onChoice: () => void }) {
         style={{
           top: 'auto',
           right: 'auto',
-          bottom: 12,
+          bottom: 'calc(12px + var(--tab-bar-offset))',
           height: 'auto',
           minHeight: 0,
           maxHeight: 'none',

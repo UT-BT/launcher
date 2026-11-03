@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { requestLogin } from '@/app/components/shared/AuthRequiredModal'
 import { AlertTriangle } from 'lucide-react'
 import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
@@ -24,11 +25,8 @@ import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import { useMapDownload } from '@/app/hooks/useMapDownload'
 import { MapDownloadStatusModal } from '@/app/components/shared/MapDownloadStatusModal'
-import { ReviewModal } from '@/app/components/modals/ReviewModal'
-import { MapScreenshotModal } from '@/app/components/modals/MapScreenshotModal'
 import { isStaff } from '@/app/utils/roles'
 import { PlaytimeBreakdownModal } from '@/app/components/modals/PlaytimeBreakdownModal'
-import { CapTimeDistributionModal } from '@/app/components/modals/CapTimeDistributionModal'
 import { HeroSection } from './mapDetail/HeroSection'
 import { StatsRow } from './mapDetail/StatsRow'
 import { YourStatsCard } from './mapDetail/YourStatsCard'
@@ -36,6 +34,9 @@ import { MedalCard } from './mapDetail/MedalCard'
 import { LeaderboardCard } from './mapDetail/LeaderboardCard'
 import { ReviewsCard } from './mapDetail/ReviewsCard'
 
+const ReviewModal = lazy(() => import('@/app/components/modals/ReviewModal').then(m => ({ default: m.ReviewModal })))
+const MapScreenshotModal = lazy(() => import('@/app/components/modals/MapScreenshotModal').then(m => ({ default: m.MapScreenshotModal })))
+const CapTimeDistributionModal = lazy(() => import('@/app/components/modals/CapTimeDistributionModal').then(m => ({ default: m.CapTimeDistributionModal })))
 const ActivityChart = lazy(() => import('./mapDetail/ActivityChart'))
 const WorldRecordProgressionModal = lazy(() => import('@/app/components/modals/WorldRecordProgressionModal').then(m => ({ default: m.WorldRecordProgressionModal })))
 
@@ -161,11 +162,10 @@ export function MapDetailPage({
     const isMapAuthor = currentUserId != null && map?.author_ref != null && String(map.author_ref) === String(currentUserId)
     const canEditScreenshot = !!accessToken && (isStaff(userProfile) || (isMapAuthor && !isInactive))
 
-    const scrollRef = useRef<HTMLDivElement>(null)
-    const onScroll = useNavScrollRestore(scrollRef, !loading)
+    useNavScrollRestore(!loading)
 
     return (
-        <div className="space-y-4 h-full flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
+        <div className="space-y-4 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
 
             <HeroSection
                 mapName={mapName}
@@ -206,7 +206,7 @@ export function MapDetailPage({
                 </div>
             )}
 
-            <div ref={scrollRef} onScroll={onScroll} className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-4">
+            <div className="overflow-x-auto pr-1 space-y-4">
                 <StatsRow
                     leaderboard={leaderboard}
                     playtime={playtime}
@@ -269,30 +269,34 @@ export function MapDetailPage({
                 </div>
             </div>
 
-            <ReviewModal
-                open={reviewModalOpen}
-                onOpenChange={setReviewModalOpen}
-                accessToken={accessToken}
-                mapName={mapName}
-                initialScores={initialReviewScores}
-                onSuccess={() => setRefreshKey(k => k + 1)}
-            />
+            <LazyModalGate open={reviewModalOpen}>
+                <ReviewModal
+                    open={reviewModalOpen}
+                    onOpenChange={setReviewModalOpen}
+                    accessToken={accessToken}
+                    mapName={mapName}
+                    initialScores={initialReviewScores}
+                    onSuccess={() => setRefreshKey(k => k + 1)}
+                />
+            </LazyModalGate>
 
-            <MapScreenshotModal
-                open={screenshotModalOpen}
-                onClose={() => setScreenshotModalOpen(false)}
-                accessToken={accessToken}
-                mapName={mapName}
-                hasScreenshot={!!map?.has_screenshot}
-                screenshotVersion={map?.screenshot_updated}
-                onUploaded={updated => setMap(prev => prev ? {
-                    ...prev,
-                    has_screenshot: updated.has_screenshot,
-                    screenshot_updated: updated.screenshot_updated,
-                } : prev)}
-            />
+            <LazyModalGate open={screenshotModalOpen}>
+                <MapScreenshotModal
+                    open={screenshotModalOpen}
+                    onClose={() => setScreenshotModalOpen(false)}
+                    accessToken={accessToken}
+                    mapName={mapName}
+                    hasScreenshot={!!map?.has_screenshot}
+                    screenshotVersion={map?.screenshot_updated}
+                    onUploaded={updated => setMap(prev => prev ? {
+                        ...prev,
+                        has_screenshot: updated.has_screenshot,
+                        screenshot_updated: updated.screenshot_updated,
+                    } : prev)}
+                />
+            </LazyModalGate>
 
-            <Suspense fallback={null}>
+            <LazyModalGate open={wrModalOpen}>
                 <WorldRecordProgressionModal
                     isOpen={wrModalOpen}
                     onClose={() => setWrModalOpen(false)}
@@ -300,7 +304,7 @@ export function MapDetailPage({
                     entries={wrProgression}
                     currentUserId={currentUserId ?? undefined}
                 />
-            </Suspense>
+            </LazyModalGate>
 
             <PlaytimeBreakdownModal
                 open={playtimeModalOpen}
@@ -310,16 +314,18 @@ export function MapDetailPage({
                 currentUserId={currentUserId ?? undefined}
             />
 
-            <CapTimeDistributionModal
-                open={distributionModalOpen}
-                onClose={() => setDistributionModalOpen(false)}
-                mapName={mapName}
-                leaderboard={leaderboard}
-                map={map}
-                currentUserId={currentUserId ?? undefined}
-                isTeam={isTeam}
-                teamLeaderboard={teamLeaderboard}
-            />
+            <LazyModalGate open={distributionModalOpen}>
+                <CapTimeDistributionModal
+                    open={distributionModalOpen}
+                    onClose={() => setDistributionModalOpen(false)}
+                    mapName={mapName}
+                    leaderboard={leaderboard}
+                    map={map}
+                    currentUserId={currentUserId ?? undefined}
+                    isTeam={isTeam}
+                    teamLeaderboard={teamLeaderboard}
+                />
+            </LazyModalGate>
 
             <MapDownloadStatusModal
                 state={mapDownload.download}
