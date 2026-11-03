@@ -62,7 +62,7 @@ function VideoTile({ slot, rect, frozen, attachMedia, onVideoFailed, controller,
         <div
             role="group"
             aria-label={run.alias?.trim() || run.user}
-            className={cn('run-compare-tile bg-black', frozen && 'is-frozen')}
+            className={cn('run-compare-tile bg-black', frozen && 'is-frozen', slot.highlighted && 'is-highlighted')}
             style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }}
         >
             {slot.src ? (

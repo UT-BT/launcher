@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigation } from '@/app/components/navigation/NavigationContext'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
@@ -8,6 +8,7 @@ import { Spinner } from '@/app/components/ui/spinner'
 import { displayMapName } from '@/app/utils/format'
 import type { UserProfile } from '@/app/utils/api'
 import { loadReplayVideoVolume, saveReplayVideoVolume } from '@/app/utils/replayVideoVolume'
+import { useAfterPaint } from './analysis/useAfterPaint'
 import { AddRuns } from './drawer/AddRuns'
 import { RunsDrawer } from './drawer/RunsDrawer'
 import { rosterRows } from './drawer/rosterRows'
@@ -28,6 +29,8 @@ import { useCueSync } from './transport/useCueSync'
 import { parseCompareQuery } from './url/compareUrl'
 import './runCompare.css'
 
+const RunAnalysis = lazy(() => import('./analysis/RunAnalysis'))
+
 interface RunComparePageProps {
     compare: string
     userProfile?: UserProfile
@@ -46,10 +49,11 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
     const [stage, setStage] = useState<HTMLElement | null>(null)
     const theaterHeight = useTheaterHeight(theater)
     const stageBox = useStageBox(stage)
+    const [speedRun, setSpeedRun] = useNavState<string | null>('compare.speedRun', null)
     const comparisons = useComparisons(useMemo(() => composeCompareModel({ query: compare, runs: loaded }).lanes.requests, [compare, loaded]))
     const composed = useMemo(
-        () => composeCompareModel({ query: compare, runs: loaded, videos, failedVideos, stageBox, comparisons }),
-        [compare, loaded, videos, failedVideos, stageBox, comparisons],
+        () => composeCompareModel({ query: compare, runs: loaded, videos, failedVideos, stageBox, comparisons, speedRun }),
+        [compare, loaded, videos, failedVideos, stageBox, comparisons, speedRun],
     )
     const settled = useRef<CompareModel | null>(null)
     const model = useMemo(() => holdWhileAdding(composed, settled.current), [composed])
@@ -109,6 +113,7 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
 
     const notice = model.noticeLine ?? storedNotice
     const hasTiles = model.race.tiles.length > 0
+    const analysisReady = useAfterPaint(!model.loading && model.runs.length > 0)
     const fillsViewport = hasTiles || drawerOpen
 
     return (
@@ -165,6 +170,12 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
                         onToggleSync={() => edit({ kind: 'sync', mode: model.sync.mode === 'position' ? 'race' : 'position' })}
                     />
                 </div>
+            )}
+
+            {analysisReady && !model.loading && model.runs.length > 0 && (
+                <Suspense fallback={null}>
+                    <RunAnalysis analysis={model.analysis} controller={controller} cueSync={cueSync} onSpeedRun={setSpeedRun} />
+                </Suspense>
             )}
         </div>
     )

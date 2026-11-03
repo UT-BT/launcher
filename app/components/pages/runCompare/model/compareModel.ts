@@ -2,6 +2,7 @@ import { displayMapName } from '@/app/utils/format'
 import type { LoadedComparisons } from '../loading/comparisons'
 import type { LoadedSoloRuns, SoloRun } from '../loading/soloRuns'
 import { MAX_COMPARE_RUNS, parseCompareQuery, serializeCompareQuery, type CompareNotice, type CompareParam } from '../url/compareUrl'
+import { composeAnalysis, EMPTY_ANALYSIS, withTileHighlight, type AnalysisModel } from './analysisModel'
 import { composeCues, EMPTY_CUES, type CueModel } from './cueModel'
 import { composeLanes, EMPTY_LANES, withLaneBadges, type LanesModel } from './laneModel'
 import { composeSync, EMPTY_SYNC, withRaceClock, type SyncModel } from './positionModel'
@@ -23,6 +24,7 @@ export interface CompareModelInput {
     failedVideos?: ReadonlySet<string>
     stageBox?: StageBox | null
     comparisons?: LoadedComparisons
+    speedRun?: string | null
 }
 
 export interface CompareModel {
@@ -38,6 +40,7 @@ export interface CompareModel {
     lanes: LanesModel
     cues: CueModel
     sync: SyncModel
+    analysis: AnalysisModel
 }
 
 const NOUNS: Record<CompareParam, [string, string]> = {
@@ -110,6 +113,13 @@ function loadDrop(run: SoloRun | null, map: string | null): LoadDropReason | nul
     return null
 }
 
+type RacePart = ReturnType<typeof racePart>
+
+function analysisPart(part: RacePart, comparisons: LoadedComparisons, speedRun: string | null): RacePart & { analysis: AnalysisModel } {
+    const analysis = composeAnalysis(part.race, part.lanes, part.cues, comparisons, speedRun)
+    return { ...part, race: withTileHighlight(part.race, analysis.speed.highlighted), analysis }
+}
+
 function racePart(input: RaceInput, comparisons: LoadedComparisons): { race: RaceModel; lanes: LanesModel; cues: CueModel; sync: SyncModel } {
     const race = composeRace(input)
     const lanes = composeLanes(race, comparisons)
@@ -118,12 +128,12 @@ function racePart(input: RaceInput, comparisons: LoadedComparisons): { race: Rac
     return { race: withLaneBadges(race, marked), lanes: marked, cues: composeCues(race, lanes, comparisons), sync }
 }
 
-export function composeCompareModel({ query, runs: loaded, videos, failedVideos, stageBox, comparisons }: CompareModelInput): CompareModel {
+export function composeCompareModel({ query, runs: loaded, videos, failedVideos, stageBox, comparisons, speedRun }: CompareModelInput): CompareModel {
     const decoded = parseCompareQuery(query)
     const seekSeconds = decoded.state.t
 
     if (decoded.state.runs.some(capId => !loaded.has(capId))) {
-        return { loading: true, runs: [], map: null, drops: [], noticeLine: null, title: null, query, seekSeconds, race: EMPTY_RACE, lanes: EMPTY_LANES, cues: EMPTY_CUES, sync: EMPTY_SYNC }
+        return { loading: true, runs: [], map: null, drops: [], noticeLine: null, title: null, query, seekSeconds, race: EMPTY_RACE, lanes: EMPTY_LANES, cues: EMPTY_CUES, sync: EMPTY_SYNC, analysis: EMPTY_ANALYSIS }
     }
 
     const kept: SoloRun[] = []
@@ -155,12 +165,12 @@ export function composeCompareModel({ query, runs: loaded, videos, failedVideos,
         title: compareTitle(kept, map),
         query: serializeCompareQuery(state),
         seekSeconds,
-        ...racePart({
+        ...analysisPart(racePart({
             runs: kept,
             state,
             videos: videos ?? new Map(),
             failedVideos: failedVideos ?? new Set(),
             stageBox: stageBox ?? null,
-        }, comparisons ?? new Map()),
+        }, comparisons ?? new Map()), comparisons ?? new Map(), speedRun ?? null),
     }
 }

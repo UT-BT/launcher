@@ -19,6 +19,7 @@ export interface VideoSlot {
     src: string | null
     badges: string[]
     result: string
+    highlighted?: boolean
 }
 
 export type TileSlot = VideoSlot

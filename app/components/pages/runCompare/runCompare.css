@@ -43,6 +43,11 @@
   opacity: 0.6;
 }
 
+.run-compare-tile.is-highlighted {
+  outline: 2px solid var(--color-accent-400);
+  outline-offset: -2px;
+}
+
 .run-compare-tile-wait {
   position: absolute;
   inset: 0;

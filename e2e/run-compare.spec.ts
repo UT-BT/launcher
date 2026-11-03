@@ -820,3 +820,86 @@ test.describe('tile overlays and audio', () => {
         expect(await historyLength(page)).toBe(lengthBefore)
     })
 })
+
+function analysis(page: Page): Locator {
+    return page.getByRole('region', { name: 'Analysis' })
+}
+
+test.describe('solo analysis', () => {
+    test('the analysis loads after the page has painted', async ({ page }) => {
+        let release = () => {}
+        const held = new Promise<void>(resolve => { release = resolve })
+        let requested = false
+        await page.route(/\/analysis\/RunAnalysis\.tsx/, async route => {
+            requested = true
+            await held
+            await route.continue()
+        })
+        await mockApi(page, { videos: [PATRIK, ARTUREK], comparisons: { [PATRIK]: 'short' } })
+        await page.goto(`/compare?runs=${PATRIK},${ARTUREK}`)
+
+        await expect(transport(page)).toBeVisible()
+        await expect.poll(() => requested).toBe(true)
+        await expect(analysis(page)).toHaveCount(0)
+
+        release()
+
+        await expect(analysis(page)).toBeVisible()
+        await expect(analysis(page).getByRole('heading', { name: 'Sector Matrix' })).toBeVisible()
+    })
+
+    test('clicking a sector row cues every video', async ({ page }) => {
+        await mockApi(page, { videos: [PATRIK, ARTUREK], comparisons: { [PATRIK]: 'short' } })
+        await page.goto(`/compare?runs=${PATRIK},${ARTUREK}`)
+        await expect(lane(page, 'PatriK')).toContainText('Replay')
+        await expect.poll(async () => (await clocksOf(page)).length).toBe(2)
+
+        await analysis(page).getByRole('button', { name: 'Cue S4' }).click()
+
+        await expect.poll(() => rounded(page)).toEqual([3.74, 3.549])
+        await expect(transport(page).getByRole('combobox', { name: 'Cue' })).toHaveValue('S4')
+    })
+
+    test('clicking the cumulative chart seeks every video', async ({ page }) => {
+        await mockApi(page, { videos: [PATRIK, ARTUREK], comparisons: { [PATRIK]: 'short' } })
+        await page.goto(`/compare?runs=${PATRIK},${ARTUREK}`)
+        await expect(lane(page, 'PatriK')).toContainText('Replay')
+        await expect.poll(async () => (await clocksOf(page)).length).toBe(2)
+
+        const chart = analysis(page).locator('.run-compare-cumulative')
+        await chart.scrollIntoViewIfNeeded()
+        const box = (await chart.boundingBox())!
+        await chart.click({ position: { x: box.width / 2, y: box.height / 2 } })
+
+        await expect.poll(async () => Math.min(...(await clocksOf(page)).map(clock => clock.time))).toBeGreaterThan(1)
+        await expect(transport(page).getByRole('slider', { name: 'Timeline' })).not.toHaveAttribute('aria-valuetext', /^0:00\.000/)
+    })
+
+    test('choosing a run for speed highlights its tile', async ({ page }) => {
+        await mockApi(page, { videos: [PATRIK, ARTUREK, DECL], comparisons: { [PATRIK]: 'short' } })
+        await page.goto(`/compare?runs=${ARTUREK},${PATRIK},${DECL}`)
+        await expect(lane(page, 'PatriK')).toContainText('Replay')
+        await expect(tile(page, 'PatriK')).not.toHaveClass(/is-highlighted/)
+
+        await analysis(page).getByRole('button', { name: 'Speed for PatriK' }).click()
+
+        await expect(analysis(page).getByRole('button', { name: 'Speed for PatriK' })).toHaveAttribute('aria-pressed', 'true')
+        await expect(tile(page, 'PatriK')).toHaveClass(/is-highlighted/)
+        await expect(tile(page, 'Arturek')).not.toHaveClass(/is-highlighted/)
+    })
+
+    test('the analysis has no horizontal overflow at 390 px with many runs', async ({ page }) => {
+        await page.setViewportSize({ width: 390, height: 844 })
+        await mockApi(page, { videos: [PATRIK, ARTUREK], comparisons: { [PATRIK]: 'short' } })
+        await page.goto(`/compare?runs=${ARTUREK},${PATRIK},${DECL},${SHX},${FIERD},${BUN},${BLUE}`)
+        await expect(analysis(page).getByRole('heading', { name: 'Sector Matrix' })).toBeVisible()
+
+        expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1)
+        for (const panel of await analysis(page).locator('.run-compare-panel').all()) {
+            expect(await panel.evaluate(element => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1)
+        }
+        for (const table of await analysis(page).locator('table').all()) {
+            expect(await table.evaluate(element => element.getBoundingClientRect().right)).toBeLessThanOrEqual(390)
+        }
+    })
+})
