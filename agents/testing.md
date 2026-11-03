@@ -812,7 +812,7 @@ further steps. A second drop fails the test.
 |---|---|---|
 | `.github/workflows/ci.yml`, job `Fast gate` | pull request into `staging` or `main`, push to `staging` | Windows, Node 20: `npm ci`, `typecheck:web`, `typecheck:e2e`, `lint`, `test` (Windows-only suites included), `docs:check`, `build:web`, `check:bundle`, one step each |
 | `.github/workflows/ci.yml`, jobs `Playwright (1/4)` to `Playwright (4/4)` | the same | Windows, Node 20: `npm ci`, `npx playwright install chromium`, `npm run test:e2e -- --shard=<n>/4` (all three projects, against the `-win32` baselines, split across four parallel jobs); on failure each shard uploads its `playwright-report/` and `test-results/` as artifacts |
-| `.github/workflows/ci.yml`, job `Mobile suite` | the same | Ubuntu, Node 20: `npm ci`, `npx playwright install --with-deps webkit chromium`, `npm run test:mobile -- --workers=4` (the PR subset on the built bundle, mocked data only, [Mobile suite](#mobile-suite)); whatever the result, it uploads the gallery as `mobile-gallery` and the HTML report as `mobile-playwright-report` |
+| `.github/workflows/ci.yml`, jobs `Mobile suite (1/6)` to `(6/6)`, then `Mobile suite` | the same | Ubuntu, Node 20. Each shard runs `npm ci`, `npx playwright install --with-deps webkit chromium`, then `npm run test:mobile -- --workers=4 --shard=<n>/6` (the PR subset on the built bundle, mocked data only, [Mobile suite](#mobile-suite)). Whatever the result, each shard uploads its gallery as `mobile-gallery-<n>` and its HTML report as `mobile-playwright-report-<n>`. On one runner the subset took over 30 minutes; six shards keep it near the `Playwright` shards' time. The `Mobile suite` job needs every shard and passes only when all six did, so branch protection requires that one check name |
 | `.github/workflows/mobile-nightly.yml`, jobs `Mobile full matrix (1/4)` to `(4/4)` | daily at 03:00 UTC on the default branch, manual (Run workflow, any branch) | Ubuntu, Node 20: the same install, then `npm run test:mobile:full -- --workers=4 --shard=<n>/4`; each shard uploads its gallery as `mobile-gallery-full-<n>` and its report as `mobile-playwright-report-full-<n>` |
 | `.github/workflows/web.yml` | push to `main`, manual | Ubuntu, Node 20: `npm ci`, `npm run quality:web` (`typecheck:web`, `typecheck:e2e`, `lint`, `test`, `build:web`, `check:bundle`), then a deploy that waits for approval |
 | `.github/workflows/release.yml` | push to `main` | Windows: builds and publishes the installer when the `package.json` version has no tag yet; no tests |
@@ -833,8 +833,8 @@ The mobile jobs pass `--reporter=list,github,html,./e2e/mobile/gallery-reporter.
 `--reporter` option replaces the config's reporters, so the gallery reporter is listed again
 ([Gallery](#gallery)). They run on Linux because the suite has no screenshot baselines, and
 `--workers=4` matches the runner's four cores. Open a gallery artifact's `index.html` to see every
-surface the run crawled, and the report's `index.html` for a failing test's error and trace; a
-nightly run splits both across its four shards. The nightly run gates
+surface the run crawled, and the report's `index.html` for a failing test's error and trace. A
+pull request run splits both across its six shards, and a nightly run across its four. The nightly run gates
 nothing: read its failures as ledger entries the full matrix is missing or new regressions at sizes
 the PR subset skips.
 

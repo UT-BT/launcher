@@ -106,10 +106,14 @@ jobs:
           path: test-results/
           retention-days: 7
 
-  mobile:
-    name: Mobile suite
+  mobile-shard:
+    name: Mobile suite (${{ matrix.shard }}/6)
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -126,8 +130,8 @@ jobs:
       - name: Install WebKit and Chromium
         run: npx playwright install --with-deps webkit chromium
 
-      - name: Mobile suite (PR subset)
-        run: npm run test:mobile -- --workers=4 --reporter=list,github,html,./e2e/mobile/gallery-reporter.ts
+      - name: Mobile suite (PR subset, shard ${{ matrix.shard }}/6)
+        run: npm run test:mobile -- --workers=4 --shard=${{ matrix.shard }}/6 --reporter=list,github,html,./e2e/mobile/gallery-reporter.ts
         env:
           PLAYWRIGHT_HTML_OPEN: never
 
@@ -135,7 +139,7 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: mobile-gallery
+          name: mobile-gallery-${{ matrix.shard }}
           path: test-results/mobile-gallery/
           retention-days: 7
 
@@ -143,6 +147,17 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: mobile-playwright-report
+          name: mobile-playwright-report-${{ matrix.shard }}
           path: playwright-report/
           retention-days: 7
+
+  mobile:
+    name: Mobile suite
+    runs-on: ubuntu-latest
+    needs: mobile-shard
+    if: ${{ always() }}
+    steps:
+      - name: Every mobile shard passed
+        run: |
+          echo "Mobile shards: ${{ needs.mobile-shard.result }}"
+          test "${{ needs.mobile-shard.result }}" = "success"
