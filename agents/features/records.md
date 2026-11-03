@@ -68,7 +68,9 @@ cap detail read adds `has_demo` and the member's full `cap`.
 
 Label a run's state with `teamRunStateLabel` (`app/utils/teamRunState.ts`): Incomplete, Pending,
 Verified, Disallowed. Team Cap Detail, the team-run chip on Cap Detail and the map's team
-leaderboard all use it, so a run reads "Pending" until it is verified.
+leaderboard all use it, so a run reads "Pending" until it is verified. Each roster member on Team
+Cap Detail carries a shield for its own run (Verified, Pending demo, Disallowed): a tooltip on
+desktop, the shield and its label inline on touch devices.
 
 ## Medals
 

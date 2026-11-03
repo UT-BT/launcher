@@ -357,7 +357,8 @@ instead of `16rem`, `lg:pl-64` or `256px`:
 `"right"`. Top and bottom flip when there is no room. `right` sits 10px right of the
 trigger, vertically centred, clamped 8px inside the titlebar's bottom and the viewport
 bottom, with the arrow on the trigger's middle. Use `right` for everything in the
-collapsed rail, so tooltips open over the page instead of the rail.
+collapsed rail, so tooltips open over the page instead of the rail. On touch devices a tap opens
+the tooltip instead of hover ([shared-components.md](shared-components.md)).
 
 ## Tables
 

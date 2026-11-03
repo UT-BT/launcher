@@ -75,3 +75,7 @@ body::before {
     font-size: max(16px, 1em);
   }
 }
+
+[data-tooltip-trigger] :disabled {
+  pointer-events: none;
+}

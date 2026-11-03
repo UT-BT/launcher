@@ -115,6 +115,7 @@
     "app/hooks/useCopyFeedback.ts",
     "app/hooks/useReplayWatch.ts",
     "app/styles/modal.css",
+    "app/styles/shell.css",
     "app/utils/format.ts",
     "app/utils/roles.ts",
     "app/utils/scoreColors.ts",

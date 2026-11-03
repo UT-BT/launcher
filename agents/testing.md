@@ -670,6 +670,14 @@ spec that is red today is marked `test.fail()`, with a note naming the ticket th
   WebKit has no multi-touch input, so there the spread is synthetic pointer events on the frame.
   The double tap uses the touchscreen on both engines. `e2e/map-screenshot-viewer.spec.ts`
   checks that desktop keeps the plain hero and that Change still opens the screenshot editor.
+- `tap-tooltips.spec.ts`: a tap on the Rank pill of a player's page opens its tooltip; a tap on the
+  page heading, a second tap on the pill, and a scroll made by code each close it. A tap on the
+  disabled Watch in an unverified cap's card panel opens "No replay — cap not verified" and stays on
+  the page. Signed in with a team of their own, a viewer of an open team sees Join disabled with
+  "Leave your current team to join" inline, and a viewer invited to a team sees Accept disabled
+  with "Leave your current team to accept" inline. A team owner's Manage Members modal labels its
+  promote and kick buttons in text, and each Team Cap Detail roster member shows its run status as
+  text. None of them opens a floating tooltip.
 - `bottom-tabs.spec.ts`: at 390×844, each tab opens its page and is the only one with
   `aria-current="page"`, a map's page highlights Maps, Menu opens the drawer and a drawer link
   closes it, and with `main` scrolled to the bottom no element of the content ends below the

@@ -37,6 +37,7 @@ import {
     type UserProfile,
 } from '@/app/utils/api'
 import { teamRunStateLabel } from '@/app/utils/teamRunState'
+import { useDeviceEnvironment } from '@/app/device/useDeviceEnvironment'
 
 const ReplayVideoModal = lazy(() => import('@/app/components/shared/ReplayVideoModal').then(m => ({ default: m.ReplayVideoModal })))
 const DemoDownloadStatusModal = lazy(() => import('@/app/components/shared/DemoDownloadStatusModal').then(m => ({ default: m.DemoDownloadStatusModal })))
@@ -75,6 +76,26 @@ function rosterColumnCount(n: number): number {
     if (n <= 1) return 1
     if (n <= 3) return n
     return Math.ceil(Math.sqrt(n))
+}
+
+const MEMBER_RUN_STATUS = {
+    disallowed: { label: 'Disallowed', tone: 'text-red-300', Icon: ShieldAlert },
+    verified: { label: 'Verified', tone: 'text-emerald-300', Icon: ShieldCheck },
+    pending: { label: 'Pending demo', tone: 'text-amber-300', Icon: ShieldAlert },
+}
+
+function MemberRunStatus({ disallowed, verified }: { disallowed: boolean; verified: boolean }) {
+    const touch = useDeviceEnvironment(env => env.touch)
+    const { label, tone, Icon } = MEMBER_RUN_STATUS[disallowed ? 'disallowed' : verified ? 'verified' : 'pending']
+    const icon = <Icon className={cn('size-3.5 shrink-0', tone)} />
+
+    if (!touch) return <Tooltip content={label} side="top">{icon}</Tooltip>
+    return (
+        <span className={cn('ml-auto inline-flex items-center gap-1 shrink-0 text-[10px] font-semibold uppercase tracking-wider', tone)}>
+            {icon}
+            {label}
+        </span>
+    )
 }
 
 interface TeamRankContextRow {
@@ -512,17 +533,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                                             title={member.active_title}
                                                             size="sm"
                                                         />
-                                                        {member.disallowed ? (
-                                                            <Tooltip content="Disallowed" side="top">
-                                                                <ShieldAlert className="size-3.5 text-red-300 shrink-0" />
-                                                            </Tooltip>
-                                                        ) : (
-                                                            <Tooltip content={member.verified ? 'Verified' : 'Pending demo'} side="top">
-                                                                {member.verified
-                                                                    ? <ShieldCheck className="size-3.5 text-emerald-300 shrink-0" />
-                                                                    : <ShieldAlert className="size-3.5 text-amber-300 shrink-0" />}
-                                                            </Tooltip>
-                                                        )}
+                                                        <MemberRunStatus disallowed={member.disallowed} verified={member.verified} />
                                                     </div>
 
                                                     <div className="flex items-center justify-between gap-2">
