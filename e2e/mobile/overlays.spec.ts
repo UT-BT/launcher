@@ -66,12 +66,8 @@ async function tapCentre(page: Page, target: Locator) {
     await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2)
 }
 
-async function closeDrawer(page: Page) {
-    const backdrop = page.getByRole('button', { name: 'Close navigation' })
-    const box = await backdrop.boundingBox()
-    if (!box) throw new Error('the drawer is not open')
-    await backdrop.click({ position: { x: box.width - 8, y: box.height / 2 } })
-    await expect(backdrop).toHaveCount(0)
+async function expectDrawerClosed(page: Page) {
+    await expect(page.getByRole('button', { name: 'Close navigation' })).toHaveCount(0)
     await settleLayout(page)
 }
 
@@ -156,7 +152,7 @@ for (const size of SIZES) {
 
             await page.keyboard.press('Escape')
             await expect(confirm).toHaveCount(0)
-            await closeDrawer(page)
+            await expectDrawerClosed(page)
             await expectPageFreed(page)
         })
 
@@ -177,7 +173,7 @@ for (const size of SIZES) {
 
             await tapCentre(page, close)
             await expect(placeholder).toHaveCount(0)
-            await closeDrawer(page)
+            await expectDrawerClosed(page)
             await expectPageFreed(page)
         })
 

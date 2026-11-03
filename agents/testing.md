@@ -603,6 +603,15 @@ spec that is red today is marked `test.fail()`, with a note naming the ticket th
   after it closes `main` takes a swipe again. A multi-filter dropdown and a `modal={false}` menu
   fit the visible area and hold the page still too. Signed-in overlays sign in by seeding the
   stored login and answering the profile request.
+- `overlay-history.spec.ts`: Back closes the open drawer and keeps the page, and the next Back
+  goes to the previous page; a drawer link takes the drawer's history entry, so the page it
+  opens adds one entry; closing the drawer from its backdrop leaves no entry behind; Back
+  closes an open sheet (the Compare run picker) before it leaves the page. History entries are
+  counted with `history.length`, and a closed overlay's entry with `history.state`.
+  `e2e/overlay-history.spec.ts` runs the modal cases on `desktop-chromium` and
+  `mobile-chromium`: one modal, stacked modals, a close button then Back and Forward, and a
+  link inside a modal. `e2e/history-leave-guards.spec.ts` adds the guarded page with Settings
+  open.
 - `admin-cards.spec.ts`: the tiered admin tables at 390×844, signed in as staff through the
   `admin` entry. Each table's main action works from its card: Manage opens the user, the title,
   patch and news editors open, a draft opens and a publish is selected (both by the request they

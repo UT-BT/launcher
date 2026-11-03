@@ -1,6 +1,1 @@
-[
-  { "surface": "home:signed-in/settings", "viewport": "360x780", "engine": "chromium" },
-  { "surface": "home:signed-in/settings", "viewport": "915x412", "engine": "chromium" },
-  { "surface": "home:signed-in/settings", "viewport": "390x844", "engine": "webkit" },
-  { "surface": "home:signed-in/settings", "viewport": "844x390", "engine": "webkit" }
-]
+[]

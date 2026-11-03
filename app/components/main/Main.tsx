@@ -82,9 +82,9 @@ const TeamCapDetailPage = lazy(() => import('@/app/components/pages/TeamCapDetai
 const NewsDetailPage = lazy(() => import('@/app/components/pages/NewsDetailPage').then(m => ({ default: m.NewsDetailPage })))
 const AdminPage = lazy(() => import('@/app/components/pages/admin/AdminPage').then(m => ({ default: m.AdminPage })))
 const ConfirmModal = lazy(() => import('@/app/components/shared/ConfirmModal').then(m => ({ default: m.ConfirmModal })))
+const FavoritesSyncModal = lazy(() => import('@/app/components/shared/FavoritesSyncModal').then(m => ({ default: m.FavoritesSyncModal })))
 import { InstallationBanner } from '@/app/components/InstallationBanner'
 import { UpdateBanner } from '@/app/components/updater/UpdateBanner'
-import { FavoritesSyncModal } from '@/app/components/shared/FavoritesSyncModal'
 import { AuthRequiredModal, LOGIN_REQUIRED_EVENT, type LoginRequest } from '@/app/components/shared/AuthRequiredModal'
 import { PatreonModal } from '@/app/components/modals/PatreonModal'
 import { DevImpersonateModal, DevImpersonationBanner } from '@/app/components/modals/DevImpersonateModal'
@@ -968,13 +968,17 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           </AppLayout>
         </NavigationContext.Provider>
       </div>
-      <FavoritesSyncModal
-        open={syncModal.open}
-        dbFavorites={syncModal.db}
-        iniFavorites={syncModal.ini}
-        onResolve={resolveSync}
-        onDismiss={dismissSync}
-      />
+      {capabilities.ini && (
+        <Suspense fallback={null}>
+          <FavoritesSyncModal
+            open={syncModal.open}
+            dbFavorites={syncModal.db}
+            iniFavorites={syncModal.ini}
+            onResolve={resolveSync}
+            onDismiss={dismissSync}
+          />
+        </Suspense>
+      )}
       <PatreonModal />
       <AuthRequiredModal request={loginRequest} onClose={() => setLoginRequest(null)} />
       {import.meta.env.DEV && <DevImpersonateModal />}

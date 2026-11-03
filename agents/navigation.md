@@ -78,7 +78,8 @@ useUnsavedChanges(dirty, 'The tournament format has edits you have not saved yet
 through `registerLeaveGuard` and arms `beforeunload` while `dirty`. The guard covers in-app
 moves and, on web, the browser's own Back/Forward, which arrive as `popstate` and pass the
 same check ([URL sync](#routes-and-url-sync-web-build)); `beforeunload` covers a reload, a
-closed tab and a hard navigation.
+closed tab and a hard navigation. On web, a Back that only closes an open overlay stays on
+the page and asks nothing; the next Back asks ([Overlay history](#overlay-history-web-build)).
 
 When a guard returns a message, `Main` parks the move in `pendingLeave` and shows a
 "Leave without saving?" confirm; confirming calls `commitNavigate` (or the parked
@@ -169,19 +170,24 @@ segments as a route needs and checks exact segment counts, so
 segments and anything else under `/events/:slug` stays on `event-detail`.
 
 On web (`useUrlSync.ts`; on desktop `useUrlSync` returns `null` and `pushUrlForEntry`
-no-ops) the in-memory stack is master and browser history mirrors it. Each history entry's
+no-ops) the in-memory stack is master and browser history mirrors it. The bookkeeping lives in
+`createHistorySync` (`historySync.ts`), which `useUrlSync` creates once over
+`window.history` and attaches to the stack in `Main`. Each history entry's
 state is `{ navId, position }`: the stack entry's `id` and the entry's place in the tab's
-history, one more than the entry it was pushed from.
+history, one more than the entry it was pushed from. Overlay entries add `overlay`
+([below](#overlay-history-web-build)).
 
-- The boot effect reads `position` from `history.state` (0 when there is none, so a reload
-  keeps it) and `replaceState`s the canonical path of the seeded entry.
+- The first attach reads `position` from `history.state` (0 when there is none, so a reload
+  keeps it) and `replaceState`s the canonical path of the seeded entry. Later attaches (a
+  re-run effect, StrictMode) don't boot again.
 - `commitNavigate` calls `pushUrlForEntry(entry)` (`pushState({ navId, position }, …)` with
   the next position). A push also drops a confirmed position that never got its `popstate`
   (a `go` past either end of history), so it can't wave through a later move.
 - In-app Back/Forward (already past `Main`'s guard check) mark the neighbouring position as
   confirmed and call `history.go(-1)` / `go(1)`.
 - The `popstate` handler ignores a `position` equal to the current one, then runs the
-  [leave guards](#leave-guards) unless the move was confirmed. When a guard blocks, it calls
+  [leave guards](#leave-guards) unless the move was confirmed or lands on the active stack
+  entry (an overlay entry of the page on screen). When a guard blocks, it calls
   `history.go(current - target)`, so the URL returns to the current entry with forward
   history intact and the cursor never moves, and hands the move to `Main` through
   `onBlocked({ message, move })`. `Main` shows the same confirm; Leave runs `move`, which
@@ -216,8 +222,57 @@ fallback, and `routes.contract.test.ts` pins that. Mechanism:
 entry.params)`, which sets `document.title` from `titleForRoute` and the canonical link on
 every navigation. A detail page refines the title with `useDocumentTitle(name)` once its
 data is in; React runs child effects before the parent's, so the generic title lands first
-and the specific one replaces it. Don't move this into `useUrlSync`'s effect: its deps are
-refs and setters, so it doesn't re-run on navigation.
+and the specific one replaces it. Don't move this into `useUrlSync`'s attach effect: its
+deps are refs and setters, so it doesn't re-run on navigation.
+
+## Overlay history (web build)
+
+On web, an open overlay owns a browser history entry, so the system back gesture (the iOS
+edge swipe, Android back) and the browser's Back close the top-most overlay instead of
+leaving the page. Desktop has no URL history: `capabilities.overlayHistory` is off there, no
+entry is written and its nav stack is untouched (`useUrlSync.test.ts`). There is still one
+page-navigation mechanism, the nav stack; overlay entries never move it.
+
+- **Which overlays.** Every shared `Modal` while `isOpen`; overlays on `useModalBehaviour`
+  that take an Escape handler (the sign-out confirm, the tutorial card, a closable
+  `ErrorModal`; the boot connection error has no close and takes no entry); and the drawer
+  while it is open below `lg`. Each calls `useOverlayHistory(open, close)` from
+  `useUrlSync.ts`. The legacy `shared/Modal` (`ConfirmModal`, including the "Leave without
+  saving?" confirm), popovers and card expand panels (inline) take none.
+- **Opening** pushes an entry with the page's URL and state `{ navId, position, overlay }`:
+  the page's `navId`, the next position and `overlay`, the entry's depth above the page
+  entry. It takes a position like any entry, so the leave guards' put-back arithmetic holds.
+  Stacked overlays push one entry each.
+- **Back** onto a lower entry closes every overlay whose entry is above it, top-most first,
+  through the overlay's own close handler. The page and URL stay, and a move that stays on
+  the active stack entry runs no leave guard: a guarded page with an open overlay closes it
+  first and asks on the next Back. An overlay whose close handler refuses (a busy modal)
+  loses its entry anyway, so the next Back leaves the page.
+- **Closing through the overlay's own UI** (close, backdrop, Escape, the drawer swipe) goes
+  back over its entry once the close commits, so the next Back leaves the page and
+  Back/Forward keep no dead step. An overlay that replaces another in the same commit (the
+  Settings loading placeholder and Settings; the drawer and the modal a drawer user-menu
+  item opens, which closes the drawer) takes over its entry.
+- **A page navigation from an open overlay** (a link in a modal, a drawer link) replaces the
+  top overlay entry with the new page instead of pushing, so Back from the new page returns
+  to the page under the overlay. An overlay still open after the navigation (an app-level
+  modal) gets a fresh entry on the new page once it commits: `useUrlSync` settles when the
+  active entry changes. A navigation that arrives while the history is still going back over
+  a closed overlay's entry waits for that move to land, and the landing leaves the new page
+  on screen.
+- **Forward never reopens an overlay.** An overlay entry whose overlay is gone is passed in
+  the direction of travel: Back always passes it; Forward passes it when a page was pushed
+  after it (`through`, set on an overlay entry when anything is pushed from it), and
+  otherwise returns to where it started. Forward after closing a modal therefore does
+  nothing, and nothing reopens.
+- **A reload** drops open overlays, and the entry it reloaded on becomes a page entry, as
+  before. Entries from before a reload carry that document's `navId`s, which the new stack
+  reuses from 0: a known gap of the URL sync, not of overlays.
+- **Tests.** `historySync.test.ts` drives `createHistorySync` against a fake history.
+  `e2e/overlay-history.spec.ts` (desktop and phone projects) covers a modal, stacked modals,
+  a close button then Back and Forward, and a link inside a modal; `history-leave-guards.spec.ts`
+  the guarded page with Settings open; `e2e/mobile/overlay-history.spec.ts` the drawer and a
+  sheet on both engines.
 
 ## Event detail tabs
 
@@ -401,7 +456,9 @@ prevents the default; a held key (`repeat`) toggles once.
 **Mobile drawer.** Below `lg` (`AppLayout` reads `belowLg` from the device environment, the
 same boundary as the `lg` classes) the same `aside` is an off-canvas drawer behind a top bar. Closed, it
 is `inert`; open, it traps focus, closes on Escape and returns focus to what opened it (the
-menu button, or the tab bar's Menu tab while it is still on screen). It opens only from those
+menu button, or the tab bar's Menu tab while it is still on screen). On web, Back closes it
+([Overlay history](#overlay-history-web-build)), and a user-menu item that opens a modal
+(Settings, Change title, Sign out) closes it. It opens only from those
 two controls and closes with a swipe to the left (`useDrawerSwipe`, with the pure thresholds
 in `app/components/layout/drawerSwipe.ts`). Keep `inert` and the breakpoint in step when
 changing the shell ([web-target.md](web-target.md)).

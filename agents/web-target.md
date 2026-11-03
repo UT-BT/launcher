@@ -46,6 +46,7 @@ loads on first paint. Build commands are in [build.md](build.md).
 | File logging | console fallback for warn/error | `window.logging` presence in `app/hooks/use-logger.ts` |
 | Titlebar, window controls, zoom | not mounted (web entry has no `WindowContextProvider`) | `app/renderer-web.tsx` |
 | Launcher telemetry (`logLauncherStartup`) | skipped | `IS_WEB` in `app/utils/api.ts` |
+| Overlay history (Back closes the top-most modal or the drawer) | on: each open overlay owns a history entry ([navigation.md](navigation.md#overlay-history-web-build)) | `capabilities.overlayHistory` in `useOverlayHistory` (`useUrlSync.ts`) |
 | Back/Forward/Refresh bar (`NavHistoryBar`) | not rendered; browser chrome owns history and reload, pages revalidate on mount ([navigation.md](navigation.md)) | `IS_WEB` in `NavHistoryBar.tsx` |
 | Navigation triggers | real `<a href>` (new tab, copy link work); buttons on desktop | `NavLink` ([navigation.md](navigation.md)) |
 | Stream tab: Cams panel, Kit card, Guide | Cams shows the Red/Blue card then a "needs the desktop launcher" notice; Kit takes a typed folder and downloads the ZIP instead of picking a folder and extracting | `capabilities.camTool` (`camsPanelView` in `events/stream/panels/camsGate.ts`, `KitSection`, `GuidePanel`) |
@@ -404,6 +405,10 @@ Phones parse the web entry chunk on first visit, so it stays lean.
   and a phone project that the Map Detail distribution modal fetches its code only on the
   first tap, behind the loading state, and not again on a reopen, and on desktop that the
   WR progression modal no longer fetches its chunk when the page renders.
+- **`FavoritesSyncModal` is lazy behind `capabilities.ini`.** The ini favourites conflict
+  modal renders in `Main.tsx` only with that capability, from `lazy()` inside
+  `<Suspense fallback={null}>`. The web never fetches it. Desktop mounts it closed at
+  startup, so its chunk is in before a conflict opens it, and nothing shows while it loads.
 - **Which modals stay eager.** Each lazy boundary costs about 1 KiB gzip of app JS, so a
   modal gets its own chunk when it would otherwise sit in the entry, when its module is
   already a lazy chunk elsewhere, or when it drags a heavy dependency onto its page
@@ -412,8 +417,8 @@ Phones parse the web entry chunk on first visit, so it stays lean.
   (`PlaytimeBreakdownModal`, `MapDownloadStatusModal`, `MapReviewsModal`,
   `PlayerReviewsModal`, `PlayerFavoritesModal`, `SlotPickerModal`, `BetModal`,
   `BackersModal`, the admin section modals). Also eager: modals that open themselves from
-  an event or at boot (`PatreonModal`, `AuthRequiredModal`, `FavoritesSyncModal`, the
-  connection `ErrorModal` in `app.tsx`), desktop-only modals, and `VideoCompareModal`,
+  an event or at boot (`PatreonModal`, `AuthRequiredModal`, the
+  connection `ErrorModal` in `app.tsx`), other desktop-only modals, and `VideoCompareModal`,
   which clears its video durations in an `open` effect: mounted from a Suspense retry that
   effect can run after the videos' `loadedmetadata`, which leaves Play disabled.
 - **`vendor-react` chunk.** `manualChunks` in `vite.config.web.ts` pins `react`,

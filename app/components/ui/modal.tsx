@@ -7,6 +7,7 @@ import { getDeviceEnvironment, subscribeDeviceEnvironment } from '@/app/device/u
 import { sheetBounds } from './modalSheet'
 import { focusFirst, isTopMostModal, openerOf, returnFocus, trapTab } from './modalFocus'
 import { lockShellScroll } from './scrollLock'
+import { useOverlayHistory } from '@/app/components/navigation/useUrlSync'
 
 interface ModalProps {
     isOpen: boolean
@@ -48,6 +49,8 @@ export function Modal({
         if (!isOpen) return
         return lockShellScroll()
     }, [isOpen])
+
+    useOverlayHistory(isOpen, onClose)
 
     useEffect(() => {
         if (!isOpen) return

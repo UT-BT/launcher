@@ -285,6 +285,9 @@ whole thead through the `theadDataAttr` hook:
   `closeOnBackdrop={false}` when the modal holds unsaved input (a form, a draft, a crop, a
   selection) or a destructive or one-time step (a confirm that overwrites, deletes or reassigns,
   a token shown once, a running sync).
+  On web, an open modal also owns a browser history entry: the back gesture or the browser's
+  Back closes the top-most modal through `onClose`, and closing it any other way consumes the
+  entry ([navigation.md](navigation.md#overlay-history-web-build)). Desktop writes no entry.
 - **Touch** (`hover: none`): the backdrop is a solid `bg-black/80` tint, the panel drops any
   `backdrop-blur`, and the header close grows to 44px. Desktop keeps the blur and the 32px close.
 - **Scroll lock.** An open modal holds the counted scroll lock (`ui/scrollLock.ts`): the shell
@@ -308,7 +311,8 @@ whole thead through the `theadDataAttr` hook:
 - **Overlays with their own markup** follow the same rules through
   `useModalBehaviour(panelRef, isOpen, onEscape?, lockScroll?)` (`ui/useModalBehaviour.ts`): the
   counted lock (unless `lockScroll` is false), the focus trap and return, and Escape for the
-  top-most overlay when `onEscape` is given. The
+  top-most overlay when `onEscape` is given; with `onEscape`, the web's Back calls it too
+  (overlay history). The
   overlay portals into `document.body` itself, puts `data-modal-backdrop` on the panel's parent
   and stacks at `z-50` or higher, above the top bar (`z-30`) and the drawer. `ErrorModal` (no
   Escape with `disableClose`), the sign-out confirm (`layout/SignOutConfirm.tsx`; Escape and

@@ -1,12 +1,15 @@
 import { useEffect, useLayoutEffect, type RefObject } from 'react'
 import { focusFirst, isTopMostModal, openerOf, returnFocus, trapTab } from './modalFocus'
 import { lockShellScroll } from './scrollLock'
+import { useOverlayHistory } from '@/app/components/navigation/useUrlSync'
 
 export function useModalBehaviour(panelRef: RefObject<HTMLElement | null>, isOpen: boolean, onEscape?: () => void, lockScroll = true) {
     useLayoutEffect(() => {
         if (!isOpen || !lockScroll) return
         return lockShellScroll()
     }, [isOpen, lockScroll])
+
+    useOverlayHistory(isOpen && !!onEscape, () => onEscape?.())
 
     useEffect(() => {
         if (!isOpen || !onEscape) return

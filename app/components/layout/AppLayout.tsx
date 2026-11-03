@@ -7,6 +7,7 @@ import { buildNavSections, isEventLinkLive, isNavItemActive, navItemDestination,
 import type { NavParams } from '@/app/components/navigation/NavigationContext'
 import { useNavigation } from '@/app/components/navigation/NavigationContext'
 import { ShellScrollRestore, useShellScroller } from '@/app/components/navigation/useNavScrollRestore'
+import { useOverlayHistory } from '@/app/components/navigation/useUrlSync'
 import { useViewportRecovery } from '@/app/components/layout/useViewportRecovery'
 import { useDrawerSwipe } from '@/app/components/layout/useDrawerSwipe'
 import { BottomTabBar } from '@/app/components/layout/BottomTabBar'
@@ -95,6 +96,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
     }
     const showTabBar = useDeviceEnvironment(showsBottomTabs)
     useDrawerSwipe(sidebarRef, isMobileViewport && mobileNavOpen, closeDrawer)
+    useOverlayHistory(isMobileViewport && mobileNavOpen, closeDrawer)
     const { entry } = useNavigation()
     const currentParams = entry.params
     useShellScroller(shellScrollerRef, shellContentRef)
@@ -316,10 +318,10 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                     patreonTier={patreonTier}
                     loginError={loginError}
                     onLogin={() => { setLoginError(null); void auth.login() }}
-                    onChangeTitle={() => setIsChangeTitleOpen(true)}
+                    onChangeTitle={() => { closeDrawer(); setIsChangeTitleOpen(true) }}
                     onSettingsIntent={() => void loadSettingsModal()}
-                    onOpenSettings={() => setIsSettingsOpen(true)}
-                    onSignOut={() => setShowLogoutConfirm(true)}
+                    onOpenSettings={() => { closeDrawer(); setIsSettingsOpen(true) }}
+                    onSignOut={() => { closeDrawer(); setShowLogoutConfirm(true) }}
                 />
             </aside>
 
