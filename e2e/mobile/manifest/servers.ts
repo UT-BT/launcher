@@ -7,6 +7,7 @@ export const servers: MobileRouteEntry = {
     tier: 'public',
     path: '/servers',
     fixtures: 'servers',
+    decorative: ['column 1'],
     storage: seen('utbt:serversPageTutorial:v1'),
     ready: listed({
         heading: 'Servers',

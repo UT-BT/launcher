@@ -22,6 +22,7 @@ export const homeSignedIn: MobileRouteEntry = {
     tier: 'role-gated',
     path: '/',
     fixtures: 'home-signed-in',
+    decorative: ['column 1'],
     storage: signedInStorage(),
     ready: steps(heading('Your Latest Caps'), shows(page => page.getByRole('button', { name: 'See More' }))),
     modals: [

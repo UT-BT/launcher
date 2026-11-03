@@ -6,6 +6,7 @@ export const events: MobileRouteEntry = {
     tier: 'public',
     path: '/events',
     fixtures: 'events',
+    decorative: [],
     ready: listed({
         heading: 'Events',
         rows: data => rowsOf(data.api('/tournaments'), 'items'),

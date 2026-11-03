@@ -6,6 +6,7 @@ export const capItAll: MobileRouteEntry = {
     tier: 'public',
     path: '/cap-it-all',
     fixtures: 'cap-it-all',
+    decorative: [],
     ready: listed({
         heading: 'Cap It All',
         rows: data => rowsOf(data.api('/v2/leaderboards/cap_it_all', 'limit=10&offset=0')),

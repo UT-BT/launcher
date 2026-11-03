@@ -7,6 +7,7 @@ export const players: MobileRouteEntry = {
     tier: 'public',
     path: '/players',
     fixtures: 'players',
+    decorative: [],
     storage: seen('utbt:playersPageTutorial:v1'),
     ready: listed({
         heading: 'Players',

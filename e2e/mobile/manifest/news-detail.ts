@@ -6,5 +6,6 @@ export const newsDetail: MobileRouteEntry = {
     tier: 'public',
     path: '/news/15',
     fixtures: 'news-detail',
+    decorative: [],
     ready: heading('2v2 Group Stage has completed - on to the play-offs!'),
 }

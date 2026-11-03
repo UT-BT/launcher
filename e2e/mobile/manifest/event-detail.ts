@@ -13,6 +13,7 @@ export const eventDetail: MobileRouteEntry = {
     tier: 'public',
     path: `/events/${EVENT_SLUG}`,
     fixtures: 'event-detail',
+    decorative: [],
     ready: heading(EVENT_NAME),
     subViews: [
         { ...tab('teams', 'Stats'), stress: { pr: 'long-text' } },

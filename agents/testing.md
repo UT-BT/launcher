@@ -327,6 +327,7 @@ policy on Home: it drops the seeded consent and reloads once, so the banner show
 | `path` | the URL that opens the view |
 | `fixtures` | the name of a fixture set in `e2e/mobile/fixtures/index.ts` |
 | `ready` | waits on measurable state that says the page shows its data, such as a heading or a fixture row; never a timeout. Steps receive the served set's data (`data.api(path, query)`, `data.gateway(path, query)`), so a list page waits for its first served row, or for its empty text when a stress variant served none |
+| `decorative` | required: the header labels of the columns the [table and card rules](#tables-and-cards) may drop, for every table the entry's surfaces show, such as a thumbnail that repeats the map name or a bar that repeats a number. An unlabelled header is named by its position, `column <n>`; `[]` when nothing is decorative |
 | `storage` | `localStorage` seeds, such as a tutorial already seen. Analytics consent is always seeded `denied` |
 | `subViews` | tabs and sub-views: `id`, `label`, and either `path` (reached by URL) or `open` (an action on the entry's page), plus `ready` (optional, required with `open`: `manifest.test.ts` checks it), `modals`, `stress` and `skip` |
 | `modals` | `id`, `label`, `open` (acts, then waits until the modal shows its content), an optional `root` (the CSS selector the rules measure, `[data-modal-backdrop]` by default) and `skip` |
@@ -463,14 +464,15 @@ An entry or tab opts in with `stress: { pr: <variant> }`. The full matrix crawls
 
 Each crawl test opens one surface at one viewport on one engine, with a 60 s base timeout (WebKit
 needs about 20 s for a large recorded page, and close to 30 s on a busy machine). It waits for the
-layout to settle: fonts loaded, on-screen images complete, no finite animation running, and the
-same layout signature for three animation frames. Then it runs each rule as a `test.step`: first
-the rules that only measure, then the gallery shot, then the interaction rules, which close the
-modal, scroll, navigate or rotate, in the table's order. Crawl tests are marked `test.slow()`, which
-triples that to 180 s. Boxes are measured against `window.visualViewport`. On a modal surface, tap
-targets, form controls, axe and `modal-fits` measure only the modal's root, and the top bar rule
-does not apply. An interaction rule that throws, for example because a tap target never appears,
-reports `fail` with "the rule could not finish" instead of ending the test.
+layout to settle: fonts loaded, on-screen images complete, no finite animation running, and the same
+layout signature for three animation frames. Then it runs each rule as a `test.step`: first the
+rules that only measure, then the gallery shot, then the interaction rules, which widen the page,
+close the modal, scroll, navigate or rotate, in the table's order. Crawl tests are marked
+`test.slow()`, which triples that to 180 s. Boxes are measured against `window.visualViewport`. On a
+modal surface, tap targets, form controls, axe, `modal-fits` and the table rules measure only the
+modal's root, and the top bar rule does not apply. An interaction rule that throws, for example
+because a tap target never appears, reports `fail` with "the rule could not finish" instead of
+ending the test.
 
 When the error boundary or the dev server's error overlay shows while a surface opens, the crawl
 stops opening it and runs the rules on what is on screen. A crash then fails `no-error-boundary`,
@@ -486,6 +488,8 @@ its modal, the rules that measure the modal's root report `n/a`.
 | `form-controls-16px` | every rendered text input, select, textarea and contenteditable has a computed font size of at least 16 px (every crawl device is touch) |
 | `tap-targets-44px` | every rendered, enabled link, button, input, select, summary and ARIA widget is at least 44×44 px. A link inside a sentence is exempt, and a checkbox or radio is measured by its label |
 | `modal-fits` | on a modal surface, the top-most modal's box sits inside the visual viewport, points along its top and bottom edges hit the box, and its close control (a button whose label or text starts with "Close") sits inside the visual viewport with `elementFromPoint` at its centre hitting the control. `n/a` on a page surface |
+| `table-shows-every-column` | on touch, each table the surface shows at desktop width either shows every non-decorative column (a labelled column by its header, an unlabelled one by its cells' content in the first rows) or renders cards; one that shows neither fails. `n/a` when every table renders cards or none shows at desktop width ([Tables and cards](#tables-and-cards)) |
+| `cards-expose-every-column` | each of the first three cards holds every non-decorative value of the same desktop row, on its face or once its expand control is open. `n/a` when no table renders cards, or no desktop rows to compare them with ([Tables and cards](#tables-and-cards)) |
 | `scroll-top-after-modal` | on a modal surface, tapping the close control closes the modal, and after a swipe that moves the page down one viewport height and a swipe back to the top the page is at the real top (below). A down swipe that scrolls nothing while `main` holds more than it shows fails, so a page left locked by the modal is caught. If the tap fails or the control can't be tapped, Escape closes the modal and the detail says so; a modal neither closes fails. `n/a` on a page surface |
 | `back-restores-scroll` | on a page surface, after a swipe of one viewport height, a new navigation through the drawer (to World Records, or Home from World Records) starts at the top, and Back returns the swiped scroller to within 4 px of where it was, measured once the surface's own `ready` (its tab's or sub-view's, else the page's) holds again. `n/a` on a modal surface or when nothing scrolls |
 | `rotation-recovers` | after the viewport's width and height are swapped, a modal surface's modal (reopened if an earlier rule closed it) still passes the `modal-fits` checks and closes, and after a swipe that moves the page down one viewport height, scrolling to the top reaches the real top. The page stays rotated, so this rule runs last |
@@ -504,6 +508,57 @@ A rule returns `pass`, `fail` or `n/a` plus detail lines. To add one, put its id
 `rules/ids.ts` (with `changesPage: true` if it changes the page, so it runs after the gallery shot),
 its check in `rules/<id>.ts` and the pair in `rules/index.ts`. Then seed the ledger with the
 failures that predate it.
+
+#### Tables and cards
+
+The two table rules share one observation per crawl test (`rules/observe-tables.ts`), and the
+judging is pure (`e2e/mobile/tables.ts`, unit-tested in `tables.test.ts`):
+
+1. The page is widened to 1920×1080. Each rendered `<table>` that is not inside another table
+   (inside the modal's root on a modal surface) gets its header labels and the values of its first
+   three body rows. A value is a line of a cell's visible text, or, for a cell with no text, its
+   images' `alt` and its labels. Values without a letter or digit (`—`) don't count. A control
+   with no text is a control value: it is named by its `aria-label` or `title`, its Lucide icon
+   (`lucide-play`) and, when it is the cell's only such control, its column's header label. Only a
+   control on the card with one of those names (as its label, title, text or icon) holds it, and
+   the control's own label is not asked for again as text. A card that prints "Watch" without a
+   Watch button fails, and one "Actions" menu doesn't stand in for a Play and a Download button.
+2. Each layout change waits for the page to hold still for 400 ms, because the table shell's width
+   hook debounces resizes by 150 ms and `settleLayout` alone returns before the switch.
+3. Back at the crawl's size, the same table shell (the `<table>`'s parent) shows a `<table>`, a
+   `role="list"` of cards, or nothing. The shell's outermost tables and lists are counted in order,
+   and each table takes the one at its desktop position, so two tables under one parent stay apart
+   even when only one turns into cards.
+4. Card N is read, then every collapsed expand control in the first three cards is tapped, and the
+   cards are read again after each tap; what any read finds counts, so a list that remounts on the
+   tap doesn't lose its face, and cards that open one at a time keep what each one showed. Card N's text, its labels and controls, plus the panels its open controls name in
+   `aria-controls`, must hold every non-decorative value of desktop row N. Text is read both as
+   rendered lines and as separate text nodes, so `<span>3</span><span>caps</span>` holds `3`. A
+   value matches only as a whole word: case is ignored, any run of whitespace (line breaks too)
+   counts as one space, and the text either side must not be a letter or digit, nor a `.`, `,` or
+   `:` that joins it to another number. So a rank `1` is not found in `21`, a difficulty `5` not in
+   `4.5`, and `1` and `2` on separate lines don't read as `12`.
+5. The cards are collapsed again, and the viewport and every scroll position are put back, so the
+   interaction rules after these two see the surface as it was. A card that stays open fails both
+   rules, and a failure while reading doesn't hide behind the clean-up.
+
+What the crawl expects of a card, so later card work passes these rules without changes:
+
+- The cards' `role="list"` sits inside the table's parent, at the table's place among that
+  parent's tables and lists; wrappers around it are fine. Cards are its outermost
+  `role="listitem"` or `<li>` elements, in the table's row order.
+- The expand control is a button (or `role="button"`) with `aria-expanded`, and no
+  `aria-haspopup`; a dropdown trigger is not an expand control. The panel sits inside the card, or
+  the control's `aria-controls` names it.
+- An icon-only action on desktop is a control on the card too: the same icon, or a control labelled
+  with the action's name (or the column's header, when the column holds that one action only).
+- A value may read differently on a card only by case or by how much whitespace separates its
+  words: a card that says "2d" for the table's "2 days ago" fails.
+
+Decorative columns are declared per manifest entry
+([Mobile route manifest](#mobile-route-manifest)). Today they are the thumbnail columns of Maps, the
+server browser and the History modal. A list that desktop shows only in a hover card, such as a
+server's player names, is not in a cell, so these rules can't see it.
 
 ### Interaction specs
 
@@ -586,10 +641,10 @@ viewport and engine combinations it ran: failures go in, passes come out, and ev
 run stays. The PR subset is seeded for every surface, role-gated ones included. The full matrix is
 seeded only for `home`, `maps`, `maps/new`, `cap-detail`, `cap-detail/compare-run` and the `news`
 stress variants at the viewports outside the PR subset, and those entries predate the modal,
-rotation and scroll rules and, for all but the `news` variants, the recorded data. Role-gated
-surfaces have no full-matrix entries yet. The other stress variants the PR subset does not crawl
-hold only the entries of a partial run. Seed the rest with `npm run test:mobile:ledger:full` before
-a full run gates anything.
+rotation, scroll, table and card rules and, for all but the `news` variants, the recorded data.
+Role-gated surfaces have no full-matrix entries yet. The other stress variants the PR subset does
+not crawl hold only the entries of a partial run. Seed the rest with
+`npm run test:mobile:ledger:full` before a full run gates anything.
 
 - A fix deletes the entries it fixes, by hand or by regenerating after the fix.
 - Only a failure that predates your change goes in. Fix a regression your change caused instead of

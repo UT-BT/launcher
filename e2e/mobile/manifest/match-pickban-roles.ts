@@ -12,6 +12,7 @@ export const matchPickbanCaptain: MobileRouteEntry = {
     tier: 'role-gated',
     path,
     fixtures: 'match-pickban-captain',
+    decorative: [],
     storage: { ...signedInStorage(CAPTAIN), ...motionOff },
     ready: shows(page => page.getByRole('region', { name: 'Your team’s controls' }).or(page.getByLabel('Your team’s controls')).first()),
 }
@@ -22,6 +23,7 @@ export const matchPickbanManager: MobileRouteEntry = {
     tier: 'role-gated',
     path,
     fixtures: 'match-pickban-manager',
+    decorative: [],
     storage: { ...signedInStorage(), ...motionOff },
     ready: shows(page => page.getByRole('heading', { name: 'Match Control' })),
 }

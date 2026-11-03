@@ -9,6 +9,7 @@ export const eventTeam: MobileRouteEntry = {
     tier: 'public',
     path: `/events/${EVENT_SLUG}/teams/${EVENT_TEAM_ID}`,
     fixtures: 'event-team',
+    decorative: [],
     ready: heading('Matches'),
     stress: { pr: 'long-text' },
 }

@@ -6,6 +6,7 @@ export const achievements: MobileRouteEntry = {
     tier: 'public',
     path: '/achievements',
     fixtures: 'achievements',
+    decorative: [],
     ready: listed({
         heading: 'Achievements',
         rows: data => rowsOf(data.api('/v2/achievements/definitions'), 'achievements'),

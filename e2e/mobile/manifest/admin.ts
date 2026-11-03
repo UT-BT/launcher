@@ -36,6 +36,7 @@ export const admin: MobileRouteEntry = {
     tier: 'role-gated',
     path: '/admin',
     fixtures: 'admin',
+    decorative: [],
     storage: signedInStorage(),
     ready: steps(heading('Overview'), shown('Active bans')),
     subViews: [

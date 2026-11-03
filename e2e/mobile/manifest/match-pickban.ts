@@ -9,6 +9,7 @@ export const matchPickban: MobileRouteEntry = {
     tier: 'public',
     path: `/events/${EVENT_SLUG}/matches/${MATCH_ID}`,
     fixtures: 'match-pickban',
+    decorative: [],
     ready: shows(page => page.getByRole('region', { name: 'Picks & Bans Stage' })
         .or(page.getByRole('heading', { name: 'Picks & Bans page not available' }))
         .first()),

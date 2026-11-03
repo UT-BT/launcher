@@ -6,6 +6,7 @@ export const news: MobileRouteEntry = {
     tier: 'public',
     path: '/news',
     fixtures: 'news',
+    decorative: [],
     ready: listed({
         heading: 'News',
         rows: data => rowsOf(data.api('/v2/news'), 'items'),

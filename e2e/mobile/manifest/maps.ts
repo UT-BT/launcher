@@ -18,6 +18,7 @@ export const maps: MobileRouteEntry = {
     tier: 'public',
     path: '/maps',
     fixtures: 'maps',
+    decorative: ['column 1'],
     storage: seen('utbt:mapsPageTutorial:v1'),
     ready: mapsReady(PAGE),
     modals: [pageTutorial('Maps')],

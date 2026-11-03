@@ -14,6 +14,7 @@ export const mapsDetail: MobileRouteEntry = {
     tier: 'public',
     path: `/maps/${MAP_NAME}`,
     fixtures: 'maps-detail',
+    decorative: [],
     ready: leaderboardShown,
     stress: { pr: 'long-text' },
     modals: [

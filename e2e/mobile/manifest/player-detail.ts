@@ -33,6 +33,7 @@ export const playerDetail: MobileRouteEntry = {
     tier: 'public',
     path: `/players/${PLAYER_ID}`,
     fixtures: 'player-detail',
+    decorative: [],
     ready: shows(page => page.getByRole('list', { name: 'Caps' }).filter({ hasText: ANY_TEXT })
         .or(page.locator('table tbody tr').filter({ hasText: ANY_TEXT }))
         .or(page.getByText(/^No caps/))

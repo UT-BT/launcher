@@ -46,6 +46,7 @@ export interface MobileRouteEntry {
     path: string
     fixtures: string
     ready: PageStep
+    decorative: readonly string[]
     storage?: Record<string, string>
     subViews?: MobileSubView[]
     modals?: MobileModal[]

@@ -29,6 +29,7 @@ export const eventDetailManager: MobileRouteEntry = {
     tier: 'role-gated',
     path: `/events/${MANAGED_EVENT_SLUG}?tab=manage`,
     fixtures: 'event-manager',
+    decorative: [],
     storage: signedInStorage(),
     ready: steps(heading(MANAGED_EVENT_NAME), shows(page => manageTabs(page)), text('Volunteers')),
     subViews: [

@@ -8,6 +8,7 @@ export const teamCapDetail: MobileRouteEntry = {
     tier: 'public',
     path: `/team-caps/${TEAM_CAP_ID}`,
     fixtures: 'team-cap-detail',
+    decorative: [],
     ready: shows(page => page.getByRole('button', { name: 'Watch Team Replay' })),
     modals: [
         {

@@ -6,6 +6,7 @@ export const worldRecords: MobileRouteEntry = {
     tier: 'public',
     path: '/world-records',
     fixtures: 'world-records',
+    decorative: [],
     ready: listed({
         heading: 'World Records',
         rows: data => rowsOf(data.api('/v2/world_records', 'limit=10&offset=0&sort=desc&sort_by=added')),

@@ -6,6 +6,7 @@ export const teams: MobileRouteEntry = {
     tier: 'public',
     path: '/teams',
     fixtures: 'teams',
+    decorative: [],
     ready: listed({
         heading: 'Teams',
         rows: data => rowsOf(data.api('/teams', 'limit=0&order=desc&sort=world_records'), 'teams'),

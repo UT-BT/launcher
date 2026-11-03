@@ -8,6 +8,7 @@ export const teamDetail: MobileRouteEntry = {
     tier: 'public',
     path: `/teams/${TEAM_ID}`,
     fixtures: 'team-detail',
+    decorative: [],
     ready: heading('fierd_'),
     stress: { pr: 'long-text' },
 }

@@ -6,6 +6,8 @@ export const RULES = [
     { id: 'form-controls-16px', label: 'Visible form controls at least 16 px', changesPage: false },
     { id: 'tap-targets-44px', label: 'Tap targets at least 44 px', changesPage: false },
     { id: 'modal-fits', label: 'An opened modal fits the visible area and its close control can be tapped', changesPage: false },
+    { id: 'table-shows-every-column', label: 'On touch, a table shows every non-decorative desktop column, or renders cards', changesPage: true },
+    { id: 'cards-expose-every-column', label: 'Each card shows every non-decorative value of its desktop row, on its face or behind its expand control', changesPage: true },
     { id: 'scroll-top-after-modal', label: 'After closing a modal, scrolling to the top reaches the real top', changesPage: true },
     { id: 'back-restores-scroll', label: 'A new navigation starts at the top and Back restores the scroll position', changesPage: true },
     { id: 'rotation-recovers', label: 'After a rotation, the modal still fits and scrolling to the top reaches the real top', changesPage: true },

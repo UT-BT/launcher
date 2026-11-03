@@ -30,6 +30,7 @@ export const capDetail: MobileRouteEntry = {
     tier: 'public',
     path: `/caps/${CAP_ID}`,
     fixtures: FIXTURES,
+    decorative: [],
     ready: shows(page => page.getByRole('button', { name: 'Watch Replay' })),
     modals: [
         {

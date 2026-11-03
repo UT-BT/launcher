@@ -14,6 +14,7 @@ export const home: MobileRouteEntry = {
     tier: 'public',
     path: '/',
     fixtures: 'home',
+    decorative: [],
     ready,
     stress: { pr: 'long-text' },
     modals: [
