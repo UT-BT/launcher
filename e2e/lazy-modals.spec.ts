@@ -95,8 +95,7 @@ test('a modal fetches its code on the first tap, shows a loading state, then ope
     expect(fetched).toHaveLength(1)
 })
 
-test('a modal that was already lazy waits for its first open too', async ({ page, isMobile }) => {
-    test.skip(isMobile, 'the phone leaderboard card has no WR history trigger yet')
+test('a modal that was already lazy waits for its first open too', async ({ page }) => {
     const fetched: string[] = []
     page.on('request', request => {
         if (PROGRESSION_MODULE.test(request.url())) fetched.push(request.url())

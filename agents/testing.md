@@ -354,12 +354,12 @@ without a record history, opens through `opensWhenShown`, which leaves the page 
 trigger is not on screen. `watchesReplay` taps the visible replay buttons in turn, closing "Replay
 not available" until a replay video opens. When either leaves no modal open, the rules that measure
 the modal's root report `n/a`, but `rotation-recovers` fails with "the modal is not open": the
-portrait `rotation-recovers` entries on the map page's and the profile's `watch-run` and
-`wr-progression` surfaces record a trigger phones don't show, not a rotation bug. On a tiered
-table the trigger sits in the card's expand panel: the shared `watchRun` and `wrHistory` modals
-open through `withCardsOpen`, which first opens every collapsed "Details" panel on screen, so World
-Records crawls both modals on phones. A trigger that lives only in table rows phones show as cards
-is not crawled until the cards expose it: the Maps page's reviews and Demos (15). Event tabs that
+portrait `rotation-recovers` entries on the profile's `watch-run` surfaces record a trigger phones
+don't show, not a rotation bug. On a tiered table the trigger sits in the card's expand panel: the
+shared `watchRun` and `wrHistory` modals open through `withCardsOpen`, which first opens every
+collapsed "Details" panel on screen, so World Records and the map page crawl both modals on
+phones. A trigger that lives only in table rows phones show as cards is not crawled until the cards
+expose it: the Maps page's reviews and Demos (15). Event tabs that
 show only while signups are open (`players`, `signup`) are not crawled on the public event; the
 staff-only `manage` and `stream` tabs are crawled by `event-detail:manager`.
 
@@ -638,6 +638,12 @@ spec that is red today is marked `test.fail()`, with a note naming the ticket th
   header's `aria-sort` once the page is widened to 1920 px, and come back on the cards, with the
   card that was open still open; switching to Top Rushers and back closes it. Cards stack one per
   row at 430×932 and 440×956 and sit two per row at 744×1133 and 844×390.
+- `leaderboard-cards.spec.ts`: the map leaderboards on a phone. A solo card shows rank, medal and
+  time on its face and Team, Date, Watch replay and Download demo in its panel; Watch opens the
+  replay video and Download fetches the card's demo (the demo read is routed in the spec). The
+  card sort flips the shown ranks, and a field picked on the cards shows as the header's
+  `aria-sort` at 1920 px. A team card's panel holds Status and Date, and its sort lists Rank, Team
+  Time and Date.
 - `viewport-recovery.spec.ts`: emulation never leaves the window offset the way iOS does, so the
   spec makes the document taller than the viewport and scrolls the window (or `body`) itself.
   The shell then puts it back to 0,0: after the zoom simulation returns to scale 1 (Chromium

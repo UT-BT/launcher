@@ -185,6 +185,15 @@ those rows; none fetches for itself except the version bar.
   client-side; the rank is the row's position by time within the tab. Each row's medal comes from
   `computeMedalTier`. The row whose id equals the newest WR progression entry's `cap_id` carries
   the WR history trigger.
+- **Leaderboard phone cards**: both leaderboards are tiered
+  ([shared-components.md](../shared-components.md#column-tiers-and-phone-cards)). A solo card's face
+  shows rank, player (with the WR history trigger), medal and time; its panel holds Team, Date,
+  Watch replay and Download demo. A team card's face shows rank, team, medal and time; its panel
+  holds Status and Date. Both sort through the card sort control (solo: rank, player, time, date;
+  team: rank, team time, date). The card body opens the cap (solo) or team cap. The team
+  columns stay `required`, so desktop still switches the whole team table to cards (at 1280 px the
+  map page's column is too narrow for it). `e2e/mobile/leaderboard-cards.spec.ts` checks the
+  cards, Watch and Download from the panel, the card sort and the body tap.
 - **Stat tiles**: the median is over certified caps (all team runs on a team map); "engaged
   players" count players with more than 300 s of non-spectator playtime.
 - **Your Stats**: on solo maps the PB and rank are the viewer's position among verified rows; on
@@ -428,7 +437,7 @@ the new-map highlight apply to either.
 | `modals/WorldRecordProgressionModal.tsx` | the WR history trigger on Map Detail, World Records and the profile WR tab | `lazy()`-loaded behind `LazyModalGate`; the caller fetches `fetchWorldRecordProgression` and passes `entries`. |
 | `modals/CapTimeDistributionModal.tsx` | Map Detail median tile | Certified caps only on solo maps, every team run on team maps; the x-axis ends at the tightest medal boundary that holds about 95 % of caps. |
 | `modals/PlaytimeBreakdownModal.tsx` | Map Detail playtime tiles | Per-player playtime; spectator rows excluded. |
-| `modals/HistoryModal.tsx` | Home | The signed-in player's own caps (`fetchSummaryCaps`, `/v2/summary/caps`). The read has no total, so it asks for one row more than the page to know whether a next page exists. |
+| `modals/HistoryModal.tsx` | Home | The signed-in player's own caps (`fetchSummaryCaps`, `/v2/summary/caps`). The read has no total, so it asks for one row more than the page to know whether a next page exists. Its table is tiered with every column essential, so a phone card shows every column and has no panel; the card body opens the cap and closes the modal. |
 | `modals/PlayerFavoritesModal.tsx`, `PlayerReviewsModal.tsx` | profile sidebar cards | The full list behind each card's preview. |
 | `modals/ReviewModal.tsx` | Map Detail, Home | Map Detail prefills it with the viewer's existing review and refetches on success. |
 | `modals/MapScreenshotModal.tsx` | map hero, Maps Authored | [api.md](../api.md) |

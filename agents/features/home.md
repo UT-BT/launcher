@@ -23,7 +23,7 @@ the seasonal ambient layer (Home only) in [styling.md](../styling.md).
 | `app/utils/medalHunt.ts` | pure row normalisation; `medalHunt.fixture.json` + `medalHunt.test.ts` pin the server contract |
 | `home/FavoriteServersCard.tsx` | favorite servers that are live, with ping and Join / Spec |
 | `home/HottestPosterGrid.tsx`, `NewestMapsCard.tsx`, `MapsToReviewCard.tsx` | map poster grid and map lists |
-| `home/LatestRecordsCard.tsx`, `RecentCapsCard.tsx` | `DataTable` widgets with compact card rows |
+| `home/LatestRecordsCard.tsx`, `RecentCapsCard.tsx` | tiered `DataTable` widgets ([shared-components.md](../shared-components.md#column-tiers-and-phone-cards)): every column is essential, so a phone card shows them all and has no panel; tapping the card body opens the cap, as a row click does |
 | `home/news/` | `NewsCard`, `ArticleCard`, `CategoryChip`; also used by the News pages and Admin → News |
 | `home/ClosingSoonBanner.tsx` | the "Predictions closing" strip |
 | `e2e/home-freshness.spec.ts` | Playwright: the News New pill, a reviewed map leaving Maps to Review, the step back from an emptied page, the silent revisit of cached reviews and counts |
@@ -167,8 +167,8 @@ nothing cached stays a skeleton.
 - Bound each widget's height so paired sections stay level: lists cap at five rows, Medal Hunt
   and Maps to Review page, News shows two and scrolls, Favorite servers scrolls past a max
   height, Achievement Progress scrolls below `sm`.
-- Latest World Records and Your Latest Caps are `DataTableShell` tables with `responsive`
-  columns and `compactContent`; keep their time labels on one line (`whitespace-nowrap`).
+- Latest World Records and Your Latest Caps are `DataTableShell` tables with tiered
+  `responsive` columns and `cards`; keep their time labels on one line (`whitespace-nowrap`).
 
 ## Adding a Home widget
 

@@ -229,6 +229,7 @@
     "e2e/mobile/fixtures/types.ts",
     "e2e/mobile/gallery-reporter.ts",
     "e2e/mobile/interactions.ts",
+    "e2e/mobile/leaderboard-cards.spec.ts",
     "e2e/mobile/ledger.ts",
     "e2e/mobile/manifest.test.ts",
     "e2e/mobile/manifest/admin.ts",
@@ -697,6 +698,7 @@
     "e2e/capTables.ts",
     "e2e/map-screenshot-viewer.spec.ts",
     "e2e/mobile/cap-numeric-tables.spec.ts",
+    "e2e/mobile/leaderboard-cards.spec.ts",
     "e2e/profile-tabs-responsive.spec.ts",
     "e2e/world-records-table.spec.ts"
   ],

@@ -14,12 +14,12 @@ import type { SummaryWorldRecord } from '@/app/utils/api'
 
 type RecordColumnId = 'map' | 'holder' | 'time' | 'when' | 'replay'
 
-const RECORD_COLUMNS: ResponsiveColumn[] = [
-    { id: 'map', required: true },
-    { id: 'holder', width: '9rem', priority: 30, required: true },
-    { id: 'time', width: '5rem', priority: 70, required: true },
-    { id: 'when', width: '7rem', priority: 10 },
-    { id: 'replay', width: '3rem', priority: 20 },
+const RECORD_COLUMNS: (Omit<ResponsiveColumn, 'id'> & { id: RecordColumnId; align?: 'center' })[] = [
+    { id: 'map', required: true, tier: 'essential', label: 'Map' },
+    { id: 'holder', width: '9rem', priority: 30, required: true, tier: 'essential', label: 'Holder' },
+    { id: 'time', width: '5rem', priority: 70, required: true, tier: 'essential', label: 'Time', align: 'center' },
+    { id: 'when', width: '7rem', priority: 10, tier: 'essential', label: 'When' },
+    { id: 'replay', width: '3rem', priority: 20, tier: 'essential', label: 'Watch replay', align: 'center' },
 ]
 
 interface LatestRecordsCardProps {
@@ -43,44 +43,57 @@ export function LatestRecordsCard({
     const handleResolve = useCallback((ids: Set<string>) => { setResolved(ids as Set<RecordColumnId>) }, [])
     const isVisible = (id: RecordColumnId) => !resolved || resolved.has(id)
 
-    const compactRows = rows.map(r => {
-        const isOwn = currentUserId != null && r.userId === currentUserId
-        const isTeamRow = !!(r.members && r.members.length > 0)
-        return (
-            <div
-                key={r.id}
-                role="listitem"
-                className={cn('grid grid-cols-[minmax(0,1fr)_auto] gap-3 p-3 border-b border-hairline/5 last:border-0', isOwn && 'bg-emerald-500/[0.05]')}
-            >
-                <div className="min-w-0 space-y-2">
+    const isOwnRecord = (r: SummaryWorldRecord) => currentUserId != null && r.userId === currentUserId
+    const isTeamRecord = (r: SummaryWorldRecord) => !!(r.members && r.members.length > 0)
+    const openRecord = (r: SummaryWorldRecord) => isTeamRecord(r) ? openTeamCap(r.id) : openCap(r.id)
+
+    const recordCell = (id: RecordColumnId, r: SummaryWorldRecord): React.ReactNode => {
+        switch (id) {
+            case 'map':
+                return (
                     <MapNameCell
                         mapName={r.mapName}
                         favorited={favoriteMapNames.has(r.mapName)}
                         onToggleFavorite={onToggleFavorite}
                         onMapSelect={onMapSelect}
                     />
-                    {isTeamRow ? (
-                        <TeamAvatarStack members={r.members!} currentUserId={currentUserId} />
-                    ) : (
-                        <PlayerInfo
-                            userId={r.userId ?? undefined}
-                            alias={r.alias}
-                            title={r.activeTitle ?? null}
-                            size="sm"
-                            highlight={isOwn}
-                            showYouBadge={isOwn}
-                        />
-                    )}
-                </div>
-                <div className="flex flex-col items-end justify-between gap-2">
-                    <CapTimeLink
-                        capId={isTeamRow ? undefined : r.id}
-                        teamCapId={isTeamRow ? r.id : undefined}
-                        seconds={r.time}
-                        className="font-mono tabular-nums font-bold text-blue-300"
+                )
+            case 'holder':
+                return isTeamRecord(r) ? (
+                    <TeamAvatarStack
+                        members={r.members ?? []}
+                        currentUserId={currentUserId}
                     />
-                    <div className="flex items-center gap-2">
+                ) : (
+                    <PlayerInfo
+                        userId={r.userId ?? undefined}
+                        alias={r.alias}
+                        title={r.activeTitle ?? null}
+                        size="sm"
+                        highlight={isOwnRecord(r)}
+                        showYouBadge={isOwnRecord(r)}
+                    />
+                )
+            case 'time':
+                return (
+                    <div className="flex justify-center">
+                        <CapTimeLink
+                            capId={isTeamRecord(r) ? undefined : r.id}
+                            teamCapId={isTeamRecord(r) ? r.id : undefined}
+                            seconds={r.time}
+                            className="font-mono tabular-nums font-bold text-blue-300"
+                        />
+                    </div>
+                )
+            case 'when':
+                return (
+                    <div className="flex justify-center">
                         <span className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">{r.timeAgo}</span>
+                    </div>
+                )
+            case 'replay':
+                return (
+                    <div className="flex justify-center">
                         <IconActionButton
                             variant="replay"
                             icon={Play}
@@ -90,10 +103,30 @@ export function LatestRecordsCard({
                             onClick={() => onWatchReplay(r)}
                         />
                     </div>
+                )
+        }
+    }
+
+    const columns: ResponsiveColumn<SummaryWorldRecord>[] = RECORD_COLUMNS.map(({ align: _align, ...column }) => ({
+        ...column,
+        cell: r => recordCell(column.id, r),
+    }))
+
+    const recordFace = (r: SummaryWorldRecord) => (
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3">
+            <div className="min-w-0 space-y-2">
+                {recordCell('map', r)}
+                {recordCell('holder', r)}
+            </div>
+            <div className="flex flex-col items-end justify-between gap-2">
+                {recordCell('time', r)}
+                <div className="flex items-center gap-2">
+                    {recordCell('when', r)}
+                    {recordCell('replay', r)}
                 </div>
             </div>
-        )
-    })
+        </div>
+    )
 
     if (rows.length === 0) {
         return (
@@ -109,10 +142,16 @@ export function LatestRecordsCard({
         <DataTableShell
             className="!flex-none"
             responsive={{
-                columns: RECORD_COLUMNS,
+                columns,
                 onResolve: handleResolve,
-                compactContent: compactRows,
                 compactAriaLabel: 'Latest world records',
+                cards: {
+                    rows,
+                    rowKey: r => r.id,
+                    face: recordFace,
+                    onOpen: openRecord,
+                    rowClassName: r => isOwnRecord(r) ? 'bg-emerald-500/[0.05]' : undefined,
+                },
             }}
         >
             <DataTableHeaderRow>
@@ -123,78 +162,19 @@ export function LatestRecordsCard({
                 {isVisible('replay') && <DataTableHeaderCell align="center" width="3rem" />}
             </DataTableHeaderRow>
             <tbody>
-                {rows.map(r => {
-                    const isOwn = currentUserId != null && r.userId === currentUserId
-                    const isTeamRow = !!(r.members && r.members.length > 0)
-                    return (
-                        <DataTableRow
-                            key={r.id}
-                            className={cn('cursor-pointer', isOwn && 'bg-emerald-500/[0.05]')}
-                            onClick={() => isTeamRow ? openTeamCap(r.id) : openCap(r.id)}
-                        >
-                            <DataTableCell>
-                                <MapNameCell
-                                    mapName={r.mapName}
-                                    favorited={favoriteMapNames.has(r.mapName)}
-                                    onToggleFavorite={onToggleFavorite}
-                                    onMapSelect={onMapSelect}
-                                />
+                {rows.map(r => (
+                    <DataTableRow
+                        key={r.id}
+                        className={cn('cursor-pointer', isOwnRecord(r) && 'bg-emerald-500/[0.05]')}
+                        onClick={() => openRecord(r)}
+                    >
+                        {RECORD_COLUMNS.filter(column => isVisible(column.id)).map(column => (
+                            <DataTableCell key={column.id} align={column.align}>
+                                {recordCell(column.id, r)}
                             </DataTableCell>
-                            {isVisible('holder') && (
-                                <DataTableCell>
-                                    {r.members && r.members.length > 0 ? (
-                                        <TeamAvatarStack
-                                            members={r.members}
-                                            currentUserId={currentUserId}
-                                        />
-                                    ) : (
-                                        <PlayerInfo
-                                            userId={r.userId ?? undefined}
-                                            alias={r.alias}
-                                            title={r.activeTitle ?? null}
-                                            size="sm"
-                                            highlight={isOwn}
-                                            showYouBadge={isOwn}
-                                        />
-                                    )}
-                                </DataTableCell>
-                            )}
-                            {isVisible('time') && (
-                                <DataTableCell align="center">
-                                    <div className="flex justify-center">
-                                        <CapTimeLink
-                                            capId={isTeamRow ? undefined : r.id}
-                                            teamCapId={isTeamRow ? r.id : undefined}
-                                            seconds={r.time}
-                                            className="font-mono tabular-nums font-bold text-blue-300"
-                                        />
-                                    </div>
-                                </DataTableCell>
-                            )}
-                            {isVisible('when') && (
-                                <DataTableCell>
-                                    <div className="flex justify-center">
-                                        <span className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">{r.timeAgo}</span>
-                                    </div>
-                                </DataTableCell>
-                            )}
-                            {isVisible('replay') && (
-                                <DataTableCell align="center">
-                                    <div className="flex justify-center">
-                                        <IconActionButton
-                                            variant="replay"
-                                            icon={Play}
-                                            iconFill
-                                            tooltip="Watch Replay"
-                                            loading={loadingCapId === r.id}
-                                            onClick={() => onWatchReplay(r)}
-                                            />
-                                    </div>
-                                </DataTableCell>
-                            )}
-                        </DataTableRow>
-                    )
-                })}
+                        ))}
+                    </DataTableRow>
+                ))}
             </tbody>
         </DataTableShell>
     )
