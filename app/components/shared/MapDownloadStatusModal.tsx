@@ -6,6 +6,7 @@ import { displayMapName } from '@/app/utils/format'
 import { capabilities } from '@/app/platform'
 import type { MapDownloadState } from '@/app/hooks/useMapDownload'
 import { mapDownloadSuccessCopy } from './mapDownloadCopy'
+import { DownloadResultPromo } from './DownloadResultPromo'
 
 interface MapDownloadStatusModalProps {
     state: MapDownloadState | null
@@ -73,6 +74,7 @@ export function MapDownloadStatusModal({ state, onClose }: MapDownloadStatusModa
                             </div>
                         )}
                     </div>
+                    <DownloadResultPromo source="map-modal" message="The desktop app installs maps straight into UT" />
                 </div>
             )}
             {state?.status === 'error' && (

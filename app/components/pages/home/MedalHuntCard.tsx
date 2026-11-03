@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowDownWideNarrow,
   ArrowUpNarrowWide,
@@ -25,7 +25,6 @@ import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { MapNavLink } from '@/app/components/shared/MapNavLink'
 import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
-import { ReplayPickerModal } from '@/app/components/modals/ReplayPickerModal'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import {
   DropdownMenu,
@@ -36,6 +35,8 @@ import {
   DropdownMenuTrigger,
 } from '@/app/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
+
+const ReplayPickerModal = lazy(() => import('@/app/components/modals/ReplayPickerModal').then(m => ({ default: m.ReplayPickerModal })))
 
 interface MedalHuntCardProps {
   accessToken?: string
@@ -441,23 +442,25 @@ export function MedalHuntCard({
           />
         ))}
       </div>
-      <ReplayPickerModal
-        open={replayPickerMap !== null}
-        onClose={() => setReplayPickerMap(null)}
-        accessToken={accessToken}
-        userId={userId ?? undefined}
-        mapName={replayPickerMap}
-        mapMetadata={replayPickerMapMetadata ?? undefined}
-        onSelect={(video, mapName, entry) => {
-          setReplayPickerMap(null)
-          setVideoModal({
-            video,
-            mapName,
-            time: entry.cap_time_seconds,
-            alias: entry.alias ?? undefined,
-          })
-        }}
-      />
+      <Suspense fallback={null}>
+        <ReplayPickerModal
+          open={replayPickerMap !== null}
+          onClose={() => setReplayPickerMap(null)}
+          accessToken={accessToken}
+          userId={userId ?? undefined}
+          mapName={replayPickerMap}
+          mapMetadata={replayPickerMapMetadata ?? undefined}
+          onSelect={(video, mapName, entry) => {
+            setReplayPickerMap(null)
+            setVideoModal({
+              video,
+              mapName,
+              time: entry.cap_time_seconds,
+              alias: entry.alias ?? undefined,
+            })
+          }}
+        />
+      </Suspense>
       <ReplayVideoModal state={videoModal} onClose={() => setVideoModal(null)} />
     </div>
   )

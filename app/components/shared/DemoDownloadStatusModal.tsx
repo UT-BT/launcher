@@ -3,6 +3,7 @@ import { Spinner } from '@/app/components/ui/spinner'
 import { Modal } from '@/app/components/ui/modal'
 import { Button } from '@/app/components/ui/button'
 import type { DemoDownloadState } from '@/app/hooks/useDemoDownload'
+import { DownloadResultPromo } from './DownloadResultPromo'
 
 interface DemoDownloadStatusModalProps {
     state: DemoDownloadState | null
@@ -65,6 +66,7 @@ export function DemoDownloadStatusModal({ state, onClose }: DemoDownloadStatusMo
                             Saved to: {state.path.replace(/[/\\][^/\\]+$/, '')}
                         </div>
                     </div>
+                    <DownloadResultPromo source="demo-modal" message="The desktop app uploads your demos automatically" />
                 </div>
             )}
             {state?.status === 'error' && (
