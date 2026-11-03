@@ -1,0 +1,1 @@
+[{"body":{"code":"bad_request","error":"Pass two different team cap ids as runner and reference.","success":false},"status":400},{"body":{"code":"team_cap_not_found","error":"The team cap provided was not found in the database.","success":false},"status":404},{"body":{"code":"different_map","error":"The two team caps are on different maps.","success":false},"status":409}]

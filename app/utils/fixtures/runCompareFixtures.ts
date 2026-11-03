@@ -10,7 +10,19 @@ import compareRoutesDiffer from './runCompare/compare_routes_differ.json'
 import compareSeparated from './runCompare/compare_separated.json'
 import compareShort from './runCompare/compare_short.json'
 import teamCapDetailMembers from './runCompare/team_cap_detail_members.json'
-import type { CapComparison, CapComparisonErrorCode, CapComparisonMotion, CapDetail, TeamCapDetail } from '@/app/utils/api'
+import teamCompareAligned from './runCompare/team_compare_aligned.json'
+import teamCompareErrors from './runCompare/team_compare_errors.json'
+import teamCompareMixed from './runCompare/team_compare_mixed.json'
+import teamCompareOppositeSides from './runCompare/team_compare_opposite_sides.json'
+import type {
+    CapComparison,
+    CapComparisonErrorCode,
+    CapComparisonMotion,
+    CapDetail,
+    TeamCapDetail,
+    TeamComparison,
+    TeamComparisonErrorCode,
+} from '@/app/utils/api'
 
 export interface RunCompareSuccessFixtures {
     aligned: CapComparison
@@ -23,6 +35,9 @@ export interface RunCompareSuccessFixtures {
     capDetailCandidates: CapDetail
     capDetailGhostOnly: CapDetail
     teamCapDetailMembers: TeamCapDetail
+    teamAligned: TeamComparison
+    teamMixed: TeamComparison
+    teamOppositeSides: TeamComparison
 }
 
 export type RunCompareFixtureName = keyof RunCompareSuccessFixtures
@@ -40,6 +55,15 @@ export interface RunCompareErrorBody {
 export interface RunCompareErrorEntry {
     status: number
     body: RunCompareErrorBody
+}
+
+export interface TeamCompareErrorEntry {
+    status: number
+    body: {
+        success: false
+        error: string
+        code: TeamComparisonErrorCode
+    }
 }
 
 export interface ChartRuleXTick {
@@ -85,6 +109,7 @@ interface FixtureEntry {
 const COMPARE_ROUTE = 'GET /ghosts/compare?runner=:capId&reference=:capId'
 const MOTION_ROUTE = 'GET /ghosts/compare/motion?runner=:capId&reference=:capId'
 const CAP_DETAIL_ROUTE = 'GET /caps/:capId/detail'
+const TEAM_COMPARE_ROUTE = 'GET /ghosts/compare/team?runner=:teamCapId&reference=:teamCapId'
 
 export const RUN_COMPARE_FIXTURES: Record<RunCompareFixtureName, FixtureEntry> = {
     aligned: { file: 'compare_aligned.json', route: COMPARE_ROUTE, body: compareAligned },
@@ -101,9 +126,17 @@ export const RUN_COMPARE_FIXTURES: Record<RunCompareFixtureName, FixtureEntry> =
         route: 'GET /caps/team_caps/:teamCapId/detail',
         body: teamCapDetailMembers,
     },
+    teamAligned: { file: 'team_compare_aligned.json', route: TEAM_COMPARE_ROUTE, body: teamCompareAligned },
+    teamMixed: { file: 'team_compare_mixed.json', route: TEAM_COMPARE_ROUTE, body: teamCompareMixed },
+    teamOppositeSides: {
+        file: 'team_compare_opposite_sides.json',
+        route: TEAM_COMPARE_ROUTE,
+        body: teamCompareOppositeSides,
+    },
 }
 
 export const RUN_COMPARE_ERRORS_FILE = 'compare_errors.json'
+export const TEAM_COMPARE_ERRORS_FILE = 'team_compare_errors.json'
 export const CHART_RULES_FILE = 'chart_rules.json'
 
 export function runCompareFixture<K extends RunCompareFixtureName>(name: K): RunCompareSuccessFixtures[K] {
@@ -129,6 +162,16 @@ export function runCompareErrors(): RunCompareErrorEntry[] {
 export function runCompareErrorResponse(code: CapComparisonErrorCode): Response {
     const entry = runCompareErrors().find((candidate) => candidate.body.code === code)
     if (!entry) throw new Error(`no comparison error fixture for ${code}`)
+    return jsonResponse(entry.body, entry.status)
+}
+
+export function runCompareTeamErrors(): TeamCompareErrorEntry[] {
+    return structuredClone(teamCompareErrors as TeamCompareErrorEntry[])
+}
+
+export function runCompareTeamErrorResponse(code: TeamComparisonErrorCode): Response {
+    const entry = runCompareTeamErrors().find((candidate) => candidate.body.code === code)
+    if (!entry) throw new Error(`no team comparison error fixture for ${code}`)
     return jsonResponse(entry.body, entry.status)
 }
 

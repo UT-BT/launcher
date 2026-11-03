@@ -2774,6 +2774,163 @@ export async function fetchCapComparisonMotion(
     }
 }
 
+export const TEAM_COMPARISON_PAIR_STATES = ['aligned', 'routes_differ', 'zones'] as const
+
+export type TeamComparisonPairState = (typeof TEAM_COMPARISON_PAIR_STATES)[number]
+
+export const TEAM_COMPARISON_BASES = ['ghost', 'zones'] as const
+
+export type TeamComparisonBasis = (typeof TEAM_COMPARISON_BASES)[number]
+
+export const TEAM_COMPARISON_ERROR_CODES = ['bad_request', 'team_cap_not_found', 'different_map'] as const
+
+export type TeamComparisonErrorCode = (typeof TEAM_COMPARISON_ERROR_CODES)[number]
+
+export const TEAM_SPLIT_CAP_ZONE = 'CAP'
+
+export interface TeamComparisonMember {
+    cap_id: string
+    user: string
+    alias: string | null
+    team: number | null
+    cap_time_ms: number
+    has_ghost: boolean
+    has_zones: boolean
+}
+
+export interface TeamComparisonTeam {
+    team_cap_id: string
+    team_run_id: string
+    team_time_ms: number
+    members: TeamComparisonMember[]
+}
+
+export interface TeamComparisonCandidate {
+    runner_cap_id: string
+    reference_cap_id: string
+    basis: TeamComparisonBasis
+    score: number
+}
+
+export interface TeamComparisonPair extends TeamComparisonCandidate {
+    state: TeamComparisonPairState
+}
+
+export interface TeamSplit {
+    zone: string
+    reference_ms: number
+    runner_ms: number
+    delta_ms: number
+    reference_member_cap_id: string
+    runner_member_cap_id: string
+}
+
+export interface TeamComparison {
+    runner: TeamComparisonTeam
+    reference: TeamComparisonTeam
+    final_delta_ms: number
+    pairs: TeamComparisonPair[]
+    unpaired: string[]
+    candidates: TeamComparisonCandidate[]
+    team_splits: TeamSplit[]
+}
+
+type Fields = { [key: string]: unknown }
+
+function isFields(raw: unknown): raw is Fields {
+    return !!raw && typeof raw === 'object' && !Array.isArray(raw)
+}
+
+function isFiniteNumber(value: unknown): value is number {
+    return typeof value === 'number' && Number.isFinite(value)
+}
+
+function isTeamComparisonMember(raw: unknown): boolean {
+    return (
+        isFields(raw)
+        && typeof raw.cap_id === 'string'
+        && typeof raw.user === 'string'
+        && (raw.alias === null || typeof raw.alias === 'string')
+        && (raw.team === null || isFiniteNumber(raw.team))
+        && isFiniteNumber(raw.cap_time_ms)
+        && typeof raw.has_ghost === 'boolean'
+        && typeof raw.has_zones === 'boolean'
+    )
+}
+
+function isTeamComparisonTeam(raw: unknown): boolean {
+    return (
+        isFields(raw)
+        && typeof raw.team_cap_id === 'string'
+        && typeof raw.team_run_id === 'string'
+        && isFiniteNumber(raw.team_time_ms)
+        && Array.isArray(raw.members)
+        && raw.members.every(isTeamComparisonMember)
+    )
+}
+
+function isTeamComparisonCandidate(raw: unknown): raw is Fields {
+    return (
+        isFields(raw)
+        && typeof raw.runner_cap_id === 'string'
+        && typeof raw.reference_cap_id === 'string'
+        && TEAM_COMPARISON_BASES.includes(raw.basis as TeamComparisonBasis)
+        && isFiniteNumber(raw.score)
+    )
+}
+
+function isTeamComparisonPair(raw: unknown): boolean {
+    return isTeamComparisonCandidate(raw) && TEAM_COMPARISON_PAIR_STATES.includes(raw.state as TeamComparisonPairState)
+}
+
+function isTeamSplit(raw: unknown): boolean {
+    return (
+        isFields(raw)
+        && typeof raw.zone === 'string'
+        && isFiniteNumber(raw.reference_ms)
+        && isFiniteNumber(raw.runner_ms)
+        && isFiniteNumber(raw.delta_ms)
+        && typeof raw.reference_member_cap_id === 'string'
+        && typeof raw.runner_member_cap_id === 'string'
+    )
+}
+
+function isTeamComparison(raw: unknown): raw is TeamComparison {
+    return (
+        isFields(raw)
+        && isTeamComparisonTeam(raw.runner)
+        && isTeamComparisonTeam(raw.reference)
+        && isFiniteNumber(raw.final_delta_ms)
+        && Array.isArray(raw.pairs)
+        && raw.pairs.every(isTeamComparisonPair)
+        && Array.isArray(raw.unpaired)
+        && raw.unpaired.every(id => typeof id === 'string')
+        && Array.isArray(raw.candidates)
+        && raw.candidates.every(isTeamComparisonCandidate)
+        && Array.isArray(raw.team_splits)
+        && raw.team_splits.length > 0
+        && raw.team_splits.every(isTeamSplit)
+        && (raw.team_splits.at(-1) as TeamSplit).zone === TEAM_SPLIT_CAP_ZONE
+    )
+}
+
+export async function fetchTeamComparison(
+    runnerTeamCapId: string,
+    referenceTeamCapId: string,
+    signal?: AbortSignal,
+): Promise<TeamComparison | null> {
+    try {
+        const query = comparisonQuery(runnerTeamCapId, referenceTeamCapId)
+        const res = await apiRequest(`/ghosts/compare/team?${query}`, { signal })
+        if (res.status !== 200) return null
+        const json = await res.json()
+        if (!json || json.success !== true || !isTeamComparison(json.data)) return null
+        return json.data
+    } catch {
+        return null
+    }
+}
+
 export async function fetchCapCheckpoints(
     accessToken: string, capId: string, signal?: AbortSignal,
 ): Promise<{ checkpoints: CapCheckpoint[]; cap_time_seconds: number; alias: string | null; team: number | null } | null> {
