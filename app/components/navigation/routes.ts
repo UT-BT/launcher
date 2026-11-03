@@ -32,8 +32,16 @@ export function viewToPath(view: string, params: NavParams): string {
         case 'news': return '/news'
         case 'news-detail': return `/news/${encodeURIComponent(String(params.newsId ?? ''))}`
         case 'admin': return '/admin'
+        case 'run-compare': return params.compare ? `/compare?${params.compare}` : '/compare'
         default: return '/'
     }
+}
+
+export function canonicalPath(view: string, params: NavParams): string {
+    if (view !== 'run-compare') return viewToPath(view, params)
+    const runs = (new URLSearchParams(params.compare ?? '').get('runs') ?? '').split(',').filter(Boolean)
+    const sorted = [...new Set(runs)].sort()
+    return sorted.length > 0 ? `/compare?runs=${sorted.join(',')}` : '/compare'
 }
 
 function decodeSegment(segment: string): string {
@@ -92,6 +100,11 @@ export function pathToNav(pathname: string, search: string): RouteTarget {
             return { view: 'news', params: {} }
         }
         case 'admin': return { view: 'admin', params: {} }
+        case 'compare': {
+            if (segments.length !== 1) return { view: 'home', params: {} }
+            const compare = search.replace(/^\?/, '')
+            return { view: 'run-compare', params: compare ? { compare } : {} }
+        }
         default: return { view: 'home', params: {} }
     }
 }

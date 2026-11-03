@@ -50,6 +50,7 @@ export function createHistorySync(history: HistoryPort, schedule: (task: () => v
     let direction = 0
     const deferred: (() => void)[] = []
     const overlays: Overlay[] = []
+    let edited: { navId: number | undefined; url: string } | null = null
 
     const current = () => readEntryState(history.state)
 
@@ -95,6 +96,19 @@ export function createHistorySync(history: HistoryPort, schedule: (task: () => v
         for (const overlay of overlays) overlay.at = null
     }
 
+    const replacePage = (url: string) => {
+        edited = { navId: host?.activeId() ?? current().navId, url }
+        if (traversing) return
+        history.replaceState(history.state, '', url)
+        if (position === base) edited = null
+    }
+
+    const applyEdit = (target: EntryState) => {
+        if (!edited || target.navId !== edited.navId) return
+        history.replaceState(history.state, '', edited.url)
+        if (!target.overlay) edited = null
+    }
+
     const onPopState = (state: unknown) => {
         traversing = false
         const target = readEntryState(state)
@@ -128,6 +142,7 @@ export function createHistorySync(history: HistoryPort, schedule: (task: () => v
             }
             position = to ?? position + 1
             base = position - (target.overlay ?? 0)
+            applyEdit(target)
             if (pageChange) host.show(target.navId, position)
         }
         direction = 0
@@ -148,6 +163,7 @@ export function createHistorySync(history: HistoryPort, schedule: (task: () => v
             return () => { host = null }
         },
         pushPage,
+        replacePage,
         settle,
         register(close: () => void) {
             const overlay: Overlay = { at: null, close }

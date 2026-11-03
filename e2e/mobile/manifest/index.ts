@@ -22,6 +22,7 @@ import { news } from './news'
 import { newsDetail } from './news-detail'
 import { playerDetail } from './player-detail'
 import { players } from './players'
+import { runCompare } from './run-compare'
 import { servers } from './servers'
 import { teamCapDetail } from './team-cap-detail'
 import { teamDetail } from './team-detail'
@@ -49,6 +50,7 @@ export const MOBILE_MANIFEST: readonly MobileRouteEntry[] = [
     achievements,
     news,
     newsDetail,
+    runCompare,
     homeSignedIn,
     mapsSignedIn,
     admin,

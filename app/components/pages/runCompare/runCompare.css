@@ -1,0 +1,5 @@
+@media (hover: none) {
+  .run-compare-row [role='button'] {
+    padding: 1rem;
+  }
+}

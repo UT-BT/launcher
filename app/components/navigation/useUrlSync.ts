@@ -26,6 +26,10 @@ export function pushUrlForEntry(entry: NavEntry): void {
     sync?.pushPage(entry.id, viewToPath(entry.view, entry.params))
 }
 
+export function replaceUrlForEntry(entry: NavEntry): void {
+    sync?.replacePage(viewToPath(entry.view, entry.params))
+}
+
 export function registerOverlay(close: () => void): (() => void) | undefined {
     return capabilities.overlayHistory ? sync?.register(close) : undefined
 }
