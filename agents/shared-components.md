@@ -109,7 +109,7 @@ Width, alignment and the responsive contract are in [styling.md](styling.md).
 | `DataTableHeaderCell` | `<th>`. `sortable` + `sortDirection` + `onSort` render the sort button and icon, and set `aria-sort` on the active column; `align`, `width`, `buttonRef`. |
 | `DataTableRow` | Body `<tr>` with locked hover and border; spreads `<tr>` props. |
 | `DataTableCell` | `<td>` with locked padding; `align`; forwards its ref for measuring. |
-| `DataTableExpandRow` | Full-width detail row under a body row (`colSpan`), for rows that expand in place on the table (Audit Logs). |
+| `DataTableExpandRow` | Full-width detail row under a body row (`colSpan`), for rows that expand in place on the table (Audit Logs). Lives in `shared/DataTableExpandRow.tsx`, out of `DataTable.tsx`, so it ships with the lazy page that uses it instead of the web entry. |
 | `DataTableEmpty` | Text-only empty-state row. |
 | `DataTableSkeletonRow` | Uniform shimmer row for pages without custom skeletons. |
 

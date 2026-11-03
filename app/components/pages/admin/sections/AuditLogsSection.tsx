@@ -21,8 +21,9 @@ import { NavLink } from '@/app/components/navigation/NavLink'
 import { cn } from '@/lib/utils'
 import {
   DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow, DataTableCell,
-  DataTableEmpty, DataTableSkeletonRow, DataTableExpandRow,
+  DataTableEmpty, DataTableSkeletonRow,
 } from '@/app/components/shared/DataTable'
+import { DataTableExpandRow } from '@/app/components/shared/DataTableExpandRow'
 
 const ACTIONS = [
   '', 'user.ban', 'user.unban', 'user.warn', 'user.alias_change', 'user.title_assign', 'user.title_unassign',
