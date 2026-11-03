@@ -466,6 +466,7 @@
     "app/components/pages/events/pickban/pickBanEntryPoints.ts",
     "app/components/pages/events/predictions/BetModal.tsx",
     "app/components/pages/events/predictions/leaderboardView.ts",
+    "app/components/pages/events/predictions/marketBasics.ts",
     "app/components/pages/events/predictions/marketLock.ts",
     "app/components/pages/events/predictions/predictionsShared.tsx",
     "app/components/pages/events/stats/StatsOverview.tsx",

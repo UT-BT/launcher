@@ -5,7 +5,7 @@
  * anything worth asserting has to live outside the JSX.
  */
 
-import { parseApiInstant } from '@/app/components/pages/events/predictions/predictionsShared'
+import { parseApiInstant } from '@/app/utils/timezone'
 import type { AchievementDefinition, AchievementEventState } from '@/app/utils/api'
 
 export const EVENT_CATEGORY = 'event'

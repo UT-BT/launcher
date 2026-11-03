@@ -26,7 +26,7 @@ owns all of it except `schedule/`, `pickban/`, `manage/pickban/` and `stream/` (
 | `events/manage/matches/` | Manage → Matches and Caps need linking (lazy); pure `matchesTable.ts`, `capsNeedLinkingView.ts` |
 | `events/stats/` | the Teams tab's stats mode (`StatsOverview`, lazy) and its pieces; pure `statsView.ts`, `statsTab.ts`; the accent and lazy stylesheets |
 | `events/stats/team/` | the team page's pieces; pure `teamPageView.ts`, `teamTablesView.ts` |
-| `events/predictions/` | Predictions tab, bet modal, odds context; pure `marketLock.ts`, `leaderboardView.ts`, `predictionsShared.tsx` |
+| `events/predictions/` | Predictions tab, bet modal, odds context; pure `marketLock.ts`, `leaderboardView.ts`, `predictionsShared.tsx`, `marketBasics.ts` (the countdown, price and side helpers Home's closing-soon banner needs, kept apart so the rest of `predictionsShared.tsx` stays out of the web entry; `predictionsShared.tsx` re-exports them) |
 | `events/achievements/`, `events/maps/` | the lazy Achievements tab (`eventAchievementBoard.ts`) and the Maps tab (`mapsShared.ts`, also its gate); achievement rules app-wide in `app/components/pages/achievements/eventAchievements.ts` |
 | `app/utils/api.ts`, `app/utils/fixtures/eventStats/` | event fetchers and types; the sha-pinned stats payloads |
 | `e2e/` | `event-stats-responsive`, `event-achievements-responsive`, `predictions-responsive`, `manage-matches` and `bracket-desktop` specs; `mobile/bracket-snap.spec.ts` |
@@ -84,7 +84,7 @@ event with its first stage's matches turned into a 16-team elimination stage (`e
   against `now`) as a chip: "Opens <date>", "Awaiting a time" or "Scheduling window closed".
 - **Own next match.** `EventDetailPage` shows a countdown to the viewer's soonest future `scheduled` match
   (`nextOwnMatch` in `bracketShared.tsx`, `useNow` / `formatCountdown` from
-  `predictions/predictionsShared.tsx`).
+  `predictions/marketBasics.ts`, re-exported by `predictionsShared.tsx`).
 - **Odds.** `MatchOddsChip` reads the market from `PredictionOddsProvider` (see [Predictions](#predictions)).
 - **Linked caps.** Per-map cap links come back only from `fetchEventMatch`, never the bracket list. A card
   given a match payload with `showCaps` lists them (`CapList`), grouped by `linkedCapRows` (see
