@@ -33,7 +33,7 @@ doesn't run on the surfaces it names.
 | `news-detail` | `news-detail` | public | `/news/15` | `news-detail` | 0 | 0 |
 | `home:signed-in` | `home` | role-gated | `/` | `home-signed-in` | 0 | 2 |
 | `maps:signed-in` | `maps` | role-gated | `/maps` | `maps-signed-in` | 0 | 0 |
-| `admin` | `admin` | role-gated | `/admin` | `admin` | 17 | 0 |
+| `admin` | `admin` | role-gated | `/admin` | `admin` | 19 | 0 |
 | `event-detail:manager` | `event-detail` | role-gated | `/events/test-cup-manage?tab=manage` | `event-manager` | 7 | 1 |
 | `match-pickban:captain` | `match-pickban` | role-gated | `/events/test-cup-pickban/matches/5d0c8e2a-7b41-5f93-a6d2-3e9f10b7c4a1` | `match-pickban-captain` | 0 | 0 |
 | `match-pickban:manager` | `match-pickban` | role-gated | `/events/test-cup-pickban/matches/5d0c8e2a-7b41-5f93-a6d2-3e9f10b7c4a1` | `match-pickban-manager` | 0 | 0 |
@@ -565,6 +565,8 @@ No skipped rules.
 | `admin/caps-management` | Caps Management | a step on `/admin` | none |
 | `admin/maps-management` | Maps Management | a step on `/admin` | none |
 | `admin/map-uploads` | Map Uploads | a step on `/admin` | none |
+| `admin/map-uploads-publishing` | Map Uploads › Publishing / Recent | a step on `/admin` | none |
+| `admin/map-uploads-drift` | Map Uploads › Drift | a step on `/admin` | none |
 | `admin/patches-management` | Patch Releases | a step on `/admin` | none |
 | `admin/anti-cheat` | Anti-Cheat | a step on `/admin` | none |
 | `admin/anti-cheat-cap-delta` | Anti-Cheat › High Cap Delta | a step on `/admin` | none |

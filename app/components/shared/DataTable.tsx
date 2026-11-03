@@ -152,6 +152,7 @@ export interface DataTableCards<Row> {
     rowClassName?: (row: Row) => string | undefined
     placeholder?: React.ReactNode
     sort?: DataTableCardSort
+    panel?: (row: Row) => React.ReactNode
 }
 
 export interface ResponsiveConfig<Row = never> {
@@ -317,7 +318,8 @@ function DataTableCardList<Row>({
     const panelIdBase = useId()
     const panel = cardPanelColumns(columns)
     const sortFields = cardSortFields(columns)
-    const { rows, rowKey, face, onOpen, rowClassName, placeholder, sort } = cards
+    const { rows, rowKey, face, onOpen, rowClassName, placeholder, sort, panel: extra } = cards
+    const expandable = panel.length > 0 || !!extra
 
     const toggle = (key: string) => onExpandedChange(prev => {
         const next = new Set(prev)
@@ -352,7 +354,7 @@ function DataTableCardList<Row>({
                                 >
                                     {face(row)}
                                 </div>
-                                {panel.length > 0 && (
+                                {expandable && (
                                     <button
                                         type="button"
                                         aria-label="Details"
@@ -365,21 +367,37 @@ function DataTableCardList<Row>({
                                     </button>
                                 )}
                             </div>
-                            {open && (
-                                <dl id={panelId} className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-2 px-3 pb-3">
-                                    {panel.map(column => (
-                                        <Fragment key={column.id}>
-                                            <dt className="text-xs text-muted-foreground">{column.label ?? column.id}</dt>
-                                            <dd className="flex min-w-0 items-center text-sm">{column.cell?.(row)}</dd>
-                                        </Fragment>
-                                    ))}
-                                </dl>
-                            )}
+                            {open && (extra ? (
+                                <div id={panelId} className="space-y-3 px-3 pb-3">
+                                    {panel.length > 0 && <CardPanelGrid columns={panel} row={row} />}
+                                    {extra(row)}
+                                </div>
+                            ) : (
+                                <CardPanelGrid id={panelId} columns={panel} row={row} className="px-3 pb-3" />
+                            ))}
                         </div>
                     )
                 })}
             </div>
         </>
+    )
+}
+
+function CardPanelGrid<Row>({ id, columns, row, className }: {
+    id?: string
+    columns: readonly ResponsiveColumn<Row>[]
+    row: Row
+    className?: string
+}) {
+    return (
+        <dl id={id} className={cn('grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-2', className)}>
+            {columns.map(column => (
+                <Fragment key={column.id}>
+                    <dt className="text-xs text-muted-foreground">{column.label ?? column.id}</dt>
+                    <dd className="flex min-w-0 items-center text-sm">{column.cell?.(row)}</dd>
+                </Fragment>
+            ))}
+        </dl>
     )
 }
 
@@ -555,6 +573,20 @@ export const DataTableCell = forwardRef<HTMLTableCellElement, DataTableCellProps
         )
     },
 )
+
+interface DataTableExpandRowProps {
+    colSpan: number
+    id?: string
+    children: React.ReactNode
+}
+
+export function DataTableExpandRow({ colSpan, id, children }: DataTableExpandRowProps) {
+    return (
+        <tr id={id} className="border-b border-hairline/5 bg-hairline/[0.02]">
+            <td colSpan={colSpan} className="px-4 py-4">{children}</td>
+        </tr>
+    )
+}
 
 interface DataTableEmptyProps {
     colSpan: number

@@ -10,14 +10,15 @@ import { useAdminTable, type AdminColumn } from '../components/useAdminTable'
 import { useAdminFilterPresets } from '../components/useAdminFilterPresets'
 import { TableControls } from '../components/TableControls'
 import { PANEL_LABEL, useResetOnChange, useAdminPageSize } from '../components/shared'
-import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { AdminCardFace, adminCardsPlaceholder } from '../components/AdminCardFace'
+import { PlayerInfo, openPlayer } from '@/app/components/shared/PlayerInfo'
 import { FilterPanelRow } from '@/app/components/ui/filter-panel-row'
 import { FilterPresetsMenu } from '@/app/components/shared/FilterPresetsMenu'
 import { ActiveFilterChip } from '@/app/components/shared/ActiveFilterChip'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import {
   DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow, DataTableCell,
-  DataTableEmpty, DataTableSkeletonRow, type SortDirection, type ResponsiveColumn,
+  DataTableEmpty, DataTableSkeletonRow, type SortDirection,
 } from '@/app/components/shared/DataTable'
 import { UserDetailModal } from './UserDetailModal'
 
@@ -26,13 +27,13 @@ const PRIORITY: Record<string, number> = {
 }
 
 const COLUMNS: AdminColumn[] = [
-  { id: 'player', label: 'Player', required: true },
-  { id: 'id', label: 'Discord ID' },
-  { id: 'role', label: 'Role' },
-  { id: 'status', label: 'Status' },
-  { id: 'warnings', label: 'Warnings' },
-  { id: 'bans', label: 'Bans' },
-  { id: 'manage', label: 'Manage', required: true },
+  { id: 'player', label: 'Player', required: true, tier: 'essential' },
+  { id: 'id', label: 'Discord ID', tier: 'detail' },
+  { id: 'role', label: 'Role', tier: 'detail' },
+  { id: 'status', label: 'Status', tier: 'detail' },
+  { id: 'warnings', label: 'Warnings', tier: 'detail' },
+  { id: 'bans', label: 'Bans', tier: 'detail' },
+  { id: 'manage', label: 'Manage', required: true, tier: 'essential' },
 ]
 
 const LAYOUT: Record<string, { width?: string; align?: 'left' | 'center' | 'right' }> = {
@@ -157,10 +158,6 @@ export function UserManagementSection({ userProfile }: AdminSectionProps) {
     onApply: applyFilters,
   })
 
-  const responsiveColumns = useMemo<ResponsiveColumn[]>(
-    () => tbl.columnOrder.filter(tbl.isVisible).map((id) => ({ id, width: LAYOUT[id]?.width, priority: PRIORITY[id], required: tbl.requiredColumns.has(id) })),
-    [tbl.columnOrder, tbl.isVisible, tbl.requiredColumns],
-  )
   const [resolved, setResolved] = useState<Set<string> | null>(null)
   const handleResolve = useCallback((ids: Set<string>) => { setResolved(ids) }, [])
   const isShown = useCallback((id: string) => tbl.isVisible(id) && (!resolved || resolved.has(id)), [tbl, resolved])
@@ -181,54 +178,56 @@ export function UserManagementSection({ userProfile }: AdminSectionProps) {
     return <DataTableHeaderCell key={id} width={layout.width} align={layout.align}>{tbl.columnLabels[id]}</DataTableHeaderCell>
   }
 
-  const renderCell = (id: string, u: AdminUserRow): ReactNode => {
-    if (!isShown(id)) return null
-    const align = LAYOUT[id].align
+  const userCell = (id: string, u: AdminUserRow): ReactNode => {
     switch (id) {
       case 'player':
-        return <DataTableCell key={id} align={align}><PlayerInfo userId={u.id} alias={u.alias} title={toActiveTitle(u.active_title)} size="sm" /></DataTableCell>
+        return <PlayerInfo userId={u.id} alias={u.alias} title={toActiveTitle(u.active_title)} size="sm" />
       case 'id':
-        return (
-          <DataTableCell key={id} align={align} width={LAYOUT[id].width}>
-            <span className="font-mono text-xs text-muted-foreground truncate block" title={u.id}>{u.id}</span>
-          </DataTableCell>
-        )
+        return <span className="font-mono text-xs text-muted-foreground truncate block" title={u.id}>{u.id}</span>
       case 'role': {
         const roleLabel = ROLE_LABELS[u.utbt_role]
-        return (
-          <DataTableCell key={id} align={align}>
-            {roleLabel ? (
-              <span className={cn('text-[11px] font-medium px-2 py-0.5 rounded border', roleLabel.className)}>{roleLabel.label}</span>
-            ) : <span className="text-muted-foreground text-xs">—</span>}
-          </DataTableCell>
-        )
+        return roleLabel ? (
+          <span className={cn('text-[11px] font-medium px-2 py-0.5 rounded border', roleLabel.className)}>{roleLabel.label}</span>
+        ) : <span className="text-muted-foreground text-xs">—</span>
       }
       case 'status':
-        return (
-          <DataTableCell key={id} align={align}>
-            {u.banned ? (
-              <span className="text-[11px] font-medium px-2 py-0.5 rounded border bg-red-500/15 border-red-500/40 text-red-300" title={u.ban_reason ?? ''}>Banned</span>
-            ) : (
-              <span className="text-emerald-300/80 text-xs">Active</span>
-            )}
-          </DataTableCell>
+        return u.banned ? (
+          <span className="text-[11px] font-medium px-2 py-0.5 rounded border bg-red-500/15 border-red-500/40 text-red-300" title={u.ban_reason ?? ''}>Banned</span>
+        ) : (
+          <span className="text-emerald-300/80 text-xs">Active</span>
         )
       case 'warnings':
-        return <DataTableCell key={id} align={align} className="tabular-nums">{u.warn_count}</DataTableCell>
+        return <span className="tabular-nums">{u.warn_count}</span>
       case 'bans':
-        return <DataTableCell key={id} align={align} className="tabular-nums">{u.ban_count}</DataTableCell>
+        return <span className="tabular-nums">{u.ban_count}</span>
       case 'manage':
         return (
-          <DataTableCell key={id} align={align}>
-            <div className="flex justify-center">
-              <ActionButton tone="accent" icon={Settings2} onClick={() => setManageId(u.id)}>Manage</ActionButton>
-            </div>
-          </DataTableCell>
+          <div className="flex justify-center">
+            <ActionButton tone="accent" icon={Settings2} onClick={() => setManageId(u.id)}>Manage</ActionButton>
+          </div>
         )
       default:
         return null
     }
   }
+
+  const renderCell = (id: string, u: AdminUserRow): ReactNode => {
+    if (!isShown(id)) return null
+    const align = LAYOUT[id].align
+    switch (id) {
+      case 'id':
+        return <DataTableCell key={id} align={align} width={LAYOUT[id].width}>{userCell(id, u)}</DataTableCell>
+      case 'warnings':
+      case 'bans':
+        return <DataTableCell key={id} align={align} className="tabular-nums">{id === 'warnings' ? u.warn_count : u.ban_count}</DataTableCell>
+      default:
+        return <DataTableCell key={id} align={align}>{userCell(id, u)}</DataTableCell>
+    }
+  }
+
+  const columns = tbl.responsiveColumns<AdminUserRow>((id) => ({
+    width: LAYOUT[id]?.width, priority: PRIORITY[id], sortKey: SORTABLE[id], cell: (u) => userCell(id, u),
+  }))
 
   return (
     <SectionShell title="User Management" icon={UserCog} tone="red">
@@ -275,7 +274,21 @@ export function UserManagementSection({ userProfile }: AdminSectionProps) {
         </div>
       )}
 
-      <DataTableShell className="flex-none" responsive={{ columns: responsiveColumns, nameFloorRem: 16, extraRem: 0, onResolve: handleResolve }}>
+      <DataTableShell
+        className="flex-none"
+        responsive={{
+          columns, nameFloorRem: 16, extraRem: 0, onResolve: handleResolve,
+          compactAriaLabel: 'Players', onCompactChange: tbl.onCompactChange,
+          cards: {
+            rows,
+            rowKey: (u) => u.id,
+            face: (u) => <AdminCardFace columns={columns} row={u} />,
+            onOpen: (u) => openPlayer(u.id),
+            placeholder: adminCardsPlaceholder(loading || total === null, rows.length === 0, 'No players match your filters.'),
+            sort: { key: sort, direction: order, onSort: (key) => toggleSort(key as AdminUserSort) },
+          },
+        }}
+      >
         <DataTableHeaderRow>
           {tbl.columnOrder.map((id) => renderHeader(id))}
         </DataTableHeaderRow>

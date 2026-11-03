@@ -7,19 +7,25 @@ import type { AdminSectionProps } from '../types'
 import { SectionShell } from '../components/SectionShell'
 import { StatCard } from '../components/StatCard'
 import { Feedback, errMessage } from '../components/controls'
-import { DataTableCell, DataTableHeaderCell, DataTableHeaderRow, DataTableRow, DataTableShell } from '@/app/components/shared/DataTable'
-import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { DataTableCell, DataTableHeaderCell, DataTableHeaderRow, DataTableRow, DataTableShell, type ResponsiveColumn } from '@/app/components/shared/DataTable'
+import { PlayerInfo, openPlayer } from '@/app/components/shared/PlayerInfo'
+import { AdminCardFace } from '../components/AdminCardFace'
 import { CHART_CYAN, CHART_TEAL } from '@/app/utils/chartColors'
 
 const WINDOWS: ActivityWindow[] = ['24h', '1w', '1m', '1y']
 const AXIS_TICK = 'var(--muted-foreground)'
 const AXIS_LINE = 'rgb(var(--hairline-rgb) / 0.12)'
 const GRID_STROKE = 'rgb(var(--hairline-rgb) / 0.08)'
-const RECENT_COLUMNS = [
-  { id: 'player', width: '14rem', required: true },
-  { id: 'surface', width: '6rem', priority: 30 },
-  { id: 'view', width: '8rem', priority: 20 },
-  { id: 'seen', width: '11rem', priority: 40 },
+type RecentUser = AdminUsageRecent['items'][number]
+
+const RECENT_COLUMNS: ResponsiveColumn<RecentUser>[] = [
+  {
+    id: 'player', width: '14rem', required: true, tier: 'essential', label: 'Player',
+    cell: (item) => <PlayerInfo userId={item.user_id} alias={item.alias} title={toActiveTitle(item.active_title)} size="sm" />,
+  },
+  { id: 'surface', width: '6rem', priority: 30, tier: 'detail', label: 'Surface', cell: (item) => <span className="capitalize">{item.surface}</span> },
+  { id: 'view', width: '8rem', priority: 20, tier: 'detail', label: 'Last view', cell: (item) => item.last_view.replaceAll('_', ' ') },
+  { id: 'seen', width: '11rem', priority: 40, tier: 'detail', label: 'Last seen', cell: (item) => new Date(item.last_seen_at).toLocaleString() },
 ]
 
 function SessionsTooltip({ active, payload, label }: {
@@ -142,16 +148,12 @@ export function UsageHealthSection({ userProfile }: AdminSectionProps) {
                   columns: RECENT_COLUMNS,
                   onResolve: resolveRecentColumns,
                   compactAriaLabel: 'Recent signed-in users',
-                  compactContent: recent.map((item) => (
-                    <div key={item.user_id} role="listitem" className="p-3 space-y-2 border-b border-hairline/5 last:border-0">
-                      <PlayerInfo userId={item.user_id} alias={item.alias} title={toActiveTitle(item.active_title)} size="sm" />
-                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                        <span className="capitalize">{item.surface}</span>
-                        <span>{item.last_view.replaceAll('_', ' ')}</span>
-                        <span>{new Date(item.last_seen_at).toLocaleString()}</span>
-                      </div>
-                    </div>
-                  )),
+                  cards: {
+                    rows: recent,
+                    rowKey: (item) => item.user_id,
+                    face: (item) => <AdminCardFace columns={RECENT_COLUMNS} row={item} />,
+                    onOpen: (item) => openPlayer(item.user_id),
+                  },
                 }}
               >
                 <DataTableHeaderRow>
@@ -163,10 +165,9 @@ export function UsageHealthSection({ userProfile }: AdminSectionProps) {
                 <tbody>
                   {recent.map((item) => (
                     <DataTableRow key={item.user_id}>
-                      <DataTableCell width="14rem"><PlayerInfo userId={item.user_id} alias={item.alias} title={toActiveTitle(item.active_title)} size="sm" /></DataTableCell>
-                      {recentColumnVisible('surface') && <DataTableCell align="center" width="6rem" className="capitalize">{item.surface}</DataTableCell>}
-                      {recentColumnVisible('view') && <DataTableCell align="center" width="8rem">{item.last_view.replaceAll('_', ' ')}</DataTableCell>}
-                      {recentColumnVisible('seen') && <DataTableCell align="center" width="11rem">{new Date(item.last_seen_at).toLocaleString()}</DataTableCell>}
+                      {RECENT_COLUMNS.filter((c) => recentColumnVisible(c.id)).map((c) => (
+                        <DataTableCell key={c.id} align={c.id === 'player' ? undefined : 'center'} width={c.width}>{c.cell?.(item)}</DataTableCell>
+                      ))}
                     </DataTableRow>
                   ))}
                 </tbody>

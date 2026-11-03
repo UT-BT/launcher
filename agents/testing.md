@@ -378,7 +378,7 @@ both.
 
 | Entry | Signed in as | Crawls |
 |---|---|---|
-| `admin` | Admin, so every section shows | Overview, then one sub-view per section in `ADMIN_SECTIONS`, picked in the section `<select>` (or the side nav from `lg`), plus the Anti-Cheat High Cap Delta and Low FPS WRs tabs |
+| `admin` | Admin, so every section shows | Overview, then one sub-view per section in `ADMIN_SECTIONS`, picked in the section `<select>` (or the side nav from `lg`), plus the Anti-Cheat High Cap Delta and Low FPS WRs tabs and the Map Uploads Publishing / Recent and Drift tabs |
 | `home:signed-in` | a user | the signed-in Home, the Recent Caps History modal (See More) and Settings (drawer, user card menu) |
 | `maps:signed-in` | a user | the Maps page with the viewer's medals, PBs and reviews in the cards and table |
 | `event-detail:manager` | an event manager (`/tournaments/<slug>/me` with `can_manage`) | the Manage tab and its Signups, Format, Bracket, Matches (plus the match editor), Picks & Bans, Schedule and Predictions sub-tabs, and the Stream tab as a manager sees it |
@@ -452,6 +452,9 @@ Role-gated entries never serve recorded data. Their sets are built in code in
   ids are `FAKE-HWID-<n>-0000-0000-TEST`, and maps are `CTF-BT-Test<Word>`. No real anti-cheat data.
 - Every optional field is filled, so the default set is the most-columns case; volumes match a live
   dashboard (a full page of 50 rows, totals in the thousands).
+- Times are relative to the moment the set loads. A row the table shows as a relative time ("2h
+  ago") sits at least an hour back, so the text can't tick between the crawl's desktop read and
+  its card read.
 - `synthetic/synthetic.test.ts` (Vitest) fails on an IP outside the documentation ranges, a
   hardware id that is not obviously fake, a player id without the synthetic prefix, an email
   address or a token in any synthetic route.
@@ -600,6 +603,16 @@ spec that is red today is marked `test.fail()`, with a note naming the ticket th
   after it closes `main` takes a swipe again. A multi-filter dropdown and a `modal={false}` menu
   fit the visible area and hold the page still too. Signed-in overlays sign in by seeding the
   stored login and answering the profile request.
+- `admin-cards.spec.ts`: the tiered admin tables at 390×844, signed in as staff through the
+  `admin` entry. Each table's main action works from its card: Manage opens the user, the title,
+  patch and news editors open, a draft opens and a publish is selected (both by the request they
+  send; the `admin` set serves no single draft or publish), and a recent user's card body opens
+  the player. Caps selection works on the cards (a 44 px checkbox target, Select all on this
+  page, the bulk bar), and Disallow opens its confirm. Each panel lists the table's detail
+  columns; Drift lists every location. Audit Logs opens the entry's details, with Roll back,
+  in the card panel, and at 1920 px in a single-cell expand row under the table row. A sort
+  picked on the User Management cards is sent with the request and shows as the header's
+  `aria-sort` at 1920 px, where the Columns menu is back.
 - `player-server-cards.spec.ts`: the tiered Players, Cap It All and Servers tables at 390×844.
   A server card keeps name, players n/max, flag and status on its face, and its panel lists the
   player and spectator names with the spectator count. A sort field and direction picked on the

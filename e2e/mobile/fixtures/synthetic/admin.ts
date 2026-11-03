@@ -248,7 +248,7 @@ const news = Array.from({ length: 14 }, (_, index) => ({
     link_url: 'https://example.com/notes',
     link_text: 'Read the notes',
     pinned: index === 0,
-    published_at: daysAgo(index * 3),
+    published_at: daysAgo(index * 3 + 0.5),
     expires_at: index % 4 === 0 ? daysAgo(-14) : null,
     author_alias: VIEWER.alias,
     active: index % 5 !== 4,
@@ -340,7 +340,7 @@ function capRow(index: number): AdminCapRow {
         verified: index % 3 === 0,
         disallowed: index % 11 === 7,
         has_demo: index % 2 === 0,
-        added: hoursAgo(index * 3),
+        added: hoursAgo(index * 3 + 1),
         ip: documentationIp(index),
         hwid: fakeHwid(index),
         btpog_id: fakeBtpog(index),
@@ -397,7 +397,7 @@ const patches: AdminPatch[] = Array.from({ length: 8 }, (_, index) => ({
     exe_md5: '0'.repeat(32),
     release_notes_url: 'https://example.com/patches/notes',
     active: index < 2,
-    added: daysAgo(index * 21),
+    added: daysAgo(index * 21 + 1),
 }))
 
 function sharedGroup(index: number): AcSharedGroup {
@@ -481,7 +481,7 @@ function auditRow(index: number): AuditEntry {
         details: { before: { difficulty: 4 }, after: { difficulty: 5 } },
         reason: index % 3 ? 'Reported in the support channel' : null,
         ip: documentationIp(index + 300),
-        created_at: hoursAgo(index * 2),
+        created_at: hoursAgo(index * 2 + 1),
         reverts: null,
         reverted: index % 13 === 6,
         can_rollback: index % 2 === 0,

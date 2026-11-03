@@ -447,7 +447,9 @@ Reference page: `events/stats/MapStatsTable.tsx`. Tiered tables: `WorldRecordsPa
 card sort), `CapItAllPage.tsx`, `mapDetail/LeaderboardCard.tsx` (a panel with actions),
 `home/LatestRecordsCard.tsx` (every column essential, no panel), `teams/TeamActivityPanel.tsx`
 (card sort over a client-sorted feed), the seven profile tabs in `playerDetail/`
-(`RecentCapsCard.tsx` with a panel of actions, `WorldRecordsCard.tsx` with no panel).
+(`RecentCapsCard.tsx` with a panel of actions, `WorldRecordsCard.tsx` with no panel), the admin
+tables through `useAdminTable` and `AdminCardFace` (`admin/sections/AuditLogsSection.tsx`: extra
+panel content and a `DataTableExpandRow` on the table; [admin.md](features/admin.md#tables-on-phones)).
 
 ## Buttons and chips
 

@@ -31,6 +31,15 @@ function antiCheatTab(id: string, label: string, data: string | RegExp): MobileS
     }
 }
 
+function mapUploadsTab(id: string, label: string, data: string | RegExp): MobileSubView {
+    return {
+        id: `map-uploads-${id}`,
+        label: `Map Uploads › ${label}`,
+        open: steps(picksSection('map-uploads', 'Map Uploads'), heading('Map Uploads'), tap(page => page.getByRole('button', { name: label, exact: true }))),
+        ready: steps(heading('Map Uploads'), shown(data)),
+    }
+}
+
 export const admin: MobileRouteEntry = {
     view: 'admin',
     tier: 'role-gated',
@@ -50,6 +59,8 @@ export const admin: MobileRouteEntry = {
         section('caps-management', 'Caps Management', 'Caps Management', person(1).alias),
         section('maps-management', 'Maps Management', 'Maps Management', syntheticMap(1).replace(/^CTF-BT-/, '')),
         section('map-uploads', 'Map Uploads', 'Map Uploads', /Baz/),
+        mapUploadsTab('publishing', 'Publishing / Recent', 'CTF-BT-Foo'),
+        mapUploadsTab('drift', 'Drift', 'FooTex.utx'),
         section('patches-management', 'Patch Releases', 'Patch Releases', 'v4.8.0'),
         section('anti-cheat', 'Anti-Cheat', 'Anti-Cheat', fakeHwid(0)),
         antiCheatTab('cap-delta', 'High Cap Delta', person(6).alias),

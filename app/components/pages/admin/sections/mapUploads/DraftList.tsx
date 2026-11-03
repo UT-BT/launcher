@@ -10,19 +10,22 @@ import {
 } from '@/app/components/shared/DataTable'
 import { ActionButton, Feedback } from '../../components/controls'
 import { PANEL_LABEL } from '../../components/shared'
+import { AdminCardFace, adminCardsPlaceholder } from '../../components/AdminCardFace'
 import { DRAFT_STATUS_LABEL, countLabel } from './reportLabels'
 import { ToneChip } from './ToneChip'
 import { DiscardDraftDialog } from './DiscardDraftDialog'
 import { DraftExpiry } from './DraftExpiry'
 import { usePollWhile } from './usePollWhile'
 
-const COLUMNS: ResponsiveColumn[] = [
-  { id: 'map', required: true },
-  { id: 'status', width: '8rem', required: true },
-  { id: 'issues', width: '8rem', priority: 65 },
-  { id: 'creator', width: '10rem', priority: 50 },
-  { id: 'expires', width: '8rem', priority: 40 },
-  { id: 'actions', width: '7.5rem', required: true },
+type DraftColumn = Omit<ResponsiveColumn<DraftSummary>, 'cell'>
+
+const COLUMNS: DraftColumn[] = [
+  { id: 'map', required: true, tier: 'essential', label: 'Map' },
+  { id: 'status', width: '8rem', required: true, tier: 'essential', label: 'Status' },
+  { id: 'issues', width: '8rem', priority: 65, tier: 'detail', label: 'Issues' },
+  { id: 'creator', width: '10rem', priority: 50, tier: 'detail', label: 'Uploaded by' },
+  { id: 'expires', width: '8rem', priority: 40, tier: 'detail', label: 'Expires' },
+  { id: 'actions', width: '7.5rem', required: true, tier: 'essential', label: 'Actions' },
 ]
 
 function Issues({ draft }: { draft: DraftSummary }) {
@@ -159,26 +162,19 @@ export function DraftList({ token, refreshKey, uploadedIds, onDismissUploaded, o
     setDrafts((prev) => prev.filter((d) => d.id !== id))
   }
 
-  const compactRows = (
-    <ul className="space-y-2">
-      {loading && Array.from({ length: 3 }).map((_, i) => <li key={i} className="h-24 rounded-xl border border-hairline/5 bg-hairline/[0.03] animate-pulse" />)}
-      {!loading && drafts.length === 0 && <li className="px-4 py-12 text-center text-sm text-muted-foreground">No drafts. Upload an archive to start one.</li>}
-      {!loading && drafts.map((draft) => (
-        <li key={draft.id} className="rounded-xl border border-hairline/5 bg-card/30 px-4 py-3 space-y-2.5">
-          <div className="flex items-start justify-between gap-2">
-            <MapCell draft={draft} />
-            <StatusChip draft={draft} />
-          </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-            <Issues draft={draft} />
-            <PlayerInfo userId={draft.created_by.id} alias={draft.created_by.alias} size="sm" />
-            <span className="text-xs text-muted-foreground"><DraftExpiry draft={draft} /></span>
-          </div>
-          <RowActions onOpen={() => onOpenDraft(draft.id)} onDiscard={() => setDiscardTarget(draft)} />
-        </li>
-      ))}
-    </ul>
-  )
+  const draftCell = (id: string, draft: DraftSummary) => {
+    switch (id) {
+      case 'map': return <MapCell draft={draft} />
+      case 'status': return <StatusChip draft={draft} />
+      case 'issues': return <Issues draft={draft} />
+      case 'creator': return <PlayerInfo userId={draft.created_by.id} alias={draft.created_by.alias} size="sm" />
+      case 'expires': return <span className="text-xs text-muted-foreground"><DraftExpiry draft={draft} /></span>
+      case 'actions': return <RowActions onOpen={() => onOpenDraft(draft.id)} onDiscard={() => setDiscardTarget(draft)} />
+      default: return null
+    }
+  }
+
+  const columns: ResponsiveColumn<DraftSummary>[] = COLUMNS.map((c) => ({ ...c, cell: (draft) => draftCell(c.id, draft) }))
 
   return (
     <section aria-label="Drafts" className="space-y-3">
@@ -190,7 +186,16 @@ export function DraftList({ token, refreshKey, uploadedIds, onDismissUploaded, o
       <Feedback message={error} tone="red" onDismiss={() => setError(null)} />
       <DataTableShell
         className="!flex-none"
-        responsive={{ columns: COLUMNS, onResolve: handleResolve, compactContent: compactRows, compactAriaLabel: 'Drafts' }}
+        responsive={{
+          columns, onResolve: handleResolve, compactAriaLabel: 'Drafts',
+          cards: {
+            rows: drafts,
+            rowKey: (draft) => String(draft.id),
+            face: (draft) => <AdminCardFace columns={columns} row={draft} />,
+            onOpen: (draft) => onOpenDraft(draft.id),
+            placeholder: adminCardsPlaceholder(loading, loading || drafts.length === 0, 'No drafts. Upload an archive to start one.'),
+          },
+        }}
       >
         <DataTableHeaderRow>
           <DataTableHeaderCell>Map</DataTableHeaderCell>
@@ -207,16 +212,9 @@ export function DraftList({ token, refreshKey, uploadedIds, onDismissUploaded, o
             <DataTableEmpty colSpan={visibleCount} message="No drafts. Upload an archive to start one." />
           ) : drafts.map((draft) => (
             <DataTableRow key={draft.id} onClick={() => onOpenDraft(draft.id)} className="cursor-pointer">
-              <DataTableCell><MapCell draft={draft} /></DataTableCell>
-              <DataTableCell><StatusChip draft={draft} /></DataTableCell>
-              {isVisible('issues') && <DataTableCell><Issues draft={draft} /></DataTableCell>}
-              {isVisible('creator') && (
-                <DataTableCell><PlayerInfo userId={draft.created_by.id} alias={draft.created_by.alias} size="sm" /></DataTableCell>
-              )}
-              {isVisible('expires') && <DataTableCell><span className="text-xs text-muted-foreground"><DraftExpiry draft={draft} /></span></DataTableCell>}
-              <DataTableCell align="right">
-                <RowActions onOpen={() => onOpenDraft(draft.id)} onDiscard={() => setDiscardTarget(draft)} />
-              </DataTableCell>
+              {COLUMNS.filter((c) => isVisible(c.id)).map((c) => (
+                <DataTableCell key={c.id} align={c.id === 'actions' ? 'right' : undefined}>{draftCell(c.id, draft)}</DataTableCell>
+              ))}
             </DataTableRow>
           ))}
         </tbody>

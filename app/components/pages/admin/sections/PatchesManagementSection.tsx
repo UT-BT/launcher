@@ -16,6 +16,7 @@ import { useAdminTable, type AdminColumn } from '../components/useAdminTable'
 import { useAdminFilterPresets } from '../components/useAdminFilterPresets'
 import { TableControls } from '../components/TableControls'
 import { PANEL_LABEL } from '../components/shared'
+import { AdminCardFace, adminCardsPlaceholder } from '../components/AdminCardFace'
 import { Modal } from '@/app/components/ui/modal'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
@@ -25,7 +26,7 @@ import { ActiveFilterChip } from '@/app/components/shared/ActiveFilterChip'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import {
   DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow, DataTableCell,
-  DataTableEmpty, DataTableSkeletonRow, type SortDirection, type ResponsiveColumn,
+  DataTableEmpty, DataTableSkeletonRow, type SortDirection,
 } from '@/app/components/shared/DataTable'
 
 const CHANNEL_OPTIONS = [
@@ -44,14 +45,14 @@ const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
 type PatchSortKey = 'channel' | 'tag' | 'asset' | 'status' | 'added'
 
 const PATCH_COLUMNS: AdminColumn[] = [
-  { id: 'channel', label: 'Channel', required: true },
-  { id: 'tag', label: 'Tag', required: true },
-  { id: 'asset', label: 'Asset' },
-  { id: 'hashes', label: 'Hashes' },
-  { id: 'notes', label: 'Notes' },
-  { id: 'status', label: 'Status', required: true },
-  { id: 'added', label: 'Added' },
-  { id: 'actions', label: 'Actions', required: true },
+  { id: 'channel', label: 'Channel', required: true, tier: 'essential' },
+  { id: 'tag', label: 'Tag', required: true, tier: 'essential' },
+  { id: 'asset', label: 'Asset', tier: 'detail' },
+  { id: 'hashes', label: 'Hashes', tier: 'detail' },
+  { id: 'notes', label: 'Notes', tier: 'detail' },
+  { id: 'status', label: 'Status', required: true, tier: 'essential' },
+  { id: 'added', label: 'Added', tier: 'detail' },
+  { id: 'actions', label: 'Actions', required: true, tier: 'essential' },
 ]
 
 const LAYOUT: Record<string, { width?: string; align?: 'left' | 'center' | 'right' }> = {
@@ -434,10 +435,6 @@ export function PatchesManagementSection({ userProfile }: AdminSectionProps) {
     }
   }, [token, deleteTarget, load])
 
-  const responsiveColumns = useMemo<ResponsiveColumn[]>(
-    () => tbl.columnOrder.filter(tbl.isVisible).map((id) => ({ id, width: LAYOUT[id]?.width, priority: PRIORITY[id], required: tbl.requiredColumns.has(id) })),
-    [tbl.columnOrder, tbl.isVisible, tbl.requiredColumns],
-  )
   const [resolved, setResolved] = useState<Set<string> | null>(null)
   const handleResolve = useCallback((ids: Set<string>) => { setResolved(ids) }, [])
   const isShown = useCallback((id: string) => tbl.isVisible(id) && (!resolved || resolved.has(id)), [tbl, resolved])
@@ -458,79 +455,78 @@ export function PatchesManagementSection({ userProfile }: AdminSectionProps) {
     return <DataTableHeaderCell key={id} width={layout.width} align={layout.align}>{tbl.columnLabels[id]}</DataTableHeaderCell>
   }
 
-  const renderCell = (id: string, p: AdminPatch): ReactNode => {
-    if (!isShown(id)) return null
-    const align = LAYOUT[id].align
+  const patchCell = (id: string, p: AdminPatch): ReactNode => {
     switch (id) {
       case 'channel':
-        return <DataTableCell key={id} align={align}><ChannelChip channel={p.channel} /></DataTableCell>
+        return <ChannelChip channel={p.channel} />
       case 'tag':
-        return (
-          <DataTableCell key={id} align={align} className="font-medium text-sm">
-            <div className="truncate" title={p.tag}>{p.tag}</div>
-          </DataTableCell>
-        )
+        return <div className="truncate" title={p.tag}>{p.tag}</div>
       case 'asset':
         return (
-          <DataTableCell key={id} align={align}>
-            <a href={p.asset_url} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-sm text-accent-300 hover:text-accent-200 min-w-0" title={p.asset_name}>
-              <span className="truncate min-w-0">{p.asset_name}</span>
-              <ExternalLink className="size-3 shrink-0" />
-            </a>
-          </DataTableCell>
+          <a href={p.asset_url} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-sm text-accent-300 hover:text-accent-200 min-w-0" title={p.asset_name}>
+            <span className="truncate min-w-0">{p.asset_name}</span>
+            <ExternalLink className="size-3 shrink-0" />
+          </a>
         )
       case 'hashes':
         return (
-          <DataTableCell key={id} align={align}>
-            <div className="flex flex-col gap-1">
-              <span className="flex items-center gap-1.5">
-                <span className="text-[10px] uppercase text-muted-foreground/60 w-7 shrink-0">zip</span>
-                <Copyable value={p.sha256} className="min-w-0" />
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="text-[10px] uppercase text-muted-foreground/60 w-7 shrink-0">exe</span>
-                <Copyable value={p.exe_md5} className="min-w-0" />
-              </span>
-            </div>
-          </DataTableCell>
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="flex items-center gap-1.5">
+              <span className="text-[10px] uppercase text-muted-foreground/60 w-7 shrink-0">zip</span>
+              <Copyable value={p.sha256} className="min-w-0" />
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="text-[10px] uppercase text-muted-foreground/60 w-7 shrink-0">exe</span>
+              <Copyable value={p.exe_md5} className="min-w-0" />
+            </span>
+          </div>
         )
       case 'notes':
         return (
-          <DataTableCell key={id} align={align}>
-            <a href={p.release_notes_url} target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center justify-center text-muted-foreground hover:text-accent-200" title={p.release_notes_url}>
-              <ExternalLink className="size-4" />
-            </a>
-          </DataTableCell>
+          <a href={p.release_notes_url} target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center justify-center text-muted-foreground hover:text-accent-200" title={p.release_notes_url}>
+            <ExternalLink className="size-4" />
+          </a>
         )
       case 'status':
-        return (
-          <DataTableCell key={id} align={align}>
-            {p.active ? <span className="text-emerald-300 text-xs">Active</span> : <span className="text-muted-foreground text-xs">Inactive</span>}
-          </DataTableCell>
-        )
+        return p.active ? <span className="text-emerald-300 text-xs">Active</span> : <span className="text-muted-foreground text-xs">Inactive</span>
       case 'added':
-        return <DataTableCell key={id} align={align} className="text-xs text-muted-foreground whitespace-nowrap" title={p.added ?? ''}>{relTime(p.added)}</DataTableCell>
+        return <span className="text-xs text-muted-foreground whitespace-nowrap" title={p.added ?? ''}>{relTime(p.added)}</span>
       case 'actions':
         return (
-          <DataTableCell key={id} align={align}>
-            <div className="flex justify-center gap-1.5">
-              <ActionButton tone="accent" icon={Pencil} onClick={() => setEditing(p)} title="Edit patch" />
-              <ActionButton
-                tone={p.active ? 'amber' : 'emerald'}
-                icon={p.active ? PowerOff : Power}
-                onClick={() => setToggleTarget(p)}
-                title={p.active ? 'Deactivate' : 'Activate'}
-              />
-              <ActionButton tone="red" icon={Trash2} onClick={() => setDeleteTarget(p)} title="Delete patch" />
-            </div>
-          </DataTableCell>
+          <div className="flex justify-center gap-1.5">
+            <ActionButton tone="accent" icon={Pencil} onClick={() => setEditing(p)} title="Edit patch" />
+            <ActionButton
+              tone={p.active ? 'amber' : 'emerald'}
+              icon={p.active ? PowerOff : Power}
+              onClick={() => setToggleTarget(p)}
+              title={p.active ? 'Deactivate' : 'Activate'}
+            />
+            <ActionButton tone="red" icon={Trash2} onClick={() => setDeleteTarget(p)} title="Delete patch" />
+          </div>
         )
       default:
         return null
     }
   }
+
+  const renderCell = (id: string, p: AdminPatch): ReactNode => {
+    if (!isShown(id)) return null
+    const align = LAYOUT[id].align
+    switch (id) {
+      case 'tag':
+        return <DataTableCell key={id} align={align} className="font-medium text-sm">{patchCell(id, p)}</DataTableCell>
+      case 'added':
+        return <DataTableCell key={id} align={align} className="text-xs text-muted-foreground whitespace-nowrap" title={p.added ?? ''}>{relTime(p.added)}</DataTableCell>
+      default:
+        return <DataTableCell key={id} align={align}>{patchCell(id, p)}</DataTableCell>
+    }
+  }
+
+  const columns = tbl.responsiveColumns<AdminPatch>((id) => ({
+    width: LAYOUT[id]?.width, priority: PRIORITY[id], sortKey: SORTABLE[id], cell: (p) => patchCell(id, p),
+  }))
 
   return (
     <SectionShell
@@ -588,7 +584,20 @@ export function PatchesManagementSection({ userProfile }: AdminSectionProps) {
         </div>
       )}
 
-      <DataTableShell className="flex-none" responsive={{ columns: responsiveColumns, nameFloorRem: 14, extraRem: 0, onResolve: handleResolve }}>
+      <DataTableShell
+        className="flex-none"
+        responsive={{
+          columns, nameFloorRem: 14, extraRem: 0, onResolve: handleResolve,
+          compactAriaLabel: 'Patches', onCompactChange: tbl.onCompactChange,
+          cards: {
+            rows: sorted,
+            rowKey: (p) => String(p.id),
+            face: (p) => <AdminCardFace columns={columns} row={p} />,
+            placeholder: adminCardsPlaceholder(loading && rows.length === 0, sorted.length === 0, 'No patches match these filters.'),
+            sort: { key: sortKey, direction: sortDir, onSort: (key) => toggleSort(key as PatchSortKey) },
+          },
+        }}
+      >
         <DataTableHeaderRow>
           {tbl.columnOrder.map((id) => renderHeader(id))}
         </DataTableHeaderRow>

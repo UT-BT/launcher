@@ -1,1 +1,4 @@
-[]
+[
+  { "surface": "admin/map-uploads-publishing", "viewport": "915x412", "engine": "chromium" },
+  { "surface": "admin/map-uploads-publishing", "viewport": "844x390", "engine": "webkit" }
+]

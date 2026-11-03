@@ -7,17 +7,10 @@ import {
 import { cn } from '@/lib/utils'
 import { formatDateTime, relTime } from '../../components/controls'
 import { PANEL_LABEL } from '../../components/shared'
+import { AdminCardFace, adminCardsPlaceholder } from '../../components/AdminCardFace'
 import { ACTIVATION_LABEL, PUBLISH_STATE_LABEL } from './publishLabels'
 import { ToneChip } from './ToneChip'
 import { isPublishSettled } from './publishState'
-
-const COLUMNS: ResponsiveColumn[] = [
-  { id: 'map', required: true },
-  { id: 'state', width: '10rem', required: true },
-  { id: 'hosts', width: '8rem', priority: 65 },
-  { id: 'created', width: '8rem', priority: 50 },
-  { id: 'activation', width: '8rem', priority: 40 },
-]
 
 function StateChip({ publish }: { publish: PublishSummary }) {
   const state = PUBLISH_STATE_LABEL[publish.state]
@@ -53,6 +46,14 @@ function Activation({ publish }: { publish: PublishSummary }) {
   return <span className="text-xs text-muted-foreground">{publish.activation ? ACTIVATION_LABEL[publish.activation] : '—'}</span>
 }
 
+const COLUMNS: ResponsiveColumn<PublishSummary>[] = [
+  { id: 'map', required: true, tier: 'essential', label: 'Map', cell: (publish) => <MapCell publish={publish} /> },
+  { id: 'state', width: '10rem', required: true, tier: 'essential', label: 'State', cell: (publish) => <StateChip publish={publish} /> },
+  { id: 'hosts', width: '8rem', priority: 65, tier: 'detail', label: 'Hosts', cell: (publish) => <Hosts publish={publish} /> },
+  { id: 'created', width: '8rem', priority: 50, tier: 'detail', label: 'Created', cell: (publish) => <Created publish={publish} /> },
+  { id: 'activation', width: '8rem', priority: 40, tier: 'detail', label: 'Went live', cell: (publish) => <Activation publish={publish} /> },
+]
+
 export function PublishList({ publishes, loading, selectedId, onSelect }: {
   publishes: PublishSummary[]
   loading: boolean
@@ -65,30 +66,22 @@ export function PublishList({ publishes, loading, selectedId, onSelect }: {
   const visibleCount = COLUMNS.filter((c) => isVisible(c.id)).length
   const selectedClass = (id: number) => (id === selectedId ? 'bg-accent-500/[0.08]' : undefined)
 
-  const compactRows = (
-    <ul className="space-y-2">
-      {publishes.map((publish) => (
-        <li key={publish.id} onClick={() => onSelect(publish.id)} className={cn('cursor-pointer rounded-xl border border-hairline/5 bg-card/30 px-4 py-3 space-y-2', selectedClass(publish.id))}>
-          <div className="flex items-start justify-between gap-2">
-            <MapCell publish={publish} />
-            <StateChip publish={publish} />
-          </div>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <Hosts publish={publish} />
-            <Created publish={publish} />
-            {publish.activation && <Activation publish={publish} />}
-          </div>
-        </li>
-      ))}
-    </ul>
-  )
-
   return (
     <section aria-label="Recent publishes" className="space-y-2">
       <h3 className={PANEL_LABEL}>Recent publishes</h3>
       <DataTableShell
         className="!flex-none"
-        responsive={{ columns: COLUMNS, onResolve: handleResolve, compactContent: compactRows, compactAriaLabel: 'Recent publishes' }}
+        responsive={{
+          columns: COLUMNS, onResolve: handleResolve, compactAriaLabel: 'Recent publishes',
+          cards: {
+            rows: publishes,
+            rowKey: (publish) => String(publish.id),
+            face: (publish) => <AdminCardFace columns={COLUMNS} row={publish} />,
+            onOpen: (publish) => onSelect(publish.id),
+            rowClassName: (publish) => selectedClass(publish.id),
+            placeholder: adminCardsPlaceholder(loading, loading || publishes.length === 0, 'Nothing has been published yet.'),
+          },
+        }}
       >
         <DataTableHeaderRow>
           <DataTableHeaderCell>Map</DataTableHeaderCell>
@@ -104,11 +97,7 @@ export function PublishList({ publishes, loading, selectedId, onSelect }: {
             <DataTableEmpty colSpan={visibleCount} message="Nothing has been published yet." />
           ) : publishes.map((publish) => (
             <DataTableRow key={publish.id} onClick={() => onSelect(publish.id)} className={cn('cursor-pointer', selectedClass(publish.id))}>
-              <DataTableCell><MapCell publish={publish} /></DataTableCell>
-              <DataTableCell><StateChip publish={publish} /></DataTableCell>
-              {isVisible('hosts') && <DataTableCell><Hosts publish={publish} /></DataTableCell>}
-              {isVisible('created') && <DataTableCell><Created publish={publish} /></DataTableCell>}
-              {isVisible('activation') && <DataTableCell><Activation publish={publish} /></DataTableCell>}
+              {COLUMNS.filter((c) => isVisible(c.id)).map((c) => <DataTableCell key={c.id}>{c.cell?.(publish)}</DataTableCell>)}
             </DataTableRow>
           ))}
         </tbody>

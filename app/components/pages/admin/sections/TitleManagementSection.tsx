@@ -15,6 +15,7 @@ import { useAdminTable, type AdminColumn } from '../components/useAdminTable'
 import { useAdminFilterPresets } from '../components/useAdminFilterPresets'
 import { TableControls } from '../components/TableControls'
 import { PANEL_LABEL } from '../components/shared'
+import { AdminCardFace, adminCardsPlaceholder } from '../components/AdminCardFace'
 import { Modal } from '@/app/components/ui/modal'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
@@ -27,7 +28,7 @@ import { getTitleTextStyle } from '@/app/utils/titleStyles'
 import { cn } from '@/lib/utils'
 import {
   DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow, DataTableCell,
-  DataTableEmpty, DataTableSkeletonRow, type SortDirection, type ResponsiveColumn,
+  DataTableEmpty, DataTableSkeletonRow, type SortDirection,
 } from '@/app/components/shared/DataTable'
 
 function hexToRgb(hex: string) {
@@ -338,10 +339,10 @@ type SortKey = 'name' | 'rarity' | 'holders'
 type SortDir = 'asc' | 'desc'
 
 const COLUMNS: AdminColumn[] = [
-  { id: 'title', label: 'Title', required: true },
-  { id: 'rarity', label: 'Rarity' },
-  { id: 'holders', label: 'Holders' },
-  { id: 'actions', label: 'Actions', required: true },
+  { id: 'title', label: 'Title', required: true, tier: 'essential' },
+  { id: 'rarity', label: 'Rarity', tier: 'detail' },
+  { id: 'holders', label: 'Holders', tier: 'detail' },
+  { id: 'actions', label: 'Actions', required: true, tier: 'essential' },
 ]
 
 const LAYOUT: Record<string, { width?: string; align?: 'left' | 'center' | 'right' }> = {
@@ -457,10 +458,6 @@ export function TitleManagementSection({ userProfile }: AdminSectionProps) {
     }
   }
 
-  const responsiveColumns = useMemo<ResponsiveColumn[]>(
-    () => tbl.columnOrder.filter(tbl.isVisible).map((id) => ({ id, width: LAYOUT[id]?.width, priority: PRIORITY[id], required: tbl.requiredColumns.has(id) })),
-    [tbl.columnOrder, tbl.isVisible, tbl.requiredColumns],
-  )
   const [resolved, setResolved] = useState<Set<string> | null>(null)
   const handleResolve = useCallback((ids: Set<string>) => { setResolved(ids) }, [])
   const isShown = useCallback((id: string) => tbl.isVisible(id) && (!resolved || resolved.has(id)), [tbl, resolved])
@@ -481,40 +478,45 @@ export function TitleManagementSection({ userProfile }: AdminSectionProps) {
     return <DataTableHeaderCell key={id} width={layout.width} align={layout.align}>{tbl.columnLabels[id]}</DataTableHeaderCell>
   }
 
-  const renderCell = (id: string, t: AdminTitleSummary): ReactNode => {
-    if (!isShown(id)) return null
-    const align = LAYOUT[id].align
+  const titleCell = (id: string, t: AdminTitleSummary): ReactNode => {
     switch (id) {
       case 'title': {
         const fakeTitle = buildFakeTitle(t.name, t.color_r, t.color_g, t.color_b, t.rarity)
-        return (
-          <DataTableCell key={id} align={align}>
-            <span className="font-medium" style={getTitleTextStyle(fakeTitle)}>{t.name}</span>
-          </DataTableCell>
-        )
+        return <span className="font-medium" style={getTitleTextStyle(fakeTitle)}>{t.name}</span>
       }
       case 'rarity':
-        return (
-          <DataTableCell key={id} align={align} className="text-muted-foreground">
-            <span className="tabular-nums">{t.rarity}</span>
-          </DataTableCell>
-        )
+        return <span className="tabular-nums">{t.rarity}</span>
       case 'holders':
-        return <DataTableCell key={id} align={align} className="tabular-nums">{t.holders}</DataTableCell>
+        return <span className="tabular-nums">{t.holders}</span>
       case 'actions':
         return (
-          <DataTableCell key={id} align={align}>
-            <div className="flex justify-center gap-2">
-              <ActionButton tone="accent" icon={Users} onClick={() => setManaging(t)} title="Manage holders" />
-              <ActionButton tone="accent" icon={Pencil} onClick={() => openEdit(t)} title="Edit title" />
-              <ActionButton tone="red" icon={Trash2} onClick={() => setDeleting(t)} title="Delete title" />
-            </div>
-          </DataTableCell>
+          <div className="flex justify-center gap-2">
+            <ActionButton tone="accent" icon={Users} onClick={() => setManaging(t)} title="Manage holders" />
+            <ActionButton tone="accent" icon={Pencil} onClick={() => openEdit(t)} title="Edit title" />
+            <ActionButton tone="red" icon={Trash2} onClick={() => setDeleting(t)} title="Delete title" />
+          </div>
         )
       default:
         return null
     }
   }
+
+  const renderCell = (id: string, t: AdminTitleSummary): ReactNode => {
+    if (!isShown(id)) return null
+    const align = LAYOUT[id].align
+    switch (id) {
+      case 'rarity':
+        return <DataTableCell key={id} align={align} className="text-muted-foreground">{titleCell(id, t)}</DataTableCell>
+      case 'holders':
+        return <DataTableCell key={id} align={align} className="tabular-nums">{t.holders}</DataTableCell>
+      default:
+        return <DataTableCell key={id} align={align}>{titleCell(id, t)}</DataTableCell>
+    }
+  }
+
+  const columns = tbl.responsiveColumns<AdminTitleSummary>((id) => ({
+    width: LAYOUT[id]?.width, priority: PRIORITY[id], sortKey: SORTABLE[id], cell: (t) => titleCell(id, t),
+  }))
 
   return (
     <SectionShell
@@ -565,7 +567,20 @@ export function TitleManagementSection({ userProfile }: AdminSectionProps) {
         </div>
       )}
 
-      <DataTableShell className="flex-none" responsive={{ columns: responsiveColumns, nameFloorRem: 14, extraRem: 0, onResolve: handleResolve }}>
+      <DataTableShell
+        className="flex-none"
+        responsive={{
+          columns, nameFloorRem: 14, extraRem: 0, onResolve: handleResolve,
+          compactAriaLabel: 'Titles', onCompactChange: tbl.onCompactChange,
+          cards: {
+            rows,
+            rowKey: (t) => String(t.id),
+            face: (t) => <AdminCardFace columns={columns} row={t} />,
+            placeholder: adminCardsPlaceholder(loading, rows.length === 0, query.trim() ? 'No titles match your filter.' : 'No titles yet.'),
+            sort: { key: sortKey, direction: sortDir, onSort: (key) => toggleSort(key as SortKey) },
+          },
+        }}
+      >
         <DataTableHeaderRow>
           {tbl.columnOrder.map((id) => renderHeader(id))}
         </DataTableHeaderRow>

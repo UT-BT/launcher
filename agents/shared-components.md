@@ -109,6 +109,7 @@ Width, alignment and the responsive contract are in [styling.md](styling.md).
 | `DataTableHeaderCell` | `<th>`. `sortable` + `sortDirection` + `onSort` render the sort button and icon, and set `aria-sort` on the active column; `align`, `width`, `buttonRef`. |
 | `DataTableRow` | Body `<tr>` with locked hover and border; spreads `<tr>` props. |
 | `DataTableCell` | `<td>` with locked padding; `align`; forwards its ref for measuring. |
+| `DataTableExpandRow` | Full-width detail row under a body row (`colSpan`), for rows that expand in place on the table (Audit Logs). |
 | `DataTableEmpty` | Text-only empty-state row. |
 | `DataTableSkeletonRow` | Uniform shimmer row for pages without custom skeletons. |
 
@@ -161,6 +162,7 @@ Each `ResponsiveColumn<Row>` of a tiered table declares:
 | `onOpen(row)` | What tapping the card body does: today's detail-page navigation. Taps on links, buttons and other controls inside the face keep their own action. |
 | `rowClassName(row)` | A per-card tint, such as the new-record highlight. |
 | `placeholder` | Skeleton or empty state, shown as the list's one item instead of the cards. |
+| `panel(row)` | Extra panel content below the label/value grid, for detail that is not a column (Audit Logs' entry details). The chevron shows when either is present. |
 | `sort` | `{ key, direction, onSort }`: the header's sort state and the header's own `onSort(key)` handler. Picking a field calls `onSort(field)`, so the page applies its usual default direction; the direction button calls `onSort(key)` on the active field, which flips it as a second header click would. Switching between table and cards keeps the sort because both read the same state. |
 
 The layout rule (`resolveTableLayout`, unit-tested in `DataTable.test.ts`):
@@ -176,7 +178,7 @@ The layout rule (`resolveTableLayout`, unit-tested in `DataTable.test.ts`):
   control replaces the sort headers.
 
 The expand control is a button named "Details" with `aria-expanded`; the panel is a `<dl>`
-inside the card. Expand state is per row and inline. The shell holds it, so an open card stays open
+inside the card, followed by the `cards.panel` content when the table passes one. Expand state is per row and inline. The shell holds it, so an open card stays open
 when a rotation switches to the table and back, and it resets when the page unmounts. A page
 that renders two tables in one spot gives each `DataTableShell` its own `key` (World Records:
 `records` and `rushers`), so cards open in one view don't reopen in the other.
@@ -356,8 +358,9 @@ shell ([teams.md](features/teams.md)).
   `suggestions`): filter suggestions as you type, Enter or Add to add,
   case-insensitive de-duplication, an "Add new tag" row, removable chips.
 - Admin sections are assembled from `SectionShell`, `TableControls` + `useAdminTable`,
-  and the controls in `controls.tsx` (search, pager, select, confirm dialog, date
-  range); reuse them in a new section.
+  `AdminCardFace`, and the controls in `controls.tsx` (search, pager, select, confirm
+  dialog, date range); reuse them in a new section. `useAdminTable` builds a tiered
+  table's columns and tracks card mode ([admin.md](features/admin.md#tables-on-phones)).
 
 ## Utilities
 
