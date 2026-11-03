@@ -25,7 +25,6 @@ export interface WorldRecordsPageState {
     currentPage: number
     pageSizePreference: number | 'auto'
     filtersPanelOpen: boolean
-    scrollTop: number
 }
 
 export type WorldRecordsPresetFilters = Pick<WorldRecordsPageState,
@@ -70,7 +69,6 @@ export const DEFAULT_WORLD_RECORDS_STATE: WorldRecordsPageState = {
     currentPage: 1,
     pageSizePreference: 'auto',
     filtersPanelOpen: false,
-    scrollTop: 0,
 }
 
 export const DEFAULT_WORLD_RECORDS_CACHES: WorldRecordsPageCaches = {

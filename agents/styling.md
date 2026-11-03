@@ -279,16 +279,20 @@ ship: 600 and 700 upright, 800 and 900 italic.
 ## Page layout
 
 ```tsx
-<div className="space-y-4 h-full flex flex-col overflow-hidden">
+<div className="space-y-4 flex flex-col overflow-hidden">
   <header />          {/* title block, shrink-0 */}
   <toolbar />         {/* search / Filters / Columns, shrink-0 */}
   <filterPanel />     {/* collapsible, shrink-0 */}
   <error />           {/* conditional banner */}
-  <DataTableShell />  {/* flex-1 min-h-0 */}
+  <DataTableShell />  {/* the table's own sideways scroller */}
   <PaginationBar />   {/* optional, shrink-0 */}
   <modals />
 </div>
 ```
+
+A page grows with its content; the shell's main element is the only vertical scroller. Don't
+give a page or a section `h-full` / `flex-1 min-h-0` with `overflow-y-auto` to make it scroll
+on its own ([navigation.md](navigation.md#scroll-position-and-the-shell-scroller)).
 
 Title block:
 

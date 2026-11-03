@@ -6,6 +6,8 @@ import { NavHistoryBar } from '@/app/components/navigation/NavHistoryBar'
 import { buildNavSections, isEventLinkLive, isNavItemActive, navItemDestination, type NavBadge } from '@/app/components/navigation/nav-items'
 import type { NavParams } from '@/app/components/navigation/NavigationContext'
 import { useNavigation } from '@/app/components/navigation/NavigationContext'
+import { ShellScrollRestore, useShellScroller } from '@/app/components/navigation/useNavScrollRestore'
+import { useViewportRecovery } from '@/app/components/layout/useViewportRecovery'
 
 const loadSettingsModal = () => IS_WEB
     ? import('@/app/components/modals/SettingsModalWeb').then(m => ({ default: m.SettingsModalWeb }))
@@ -64,6 +66,8 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
     const collapsed = collapsePreference && !isMobileViewport
     const mobileMenuButtonRef = useRef<HTMLButtonElement>(null)
     const sidebarRef = useRef<HTMLElement>(null)
+    const shellScrollerRef = useRef<HTMLElement>(null)
+    const shellContentRef = useRef<HTMLDivElement>(null)
 
     const changeView = (view: string, params?: NavParams) => {
         setMobileNavOpen(false)
@@ -71,6 +75,8 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
     }
     const { entry } = useNavigation()
     const currentParams = entry.params
+    useShellScroller(shellScrollerRef, shellContentRef)
+    useViewportRecovery(shellScrollerRef)
     const [isSettingsOpen, setIsSettingsOpen] = useState(false)
     const [isChangeTitleOpen, setIsChangeTitleOpen] = useState(false)
     const [settingsInitialSection, setSettingsInitialSection] = useState<string | undefined>(undefined)
@@ -155,7 +161,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
         const focusable = () => Array.from(sidebar.querySelectorAll<HTMLElement>(
             'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
         ))
-        focusable()[0]?.focus()
+        focusable()[0]?.focus({ preventScroll: true })
 
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
@@ -167,7 +173,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
             const nodes = focusable()
             if (nodes.length === 0) {
                 event.preventDefault()
-                sidebar.focus()
+                sidebar.focus({ preventScroll: true })
                 return
             }
             const first = nodes[0]
@@ -184,7 +190,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
         return () => {
             document.removeEventListener('keydown', handleKeyDown)
             sidebar.setAttribute('inert', '')
-            menuButton?.focus()
+            menuButton?.focus({ preventScroll: true })
         }
     }, [isMobileViewport, mobileNavOpen])
 
@@ -296,13 +302,14 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
             </aside>
 
             {/* Main Content */}
-            <main className="shell-main flex-1 overflow-y-auto relative z-10">
+            <main ref={shellScrollerRef} className="shell-main flex-1 overflow-y-auto relative z-10">
                 <PageRefreshProvider>
-                    <div className="p-4 sm:p-6 lg:p-8 min-h-full">
+                    <div ref={shellContentRef} className="p-4 sm:p-6 lg:p-8 min-h-full">
                         <NavHistoryBar />
                         {children}
                     </div>
                 </PageRefreshProvider>
+                <ShellScrollRestore entryId={entry.id} />
 
                 {isChangeTitleOpen && (
                     <Suspense fallback={null}>

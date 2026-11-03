@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { requestLogin } from '@/app/components/shared/AuthRequiredModal'
 import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
@@ -37,7 +37,6 @@ export function TeamDetailsPage({ teamId, userProfile, onExitToGallery }: TeamDe
     const [error, setError] = useState<string | null>(null)
     const [joining, setJoining] = useState(false)
     const [inviteBusy, setInviteBusy] = useState(false)
-    const scrollRef = useRef<HTMLDivElement>(null)
 
     useDocumentTitle(team?.name, SITE_NAME)
 
@@ -67,7 +66,7 @@ export function TeamDetailsPage({ teamId, userProfile, onExitToGallery }: TeamDe
         tooltip: 'Refresh',
     })
 
-    const onScroll = useNavScrollRestore(scrollRef, !loading)
+    useNavScrollRestore(!loading)
 
     const isOwnTeam = team != null && myTeamId != null && myTeamId === team.id
     const myMembership = team ? (team.members ?? []).find(m => String(m.user) === String(myUserId)) : undefined
@@ -168,14 +167,10 @@ export function TeamDetailsPage({ teamId, userProfile, onExitToGallery }: TeamDe
     })()
 
     return (
-        <div className="space-y-4 h-full flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
+        <div className="space-y-4 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
             {error && <div className="shrink-0"><ErrorBanner message={error} /></div>}
 
-            <div
-                ref={scrollRef}
-                onScroll={onScroll}
-                className="flex-1 min-h-0 overflow-auto px-0.5 pb-2"
-            >
+            <div className="overflow-x-auto px-0.5 pb-2">
                 {loading && !team ? (
                     <div className="py-16 text-center text-sm text-muted-foreground">Loading team…</div>
                 ) : !team ? (

@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
+import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import {
     fetchAchievementDefinitions,
     fetchMyAchievements,
@@ -31,7 +32,6 @@ export function AchievementsPage({
 
     const [loading, setLoading] = useState(caches.definitions.length === 0)
     const [error, setError] = useState<string | null>(null)
-    const scrollRef = useRef<HTMLDivElement | null>(null)
 
     const load = useCallback(async (background = false) => {
 
@@ -61,10 +61,7 @@ export function AchievementsPage({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [accessToken])
 
-    useEffect(() => {
-        if (scrollRef.current && !loading) scrollRef.current.scrollTop = state.scrollTop
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [loading])
+    useNavScrollRestore(!loading)
 
     useRegisterPageRefresh({
         onRefresh: () => void load(),
@@ -73,7 +70,7 @@ export function AchievementsPage({
     })
 
     return (
-        <div className="space-y-4 h-full flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
+        <div className="space-y-4 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
             <div className="flex flex-wrap items-end justify-between gap-3 shrink-0">
                 <div>
                     <h1 className="text-2xl font-bold text-foreground leading-tight">Achievements</h1>
@@ -97,16 +94,7 @@ export function AchievementsPage({
                 </div>
             )}
 
-            <div
-                ref={scrollRef}
-                onScroll={() => {
-                    if (scrollRef.current) {
-                        const top = scrollRef.current.scrollTop
-                        onStateChange(prev => (prev.scrollTop === top ? prev : { ...prev, scrollTop: top }))
-                    }
-                }}
-                className="flex-1 min-h-0 overflow-auto px-0.5 pt-2 pb-2 space-y-2.5"
-            >
+            <div className="overflow-x-auto px-0.5 pt-2 pb-2 space-y-2.5">
                 <AchievementsShowcase
                     definitions={caches.definitions}
                     progress={caches.progress}

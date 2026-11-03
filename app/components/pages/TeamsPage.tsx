@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Modal } from '@/app/components/ui/modal'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
+import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import {
     fetchMyInvitations, fetchMyTeam,
     type TeamCore, type TeamDetail, type TeamSort, type UserProfile,
@@ -33,7 +34,6 @@ export function TeamsPage({ userProfile, state, onStateChange, caches, onCachesC
     const [error, setError] = useState<string | null>(null)
     const [createOpen, setCreateOpen] = useState(false)
     const [directoryRefreshKey, setDirectoryRefreshKey] = useState(0)
-    const scrollRef = useRef<HTMLDivElement | null>(null)
     const cachesRef = useRef(caches)
     cachesRef.current = caches
 
@@ -64,9 +64,7 @@ export function TeamsPage({ userProfile, state, onStateChange, caches, onCachesC
         if (accessToken) void load(cachesRef.current.loaded)
     }, [accessToken, load])
 
-    useEffect(() => {
-        if (scrollRef.current && !loading) scrollRef.current.scrollTop = state.scrollTop
-    }, [loading, state.scrollTop])
+    useNavScrollRestore(!loading)
 
     useRegisterPageRefresh({
         onRefresh: () => {
@@ -119,7 +117,7 @@ export function TeamsPage({ userProfile, state, onStateChange, caches, onCachesC
     }
 
     return (
-        <div className="space-y-4 h-full flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
+        <div className="space-y-4 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
             <div className="flex items-end justify-between gap-3 shrink-0">
                 <div>
                     <h1 className="text-2xl font-bold text-white leading-tight">Teams</h1>
@@ -136,16 +134,7 @@ export function TeamsPage({ userProfile, state, onStateChange, caches, onCachesC
 
             {error && <div className="shrink-0"><ErrorBanner message={error} /></div>}
 
-            <div
-                ref={scrollRef}
-                onScroll={() => {
-                    if (scrollRef.current) {
-                        const top = scrollRef.current.scrollTop
-                        onStateChange(prev => (prev.scrollTop === top ? prev : { ...prev, scrollTop: top }))
-                    }
-                }}
-                className="flex-1 min-h-0 overflow-auto px-0.5 pb-2 space-y-4"
-            >
+            <div className="overflow-x-auto px-0.5 pb-2 space-y-4">
                 {loading && !caches.loaded ? (
                     <div className="py-16 text-center text-sm text-muted-foreground">Loading teams…</div>
                 ) : (

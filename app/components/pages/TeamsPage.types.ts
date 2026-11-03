@@ -6,7 +6,6 @@ export interface TeamsPageState {
     directoryAccess: TeamAccessFilter
     directorySort: TeamSort
     directorySortDir: 'asc' | 'desc'
-    scrollTop: number
 }
 
 export interface TeamsPageCaches {
@@ -23,7 +22,6 @@ export const DEFAULT_TEAMS_STATE: TeamsPageState = {
     directoryAccess: 'all',
     directorySort: 'world_records',
     directorySortDir: 'desc',
-    scrollTop: 0,
 }
 
 export const DEFAULT_TEAMS_CACHES: TeamsPageCaches = {

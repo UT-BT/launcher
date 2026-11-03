@@ -3,7 +3,6 @@ import type { AchievementStatusFilter } from './achievements/AchievementsShowcas
 
 export interface AchievementsPageState {
     statusFilter: AchievementStatusFilter
-    scrollTop: number
 }
 
 export type AchievementsCacheStatus = 'idle' | 'loading' | 'ready' | 'error'
@@ -17,7 +16,6 @@ export interface AchievementsPageCaches {
 
 export const DEFAULT_ACHIEVEMENTS_STATE: AchievementsPageState = {
     statusFilter: 'all',
-    scrollTop: 0,
 }
 
 export const DEFAULT_ACHIEVEMENTS_CACHES: AchievementsPageCaches = {

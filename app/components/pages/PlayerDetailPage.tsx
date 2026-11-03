@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
@@ -58,8 +58,6 @@ export function PlayerDetailPage({
     const [chartLoading, setChartLoading] = useState(true)
     const [authoredMapCount, setAuthoredMapCount] = useState<number | null>(null)
 
-    const scrollRef = useRef<HTMLDivElement>(null)
-
     const { data: summaryData, loading, error } = useAsync<UserSummary>(
         () => fetchUserSummary(accessToken, userId),
         [accessToken, userId, refreshKey],
@@ -76,7 +74,7 @@ export function PlayerDetailPage({
         tooltip: refreshCooldown.canRefresh ? 'Refresh' : `Wait ${refreshCooldown.remainingSeconds}s`,
     })
 
-    const onScroll = useNavScrollRestore(scrollRef, !loading)
+    useNavScrollRestore(!loading)
 
     // Lazy-load aggregated lifetime activity once initial summary is in.
     useEffect(() => {
@@ -108,7 +106,7 @@ export function PlayerDetailPage({
     const { tabs, activeTab } = playerDetailTabs(storedTab, counts, authoredMapCount)
 
     return (
-        <div className="space-y-4 h-full flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
+        <div className="space-y-4 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
 
             <HeroSection
                 userId={userId}
@@ -129,7 +127,7 @@ export function PlayerDetailPage({
                 </div>
             )}
 
-            <div ref={scrollRef} onScroll={onScroll} className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-4">
+            <div className="overflow-x-auto pr-1 space-y-4">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                     <div className="lg:col-span-4 space-y-4">
                         <MedalShowcaseCard medals={medals} loading={loading} />

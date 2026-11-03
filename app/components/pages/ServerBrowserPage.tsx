@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
+import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import {
     RefreshCw, Play, BadgeCheck, Signal, Swords, Gamepad2, HelpCircle, User, ExternalLink,
     Twitch, Eye, SlidersHorizontal, AlertCircle,
@@ -328,7 +329,6 @@ export function ServerBrowserPage({
     const { join: handleJoin, notice: launchNotice, clearNotice: clearLaunchNotice } = useServerJoin()
     const [activePresetId, setActivePresetId] = useState<string | null>(null)
 
-    const scrollContainerRef = useRef<HTMLDivElement | null>(null)
     const filtersButtonRef = useRef<HTMLButtonElement | null>(null)
     const columnsButtonRef = useRef<HTMLButtonElement | null>(null)
     const presetsButtonRef = useRef<HTMLButtonElement | null>(null)
@@ -425,12 +425,6 @@ export function ServerBrowserPage({
         return () => clearInterval(interval)
     }, [fetchServers])
 
-    useEffect(() => {
-        const node = scrollContainerRef.current
-        if (node) node.scrollTop = state.scrollTop
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
-
     const availableRegions = useMemo(() => {
         const regions = new Set<string>()
         caches.servers.forEach(s => {
@@ -499,13 +493,6 @@ export function ServerBrowserPage({
         onStateChange(prev => ({ ...prev, filtersPanelOpen: !prev.filtersPanelOpen }))
     }, [onStateChange])
 
-    const onScroll = useCallback(() => {
-        const node = scrollContainerRef.current
-        if (!node) return
-        const top = node.scrollTop
-        onStateChange(prev => Math.abs(prev.scrollTop - top) > 24 ? { ...prev, scrollTop: top } : prev)
-    }, [onStateChange])
-
     const resetFilters = useCallback(() => {
         onStateChange(prev => ({ ...prev, filters: DEFAULT_FILTERS }))
         setActivePresetId(null)
@@ -540,7 +527,6 @@ export function ServerBrowserPage({
             filters: sanitizeServerFilters(raw?.filters),
             sortBy: typeof raw?.sortBy === 'string' && SORT_FIELD_VALUES.has(raw.sortBy) ? raw.sortBy : prev.sortBy,
             sortDir: raw?.sortDir === 'asc' || raw?.sortDir === 'desc' ? raw.sortDir : prev.sortDir,
-            scrollTop: 0,
         }))
     }
 
@@ -569,6 +555,7 @@ export function ServerBrowserPage({
     }, [caches.lastRefreshIso])
 
     const showSkeleton = loading && caches.servers.length === 0
+    useNavScrollRestore(!showSkeleton)
 
     const displayColumnOrder = useMemo(
         () => state.columnOrder.filter(id =>
@@ -926,7 +913,7 @@ export function ServerBrowserPage({
     })
 
     return (
-        <div className="space-y-4 h-full flex flex-col overflow-hidden">
+        <div className="space-y-4 flex flex-col overflow-hidden">
             <div className="flex items-end justify-between shrink-0">
                 <div>
                     <h1 className="text-2xl font-bold text-foreground leading-tight">Servers</h1>
@@ -1113,8 +1100,6 @@ export function ServerBrowserPage({
             )}
 
             <DataTableShell
-                scrollRef={scrollContainerRef}
-                onScroll={onScroll}
                 responsive={{
                     columns: responsiveColumns,
                     onResolve: handleResolve,

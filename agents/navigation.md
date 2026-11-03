@@ -120,6 +120,42 @@ live in `<Page>.types.ts`. `pageLoaders.test.ts` enforces both and pins the load
 To make a page-view refetch after a mutation made elsewhere, clear its cache slice before
 navigating to it, as `exitTeamsToGallery` does for `teams`.
 
+## Scroll position and the shell scroller
+
+The main element in `AppLayout` (`main.shell-main`) is the only vertical scroller for page
+content, on both targets. A page never fills the shell's height with a scroller of its own: a
+page root may clip sideways (`overflow-hidden`) and an inner wrapper may scroll sideways
+(`overflow-x-auto`, as a wide table does), but the page grows with its content and `main`
+scrolls it. Anything that follows page scrolling attaches to `main`: the modal scroll lock
+([shared-components.md](shared-components.md#modal)), and pull to refresh and the
+hide-on-scroll bars once they exist. Both of those wrappers are still scroll containers, so a
+`sticky` element inside one sticks to it rather than to `main`. Where a page has a sticky
+element below `lg`, its wrappers clip with `max-lg:overflow-x-clip max-lg:overflow-y-visible`
+instead. The event page does this for the bracket's round headings
+([events.md](features/events.md#elimination-stage-on-phones)).
+
+The shell keeps each history entry's scroll position:
+
+- **Saving.** `useShellScroller` (`app/components/navigation/useNavScrollRestore.ts`) listens
+  to `main`'s scroll events, and `ShellScrollRestore` (mounted after the page content inside
+  `main`) reads `main.scrollTop` in `getSnapshotBeforeUpdate` when `entry.id` changes, before
+  React swaps the page. Positions live in a map keyed by entry id, not in the entry's state
+  bag: writing the bag re-renders the app on every scroll. The map lives as long as the
+  in-memory stack.
+- **New navigation** (a fresh entry, a `pushExternal`, a reload) starts at the top.
+- **Back/Forward** to an entry restores its position once the page is ready, and keeps
+  re-applying it as the content grows until it is reached. While it holds a restored position
+  it turns scroll anchoring off on `main`, so content loading in above can't shift it. The
+  restore ends when the user scrolls (wheel, touch, pointer or key on `main`), when a scroll
+  the shell didn't make moves a reached position, or on the next navigation. A page that
+  starts loading again before anyone scrolled gets the restored position back.
+- **Pages say when they are ready.** A page whose first render isn't its final content calls
+  `useNavScrollRestore(ready)`; while `ready` is false it holds the restore (the page stays at
+  the top). Detail pages pass their loading flag (`!loading && !!detail`), list pages
+  `!showSkeleton` or `!loading`, and the pick/ban page `!session.loading`. A page that never
+  turns ready (an error, or a highlight that must not be scrolled away) is never restored. The
+  pure logic is `createScrollRestore` in `scrollRestore.ts`.
+
 ## Routes and URL sync (web build)
 
 `app/components/navigation/routes.ts` maps both ways: `viewToPath(view, params)` and
@@ -424,8 +460,9 @@ consumes either, rings the items newer than `since` and scrolls the first into v
 ring drops 7 s after `itemsReady` turns true (Events and News pass it so a slow fetch
 doesn't burn the window on a spinner). `onActivate` makes the new items reachable: Maps
 sorts by `added` desc, World Records switches to records by date desc, News clears its
-category filter and skips scroll restore, Events skips scroll restore (it must not rewrite
-the entry's `scrollTop`, which Back would apply). Compared timestamps: `map.added`,
+category filter and skips scroll restore, Events skips scroll restore (both keep
+[`useNavScrollRestore`](#scroll-position-and-the-shell-scroller) holding, so Back can't pull
+the page away from the highlighted item). Compared timestamps: `map.added`,
 `record.added`, `article.publishedAt`, `event.published_at ?? event.created_at` (Events
 skips `draft` rows, which the count excludes). The hook parses naive
 `YYYY-MM-DD HH:MM:SS` timestamps as UTC; a raw `Date.parse` would read them as local time.

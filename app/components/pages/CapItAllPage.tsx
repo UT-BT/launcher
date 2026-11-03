@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { useAutoPageSize } from '@/app/hooks/useAutoPageSize'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
+import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import {
     UserProfile, CapItAllLeaderboardPage,
     fetchCapItAllLeaderboard,
@@ -67,7 +68,6 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
     const [pageLoading, setPageLoading] = useState(caches.items.length === 0)
     const [error, setError] = useState<string | null>(null)
     const refreshCooldown = useRefreshCooldown()
-    const scrollContainerRef = useRef<HTMLDivElement | null>(null)
 
     const [debouncedSearch, setDebouncedSearch] = useState(state.search.trim())
     useEffect(() => {
@@ -152,18 +152,6 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
 
     useEffect(() => { loadPage() }, [loadPage])
 
-    // Restore scroll once on mount.
-    useEffect(() => {
-        if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = state.scrollTop
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
-
-    const onScrollContainerScroll = useCallback(() => {
-        if (!scrollContainerRef.current) return
-        const top = scrollContainerRef.current.scrollTop
-        onStateChange(prev => Math.abs(prev.scrollTop - top) > 24 ? { ...prev, scrollTop: top } : prev)
-    }, [onStateChange])
-
     const refresh = () => {
         refreshCooldown.trigger(() => {
             pageCacheRef.current = {}
@@ -193,6 +181,7 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
 
     const items = caches.items
     const showSkeleton = !error && (!cacheFresh || (pageLoading && items.length === 0))
+    useNavScrollRestore(!showSkeleton)
 
     const [resolved, setResolved] = useState<Set<CapItAllColumnId> | null>(null)
     const handleResolve = useCallback((ids: Set<string>) => {
@@ -241,7 +230,7 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
     })
 
     return (
-        <div className="space-y-4 h-full flex flex-col overflow-hidden">
+        <div className="space-y-4 flex flex-col overflow-hidden">
             <div className="flex items-end justify-between shrink-0">
                 <div>
                     <div className="flex items-center gap-2">
@@ -287,8 +276,6 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
             )}
 
             <DataTableShell
-                scrollRef={scrollContainerRef}
-                onScroll={onScrollContainerScroll}
                 responsive={{
                     columns: CAP_IT_ALL_COLUMNS,
                     onResolve: handleResolve,

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { requestLogin } from '@/app/components/shared/AuthRequiredModal'
 import { AlertTriangle } from 'lucide-react'
@@ -162,11 +162,10 @@ export function MapDetailPage({
     const isMapAuthor = currentUserId != null && map?.author_ref != null && String(map.author_ref) === String(currentUserId)
     const canEditScreenshot = !!accessToken && (isStaff(userProfile) || (isMapAuthor && !isInactive))
 
-    const scrollRef = useRef<HTMLDivElement>(null)
-    const onScroll = useNavScrollRestore(scrollRef, !loading)
+    useNavScrollRestore(!loading)
 
     return (
-        <div className="space-y-4 h-full flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
+        <div className="space-y-4 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
 
             <HeroSection
                 mapName={mapName}
@@ -207,7 +206,7 @@ export function MapDetailPage({
                 </div>
             )}
 
-            <div ref={scrollRef} onScroll={onScroll} className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-4">
+            <div className="overflow-x-auto pr-1 space-y-4">
                 <StatsRow
                     leaderboard={leaderboard}
                     playtime={playtime}

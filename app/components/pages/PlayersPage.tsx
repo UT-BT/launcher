@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
+import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import { useAutoPageSize } from '@/app/hooks/useAutoPageSize'
 import { Search, X, HelpCircle, ShieldAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -159,8 +160,6 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
         setColumnsMenuOpen(false)
     }, [])
 
-    const scrollContainerRef = useRef<HTMLDivElement | null>(null)
-
     const serverParams = useMemo(() => ({
         search: debouncedSearch || undefined,
         sort: state.sortBy,
@@ -265,18 +264,6 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
         return () => { cancelled = true }
     }, [loadPage])
 
-    // Restore scroll once on mount.
-    useEffect(() => {
-        if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = state.scrollTop
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
-
-    const onScrollContainerScroll = useCallback(() => {
-        if (!scrollContainerRef.current) return
-        const top = scrollContainerRef.current.scrollTop
-        onStateChange(prev => Math.abs(prev.scrollTop - top) > 24 ? { ...prev, scrollTop: top } : prev)
-    }, [onStateChange])
-
     const totalCount = caches.totalCount
     const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
     const page = Math.min(state.currentPage, totalPages)
@@ -370,6 +357,7 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
 
     const players = caches.players
     const showSkeleton = !error && (!cacheFresh || (pageLoading && players.length === 0))
+    useNavScrollRestore(!showSkeleton)
 
     const renderHeaderCell = (id: PlayerColumnId) => {
         const sortField = COLUMN_SORT_FIELD[id]
@@ -521,7 +509,7 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
     })
 
     return (
-        <div className="space-y-4 h-full flex flex-col overflow-hidden">
+        <div className="space-y-4 flex flex-col overflow-hidden">
             <div className="flex items-end justify-between shrink-0">
                 <div>
                     <h1 className="text-2xl font-bold text-foreground leading-tight">Players</h1>
@@ -589,8 +577,6 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
             )}
 
             <DataTableShell
-                scrollRef={scrollContainerRef}
-                onScroll={onScrollContainerScroll}
                 responsive={{
                     columns: responsiveColumns,
                     onResolve: handleResolve,

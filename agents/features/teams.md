@@ -29,7 +29,7 @@ team runs and team caps on team maps are in [api.md](../api.md).
 ## Pages and navigation
 
 - **`teams`** is a lazy, controlled page-view. Per-entry state (`utbt:teamsState:v2`, no
-  preference fields): search, access filter, sort field, sort direction, scroll. Its `caches`
+  preference fields): search, access filter, sort field and sort direction. Its `caches`
   hold `myTeam` (from `/me/team`) and `invitations` (from `/me/invitations`), revalidated on
   every mount through `load(background)`, plus the directory rows `TeamGallery` revalidates.
 - **The directory rows live in the Teams caches.** `TeamGallery` fetches the whole directory

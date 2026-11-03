@@ -10,6 +10,7 @@ import { Modal } from '@/app/components/ui/modal'
 import { useAutoPageSize } from '@/app/hooks/useAutoPageSize'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
+import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import { useReplayWatch } from '@/app/hooks/useReplayWatch'
 import { useDemoDownload } from '@/app/hooks/useDemoDownload'
 import { useNewItemHighlight } from '@/app/hooks/useNewItemHighlight'
@@ -284,7 +285,6 @@ export function WorldRecordsPage({
     const [pageLoading, setPageLoading] = useState(currentRows.length === 0)
     const [error, setError] = useState<string | null>(null)
     const refreshCooldown = useRefreshCooldown()
-    const scrollContainerRef = useRef<HTMLDivElement | null>(null)
 
     const replay = useReplayWatch()
     const demoDownload = useDemoDownload()
@@ -493,17 +493,6 @@ export function WorldRecordsPage({
         return () => { cancelled = true }
     }, [loadPage])
 
-    useEffect(() => {
-        if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = state.scrollTop
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
-
-    const onScrollContainerScroll = useCallback(() => {
-        if (!scrollContainerRef.current) return
-        const top = scrollContainerRef.current.scrollTop
-        onStateChange(prev => Math.abs(prev.scrollTop - top) > 24 ? { ...prev, scrollTop: top } : prev)
-    }, [onStateChange])
-
     const refresh = () => {
         refreshCooldown.trigger(() => {
             pageCacheRef.current = {}
@@ -549,7 +538,7 @@ export function WorldRecordsPage({
 
     const handleLoadPreset = (p: WorldRecordsPreset) => {
         setActivePresetId(p.id)
-        onStateChange(prev => ({ ...prev, ...pickPresetFilters(p.filters ?? {}), currentPage: 1, scrollTop: 0 }))
+        onStateChange(prev => ({ ...prev, ...pickPresetFilters(p.filters ?? {}), currentPage: 1 }))
     }
 
     const handleDeletePreset = (p: WorldRecordsPreset) => {
@@ -661,6 +650,7 @@ export function WorldRecordsPage({
     }, [cacheFresh, totalCount, totalPages, state.currentPage, onStateChange])
 
     const showSkeleton = !error && (!cacheFresh || (pageLoading && currentRows.length === 0))
+    useNavScrollRestore(!showSkeleton)
 
     const activeFilterCount = [
         state.difficultyFilters.length > 0,
@@ -966,7 +956,7 @@ export function WorldRecordsPage({
     })
 
     return (
-        <div className="space-y-4 h-full flex flex-col overflow-hidden">
+        <div className="space-y-4 flex flex-col overflow-hidden">
             <div className="flex items-end justify-between shrink-0">
                 <div>
                     <h1 className="text-2xl font-bold text-foreground leading-tight">World Records</h1>
@@ -1249,8 +1239,6 @@ export function WorldRecordsPage({
 
             {isRushers ? (
                 <DataTableShell
-                    scrollRef={scrollContainerRef}
-                    onScroll={onScrollContainerScroll}
                     responsive={{
                         columns: RUSHER_COLUMNS,
                         onResolve: handleRushersResolve,
@@ -1351,8 +1339,6 @@ export function WorldRecordsPage({
                 </DataTableShell>
             ) : (
                 <DataTableShell
-                    scrollRef={scrollContainerRef}
-                    onScroll={onScrollContainerScroll}
                     responsive={{
                         columns: responsiveColumns,
                         onResolve: handleRecordsResolve,

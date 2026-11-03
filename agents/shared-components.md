@@ -104,7 +104,7 @@ Width, alignment and the responsive contract are in [styling.md](styling.md).
 
 | Component | Role |
 |---|---|
-| `DataTableShell` | Scroll container and `<table>`. `scrollRef` / `onScroll` for persisted scroll. `responsive` adds density, priority auto-hide and compact cards. |
+| `DataTableShell` | Scroll container and `<table>`. `scrollRef` / `onScroll` reach that container, which only scrolls sideways; page scroll is the shell's ([navigation.md](navigation.md#scroll-position-and-the-shell-scroller)). `responsive` adds density, priority auto-hide and compact cards. |
 | `DataTableHeaderRow` | Sticky `<thead>` and its `<tr>`. `theadDataAttr` writes a data attribute for the tutorial z-lift. |
 | `DataTableHeaderCell` | `<th>`. `sortable` + `sortDirection` + `onSort` render the sort button and icon; `align`, `width`, `buttonRef`. |
 | `DataTableRow` | Body `<tr>` with locked hover and border; spreads `<tr>` props. |
@@ -113,7 +113,7 @@ Width, alignment and the responsive contract are in [styling.md](styling.md).
 | `DataTableSkeletonRow` | Uniform shimmer row for pages without custom skeletons. |
 
 ```tsx
-<DataTableShell scrollRef={scrollRef} onScroll={onScroll} responsive={…}>
+<DataTableShell responsive={…}>
   <DataTableHeaderRow theadDataAttr="data-utbt-foo-thead">
     <DataTableHeaderCell sortable sortDirection={dir('name')} onSort={() => sort('name')}>
       Name

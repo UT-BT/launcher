@@ -33,7 +33,6 @@ export interface PlayersPageState {
     columnOrder: PlayerColumnId[]
     currentPage: number
     pageSizePreference: number | 'auto'
-    scrollTop: number
 }
 
 export interface PlayersPageCaches {
@@ -51,7 +50,6 @@ export const DEFAULT_PLAYERS_STATE: PlayersPageState = {
     columnOrder: DEFAULT_COLUMN_ORDER,
     currentPage: 1,
     pageSizePreference: 'auto',
-    scrollTop: 0,
 }
 
 export const DEFAULT_PLAYERS_CACHES: PlayersPageCaches = {

@@ -22,8 +22,10 @@ page-views vs detail-pages) first.
   `caches`, `onCachesChange` (functional updaters), plus page-specific props.
 - Export `interface <Name>PageState`, `interface <Name>PageCaches`, and
   `DEFAULT_<NAME>_STATE` / `DEFAULT_<NAME>_CACHES` (see Page shape in
-  `agents/state-patterns.md`). Query state (search/filters/sort/scroll) lives in
-  state; fetched rows live in caches.
+  `agents/state-patterns.md`). Query state (search/filters/sort) lives in
+  state; fetched rows live in caches. Scroll is the shell's: call
+  `useNavScrollRestore(!showSkeleton)` so Back waits for the rows
+  (`agents/navigation.md`, Scroll position and the shell scroller).
 - Layout follows `agents/styling.md` Page layout; tables use the `DataTable.*`
   primitives; players render through `PlayerInfo` (`agents/shared-components.md`).
 - Fetch data via `app/utils/api.ts` helpers — never raw `fetch`

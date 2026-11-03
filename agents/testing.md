@@ -542,6 +542,19 @@ spec that is red today is marked `test.fail()`, with a note naming the ticket th
   WebKit has no multi-touch input, so there the spread is synthetic pointer events on the frame.
   The double tap uses the touchscreen on both engines. `e2e/map-screenshot-viewer.spec.ts`
   checks that desktop keeps the plain hero and that Change still opens the screenshot editor.
+- `scroll-restore.spec.ts`: a cap page opened from a tapped link on the map page starts at the
+  top; Back and Forward return each page to within 4 px of where it was left; a new visit to a
+  page already in history starts at the top again. The same holds for two list pages, World
+  Records and Maps, reached through the drawer. It serves two recorded sets at once; the first
+  entry's set answers a path both know. `e2e/scroll-restore.spec.ts` runs the cap and map flow
+  on `desktop-chromium` with real wheel input.
+- `viewport-recovery.spec.ts`: emulation never leaves the window offset the way iOS does, so the
+  spec makes the document taller than the viewport and scrolls the window (or `body`) itself.
+  The shell then puts it back to 0,0: after the zoom simulation returns to scale 1 (Chromium
+  only; while zoomed in the offset stays), at scale 1 on both engines, and, while a text field
+  has focus, only once focus leaves it.
+- **WebKit delivers `scroll` events for script scrolls late**, sometimes only with the next
+  scroll. Wait on positions (`scrollerTop`, `expect.poll`), never on a scroll event.
 - **Zoom is simulated.** No engine can emulate a real pinch. On Chromium, `zoomVisualViewport` sets
   the page scale through the DevTools protocol (`Emulation.setPageScaleFactor`) and waits for
   `visualViewport.scale` to follow. It cannot pan the zoomed view, because headless Chromium ignores

@@ -232,6 +232,26 @@ cap (owner decision).
 - Content padding is `p-4 sm:p-6 lg:p-8`, inside the main element's safe-area padding;
   the app root uses `h-dvh` (mobile browser toolbars); the web entry sets
   `--window-titlebar-height` to `0px`.
+- **One scroller.** The main element is the only vertical scroller for page content; pages
+  grow with their content and never scroll on their own. Back/Forward restore its position
+  and a new page starts at the top
+  ([navigation.md](navigation.md#scroll-position-and-the-shell-scroller)).
+- **Viewport recovery.** `useViewportRecovery` (`app/components/layout/useViewportRecovery.ts`,
+  mounted by `AppLayout`) subscribes to the device environment below (`visualViewport` resize
+  and scroll, window resize and scroll, orientation change), to focus leaving a field and to
+  scrolls of the main element's ancestors. Whenever the visible area is at scale 1 and no
+  text field has focus, it puts the window and every ancestor of the main element (`html`,
+  `body`, `#app` and the shell wrappers, all `overflow: hidden`, so a user can't pan them
+  back) back to 0,0. That covers zooming back out after a pinch, a rotation, and the offset
+  iOS leaves after the keyboard closes. The reset fires the window's scroll event, so the
+  device environment re-reads the visible area and the sheet modal follows it.
+  - It leaves a zoomed-in window alone (the user is panning), and the offset under a focused
+    text field (iOS scrolls the window to keep the field above the keyboard) until focus
+    leaves it.
+  - Programmatic focus in the shell uses `preventScroll`: the drawer's first item when it
+    opens, the drawer itself when it holds nothing focusable, and the menu button when it
+    closes. The drawer's Tab wrap doesn't, so the item it wraps to scrolls into view inside
+    the drawer's own list.
 - **Form controls are 16px or more on touch**, at any width, so iOS never zooms on focus
   ([styling.md](styling.md#form-inputs)).
 - **Modals.** `ui/modal.tsx` portals into `document.body` and, below `sm` or on a touch

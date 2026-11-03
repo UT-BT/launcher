@@ -159,11 +159,10 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
     const videoAvail = useVideoCompareAvailability(cap?.id, videoOpponent?.id ?? null, !!videoOpponent)
     const videoReady = videoAvail.bothReady && videoOpponentData != null
 
-    const scrollRef = useRef<HTMLDivElement>(null)
-    const onScroll = useNavScrollRestore(scrollRef, !loading && !!detail)
+    useNavScrollRestore(!loading && !!detail)
 
     return (
-        <div className="space-y-4 h-full flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
+        <div className="space-y-4 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
 
             {loading && !detail ? (
                 <div className="bg-card/30 border border-hairline/5 rounded-xl h-56 animate-pulse shrink-0" />
@@ -225,7 +224,7 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
                         </div>
                     )}
 
-                    <div ref={scrollRef} onScroll={onScroll} className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-4">
+                    <div className="overflow-x-auto pr-1 space-y-4">
                         <ClientSettingsGrid cap={cap} server={detail.server} />
 
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback, Fragment, lazy } fro
 import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
+import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import { useAutoPageSize } from '@/app/hooks/useAutoPageSize'
 import { useNewItemHighlight } from '@/app/hooks/useNewItemHighlight'
 import { Search, RefreshCw, SlidersHorizontal, X, ArrowLeft, HelpCircle } from 'lucide-react'
@@ -719,7 +720,6 @@ export function MapsPage({
         0,
     )
     const searchAbortRef = useRef<AbortController | null>(null)
-    const scrollContainerRef = useRef<HTMLDivElement | null>(null)
 
     const isSearchMode = state.search.trim().length > 0
     const usesClientOnlyFilter =
@@ -960,21 +960,6 @@ export function MapsPage({
     useEffect(() => {
         setLoading(!caches.metadataLoaded || !caches.reviewsLoaded)
     }, [caches.metadataLoaded, caches.reviewsLoaded])
-
-    useEffect(() => {
-        if (scrollContainerRef.current) {
-            scrollContainerRef.current.scrollTop = state.scrollTop
-        }
-        // Restore scroll once on mount; deps intentionally empty.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
-
-    const onScrollContainerScroll = useCallback(() => {
-        if (!scrollContainerRef.current) return
-        const top = scrollContainerRef.current.scrollTop
-        // Skip writes for sub-24px scroll deltas to avoid spamming localStorage.
-        onStateChange(prev => Math.abs(prev.scrollTop - top) > 24 ? { ...prev, scrollTop: top } : prev)
-    }, [onStateChange])
 
     const passesClientFilters = useCallback((
         m: Map | MapMetadata,
@@ -1313,7 +1298,6 @@ export function MapsPage({
             ...prev,
             ...pickPresetFilters(p.filters ?? {}),
             currentPage: 1,
-            scrollTop: 0,
         }))
     }
 
@@ -1382,6 +1366,7 @@ export function MapsPage({
     const showSkeleton =
         (loading && pageItems.length === 0) ||
         (mode === 'search' && searchLoading)
+    useNavScrollRestore(!showSkeleton)
 
     const renderColumnHeader = (id: ColumnId): React.ReactNode => {
         if (!isEffectivelyVisible(id)) return null
@@ -1967,7 +1952,7 @@ export function MapsPage({
     ) : rows.map(renderMapCard)
 
     return (
-        <div className="space-y-4 h-full flex flex-col overflow-hidden">
+        <div className="space-y-4 flex flex-col overflow-hidden">
             <div className="flex items-end justify-between shrink-0">
                 <div>
                     <h1 className="text-2xl font-bold text-foreground leading-tight">Maps</h1>
@@ -2315,8 +2300,6 @@ export function MapsPage({
             )}
 
             <DataTableShell
-                scrollRef={scrollContainerRef}
-                onScroll={onScrollContainerScroll}
                 responsive={{
                     columns: responsiveColumns,
                     onResolve: handleResolve,

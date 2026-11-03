@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useState, type ReactNode } from 'react'
 import { ArrowLeft, Check, Link2, Sparkles, Swords, TriangleAlert, WifiOff, ZapOff } from 'lucide-react'
 import { NavLink } from '@/app/components/navigation/NavLink'
 import { useNavigation } from '@/app/components/navigation/NavigationContext'
+import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import { buildMatchLinks } from '@/app/components/navigation/matchLinks'
 import { useDocumentTitle } from '@/app/components/navigation/useDocumentMeta'
 import { SITE_NAME } from '@/app/components/navigation/titles'
@@ -85,6 +86,7 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
     const [sideChoice, setSideChoice] = useState<SideChoiceState>(IDLE_SIDE_CHOICE)
     const [vetoChoice, setVetoChoice] = useState<VetoChoiceState>(IDLE_VETO_CHOICE)
     usePickBanPreload(view?.cards)
+    useNavScrollRestore(!session.loading)
     const sound = usePickBanSound({
         state: session.state,
         clockOffsetMs: session.clockOffsetMs,

@@ -281,8 +281,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
         setCompareRuns(null)
     }
 
-    const scrollRef = useRef<HTMLDivElement>(null)
-    const onScroll = useNavScrollRestore(scrollRef, !loading && !!detail)
+    useNavScrollRestore(!loading && !!detail)
 
     const showMedal = detail != null && detail.medal >= 1
     const medalIcon = detail ? medalIconForInt(detail.medal) : null
@@ -301,7 +300,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
     const rosterColsClass = ROSTER_GRID_COLS[rosterColumnCount(members.length)] ?? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'
 
     return (
-        <div className="space-y-4 h-full flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
+        <div className="space-y-4 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
 
             {loading && !detail ? (
                 <div className="bg-card/30 border border-hairline/5 rounded-xl h-56 animate-pulse shrink-0" />
@@ -475,7 +474,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                         </div>
                     )}
 
-                    <div ref={scrollRef} onScroll={onScroll} className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-4">
+                    <div className="overflow-x-auto pr-1 space-y-4">
                         {members.length > 0 && (
                             <div className="bg-card/30 border border-hairline/5 rounded-xl">
                                 <div className="px-4 py-3 border-b border-hairline/5 text-[10px] uppercase tracking-wider text-muted-foreground font-medium text-center">
