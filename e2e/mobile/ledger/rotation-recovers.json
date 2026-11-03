@@ -10,9 +10,5 @@
   { "surface": "player-detail/personal-bests/watch-run", "viewport": "360x780", "engine": "chromium" },
   { "surface": "player-detail/personal-bests/watch-run", "viewport": "390x844", "engine": "webkit" },
   { "surface": "player-detail/watch-run", "viewport": "360x780", "engine": "chromium" },
-  { "surface": "player-detail/watch-run", "viewport": "390x844", "engine": "webkit" },
-  { "surface": "world-records/watch-run", "viewport": "360x780", "engine": "chromium" },
-  { "surface": "world-records/watch-run", "viewport": "390x844", "engine": "webkit" },
-  { "surface": "world-records/wr-progression", "viewport": "360x780", "engine": "chromium" },
-  { "surface": "world-records/wr-progression", "viewport": "390x844", "engine": "webkit" }
+  { "surface": "player-detail/watch-run", "viewport": "390x844", "engine": "webkit" }
 ]

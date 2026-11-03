@@ -350,6 +350,16 @@ re-sorting reuses the total.
   ([state-patterns.md](../state-patterns.md)). Persisted prefs: column visibility and order, page
   size, filters panel open.
 - Watch and the demo download are always enabled: every row is a verified WR.
+- **Phone cards**: both tables are tiered
+  ([shared-components.md](../shared-components.md#column-tiers-and-phone-cards)). A record card's
+  face holds the favourite, the map (with New), the holder(s) and the time; difficulty, date set
+  and the Watch, Download and WR history actions sit in the expand panel. Tapping the body opens
+  the map. A Top Rushers card shows rank, rusher, WR count and share, with median and average in
+  the panel, and its body opens the rusher. Records cards sort through the card sort control (map,
+  holder, time, difficulty, date set), on the same sort state as the header; Top Rushers has no
+  sort. Switching between the two views closes every open card. `e2e/mobile/table-cards.spec.ts`
+  checks the cards; `e2e/world-records-table.spec.ts` pins the desktop header lists and priority
+  drops.
 - Arriving from the sidebar's new-records badge resets to Records sorted by date, newest first
   (`useNewItemHighlight`, [navigation.md](../navigation.md)).
 

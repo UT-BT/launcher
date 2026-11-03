@@ -46,13 +46,5 @@
   { "surface": "team-detail", "viewport": "360x780", "engine": "chromium" },
   { "surface": "team-detail", "viewport": "390x844", "engine": "webkit" },
   { "surface": "team-detail~long-text", "viewport": "360x780", "engine": "chromium" },
-  { "surface": "team-detail~long-text", "viewport": "390x844", "engine": "webkit" },
-  { "surface": "world-records", "viewport": "360x780", "engine": "chromium" },
-  { "surface": "world-records", "viewport": "390x844", "engine": "webkit" },
-  { "surface": "world-records/rushers", "viewport": "360x780", "engine": "chromium" },
-  { "surface": "world-records/rushers", "viewport": "390x844", "engine": "webkit" },
-  { "surface": "world-records/rushers~long-text", "viewport": "360x780", "engine": "chromium" },
-  { "surface": "world-records/rushers~long-text", "viewport": "390x844", "engine": "webkit" },
-  { "surface": "world-records~most-columns", "viewport": "360x780", "engine": "chromium" },
-  { "surface": "world-records~most-columns", "viewport": "390x844", "engine": "webkit" }
+  { "surface": "team-detail~long-text", "viewport": "390x844", "engine": "webkit" }
 ]

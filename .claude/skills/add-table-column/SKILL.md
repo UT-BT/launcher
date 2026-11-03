@@ -50,7 +50,10 @@ and `agents/styling.md` (Column widths and alignment) first.
    `required`). The new width you set
    in step 3 is what the resolver charges it. If the column carries a tutorial
    ref, mark it `required` in the responsive descriptor. See `styling.md` →
-   Responsive columns.
+   Responsive columns. On a tiered table (one that passes `responsive.cards`, such
+   as World Records), also give the column its `tier`, panel `label` and `cell`;
+   a `detail` column then shows in the card's expand panel with no card code
+   (`agents/shared-components.md` → Column tiers and phone cards).
 8. **Data not fetched yet?** If the field isn't in the row type, get it from the
    API first — use the `consume-api-data` skill.
 
@@ -63,7 +66,8 @@ and `agents/styling.md` (Column widths and alignment) first.
   window — confirm the column auto-hides at the priority you gave it (header and
   body drop together).
 - Both targets, all widths: if the new column carries the page's core metric,
-  mark it `required` AND add it to the page's `compactContent` card renderer —
-  a phone user must still see it (`agents/styling.md` → Responsive columns).
+  mark it `required` AND add it to the page's `compactContent` card renderer (on a
+  tiered table: make it `essential` and put it on the card face) — a phone user
+  must still see it (`agents/styling.md` → Responsive columns).
   Check at 390px via `npm run dev:web` that the compact card shows the right
   fields and the table never scrolls horizontally.

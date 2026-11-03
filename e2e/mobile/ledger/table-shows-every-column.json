@@ -64,13 +64,5 @@
   { "surface": "servers", "viewport": "915x412", "engine": "chromium" },
   { "surface": "servers", "viewport": "844x390", "engine": "webkit" },
   { "surface": "servers~long-text", "viewport": "915x412", "engine": "chromium" },
-  { "surface": "servers~long-text", "viewport": "844x390", "engine": "webkit" },
-  { "surface": "world-records", "viewport": "915x412", "engine": "chromium" },
-  { "surface": "world-records", "viewport": "844x390", "engine": "webkit" },
-  { "surface": "world-records/rushers", "viewport": "915x412", "engine": "chromium" },
-  { "surface": "world-records/rushers", "viewport": "844x390", "engine": "webkit" },
-  { "surface": "world-records/rushers~long-text", "viewport": "915x412", "engine": "chromium" },
-  { "surface": "world-records/rushers~long-text", "viewport": "844x390", "engine": "webkit" },
-  { "surface": "world-records~most-columns", "viewport": "915x412", "engine": "chromium" },
-  { "surface": "world-records~most-columns", "viewport": "844x390", "engine": "webkit" }
+  { "surface": "servers~long-text", "viewport": "844x390", "engine": "webkit" }
 ]

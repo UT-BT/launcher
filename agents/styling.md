@@ -406,8 +406,9 @@ from a 360px phone up, never by horizontal scroll:
 responsive={{ columns, onResolve, compactContent, compactAriaLabel, onCompactChange, nameFloorRem?, extraRem? }}
 ```
 
-- `columns: ResponsiveColumn[]` (`{ id, width?, priority?, required? }`) lists the
-  currently visible columns in display order. Each `width` is the same literal as its
+- `columns: ResponsiveColumn[]` (`{ id, width?, priority?, required? }`, plus `tier`,
+  `label`, `cell` and `sortKey` on a tiered table) lists the currently visible columns in
+  display order. Each `width` is the same literal as its
   header cell; `rem` and `px` are measured, `%` or no width counts as the flex column
   at `nameFloorRem` (default 12).
 - The shell measures itself (`useElementWidth`) and then, in order: condenses
@@ -424,9 +425,14 @@ responsive={{ columns, onResolve, compactContent, compactAriaLabel, onCompactCha
   `userVisible && resolved.has(id)` on both the header and the body (a one-sided gate
   desyncs `table-fixed` tracks). The result is render-time only: keep it out of
   persisted state and `columnVisibility`, or it overwrites the user's column prefs.
-  Wrap `onResolve` in `useCallback` and `columns` in `useMemo`.
+  Wrap `onResolve` in `useCallback` and `columns` in `useMemo`. A tiered table's columns
+  carry `cell` renderers that read the page's render state, so it builds them on each render.
 - `onCompactChange(compact)` reports the switch to cards. Hide `ColumnsMenu` and any
   sort-header control while `compact` is true.
+- A tiered table (`cards` instead of `compactContent`) follows the touch rule instead: on a
+  touch device it renders the table only when every non-decorative column fits, and
+  DataTable draws the cards, their expand panel and the card sort control
+  ([shared-components.md](shared-components.md#column-tiers-and-phone-cards)).
 - Header `width` literals and `ResponsiveColumn.width` values must match. A header
   forcing a width on the flex column makes the real table wider than the computed
   `minWidth` and brings back horizontal scroll.
@@ -436,10 +442,10 @@ times through `CapTimeLink`, and handle skeleton and empty states themselves, si
 `compactContent` replaces the whole table including `DataTableSkeletonRow` and
 `DataTableEmpty`.
 
-Reference pages: `PlayersPage.tsx`, `WorldRecordsPage.tsx`, `ServerBrowserPage.tsx`
+Reference pages: `PlayersPage.tsx`, `ServerBrowserPage.tsx`
 (with ColumnsMenu and `onCompactChange`), `CapItAllPage.tsx`,
 `home/LatestRecordsCard.tsx`, `mapDetail/LeaderboardCard.tsx`,
-`teams/TeamActivityPanel.tsx`.
+`teams/TeamActivityPanel.tsx`. A tiered table: `WorldRecordsPage.tsx`.
 
 ## Buttons and chips
 

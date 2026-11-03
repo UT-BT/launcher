@@ -111,14 +111,30 @@ export function opensWhenShown(trigger: (page: Page) => Locator, title: string |
     }
 }
 
+export function withCardsOpen(open: PageStep): PageStep {
+    return async (page, data) => {
+        const controls = page.getByRole('main').getByRole('listitem')
+            .getByRole('button', { name: 'Details' })
+            .filter({ visible: true })
+        const count = await controls.count()
+        for (let index = 0; index < count; index += 1) {
+            const control = controls.nth(index)
+            if (await control.getAttribute('aria-expanded') !== 'false') continue
+            await control.click()
+            await control.and(page.locator('[aria-expanded="true"]')).waitFor()
+        }
+        await open(page, data)
+    }
+}
+
 export const watchRun: MobileModal = {
     id: 'watch-run',
     label: 'Replay video',
-    open: watchesReplay(),
+    open: withCardsOpen(watchesReplay()),
 }
 
 export const wrHistory: MobileModal = {
     id: 'wr-progression',
     label: 'World record progression',
-    open: opensWhenShown(page => page.getByRole('button', { name: 'View world record history' }), /^World Record Progression/),
+    open: withCardsOpen(opensWhenShown(page => page.getByRole('button', { name: 'View world record history' }), /^World Record Progression/)),
 }

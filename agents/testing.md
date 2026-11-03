@@ -313,8 +313,8 @@ on both engines at the project's default size (390×844 and 360×780).
 `route-contract.json`. Manifest modules import only types from Playwright (no `test`, no `expect`),
 so Vitest can import them too; waits use locator `waitFor()`. The step helpers they share (`listed`,
 `recordShown`, `rowsOf`, `heading`, `shows`, `text`, `tap`, `steps`, `opens`, `opensWhenShown`,
-`watchesReplay`, `modalHeading`, `seen`) and the shared `watchRun` and `wrHistory` modals are in
-`manifest/steps.ts`. The overlays that aren't a page's own modal are in `manifest/overlays.ts`:
+`watchesReplay`, `withCardsOpen`, `modalHeading`, `seen`) and the shared `watchRun` and `wrHistory`
+modals are in `manifest/steps.ts`. The overlays that aren't a page's own modal are in `manifest/overlays.ts`:
 `pageTutorial(page)` (the Servers, Maps and Players tutorial card, opened from the page's help
 button, with the card's dialog as `root`) and `consentPolicy(ready)` (the consent banner's privacy
 policy on Home: it drops the seeded consent and reloads once, so the banner shows).
@@ -350,8 +350,11 @@ without a record history, opens through `opensWhenShown`, which leaves the page 
 trigger is not on screen. `watchesReplay` taps the visible replay buttons in turn, closing "Replay
 not available" until a replay video opens. When either leaves no modal open, the rules that measure
 the modal's root report `n/a`, but `rotation-recovers` fails with "the modal is not open": the
-portrait `rotation-recovers` entries on `watch-run` and `wr-progression` surfaces record a trigger
-phones don't show, not a rotation bug. A trigger that lives only in table rows phones show as cards
+portrait `rotation-recovers` entries on the map page's and the profile's `watch-run` and
+`wr-progression` surfaces record a trigger phones don't show, not a rotation bug. On a tiered
+table the trigger sits in the card's expand panel: the shared `watchRun` and `wrHistory` modals
+open through `withCardsOpen`, which first opens every collapsed "Details" panel on screen, so World
+Records crawls both modals on phones. A trigger that lives only in table rows phones show as cards
 is not crawled until the cards expose it: the Maps page's reviews and Demos (15). Event tabs that
 show only while signups are open (`players`, `signup`) are not crawled on the public event; the
 staff-only `manage` and `stream` tabs are crawled by `event-detail:manager`.
@@ -616,6 +619,13 @@ spec that is red today is marked `test.fail()`, with a note naming the ticket th
   Records and Maps, reached through the drawer. It serves two recorded sets at once; the first
   entry's set answers a path both know. `e2e/scroll-restore.spec.ts` runs the cap and map flow
   on `desktop-chromium` with real wheel input.
+- `table-cards.spec.ts`: the tiered World Records tables on a phone. The card's "Details" chevron
+  is at least 44 px and opens its panel in place (Difficulty, Date Set, Actions; Median WR and
+  Average WR on Top Rushers) without leaving the page, while a tap on the card body away from its
+  controls opens the map (or the rusher). A sort field and direction chosen on the cards show as the
+  header's `aria-sort` once the page is widened to 1920 px, and come back on the cards, with the
+  card that was open still open; switching to Top Rushers and back closes it. Cards stack one per
+  row at 430×932 and 440×956 and sit two per row at 744×1133 and 844×390.
 - `viewport-recovery.spec.ts`: emulation never leaves the window offset the way iOS does, so the
   spec makes the document taller than the viewport and scrolls the window (or `body`) itself.
   The shell then puts it back to 0,0: after the zoom simulation returns to scale 1 (Chromium

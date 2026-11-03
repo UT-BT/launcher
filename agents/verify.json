@@ -266,6 +266,7 @@
     "e2e/mobile/screenshot-viewer.spec.ts",
     "e2e/mobile/scroll-restore.spec.ts",
     "e2e/mobile/settle.ts",
+    "e2e/mobile/table-cards.spec.ts",
     "e2e/mobile/tables.ts",
     "e2e/mobile/viewport-recovery.spec.ts",
     "e2e/mobile/viewports.ts",
@@ -687,7 +688,8 @@
     "e2e/capTables.ts",
     "e2e/map-screenshot-viewer.spec.ts",
     "e2e/mobile/cap-numeric-tables.spec.ts",
-    "e2e/profile-tabs-responsive.spec.ts"
+    "e2e/profile-tabs-responsive.spec.ts",
+    "e2e/world-records-table.spec.ts"
   ],
   "agents/features/stream-kit.md": [
     "app/components/broadcast/BroadcastStage.tsx",
