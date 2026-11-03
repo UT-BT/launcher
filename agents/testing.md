@@ -628,7 +628,8 @@ spec that is red today is marked `test.fail()`, with a note naming the ticket th
   the player. Caps selection works on the cards (a 44 px checkbox target, Select all on this
   page, the bulk bar), and Disallow opens its confirm. Each panel lists the table's detail
   columns; Drift lists every location. Audit Logs opens the entry's details, with Roll back,
-  in the card panel, and at 1920 px in a single-cell expand row under the table row. A sort
+  in the card panel, and at 1920 px in a single-cell expand row under the table row; an Actor
+  column hidden in Columns is still listed once in the card panel. A sort
   picked on the User Management cards is sent with the request and shows as the header's
   `aria-sort` at 1920 px, where the Columns menu is back. Maps Management: Edit opens the
   editor, the card sort is sent with the request, and the card body opens the map; Difficulty
@@ -642,8 +643,11 @@ spec that is red today is marked `test.fail()`, with a note naming the ticket th
   A server card keeps name, players n/max, flag and status on its face, and its panel lists the
   player and spectator names with the spectator count. A sort field and direction picked on the
   Servers and Players cards reorder the cards (Players: the request carries the new sort) and show
-  as the header's `aria-sort` at 1920 px. The Players face holds rank, points and WRs with Role in
-  the panel; the Cap It All face holds the certified percentage with the three breakdowns in the
+  as the header's `aria-sort` at 1920 px. The Players face holds rank, points and WRs; the panel
+  lists Role, the four medal counts and Member Since, and the card sort every sortable column,
+  although the medals and Member Since are hidden on the table by default. At 844×390 the Players
+  table stays a table with its five shown columns rather than switching to cards for the hidden
+  ones. The Cap It All face holds the certified percentage with the three breakdowns in the
   panel and no sort control. Tapping a Players or Cap It All card body opens the player.
 - `pull-to-refresh.spec.ts`: on Maps with the New maps filter set, a short pull shows the
   indicator and refreshes nothing. A pull past the threshold shows the spinner below the top

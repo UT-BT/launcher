@@ -65,9 +65,9 @@ table column, add an IPC channel, wire new API data, audit the docs) trigger on 
 9. **Desktop-only behaviour gates through `app/platform/` capabilities** (`usePlatform()` or its
    named exports), not `window.conveyor` presence checks or `__WEB_TARGET__` reads.
 10. **Every UI change works from a 360 px phone to 4K on both targets, and stays cheap.**
-    Tables get `responsive` configs with `compactContent` card rows instead of horizontal
-    scroll; heroes and tiles wrap instead of truncating key data; controls stay tappable at
-    390 px. Lazy-load anything opened after a user action and keep `npm run check:bundle`
+    Tables get `responsive` configs with a tier on every column and phone `cards` instead of
+    horizontal scroll; heroes and tiles wrap instead of truncating key data; controls stay
+    tappable at 390 px. Lazy-load anything opened after a user action and keep `npm run check:bundle`
     green; no per-row `backdrop-blur` or infinite animations
     ([styling.md](agents/styling.md), [web-target.md](agents/web-target.md)).
 

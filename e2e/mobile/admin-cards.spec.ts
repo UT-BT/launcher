@@ -253,15 +253,15 @@ test.describe('Admin cards', () => {
         await expect(detail.getByRole('cell')).toHaveCount(1)
     })
 
-    test('Audit Logs: an actor column hidden on desktop stays in the card details', async ({ page }) => {
+    test('Audit Logs: an actor column hidden on desktop is still listed once in the card panel', async ({ page }) => {
         await page.addInitScript(() => {
             localStorage.setItem('utbt:admin:audit:cols:v2', JSON.stringify({ hidden: ['actor'] }))
         })
         await openSection(page, 'audit-logs')
         const card = (await cardsOf(page, 'Audit entries')).first()
         await openPanel(card)
-        await expect(terms(card)).toHaveText(['Time', 'Action'])
-        await expect(card.getByText('Actor', { exact: true })).toBeVisible()
+        await expect(terms(card)).toHaveText(['Time', 'Actor', 'Action'])
+        await expect(card.getByText('Actor', { exact: true })).toHaveCount(1)
         await expect(card.getByText('Action', { exact: true })).toHaveCount(1)
     })
 

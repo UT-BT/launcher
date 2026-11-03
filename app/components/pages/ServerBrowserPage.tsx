@@ -619,11 +619,6 @@ export function ServerBrowserPage({
         [state.columnOrder],
     )
 
-    const visibleColumns = useMemo(
-        () => displayColumnOrder.filter(id => state.columnVisibility[id]),
-        [displayColumnOrder, state.columnVisibility],
-    )
-
     const [resolved, setResolved] = useState<Set<ServerColumnId> | null>(null)
     const handleResolve = useCallback((ids: Set<string>) => {
         setResolved(ids as Set<ServerColumnId>)
@@ -855,8 +850,9 @@ export function ServerBrowserPage({
         )
     }
 
-    const serverColumns: ResponsiveColumn<Server>[] = visibleColumns.map(id => ({
+    const serverColumns: ResponsiveColumn<Server>[] = displayColumnOrder.map(id => ({
         id,
+        hiddenByUser: !state.columnVisibility[id],
         width: COLUMN_LAYOUT[id].width,
         priority: COLUMN_PRIORITY[id],
         required: RESPONSIVE_REQUIRED_COLUMNS.has(id),

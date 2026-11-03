@@ -138,8 +138,8 @@ is `'Unsupported'`.
   ping (desktop), and the player and spectator lists: each shows its count, then every name in
   the same rows as the desktop dropdowns (`PlayerInfo`, or the spectator bot's Twitch row). Players and spectators are detail
   columns for that reason, although the n/max count is on the face too; the thumbnail is
-  decorative. The body has no tap action, as there is no server page. The card sort control
-  offers every visible sortable column. `e2e/mobile/player-server-cards.spec.ts` checks the
+  decorative. The body has no tap action, as there is no server page. The panel and the card
+  sort control list every column, including those hidden in Columns (`hiddenByUser`). `e2e/mobile/player-server-cards.spec.ts` checks the
   cards.
 
 ### The game already running

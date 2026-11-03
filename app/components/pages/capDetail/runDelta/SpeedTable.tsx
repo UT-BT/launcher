@@ -18,10 +18,10 @@ import type { RunSpeed, SpeedGap } from './runSpeed'
 type SpeedColumnId = 'sector' | 'speed' | 'fromSpeed' | 'fromLine'
 
 const SPEED_COLUMNS: ResponsiveColumn[] = [
-    { id: 'sector', width: '4.5rem', required: true },
-    { id: 'speed', width: '4.25rem', priority: 10 },
-    { id: 'fromSpeed', width: '4.25rem', priority: 30 },
-    { id: 'fromLine', width: '4rem', priority: 40 },
+    { id: 'sector', width: '4.5rem', required: true, tier: 'essential', label: 'Sector' },
+    { id: 'speed', width: '4.25rem', priority: 10, tier: 'essential', label: 'Avg speed' },
+    { id: 'fromSpeed', width: '4.25rem', priority: 30, tier: 'essential', label: 'Δ Speed' },
+    { id: 'fromLine', width: '4rem', priority: 40, tier: 'essential', label: 'Δ Line' },
 ]
 
 interface SpeedTableProps {
@@ -68,7 +68,7 @@ export function SpeedTable({ speed, differentLineNote, selectedSector, onSelectS
         <>
             <DataTableShell
                 className={cn('!bg-transparent !border-0 !rounded-none', NUMERIC_TABLE)}
-                responsive={{ columns: SPEED_COLUMNS, onResolve: handleResolve }}
+                responsive={{ columns: SPEED_COLUMNS, onResolve: handleResolve, tableOnly: true }}
             >
                 <DataTableHeaderRow>
                     <DataTableHeaderCell width="4.5rem" align="center" className={NUMERIC_CELL}>Sector</DataTableHeaderCell>

@@ -273,7 +273,8 @@ target or a `null` read) or loading.
   more than 4× its neighbours' mismatch (a skipped or misread checkpoint), and renumbers the kept
   ones `CP1…` between `SPAWN` and `CAP` for the splits table, the delta chart and the scrubber.
 - **Phones.** The splits, sector and speed tables stay tables with every column: they are numeric
-  comparisons, so they have no card rows. Each `DataTableShell` is a `@container/numbers`
+  comparisons, so they have no cards: each passes `tableOnly: true`, and every column is
+  `essential`. Each `DataTableShell` is a `@container/numbers`
   (`numericTable.tsx`). Below 28rem (448 px), cells drop to `px-1.5`, numbers switch from mono to
   the system font's tabular digits at `text-xs` with `tracking-tight`, the CP column narrows to
   2.25rem, and two headers shorten (`NumericHeader`: Cumulative → Cum., Avg speed → Speed, with the
@@ -409,9 +410,11 @@ server-computed values the profile hero shows.
 - **Phone cards**: the table is tiered
   ([shared-components.md](../shared-components.md#column-tiers-and-phone-cards)). The face holds
   rank, player (with the Banned badge), points and world records; role, the medal counts and
-  member since sit in the expand panel, when the user shows those columns. Tapping the body opens
-  the player. The card sort control offers every visible sortable column, on the same sort state
-  as the header. `e2e/mobile/player-server-cards.spec.ts` checks the cards.
+  member since sit in the expand panel, even though the medal counts and member since are hidden
+  by default on the table (`hiddenByUser`). Tapping the body opens the player. The card sort
+  control offers every sortable column, on the same sort state as the header.
+  `e2e/mobile/player-server-cards.spec.ts` checks the cards, and that a landscape phone keeps the
+  table with the default columns instead of switching to cards for the hidden ones.
 
 ## Maps list
 
@@ -447,7 +450,8 @@ touch rule decides instead.
   the headers.
 - The thumbnail is the decorative column the touch rule may drop. Skeleton and "No maps match your
   filters." are the card list's placeholder. Columns hides while cards show; a column hidden there
-  on a wide screen also stays off the card face, panel and sort.
+  on a wide screen still shows in the panel and the card sort (`hiddenByUser`), and never pushes
+  the table to cards.
 - **Tutorial**: in card view the first card's panel opens when the tutorial starts, and again
   whenever another map becomes the first card, so the Demos and ratings steps spotlight the real
   buttons. The sort step spotlights the card sort control,

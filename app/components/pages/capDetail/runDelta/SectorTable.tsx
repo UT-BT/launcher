@@ -16,10 +16,10 @@ import type { SectorRow } from './runDeltaCard'
 type SectorColumnId = 'sector' | 'split' | 'deltaSplit' | 'deltaTotal'
 
 const SECTOR_COLUMNS: ResponsiveColumn[] = [
-    { id: 'sector', width: '4.5rem', required: true },
-    { id: 'split', width: '4rem', priority: 10 },
-    { id: 'deltaSplit', width: '4.25rem', priority: 30 },
-    { id: 'deltaTotal', width: '4.5rem', priority: 40 },
+    { id: 'sector', width: '4.5rem', required: true, tier: 'essential', label: 'Sector' },
+    { id: 'split', width: '4rem', priority: 10, tier: 'essential', label: 'Split' },
+    { id: 'deltaSplit', width: '4.25rem', priority: 30, tier: 'essential', label: 'Δ Split' },
+    { id: 'deltaTotal', width: '4.5rem', priority: 40, tier: 'essential', label: 'Δ Total' },
 ]
 
 interface SectorTableProps {
@@ -38,7 +38,7 @@ export function SectorTable({ rows, differentLineNote }: SectorTableProps) {
         <>
             <DataTableShell
                 className={cn('!bg-transparent !border-0 !rounded-none', NUMERIC_TABLE)}
-                responsive={{ columns: SECTOR_COLUMNS, onResolve: handleResolve }}
+                responsive={{ columns: SECTOR_COLUMNS, onResolve: handleResolve, tableOnly: true }}
             >
                 <DataTableHeaderRow>
                     <DataTableHeaderCell width="4.5rem" align="center" className={NUMERIC_CELL}>Sector</DataTableHeaderCell>

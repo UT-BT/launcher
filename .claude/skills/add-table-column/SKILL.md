@@ -6,14 +6,20 @@ description: >-
   the request mentions adding a column, a new sortable field, showing/hiding a
   field, reordering columns, or a "last seen / count / rank / time" column on a
   table. Covers the column-id union, header + body cells, alignment, ColumnsMenu
-  wiring, sort, and persisted column prefs.
+  wiring, sort, persisted column prefs, and the column's phone-card tier and
+  panel label.
 ---
 
 # Add a table column
 
 Tabular pages render through the `DataTable.*` primitives and own their own
-column definitions. Read `agents/shared-components.md` (DataTable, ColumnsMenu)
-and `agents/styling.md` (Column widths and alignment) first.
+column definitions. Read `agents/shared-components.md` (DataTable, Column tiers
+and phone cards, ColumnsMenu) and `agents/styling.md` (Column widths and
+alignment) first.
+
+Every column must declare a **tier** and a **panel label**; `npm run
+typecheck:web` rejects a `ResponsiveColumn` without them. Phone cards then pick
+the column up with no card code.
 
 ## Steps (in the page file, e.g. `app/components/pages/PlayersPage.tsx`)
 
@@ -50,11 +56,32 @@ and `agents/styling.md` (Column widths and alignment) first.
    `required`). The new width you set
    in step 3 is what the resolver charges it. If the column carries a tutorial
    ref, mark it `required` in the responsive descriptor. See `styling.md` →
-   Responsive columns. On a tiered table (one that passes `responsive.cards`, such
-   as World Records), also give the column its `tier`, panel `label` and `cell`;
-   a `detail` column then shows in the card's expand panel with no card code
-   (`agents/shared-components.md` → Column tiers and phone cards).
-8. **Data not fetched yet?** If the field isn't in the row type, get it from the
+   Responsive columns.
+8. **Tier, label and cell (required)** — in the page's tier map (e.g.
+   `COLUMN_TIER`; admin tables declare `tier` on the `AdminColumn`) pick one:
+   - `essential`: the card face shows it. Only for the table's few key fields.
+   - `detail`: the card's expand panel lists it under its `label`. The default
+     for everything else, including action columns (watch, download, history).
+   - `decorative`: the touch rule may drop it, for a thumbnail that repeats the
+     name or a bar that repeats a number.
+
+   Give it a short panel `label` (the panel's term and the card sort field's
+   name; usually the header text) and a `cell(row)` that returns the cell
+   content without the `<td>`. Render the table's `DataTableCell` from the same
+   `cell`, so table and panel can't drift. Add the sort field as `sortKey` if the
+   column sorts; the card sort control lists it. Pass the column even while the
+   user hides it in Columns, flagged `hiddenByUser`, never filtered out: the
+   cards must still list it.
+9. **Review the card face.** The face holds the table's essential fields: at
+   most about four data fields, plus the favourite and status badges
+   (`agents/shared-components.md` → Column tiers and phone cards; the table's
+   feature doc lists its face). If the new column is `essential`, add it to the
+   page's `cards.face` renderer and check the face still fits that rule; if the
+   face would grow past it, make the column `detail` instead, or ask the owner
+   which field leaves the face. A `detail` column needs no face change. A
+   `tableOnly` table (the cap page's numeric tables) has no cards: mark the
+   column `essential` and check the table still fits 360 px.
+10. **Data not fetched yet?** If the field isn't in the row type, get it from the
    API first — use the `consume-api-data` skill.
 
 ## Verify
@@ -66,8 +93,11 @@ and `agents/styling.md` (Column widths and alignment) first.
   window — confirm the column auto-hides at the priority you gave it (header and
   body drop together).
 - Both targets, all widths: if the new column carries the page's core metric,
-  mark it `required` AND add it to the page's `compactContent` card renderer (on a
-  tiered table: make it `essential` and put it on the card face) — a phone user
-  must still see it (`agents/styling.md` → Responsive columns).
-  Check at 390px via `npm run dev:web` that the compact card shows the right
-  fields and the table never scrolls horizontally.
+  mark it `required`, make it `essential` and put it on the card face — a phone
+  user must still see it (`agents/styling.md` → Responsive columns).
+  Check at 390px via `npm run dev:web` that the card face shows the essential
+  fields, the Details panel lists the new column under its label (also when it
+  is hidden in Columns), the card sort offers it if it sorts, and the table never
+  scrolls horizontally.
+- Update the card spec that pins the table's panel terms or sort fields (the
+  table's feature doc names it), and the feature doc's face or panel list.

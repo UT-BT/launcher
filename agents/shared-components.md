@@ -104,7 +104,7 @@ Width, alignment and the responsive contract are in [styling.md](styling.md).
 
 | Component | Role |
 |---|---|
-| `DataTableShell` | Scroll container and `<table>`. `scrollRef` / `onScroll` reach that container, which only scrolls sideways; page scroll is the shell's ([navigation.md](navigation.md#scroll-position-and-the-shell-scroller)). `responsive` adds density, priority auto-hide and compact cards; `responsive.cards` makes it a tiered table ([below](#column-tiers-and-phone-cards)). |
+| `DataTableShell` | Scroll container and `<table>`. `scrollRef` / `onScroll` reach that container, which only scrolls sideways; page scroll is the shell's ([navigation.md](navigation.md#scroll-position-and-the-shell-scroller)). `responsive` is required: density, priority auto-hide, and either phone cards (`responsive.cards`) or an explicit `tableOnly: true` ([below](#column-tiers-and-phone-cards)). |
 | `DataTableHeaderRow` | Sticky `<thead>` and its `<tr>`. `theadDataAttr` writes a data attribute for the tutorial z-lift. |
 | `DataTableHeaderCell` | `<th>`. `sortable` + `sortDirection` + `onSort` render the sort button and icon, and set `aria-sort` on the active column; `align`, `width`, `buttonRef`. |
 | `DataTableRow` | Body `<tr>` with locked hover and border; spreads `<tr>` props. |
@@ -114,7 +114,7 @@ Width, alignment and the responsive contract are in [styling.md](styling.md).
 | `DataTableSkeletonRow` | Uniform shimmer row for pages without custom skeletons. |
 
 ```tsx
-<DataTableShell responsive={…}>
+<DataTableShell responsive={{ columns, onResolve, compactAriaLabel: 'Foos', cards }}>
   <DataTableHeaderRow theadDataAttr="data-utbt-foo-thead">
     <DataTableHeaderCell sortable sortDirection={dir('name')} onSort={() => sort('name')}>
       Name
@@ -136,20 +136,32 @@ Width, alignment and the responsive contract are in [styling.md](styling.md).
 
 ### Column tiers and phone cards
 
-A tiered table passes `responsive.cards`. DataTable then renders the phone cards itself: the
-page's card face, a 44 px expand chevron, an inline panel generated from the columns, and a
-sort control. Reference: `WorldRecordsPage.tsx` (records and Top Rushers). Until 24 the tier
-fields are optional and only tables with `cards` use them; every other table keeps
-`compactContent` and the desktop rule.
+Every responsive table passes `responsive.cards`. DataTable then renders the phone cards
+itself: the page's card face, a 44 px expand chevron, an inline panel generated from the
+columns, and a sort control. Reference: `WorldRecordsPage.tsx` (records and Top Rushers).
+There is no other phone fallback: no hand-made compact rows, and no sideways-scrolling
+cut-down table on touch.
 
-Each `ResponsiveColumn<Row>` of a tiered table declares:
+The one exception is a table that reads best as a table at every width: it passes
+`tableOnly: true` instead of `cards` and keeps the desktop rule on every device. Only the
+cap page's checkpoint split, sector and speed tables do (their widths fit 360 px; see
+[records.md](features/records.md)). The types allow `cards` or `tableOnly`, never both or
+neither.
+
+Every `ResponsiveColumn<Row>` declares, and the compiler rejects a column without them:
 
 | Field | Meaning |
 |---|---|
-| `tier` | `essential`: on the card face. `detail`: in the expand panel. `decorative`: may be dropped (a thumbnail that repeats the name, a bar that repeats a number). A column without a tier counts as `detail`. |
+| `tier` | `essential`: on the card face. `detail`: in the expand panel. `decorative`: may be dropped (a thumbnail that repeats the name, a bar that repeats a number). A `tableOnly` table marks every column `essential`. |
 | `label` | The short label the panel shows beside the value, and the card sort field's name. |
+
+And optionally:
+
+| Field | Meaning |
+|---|---|
 | `cell(row)` | The cell content, without the `<td>`. The page's table rows render it inside `DataTableCell`, and the panel renders it beside `label`, so a new detail column reaches phones with no card code. Action columns (watch, download, history) are detail columns too. |
 | `sortKey` | The column's sort field. The card sort control lists every column that has one. |
+| `hiddenByUser` | The user hid the column in `ColumnsMenu`. Pass every column, flagged, rather than filtering the list: the table and its layout decision skip a flagged column, while the card panel and the card sort still list it, because the Columns menu is hidden on cards. `useAdminTable`'s `responsiveColumns` sets it. |
 
 `width`, `priority` and `required` keep governing the desktop table exactly as before.
 
@@ -174,8 +186,10 @@ The layout rule (`resolveTableLayout`, unit-tested in `DataTable.test.ts`):
   required columns don't fit.
 - Both decide on the shell's measured width. Cards sit two per row from 600 px of container
   (`cardsPerRow`).
-- `onCompactChange` still reports cards, so hide `ColumnsMenu` while it is true. The card sort
-  control replaces the sort headers.
+- A column with `hiddenByUser` never takes part, so hiding columns can't flip a landscape
+  phone to cards, and the switch can't oscillate as cards come and go.
+- `onCompactChange` reports cards, so hide `ColumnsMenu` while it is true. The card sort
+  control replaces the sort headers. `compactAriaLabel` names the card list.
 
 The expand control is a button named "Details" with `aria-expanded`; the panel is a `<dl>`
 inside the card, followed by the `cards.panel` content when the table passes one. Expand state is per row and inline. The shell holds it, so an open card stays open
@@ -191,7 +205,7 @@ mutates them in `onToggle` / `onReorder`. `requiredColumns` can't be hidden;
 `excludeFromList` keeps a column in the order but out of the menu (the Maps `tags`
 pseudo-column); `renderExtra(id)` adds a per-row control (Maps' nested "Show Tags").
 `triggerRef`, `menuOpen` and `onMenuOpenChange` let a tutorial drive it. Hide it while
-a responsive table shows compact cards.
+a responsive table shows cards; the cards list hidden columns anyway (`hiddenByUser`).
 
 ## FilterPresetsMenu
 

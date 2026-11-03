@@ -283,13 +283,12 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-function ExpandedDetail({ e, onRollback, busy, onMapSelect, inCard = false, listedAbove = () => false }: {
+function ExpandedDetail({ e, onRollback, busy, onMapSelect, inCard = false }: {
   e: AuditEntry
   onRollback: (e: AuditEntry) => void
   busy: boolean
   onMapSelect?: (mapName: string) => void
   inCard?: boolean
-  listedAbove?: (id: string) => boolean
 }) {
   const role = ROLE_LABELS[e.actor_role]
   return (
@@ -318,7 +317,7 @@ function ExpandedDetail({ e, onRollback, busy, onMapSelect, inCard = false, list
         <Field label="Timestamp">
           <span className="tabular-nums">{formatDateTime(e.created_at) || '—'}</span>
         </Field>
-        {!listedAbove('actor') && <Field label="Actor">
+        {!inCard && <Field label="Actor">
           <div className="flex items-center gap-2">
             {e.actor_id ? (
               <PlayerInfo userId={e.actor_id} alias={e.actor_alias ?? undefined} title={toActiveTitle(e.actor_title)} size="sm" />
@@ -332,7 +331,7 @@ function ExpandedDetail({ e, onRollback, busy, onMapSelect, inCard = false, list
             )}
           </div>
         </Field>}
-        {!listedAbove('action') && <Field label="Action">
+        {!inCard && <Field label="Action">
           <span className="font-mono text-xs text-muted-foreground">{e.action}</span>
         </Field>}
         <Field label="Target">
@@ -523,7 +522,7 @@ export function AuditLogsSection({ userProfile, onMapSelect, onNavigate }: Admin
   const detail = (e: AuditEntry, inCard = false) => (
     <ExpandedDetail
       e={e} onRollback={setRollbackTarget} busy={rollbackBusy && rollbackTarget?.id === e.id} onMapSelect={onMapSelect}
-      inCard={inCard} listedAbove={inCard ? tbl.isVisible : undefined}
+      inCard={inCard}
     />
   )
 

@@ -5,7 +5,7 @@ export interface AdminColumn {
   id: string
   label: string
   required?: boolean
-  tier?: ColumnTier
+  tier: ColumnTier
 }
 
 export interface AdminColumnSpec<Row> {
@@ -22,9 +22,10 @@ export function adminResponsiveColumns<Row>(
   spec: (id: string) => AdminColumnSpec<Row>,
 ): ResponsiveColumn<Row>[] {
   const byId = new Map(columns.map((c) => [c.id, c]))
-  return order.filter(isVisible).map((id) => {
+  return order.flatMap((id) => {
     const column = byId.get(id)
-    return { ...spec(id), id, required: !!column?.required, tier: column?.tier, label: column?.label ?? id }
+    if (!column) return []
+    return [{ ...spec(id), id, required: !!column.required, tier: column.tier, label: column.label, hiddenByUser: !isVisible(id) }]
   })
 }
 

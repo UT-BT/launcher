@@ -74,6 +74,14 @@ const COLUMN_PRIORITY: Partial<Record<SplitsColumnId, number>> = {
 
 const REQUIRED_COLUMNS = new Set<SplitsColumnId>(['cp'])
 
+const COLUMN_LABEL: Record<SplitsColumnId, string> = {
+    cp: 'CP',
+    split: 'Split',
+    cumulative: 'Cumulative',
+    splitDelta: 'Δ Split',
+    cumDelta: 'Δ Total',
+}
+
 function NoSplits({ message }: { message: string }) {
     return (
         <div className="flex items-center justify-center text-sm text-muted-foreground text-center px-4 py-12 h-full">
@@ -282,6 +290,8 @@ function ZonetimeView({
             width: COLUMN_WIDTH[id],
             priority: COLUMN_PRIORITY[id],
             required: REQUIRED_COLUMNS.has(id),
+            tier: 'essential',
+            label: COLUMN_LABEL[id],
         })),
         [presentColumns],
     )
@@ -299,7 +309,7 @@ function ZonetimeView({
             <div className="lg:w-1/2 h-[320px] lg:h-full lg:border-r border-hairline/5 min-h-0 flex flex-col">
                 <DataTableShell
                     className={cn('!bg-transparent !border-0 !rounded-none', NUMERIC_TABLE)}
-                    responsive={{ columns: responsiveColumns, onResolve: handleResolve }}
+                    responsive={{ columns: responsiveColumns, onResolve: handleResolve, tableOnly: true }}
                 >
                     <DataTableHeaderRow>
                         {isVisible('cp') && (

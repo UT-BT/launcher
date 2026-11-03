@@ -10,6 +10,7 @@ import type { MobileRouteEntry } from './manifest/types'
 import { settleLayout } from './settle'
 
 const PHONE = { width: 390, height: 844 }
+const LANDSCAPE_PHONE = { width: 844, height: 390 }
 const DESKTOP_WIDTH = { width: 1920, height: 1080 }
 
 async function open(page: Page, entry: MobileRouteEntry) {
@@ -102,13 +103,17 @@ test.describe('Players, Cap It All and Servers cards', () => {
         await expect(first).toContainText('pts')
         await expect(first).toContainText('WRs')
         await openPanel(first)
-        await expect(first.getByRole('term')).toHaveText(['Role'])
+        await expect(first.getByRole('term')).toHaveText(['Role', 'Champion', 'Gold', 'Silver', 'Bronze', 'Member Since'])
+        await expect(panelValue(first, 'Champion')).toHaveText(/^\d[\d,]*$/)
+        await expect(panelValue(first, 'Member Since')).not.toBeEmpty()
 
         const field = page.getByRole('combobox', { name: 'Sort by' })
         const direction = page.getByRole('button', { name: /^(Ascending|Descending)$/ })
         await expect(field).toHaveValue('rank')
         await expect(direction).toHaveText('Ascending')
-        await expect(field.getByRole('option')).toHaveText(['Rank', 'Player', 'Points', 'World Records'])
+        await expect(field.getByRole('option')).toHaveText([
+            'Rank', 'Player', 'Points', 'World Records', 'Champion', 'Gold', 'Silver', 'Bronze', 'Member Since',
+        ])
 
         const sorted = page.waitForRequest(request => {
             const url = new URL(request.url())
@@ -141,5 +146,18 @@ test.describe('Players, Cap It All and Servers cards', () => {
             await card.getByText('#1', { exact: true }).tap()
             await expect(page).toHaveURL(new RegExp(`${href!}$`))
         }
+    })
+})
+
+test.describe('Players on a landscape phone', () => {
+    test.use({ viewport: LANDSCAPE_PHONE, contextOptions: { screen: LANDSCAPE_PHONE } })
+
+    test('the table keeps its shown columns instead of switching to cards for the hidden ones', async ({ page }) => {
+        await open(page, players)
+        const table = page.getByRole('main').getByRole('table')
+        await expect(table).toBeVisible()
+        await expect(page.getByRole('main').getByRole('list', { name: 'Players' })).toHaveCount(0)
+        await expect(table.getByRole('columnheader')).toHaveCount(5)
+        await expect(table.getByRole('columnheader', { name: 'Member Since' })).toHaveCount(0)
     })
 })

@@ -1941,10 +1941,11 @@ export function MapsPage({
     }
 
     const responsiveColumns: ResponsiveColumn<RowCtx>[] = columnOrder
-        .filter(id => !NON_TABLE_COLUMNS.has(id) && isColumnVisible(id))
+        .filter(id => !NON_TABLE_COLUMNS.has(id))
         .filter(id => !!accessToken || !SIGNED_IN_COLUMNS.includes(id))
         .map(id => ({
             id,
+            hiddenByUser: !isColumnVisible(id),
             width: COLUMN_WIDTH[id],
             priority: COLUMN_PRIORITY[id],
             required: REQUIRED_COLUMNS.has(id) || CORE_COLUMNS.has(id),

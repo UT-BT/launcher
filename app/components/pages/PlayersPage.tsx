@@ -450,8 +450,9 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
         </DataTableCell>
     )
 
-    const playerColumns: ResponsiveColumn<PlayerListRow>[] = visibleColumns.map(id => ({
+    const playerColumns: ResponsiveColumn<PlayerListRow>[] = state.columnOrder.map(id => ({
         id,
+        hiddenByUser: !visibleColumns.includes(id),
         width: COLUMN_WIDTH[id],
         priority: COLUMN_PRIORITY[id],
         required: REQUIRED_COLUMNS.has(id) || id === 'rank' || id === 'points',

@@ -13,7 +13,7 @@ import { PlayerInfo, openPlayer } from '@/app/components/shared/PlayerInfo'
 import { PaginationBar } from '@/app/components/ui/pagination'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow,
-    DataTableCell, DataTableEmpty, DataTableSkeletonRow, type ColumnTier, type ResponsiveColumn,
+    DataTableCell, DataTableEmpty, DataTableSkeletonRow, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import type { CapItAllPageCaches, CapItAllPageState } from './CapItAllPage.types'
 
@@ -24,7 +24,7 @@ const COLUMN_LABELS: Record<CapItAllColumnId, string> = {
     noncertified: 'Non-certified', teammaps: 'Team Maps', total: 'Total',
 }
 
-const CAP_IT_ALL_COLUMNS: (ResponsiveColumn & { id: CapItAllColumnId; tier: ColumnTier })[] = [
+const CAP_IT_ALL_COLUMNS: (Omit<ResponsiveColumn, 'label'> & { id: CapItAllColumnId })[] = [
     { id: 'rank', width: '72px', priority: 30, required: true, tier: 'essential' },
     { id: 'player', required: true, tier: 'essential' },
     { id: 'certified', width: '10rem', priority: 60, tier: 'detail' },

@@ -7,7 +7,7 @@ interface Row { name: string; count: number }
 const COLUMNS: AdminColumn[] = [
   { id: 'name', label: 'Name', required: true, tier: 'essential' },
   { id: 'count', label: 'Count', tier: 'detail' },
-  { id: 'note', label: 'Note' },
+  { id: 'note', label: 'Note', tier: 'detail' },
   { id: 'actions', label: 'Actions', required: true, tier: 'essential' },
 ]
 
@@ -22,8 +22,19 @@ const build = (order: string[], hidden: string[] = []) =>
   adminResponsiveColumns(COLUMNS, order, (id) => !hidden.includes(id), (id) => SPEC[id as keyof typeof SPEC])
 
 describe('adminResponsiveColumns', () => {
-  it('builds the columns in the user order and drops hidden ones', () => {
-    expect(build(['actions', 'count', 'name', 'note'], ['note']).map((c) => c.id)).toEqual(['actions', 'count', 'name'])
+  it('builds every column in the user order and marks the ones the user hid', () => {
+    const columns = build(['actions', 'count', 'name', 'note'], ['note'])
+    expect(columns.map((c) => c.id)).toEqual(['actions', 'count', 'name', 'note'])
+    expect(columns.filter((c) => c.hiddenByUser).map((c) => c.id)).toEqual(['note'])
+  })
+
+  it('keeps a hidden column in the card panel and the card sort', () => {
+    const columns = build(['name', 'count', 'note'], ['count'])
+    expect(cardPanelColumns(columns).map((c) => c.id)).toEqual(['count', 'note'])
+    expect(cardSortFields(columns)).toEqual([
+      { key: 'name', label: 'Name' },
+      { key: 'count', label: 'Count' },
+    ])
   })
 
   it('takes required, tier and label from the admin column and the rest from the spec', () => {
@@ -33,12 +44,6 @@ describe('adminResponsiveColumns', () => {
     expect(count.cell?.({ name: 'a', count: 7 })).toBe(7)
   })
 
-  it('leaves the tier unset where the admin column declares none, so DataTable treats it as detail', () => {
-    const [note] = build(['note'])
-    expect(note.tier).toBeUndefined()
-    expect(cardPanelColumns(build(['name', 'count', 'note', 'actions'])).map((c) => c.id)).toEqual(['count', 'note'])
-  })
-
   it('feeds the card sort from the spec sort keys with the admin labels', () => {
     expect(cardSortFields(build(['name', 'count', 'note']))).toEqual([
       { key: 'name', label: 'Name' },
@@ -46,8 +51,7 @@ describe('adminResponsiveColumns', () => {
     ])
   })
 
-  it('lists ids the admin columns do not know as unrequired detail columns labelled by id', () => {
-    const [extra] = adminResponsiveColumns(COLUMNS, ['extra'], () => true, () => ({ cell: () => null }))
-    expect(extra).toMatchObject({ id: 'extra', required: false, label: 'extra' })
+  it('skips ids the admin columns do not know', () => {
+    expect(adminResponsiveColumns(COLUMNS, ['extra', 'name'], () => true, () => ({ cell: () => null })).map((c) => c.id)).toEqual(['name'])
   })
 })

@@ -83,10 +83,11 @@ Two variations the standard recipe above doesn't cover — the `admin` page
 The page ships to the Electron app AND the website (phones → 4K). Before
 calling it done:
 
-- The table passes `responsive={{ columns, onResolve, compactContent,
-  compactAriaLabel }}` — core metric `required`, cosmetic columns prioritized,
-  compact card rows (with skeleton + empty states) for phone widths. Contract:
-  `agents/styling.md` → Responsive columns.
+- The table passes `responsive={{ columns, onResolve, compactAriaLabel, cards }}`
+  — every column with a `tier` and panel `label`, core metric `required`,
+  cosmetic columns prioritized, a card face plus skeleton and empty states in
+  `cards.placeholder` for phone widths. Contract: `agents/styling.md` →
+  Responsive columns.
 - Pagination is the shared `PaginationBar` (mobile touch bar comes free).
 - Header/toolbars wrap (`flex-wrap`); no `truncate` beside a `shrink-0` group.
 - New view added to `routes.ts` both directions (web deep links).

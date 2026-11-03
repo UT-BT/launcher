@@ -20,11 +20,12 @@ export type ColumnTier = 'essential' | 'detail' | 'decorative'
 
 export type ResponsiveColumn<Row = never> = {
     id: string
+    tier: ColumnTier
+    label: string
     width?: string
     priority?: number
     required?: boolean
-    tier?: ColumnTier
-    label?: string
+    hiddenByUser?: boolean
     sortKey?: string
     cell?: (row: Row) => React.ReactNode
 }
@@ -55,7 +56,7 @@ interface ResolveOpts {
 }
 
 export function resolveResponsiveColumns(
-    cols: ResponsiveColumn[],
+    cols: readonly Pick<ResponsiveColumn, 'id' | 'width' | 'priority' | 'required'>[],
     measuredRem: number,
     opts: ResolveOpts = {},
 ): { visibleIds: Set<string>; hiddenIds: Set<string>; minWidth: string; requiredFits: boolean } {
@@ -102,17 +103,18 @@ export function resolveResponsiveColumns(
 
 interface TableLayoutOpts extends ResolveOpts {
     touch: boolean
-    tiered: boolean
+    cards: boolean
 }
 
-export function resolveTableLayout(
-    cols: ResponsiveColumn[],
+export function resolveTableLayout<Row>(
+    cols: readonly ResponsiveColumn<Row>[],
     measuredRem: number,
-    { touch, tiered, ...opts }: TableLayoutOpts,
+    { touch, cards, ...opts }: TableLayoutOpts,
 ): { visibleIds: Set<string>; hiddenIds: Set<string>; minWidth: string; table: boolean } {
-    const ruled = touch && tiered
-        ? cols.map(c => c.tier === 'decorative' ? c : { ...c, required: true })
-        : cols
+    const inTable = cols.filter(c => !c.hiddenByUser)
+    const ruled = touch && cards
+        ? inTable.map(c => c.tier === 'decorative' ? c : { ...c, required: true })
+        : inTable
     const { requiredFits, ...res } = resolveResponsiveColumns(ruled, measuredRem, opts)
     return { ...res, table: requiredFits }
 }
@@ -122,7 +124,7 @@ export function cardsPerRow(containerPx: number): 1 | 2 {
 }
 
 export function cardPanelColumns<Row>(cols: readonly ResponsiveColumn<Row>[]): ResponsiveColumn<Row>[] {
-    return cols.filter(c => (c.tier ?? 'detail') === 'detail')
+    return cols.filter(c => c.tier === 'detail')
 }
 
 export interface CardSortField {
@@ -131,7 +133,7 @@ export interface CardSortField {
 }
 
 export function cardSortFields<Row>(cols: readonly ResponsiveColumn<Row>[]): CardSortField[] {
-    return cols.flatMap(c => c.sortKey ? [{ key: c.sortKey, label: c.label ?? c.id }] : [])
+    return cols.flatMap(c => c.sortKey ? [{ key: c.sortKey, label: c.label }] : [])
 }
 
 type Density = 'comfortable' | 'condensed'
@@ -155,20 +157,29 @@ export interface DataTableCards<Row> {
     panel?: (row: Row) => React.ReactNode
 }
 
-export interface ResponsiveConfig<Row = never> {
+interface ResponsiveBase<Row> {
     columns: ResponsiveColumn<Row>[]
     nameFloorRem?: number
     extraRem?: number
     onResolve?: (visibleIds: Set<string>) => void
     density?: boolean
-    /** Mobile-first representation used when even the required columns cannot fit. */
-    compactContent?: React.ReactNode
+}
+
+export interface CardsResponsiveConfig<Row> extends ResponsiveBase<Row> {
+    cards: DataTableCards<Row>
     compactAriaLabel?: string
-    cards?: DataTableCards<Row>
-    /** Fires when the shell switches between table and compact-card rendering.
+    /** Fires when the shell switches between the table and the cards.
      *  Use it to hide table-only controls (ColumnsMenu, sort headers) while cards show. */
     onCompactChange?: (compact: boolean) => void
+    tableOnly?: never
 }
+
+export interface TableOnlyResponsiveConfig<Row> extends ResponsiveBase<Row> {
+    tableOnly: true
+    cards?: never
+}
+
+export type ResponsiveConfig<Row = never> = CardsResponsiveConfig<Row> | TableOnlyResponsiveConfig<Row>
 
 interface DataTableShellProps<Row = never> {
     scrollRef?: React.RefObject<HTMLDivElement | null>
@@ -176,8 +187,7 @@ interface DataTableShellProps<Row = never> {
     children: React.ReactNode
     className?: string
     theadDataAttr?: string
-    minWidth?: string
-    responsive?: ResponsiveConfig<Row>
+    responsive: ResponsiveConfig<Row>
 }
 
 /**
@@ -185,41 +195,20 @@ interface DataTableShellProps<Row = never> {
  * <thead>/<tbody> elements rendered by the page.
  *
  * Usage:
- *   <DataTableShell scrollRef={ref} onScroll={onScroll}>
+ *   <DataTableShell scrollRef={ref} onScroll={onScroll} responsive={{ columns, cards }}>
  *     <DataTableHeaderRow>...</DataTableHeaderRow>
  *     <tbody>...</tbody>
  *   </DataTableShell>
  */
-export function DataTableShell<Row = never>(props: DataTableShellProps<Row>) {
-    if (props.responsive) return <ResponsiveDataTableShell {...props} responsive={props.responsive} />
-
-    const { scrollRef, onScroll, children, className, theadDataAttr, minWidth } = props
-    return (
-        <div
-            ref={scrollRef}
-            onScroll={onScroll}
-            className={cn(
-                'flex-1 min-h-0 bg-card/30 border border-hairline/5 rounded-xl overflow-auto',
-                className,
-            )}
-            data-utbt-table-thead={theadDataAttr}
-        >
-            <table className="w-full table-fixed text-sm" style={minWidth ? { minWidth } : undefined}>
-                {children}
-            </table>
-        </div>
-    )
-}
-
-function ResponsiveDataTableShell<Row>({
-    scrollRef, onScroll, children, className, theadDataAttr,
-    responsive,
-}: DataTableShellProps<Row> & { responsive: ResponsiveConfig<Row> }) {
+export function DataTableShell<Row = never>({
+    scrollRef, onScroll, children, className, theadDataAttr, responsive,
+}: DataTableShellProps<Row>) {
     const {
-        columns, nameFloorRem = 12, extraRem = 0, onResolve,
-        density: densityEnabled = true, compactContent, compactAriaLabel,
-        cards, onCompactChange,
+        columns, nameFloorRem = 12, extraRem = 0, onResolve, density: densityEnabled = true,
     } = responsive
+    const cards = responsive.cards
+    const compactAriaLabel = responsive.cards ? responsive.compactAriaLabel : undefined
+    const onCompactChange = responsive.cards ? responsive.onCompactChange : undefined
 
     const internalRef = useRef<HTMLDivElement | null>(null)
     const setRef = useCallback((node: HTMLDivElement | null) => {
@@ -229,7 +218,7 @@ function ResponsiveDataTableShell<Row>({
 
     const widthPx = useElementWidth(internalRef)
     const touch = useDeviceEnvironment(env => env.touch)
-    const tiered = !!cards
+    const hasCards = !!cards
     const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set())
     const prevVisibleRef = useRef<Set<string> | undefined>(undefined)
     const lastKeyRef = useRef<string>('')
@@ -237,7 +226,7 @@ function ResponsiveDataTableShell<Row>({
     const { visibleIds, minWidth, table, density, key } = useMemo(() => {
         const measuredRem = widthPx > 0 ? widthPx / 16 - SCROLLBAR_GUTTER_REM : 0
         const res = resolveTableLayout(columns, measuredRem, {
-            nameFloorRem, extraRem, prevVisible: prevVisibleRef.current, touch, tiered,
+            nameFloorRem, extraRem, prevVisible: prevVisibleRef.current, touch, cards: hasCards,
         })
         const k = [...res.visibleIds].sort().join('|')
         const d: Density = densityEnabled && measuredRem > 0 && measuredRem < CONDENSE_BELOW_REM
@@ -246,7 +235,7 @@ function ResponsiveDataTableShell<Row>({
             visibleIds: res.visibleIds, minWidth: res.minWidth,
             table: res.table, density: d, key: k,
         }
-    }, [columns, widthPx, nameFloorRem, extraRem, densityEnabled, touch, tiered])
+    }, [columns, widthPx, nameFloorRem, extraRem, densityEnabled, touch, hasCards])
 
     useLayoutEffect(() => {
         if (key === lastKeyRef.current) return
@@ -255,7 +244,7 @@ function ResponsiveDataTableShell<Row>({
         onResolve?.(visibleIds)
     }, [key, visibleIds, onResolve])
 
-    const compactActive = !table && (tiered || !!compactContent)
+    const compactActive = !table && hasCards
     const lastCompactRef = useRef<boolean | null>(null)
     useLayoutEffect(() => {
         if (widthPx <= 0 || lastCompactRef.current === compactActive) return
@@ -284,8 +273,6 @@ function ResponsiveDataTableShell<Row>({
                         expanded={expanded}
                         onExpandedChange={setExpanded}
                     />
-                ) : compactActive ? (
-                    <div role="list" aria-label={compactAriaLabel}>{compactContent}</div>
                 ) : (
                     <table className="w-full table-fixed text-sm" style={{ minWidth }}>
                         {children}
@@ -373,7 +360,7 @@ function DataTableCardList<Row>({
                                         <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-2">
                                             {panel.map(column => (
                                                 <Fragment key={column.id}>
-                                                    <dt className="text-xs text-muted-foreground">{column.label ?? column.id}</dt>
+                                                    <dt className="text-xs text-muted-foreground">{column.label}</dt>
                                                     <dd className="flex min-w-0 items-center text-sm">{column.cell?.(row)}</dd>
                                                 </Fragment>
                                             ))}

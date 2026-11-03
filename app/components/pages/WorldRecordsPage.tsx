@@ -844,8 +844,9 @@ export function WorldRecordsPage({
         }
     }
 
-    const recordColumns: ResponsiveColumn<WorldRecord>[] = visibleColumns.map(id => ({
+    const recordColumns: ResponsiveColumn<WorldRecord>[] = state.columnOrder.map(id => ({
         id,
+        hiddenByUser: !visibleColumns.includes(id),
         width: COLUMN_WIDTH[id],
         priority: COLUMN_PRIORITY[id],
         required: REQUIRED_COLUMNS.has(id),

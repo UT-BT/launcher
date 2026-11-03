@@ -85,9 +85,9 @@ Admin tables are tiered DataTables ([shared-components.md](../shared-components.
 on a phone they render cards, never a table that scrolls sideways. The card face holds the
 table's required columns plus its main action; every other column is in the expand panel.
 
-- **Tiers live with the columns.** An `AdminColumn` declares `tier` next to its `label` and
+- **Tiers live with the columns.** An `AdminColumn` must declare `tier` next to its `label` and
   `required` flag. `tbl.responsiveColumns(id => ({ width, priority, sortKey, cell }))` builds
-  the `ResponsiveColumn`s in the user's order and visibility, taking `required`, `tier` and
+  every `ResponsiveColumn` in the user's order, flags hidden ones `hiddenByUser`, and takes `required`, `tier` and
   `label` from the admin columns (`adminResponsiveColumns`, unit-tested in
   `useAdminTable.test.ts`). Each `cell(row)` is the cell content: the table rows render it
   inside their `DataTableCell`, and the panel renders it beside its label.
@@ -134,13 +134,12 @@ table's required columns plus its main action; every other column is in the expa
 
 **Audit Logs details.** On the table a row click opens the details in a `DataTableExpandRow`
 (the full-width row under it); on cards they open in the card's panel through
-`cards.panel`, which skips the actor and action fields when the panel's grid already lists
-them (a column hidden through the Columns menu stays in the details). Both render
-`ExpandedDetail`, with Roll back.
+`cards.panel`, which skips the actor and action fields because the panel's grid above it
+always lists them. Both render `ExpandedDetail`, with Roll back.
 
-Hidden columns: until the panel lists every column (owner decision, ticket 24), a column a user
-hides through the Columns menu is missing from the card panel too. That applies to every table
-above with a Columns menu; the Map Authors and Difficulty Sync tables have none.
+Hidden columns: `tbl.responsiveColumns` returns every column, and marks the ones a user hid
+through the Columns menu `hiddenByUser`. The table skips them; the card panel and the card sort
+still list them, since the Columns menu is hidden on cards.
 
 ## Map authors
 

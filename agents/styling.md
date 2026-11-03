@@ -403,19 +403,21 @@ Every tabular surface passes `responsive` to `DataTableShell` so it fits any wid
 from a 360px phone up, never by horizontal scroll:
 
 ```tsx
-responsive={{ columns, onResolve, compactContent, compactAriaLabel, onCompactChange, nameFloorRem?, extraRem? }}
+responsive={{ columns, onResolve, compactAriaLabel, onCompactChange, cards, nameFloorRem?, extraRem? }}
 ```
 
-- `columns: ResponsiveColumn[]` (`{ id, width?, priority?, required? }`, plus `tier`,
-  `label`, `cell` and `sortKey` on a tiered table) lists the currently visible columns in
-  display order. Each `width` is the same literal as its
-  header cell; `rem` and `px` are measured, `%` or no width counts as the flex column
-  at `nameFloorRem` (default 12).
+- `columns: ResponsiveColumn[]` (`{ id, tier, label, width?, priority?, required?,
+  hiddenByUser?, sortKey?, cell? }`) lists every column in display order. `tier` and
+  `label` are required, so a column without them doesn't compile. A column the user hid
+  through `ColumnsMenu` stays in the list with `hiddenByUser: true`: the table skips it
+  and the cards still list it. Each `width` is the same literal as its header cell; `rem`
+  and `px` are measured, `%` or no width counts as the flex column at `nameFloorRem`
+  (default 12).
 - The shell measures itself (`useElementWidth`) and then, in order: condenses
   padding below 58rem; hides optional columns that don't fit, lowest `priority` first
   (default 50; `required` columns always stay); sizes the table's `minWidth` from the
-  surviving columns; and, when even the required columns don't fit, renders
-  `compactContent` (a `role="list"` labelled `compactAriaLabel`) instead of the table.
+  surviving columns; and, when even the required columns don't fit, renders the cards
+  instead of the table.
 - Mark the flex (name) column and the page's core metric (time, count, points)
   `required`, so mid widths never drop them before cards engage; a leaderboard
   showing only rank and name is a bug. Mark any tutorial-spotlighted column
@@ -425,27 +427,28 @@ responsive={{ columns, onResolve, compactContent, compactAriaLabel, onCompactCha
   `userVisible && resolved.has(id)` on both the header and the body (a one-sided gate
   desyncs `table-fixed` tracks). The result is render-time only: keep it out of
   persisted state and `columnVisibility`, or it overwrites the user's column prefs.
-  Wrap `onResolve` in `useCallback` and `columns` in `useMemo`. A tiered table's columns
-  carry `cell` renderers that read the page's render state, so it builds them on each render.
+  Wrap `onResolve` in `useCallback`. The columns carry `cell` renderers that read the
+  page's render state, so most pages build them on each render.
 - `onCompactChange(compact)` reports the switch to cards. Hide `ColumnsMenu` and any
   sort-header control while `compact` is true.
-- A tiered table (`cards` instead of `compactContent`) follows the touch rule instead: on a
-  touch device it renders the table only when every non-decorative column fits, and
+- On a touch device the table renders only when every non-decorative column fits, and
   DataTable draws the cards, their expand panel and the card sort control
   ([shared-components.md](shared-components.md#column-tiers-and-phone-cards)).
+- The only exception is `tableOnly: true` instead of `cards`: the cap page's checkpoint
+  split, sector and speed tables stay tables on every device and drop columns by
+  priority, with widths tuned to fit 360 px ([records.md](features/records.md)).
 - Header `width` literals and `ResponsiveColumn.width` values must match. A header
   forcing a width on the flex column makes the real table wider than the computed
   `minWidth` and brings back horizontal scroll.
 
-Compact card rows show the core metric, render identity through `PlayerInfo` and
-times through `CapTimeLink`, and handle skeleton and empty states themselves, since
-`compactContent` replaces the whole table including `DataTableSkeletonRow` and
-`DataTableEmpty`.
+The card face shows the essential fields, renders identity through `PlayerInfo` and
+times through `CapTimeLink`. Skeleton and empty states go in `cards.placeholder`, since
+the cards replace the whole table including `DataTableSkeletonRow` and `DataTableEmpty`.
 
-No page uses `compactContent` any more. Tiered tables: the five event tables
+References: the five event tables
 ([events.md](features/events.md#phone-cards), standings with `cards.panel`), `WorldRecordsPage.tsx`,
-`PlayersPage.tsx` and `ServerBrowserPage.tsx` (with ColumnsMenu, `onCompactChange` and the
-card sort), `CapItAllPage.tsx`, `mapDetail/LeaderboardCard.tsx` (a panel with actions),
+`PlayersPage.tsx` and `ServerBrowserPage.tsx` (with ColumnsMenu, `hiddenByUser`, `onCompactChange`
+and the card sort), `CapItAllPage.tsx`, `mapDetail/LeaderboardCard.tsx` (a panel with actions),
 `home/LatestRecordsCard.tsx` (every column essential, no panel), `teams/TeamActivityPanel.tsx`
 (card sort over a client-sorted feed), the seven profile tabs in `playerDetail/`
 (`RecentCapsCard.tsx` with a panel of actions, `WorldRecordsCard.tsx` with no panel), the admin

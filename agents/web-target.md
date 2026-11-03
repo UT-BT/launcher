@@ -338,10 +338,11 @@ cap (owner decision).
   [app/components/pages/settings/README.md](../app/components/pages/settings/README.md).
   A `position: fixed` overlay inside a container-query ancestor must be portalled to
   `document.body`, or containment traps it.
-- **Tables** pass `responsive={{ columns, …, compactContent }}` and fall back to stacked
-  cards below the required-fit width, never horizontal scroll ([styling.md](styling.md)). A
-  tiered table (`responsive.cards`) shows cards on a touch screen unless every non-decorative
-  column fits ([shared-components.md](shared-components.md#column-tiers-and-phone-cards)).
+- **Tables** pass `responsive={{ columns, …, cards }}`, with a tier and a label on every column,
+  and fall back to DataTable's cards below the required-fit width, never horizontal scroll
+  ([styling.md](styling.md)). On a touch screen they show cards unless every non-decorative
+  column fits ([shared-components.md](shared-components.md#column-tiers-and-phone-cards)). Only
+  the cap page's numeric tables pass `tableOnly: true` instead.
 - **Pagination.** `PaginationBar` (`app/components/ui/pagination.tsx`) switches to a touch
   bar below `sm` on its own.
 - **Heroes and tiles**: see [styling.md](styling.md).
