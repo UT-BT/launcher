@@ -821,6 +821,164 @@ test.describe('tile overlays and audio', () => {
     })
 })
 
+function focusButton(page: Page, alias: string): Locator {
+    return tile(page, alias).getByRole('button', { name: 'Focus' })
+}
+
+async function clickTile(page: Page, alias: string) {
+    const button = focusButton(page, alias)
+    const box = (await button.boundingBox())!
+    await button.click({ position: { x: 12, y: box.height - 12 } })
+}
+
+async function tileWidths(page: Page, aliases: readonly string[]): Promise<number[]> {
+    return Promise.all(aliases.map(async alias => Math.round((await tile(page, alias).boundingBox())!.width)))
+}
+
+async function spyOnFullscreen(page: Page) {
+    await page.addInitScript(() => {
+        const request = Element.prototype.requestFullscreen
+        Element.prototype.requestFullscreen = function (this: Element, options?: FullscreenOptions) {
+            document.documentElement.dataset.fullscreenRequested = this.className
+            return request.call(this, options)
+        }
+    })
+}
+
+function shortcutSheet(page: Page): Locator {
+    return page.locator('[data-modal-backdrop]').filter({ has: page.getByRole('heading', { name: 'Keyboard Shortcuts' }) })
+}
+
+function fullscreenRequested(page: Page): Promise<string | null> {
+    return page.evaluate(() => document.documentElement.dataset.fullscreenRequested ?? null)
+}
+
+test.describe('focus, fullscreen and keyboard', () => {
+    test('clicking a tile focuses it and moves the audio, 0 returns to the grid and a second click does too', async ({ page }) => {
+        await mockApi(page, { videos: [DECL, SHX, PATRIK] })
+        await page.goto(`/compare?runs=${DECL},${SHX},${PATRIK}`)
+        await expect.poll(async () => (await mutedOf(page)).map(video => video.muted)).toEqual([true, true, true])
+
+        await clickTile(page, 'ShX')
+
+        await expect(focusButton(page, 'ShX')).toHaveAttribute('aria-pressed', 'true')
+        await expect.poll(async () => (await mutedOf(page)).map(video => video.muted)).toEqual([true, false, true])
+        await expect.poll(async () => {
+            const [decl, shx, patrik] = await tileWidths(page, ['Decl', 'ShX', 'PatriK'])
+            return shx > 2 * decl && decl === patrik
+        }).toBe(true)
+
+        await page.keyboard.press('0')
+
+        await expect(focusButton(page, 'ShX')).toHaveAttribute('aria-pressed', 'false')
+        await expect.poll(async () => new Set(await tileWidths(page, ['Decl', 'ShX', 'PatriK'])).size).toBe(1)
+        await expect.poll(async () => (await mutedOf(page)).map(video => video.muted)).toEqual([true, false, true])
+
+        await page.keyboard.press('3')
+        await expect(focusButton(page, 'PatriK')).toHaveAttribute('aria-pressed', 'true')
+        await expect.poll(async () => (await mutedOf(page)).map(video => video.muted)).toEqual([true, true, false])
+
+        await clickTile(page, 'PatriK')
+        await expect(focusButton(page, 'PatriK')).toHaveAttribute('aria-pressed', 'false')
+        await expect.poll(async () => new Set(await tileWidths(page, ['Decl', 'ShX', 'PatriK'])).size).toBe(1)
+    })
+
+    test('Space plays and pauses, and F requests fullscreen on the stage with the transport bar inside', async ({ page }) => {
+        await spyOnFullscreen(page)
+        await mockApi(page, { videos: [DECL, SHX] })
+        await page.goto(`/compare?runs=${DECL},${SHX}`)
+        await expect.poll(async () => (await clocksOf(page)).length).toBe(2)
+        await expect(transport(page).getByRole('button', { name: 'Fullscreen' })).toBeVisible()
+
+        await page.keyboard.press(' ')
+        await expect(transport(page).getByRole('button', { name: 'Pause', exact: true })).toBeVisible()
+        await expect.poll(async () => (await clocksOf(page)).every(clock => !clock.paused)).toBe(true)
+
+        await page.keyboard.press(' ')
+        await expect(playButton(page)).toBeVisible()
+        await expect.poll(async () => (await clocksOf(page)).every(clock => clock.paused)).toBe(true)
+
+        await transport(page).getByRole('slider', { name: 'Timeline' }).focus()
+        await page.keyboard.press(' ')
+        await expect(transport(page).getByRole('button', { name: 'Pause', exact: true })).toBeVisible()
+        await page.keyboard.press(' ')
+        await expect(playButton(page)).toBeVisible()
+
+        await page.keyboard.press('f')
+        await expect.poll(() => fullscreenRequested(page)).toBe('run-compare-theater')
+        await expect(page.locator('.run-compare-theater').getByRole('region', { name: 'Playback' })).toHaveCount(1)
+    })
+
+    test('without a video tile there is no stage to take fullscreen', async ({ page }) => {
+        await spyOnFullscreen(page)
+        await mockApi(page)
+        await page.goto(`/compare?runs=${FIERD},${BUN}`)
+        await expect(lanes(page).getByRole('listitem')).toHaveCount(2)
+
+        await expect(transport(page).getByRole('button', { name: 'Fullscreen' })).toHaveCount(0)
+        await page.keyboard.press('f')
+        expect(await fullscreenRequested(page)).toBeNull()
+    })
+
+    test('[ and ] step through the cues of every run', async ({ page }) => {
+        await mockApi(page, { videos: [PATRIK, ARTUREK], comparisons: { [PATRIK]: 'short' } })
+        await page.goto(`/compare?runs=${PATRIK},${ARTUREK}`)
+        await expect(lane(page, 'PatriK')).toContainText('Replay')
+        await expect.poll(async () => (await clocksOf(page)).length).toBe(2)
+        const cue = transport(page).getByRole('combobox', { name: 'Cue' })
+
+        await page.keyboard.press(']')
+        await expect(cue).not.toHaveValue('')
+        const first = await cue.inputValue()
+        await page.keyboard.press(']')
+        await expect(cue).not.toHaveValue(first)
+        await page.keyboard.press('[')
+        await expect(cue).toHaveValue(first)
+    })
+
+    test('? opens the shortcut sheet, which lists every shortcut with its control', async ({ page, isMobile }) => {
+        await mockApi(page, { videos: [DECL, SHX] })
+        await page.goto(`/compare?runs=${DECL},${SHX}`)
+        await expect(tile(page, 'ShX').locator('video')).toHaveCount(1)
+
+        await page.keyboard.press('Shift+?')
+
+        const sheet = shortcutSheet(page)
+        await expect(sheet).toBeVisible()
+        await expect(sheet).toContainText('Play or pause')
+        await expect(sheet).toContainText('Or: Back 5 seconds, Forward 5 seconds')
+        await page.keyboard.press('Escape')
+        await expect(sheet).toHaveCount(0)
+
+        if (isMobile) {
+            await expect(transport(page).getByRole('button', { name: 'Shortcuts' })).toHaveCount(0)
+            return
+        }
+        await transport(page).getByRole('button', { name: 'Shortcuts' }).click()
+        await expect(sheet).toBeVisible()
+    })
+
+    test('typing in the drawer search triggers no shortcut', async ({ page }) => {
+        await spyOnFullscreen(page)
+        await mockApi(page, { videos: [DECL, SHX] })
+        await mockLeaderboard(page, [DECL, SHX, BLUE])
+        await page.goto(`/compare?runs=${DECL},${SHX}`)
+        await expect.poll(async () => (await mutedOf(page)).map(video => video.muted)).toEqual([true, true])
+        await runsButton(page).click()
+        const search = drawer(page).getByRole('searchbox', { name: 'Search Players' })
+        await search.click()
+
+        await page.keyboard.type('f m1 ?')
+
+        await expect(search).toHaveValue('f m1 ?')
+        await expect(shortcutSheet(page)).toHaveCount(0)
+        await expect(playButton(page)).toBeVisible()
+        await expect(focusButton(page, 'Decl')).toHaveAttribute('aria-pressed', 'false')
+        expect((await mutedOf(page)).map(video => video.muted)).toEqual([true, true])
+        expect(await fullscreenRequested(page)).toBeNull()
+    })
+})
+
 function analysis(page: Page): Locator {
     return page.getByRole('region', { name: 'Analysis' })
 }

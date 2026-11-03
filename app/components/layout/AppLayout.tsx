@@ -27,6 +27,7 @@ import { PageRefreshProvider } from '@/app/components/navigation/PageRefreshCont
 
 import { UserProfile } from '@/app/utils/api'
 import { usePatreonTier } from '@/app/utils/patreon'
+import { isTypingTarget } from '@/app/utils/typingTarget'
 import { IS_WEB, usePlatform } from '@/app/platform'
 import { SeasonalAmbient } from '@/app/seasonal/lazyDecor'
 import { useSeason } from '@/app/seasonal/SeasonProvider'
@@ -50,10 +51,6 @@ function isBelowLg(environment: DeviceEnvironment): boolean {
 
 function hidesBarsOnScroll(environment: DeviceEnvironment): boolean {
     return environment.touch && environment.belowLg
-}
-
-function isTypingTarget(target: EventTarget | null): boolean {
-    return target instanceof HTMLElement && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
 }
 
 function isToggleShortcut(event: KeyboardEvent): boolean {

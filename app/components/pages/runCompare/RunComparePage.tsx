@@ -4,6 +4,7 @@ import { useNavState } from '@/app/components/navigation/useNavState'
 import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import { useDocumentTitle } from '@/app/components/navigation/useDocumentMeta'
 import { SITE_NAME } from '@/app/components/navigation/titles'
+import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { Spinner } from '@/app/components/ui/spinner'
 import { displayMapName } from '@/app/utils/format'
 import type { UserProfile } from '@/app/utils/api'
@@ -12,23 +13,28 @@ import { useAfterPaint } from './analysis/useAfterPaint'
 import { AddRuns } from './drawer/AddRuns'
 import { RunsDrawer } from './drawer/RunsDrawer'
 import { rosterRows } from './drawer/rosterRows'
+import type { Shortcut } from './keyboard/shortcuts'
+import { useCompareShortcuts } from './keyboard/useCompareShortcuts'
 import { useComparisons } from './loading/comparisons'
 import { useReplayVideos } from './loading/replayVideos'
 import { useSoloRuns } from './loading/soloRuns'
 import { holdWhileAdding, type SetChange } from './model/addRuns'
 import { audibleRun, chooseAudio } from './model/audioModel'
 import { composeCompareModel, type CompareModel } from './model/compareModel'
+import { focusAt, nextAudio, toggleFocus } from './model/focusModel'
 import { tileOverlays } from './model/overlayModel'
 import { videoReadOrder } from './model/raceModel'
 import { editableSet, editSet, type SetEdit } from './model/setEdits'
-import { RaceStage, type StageOverlays } from './stage/RaceStage'
+import { RaceStage, type StageFocus, type StageOverlays } from './stage/RaceStage'
 import { useRacePlayback } from './stage/useRacePlayback'
+import { useStageFullscreen } from './stage/useStageFullscreen'
 import { useStageBox, useTheaterHeight } from './stage/useStageMeasure'
 import { TransportBar } from './transport/TransportBar'
 import { useCueSync } from './transport/useCueSync'
 import { parseCompareQuery } from './url/compareUrl'
 import './runCompare.css'
 
+const ShortcutSheetModal = lazy(() => import('./keyboard/ShortcutSheetModal').then(m => ({ default: m.ShortcutSheetModal })))
 const RunAnalysis = lazy(() => import('./analysis/RunAnalysis'))
 
 interface RunComparePageProps {
@@ -51,9 +57,10 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
     const stageBox = useStageBox(stage)
     const [speedRun, setSpeedRun] = useNavState<string | null>('compare.speedRun', null)
     const comparisons = useComparisons(useMemo(() => composeCompareModel({ query: compare, runs: loaded }).lanes.requests, [compare, loaded]))
+    const [storedFocus, setFocus] = useNavState<string | null>('compare.focus', null)
     const composed = useMemo(
-        () => composeCompareModel({ query: compare, runs: loaded, videos, failedVideos, stageBox, comparisons, speedRun }),
-        [compare, loaded, videos, failedVideos, stageBox, comparisons, speedRun],
+        () => composeCompareModel({ query: compare, runs: loaded, videos, failedVideos, stageBox, comparisons, focus: storedFocus, speedRun }),
+        [compare, loaded, videos, failedVideos, stageBox, comparisons, storedFocus, speedRun],
     )
     const settled = useRef<CompareModel | null>(null)
     const model = useMemo(() => holdWhileAdding(composed, settled.current), [composed])
@@ -92,6 +99,58 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
         () => ({ overlays: tileOverlays(model), audio: { audible, volume, onAudio, onVolume }, onEdit: edit }),
         [model, audible, volume, onAudio, onVolume, edit],
     )
+    const focusTile = useCallback((capId: string | null) => {
+        setFocus(capId)
+        if (capId !== null && capId !== model.race.focused) setAudioFrom(capId)
+    }, [model.race.focused, setFocus, setAudioFrom])
+    const stageFocus = useMemo<StageFocus>(
+        () => ({ focused: model.race.focused, onFocus: capId => focusTile(toggleFocus(model.race, model.race.focused, capId)) }),
+        [model.race, focusTile],
+    )
+    const fullscreen = useStageFullscreen(theater)
+    const canFullscreen = fullscreen.supported && (model.race.tiles.length > 0 || fullscreen.active)
+    const [sheetOpen, setSheetOpen] = useState(false)
+    const closeSheet = useCallback(() => setSheetOpen(false), [])
+    useCompareShortcuts((shortcut: Shortcut) => {
+        switch (shortcut.kind) {
+            case 'play-pause':
+                if (!controller) return false
+                if (controller.getState().playing) controller.pause()
+                else controller.play()
+                return true
+            case 'frame':
+                controller?.stepFrame(shortcut.direction)
+                return controller !== null
+            case 'skip':
+                controller?.skip(shortcut.direction)
+                return controller !== null
+            case 'focus': {
+                const capId = focusAt(model.race, shortcut.tile)
+                if (capId !== null) focusTile(capId)
+                return capId !== null
+            }
+            case 'grid':
+                focusTile(null)
+                return true
+            case 'cue':
+                if (!controller || model.cues.points.length === 0) return false
+                if (shortcut.direction < 0) cueSync.previousCue()
+                else cueSync.nextCue()
+                return true
+            case 'fullscreen':
+                if (canFullscreen) fullscreen.toggle()
+                return canFullscreen
+            case 'reference':
+                if (model.race.focused !== null) edit({ kind: 'pin', capId: model.race.focused })
+                return model.race.focused !== null
+            case 'audio':
+                setAudioFrom(nextAudio(model.race, audible))
+                return true
+            case 'sheet':
+                setSheetOpen(true)
+                return true
+        }
+    })
     const onVideoFailed = useCallback((capId: string) => {
         setFailedVideos(previous => (previous.has(capId) ? previous : new Set(previous).add(capId)))
     }, [])
@@ -140,7 +199,7 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
             )}
 
             {!model.loading && model.runs.length > 0 && (
-                <div ref={setTheater} className="run-compare-theater" style={fillsViewport && theaterHeight !== null ? { height: theaterHeight } : undefined}>
+                <div ref={setTheater} className="run-compare-theater" style={fillsViewport && theaterHeight !== null && !fullscreen.active ? { height: theaterHeight } : undefined}>
                     {fillsViewport && (
                         <div className="run-compare-stage-area">
                             {hasTiles && (
@@ -151,6 +210,7 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
                                     attachMedia={attachMedia}
                                     onVideoFailed={onVideoFailed}
                                     tileOverlays={stageOverlays}
+                                    focus={stageFocus}
                                 />
                             )}
                             <RunsDrawer open={drawerOpen} onClose={closeDrawer} rows={roster} note={editNote} onEdit={edit} audible={audible} onAudio={onAudio}>
@@ -168,7 +228,12 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
                         cueSync={cueSync}
                         syncMode={model.sync.mode}
                         onToggleSync={() => edit({ kind: 'sync', mode: model.sync.mode === 'position' ? 'race' : 'position' })}
+                        fullscreen={canFullscreen ? { active: fullscreen.active, toggle: fullscreen.toggle } : null}
+                        onShortcuts={() => setSheetOpen(true)}
                     />
+                    <LazyModalGate open={sheetOpen}>
+                        <ShortcutSheetModal isOpen={sheetOpen} onClose={closeSheet} portal={!fullscreen.active} />
+                    </LazyModalGate>
                 </div>
             )}
 

@@ -24,6 +24,7 @@ export interface CompareModelInput {
     failedVideos?: ReadonlySet<string>
     stageBox?: StageBox | null
     comparisons?: LoadedComparisons
+    focus?: string | null
     speedRun?: string | null
 }
 
@@ -128,7 +129,7 @@ function racePart(input: RaceInput, comparisons: LoadedComparisons): { race: Rac
     return { race: withLaneBadges(race, marked), lanes: marked, cues: composeCues(race, lanes, comparisons), sync }
 }
 
-export function composeCompareModel({ query, runs: loaded, videos, failedVideos, stageBox, comparisons, speedRun }: CompareModelInput): CompareModel {
+export function composeCompareModel({ query, runs: loaded, videos, failedVideos, stageBox, comparisons, focus, speedRun }: CompareModelInput): CompareModel {
     const decoded = parseCompareQuery(query)
     const seekSeconds = decoded.state.t
 
@@ -171,6 +172,7 @@ export function composeCompareModel({ query, runs: loaded, videos, failedVideos,
             videos: videos ?? new Map(),
             failedVideos: failedVideos ?? new Set(),
             stageBox: stageBox ?? null,
+            focus,
         }, comparisons ?? new Map()), comparisons ?? new Map(), speedRun ?? null),
     }
 }

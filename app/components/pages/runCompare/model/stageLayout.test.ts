@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { packStage, type StageBox, type StageLayout } from './stageLayout'
+import { packFocus, packStage, STAGE_GAP, type StageBox, type StageLayout } from './stageLayout'
 
 interface Slot {
     kind: 'video' | 'map'
@@ -99,5 +99,87 @@ describe('packing the stage for the largest 16:9 tile', () => {
     it('places nothing on an empty or unmeasured stage', () => {
         expect(packStage(slots(0), { width: 1920, height: 1080 }).placed).toEqual([])
         expect(packStage(slots(3), { width: 0, height: 0 }).placed).toEqual([])
+    })
+})
+
+const FOCUS_SIZES: { box: StageBox; widths: number[] }[] = [
+    { box: { width: 1280, height: 720 }, widths: [1020, 1020, 1020, 1020, 1025.69, 1068.593, 1099.238] },
+    { box: { width: 1920, height: 1080 }, widths: [1532, 1532, 1532, 1532, 1537.689, 1601.926, 1647.810] },
+    { box: { width: 3840, height: 2160 }, widths: [3068, 3068, 3068, 3068, 3073.689, 3201.926, 3293.524] },
+]
+
+function focusedRect(layout: StageLayout<Slot>, id: string) {
+    return layout.placed.find(p => p.slot.id === id)!.rect
+}
+
+function stripRects(layout: StageLayout<Slot>, id: string) {
+    return layout.placed.filter(p => p.slot.id !== id).map(p => p.rect)
+}
+
+describe('packing the stage around a focused tile', () => {
+    for (const { box, widths } of FOCUS_SIZES) {
+        describe(`in a ${box.width}×${box.height} stage`, () => {
+            widths.forEach((width, i) => {
+                const count = i + 2
+                it(`gives the focused tile most of the stage and stacks the other ${count - 1} along the right edge`, () => {
+                    const focus = `slot-${Math.min(2, count)}`
+                    const layout = packFocus(slots(count), focus, box)
+                    const big = focusedRect(layout, focus)
+                    const strip = stripRects(layout, focus)
+
+                    expect(big.width).toBeCloseTo(width, 2)
+                    expect([layout.tileWidth, layout.tileHeight]).toEqual([big.width, big.height])
+                    expect(big.width * big.height).toBeGreaterThan(box.width * box.height / 2)
+                    expect(layout.placed.map(p => p.slot.id)).toEqual(slots(count).map(s => s.id))
+                    expect(strip).toHaveLength(count - 1)
+                    for (const rect of strip) {
+                        expect(rect.x).toBeCloseTo(big.x + big.width + STAGE_GAP, 6)
+                        expect(rect.width).toBeCloseTo(strip[0].width, 6)
+                        expect(rect.width).toBeLessThanOrEqual(box.width / 5 + 1e-6)
+                    }
+                    strip.slice(1).forEach((rect, j) => expect(rect.y).toBeGreaterThan(strip[j].y))
+                    expectSixteenByNine(layout)
+                    expectInside(layout, box)
+                    expectNoOverlap(layout)
+                })
+            })
+        })
+    }
+
+    it('centres the focused tile and the strip together when the height limits the tile', () => {
+        const box = { width: 2560, height: 1080 }
+        const layout = packFocus(slots(8), 'slot-1', box)
+        const big = focusedRect(layout, 'slot-1')
+        const strip = stripRects(layout, 'slot-1')
+        const right = strip[0].x + strip[0].width
+
+        expect(big.height).toBeCloseTo(1080, 6)
+        expect(big.x).toBeCloseTo(box.width - right, 6)
+        expect(strip[0].y).toBeCloseTo(box.height - (strip[6].y + strip[6].height), 6)
+    })
+
+    it('puts the strip along the bottom of a tall stage', () => {
+        const box = { width: 800, height: 1200 }
+        const layout = packFocus(slots(4), 'slot-3', box)
+        const big = focusedRect(layout, 'slot-3')
+        const strip = stripRects(layout, 'slot-3')
+
+        expect(big.width).toBeCloseTo(800, 6)
+        expect(strip.map(rect => rect.y)).toEqual([strip[0].y, strip[0].y, strip[0].y])
+        expect(strip[0].y).toBeCloseTo(big.y + big.height + STAGE_GAP, 6)
+        strip.slice(1).forEach((rect, j) => expect(rect.x).toBeGreaterThan(strip[j].x))
+        expect(strip[0].height).toBeLessThanOrEqual(1200 / 5 + 1e-6)
+        expectSixteenByNine(layout)
+        expectInside(layout, box)
+        expectNoOverlap(layout)
+    })
+
+    it('falls back to the grid for one tile or a focus that has no tile', () => {
+        const box = { width: 1920, height: 1080 }
+
+        expect(packFocus(slots(1), 'slot-1', box)).toEqual(packStage(slots(1), box))
+        expect(packFocus(slots(3), 'gone', box)).toEqual(packStage(slots(3), box))
+        expect(packFocus(slots(3), null, box)).toEqual(packStage(slots(3), box))
+        expect(packFocus(slots(3), 'slot-1', { width: 0, height: 0 }).placed).toEqual([])
     })
 })

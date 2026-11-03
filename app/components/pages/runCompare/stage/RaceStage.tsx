@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Spinner } from '@/app/components/ui/spinner'
+import { useDeviceEnvironment } from '@/app/device/useDeviceEnvironment'
 import { usePrefersReducedMotion } from '@/app/hooks/usePrefersReducedMotion'
 import { cn } from '@/lib/utils'
 import type { TileOverlay as TileOverlayModel } from '../model/overlayModel'
@@ -20,6 +21,11 @@ export interface StageAudio {
     onVolume: (volume: number) => void
 }
 
+export interface StageFocus {
+    focused: string | null
+    onFocus: (capId: string) => void
+}
+
 export interface StageOverlays {
     overlays: ReadonlyMap<string, TileOverlayModel>
     audio: StageAudio
@@ -36,10 +42,14 @@ interface TileProps<S extends TileSlot> {
     overlay: TileOverlayModel | undefined
     overlaysShown: boolean
     tileOverlays: StageOverlays
+    focus: StageFocus
+    touch: boolean
 }
 
-function VideoTile({ slot, rect, frozen, attachMedia, onVideoFailed, controller, overlay, overlaysShown, tileOverlays }: TileProps<VideoSlot>) {
+function VideoTile({ slot, rect, frozen, attachMedia, onVideoFailed, controller, overlay, overlaysShown, tileOverlays, focus, touch }: TileProps<VideoSlot>) {
     const videoRef = useRef<HTMLVideoElement>(null)
+    const wakingTap = useRef(false)
+    const focused = focus.focused === slot.id
     const { run } = slot
     const { audio, onEdit } = tileOverlays
     const audible = audio.audible === slot.id
@@ -62,7 +72,7 @@ function VideoTile({ slot, rect, frozen, attachMedia, onVideoFailed, controller,
         <div
             role="group"
             aria-label={run.alias?.trim() || run.user}
-            className={cn('run-compare-tile bg-black', frozen && 'is-frozen', slot.highlighted && 'is-highlighted')}
+            className={cn('run-compare-tile bg-black', frozen && 'is-frozen', focused && 'is-focused', slot.highlighted && 'is-highlighted')}
             style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }}
         >
             {slot.src ? (
@@ -78,6 +88,17 @@ function VideoTile({ slot, rect, frozen, attachMedia, onVideoFailed, controller,
             ) : (
                 <div className="run-compare-tile-wait text-muted-foreground"><Spinner className="size-6" /></div>
             )}
+            <button
+                type="button"
+                aria-label="Focus"
+                aria-pressed={focused}
+                className="run-compare-tile-focus"
+                onPointerDown={() => { wakingTap.current = touch && !overlaysShown }}
+                onClick={() => {
+                    if (wakingTap.current) wakingTap.current = false
+                    else focus.onFocus(slot.id)
+                }}
+            />
             {overlay && (
                 <TileOverlay
                     overlay={overlay}
@@ -103,12 +124,14 @@ interface RaceStageProps {
     attachMedia: AttachMedia
     onVideoFailed: (capId: string) => void
     tileOverlays: StageOverlays
+    focus: StageFocus
 }
 
-export function RaceStage({ layout, controller, stageRef, attachMedia, onVideoFailed, tileOverlays }: RaceStageProps) {
+export function RaceStage({ layout, controller, stageRef, attachMedia, onVideoFailed, tileOverlays, focus }: RaceStageProps) {
     const frozen = new Set(usePlaybackSelector(controller, state => frozenKey(state.frozen)).split(','))
     const shown = useOverlayIdle(controller)
     const still = usePrefersReducedMotion()
+    const touch = useDeviceEnvironment(environment => environment.touch)
 
     return (
         <section ref={stageRef} aria-label="Stage" className={cn('run-compare-stage', still && 'is-still')}>
@@ -124,6 +147,8 @@ export function RaceStage({ layout, controller, stageRef, attachMedia, onVideoFa
                     overlay={tileOverlays.overlays.get(slot.id)}
                     overlaysShown={shown}
                     tileOverlays={tileOverlays}
+                    focus={focus}
+                    touch={touch}
                 />
             ))}
         </section>

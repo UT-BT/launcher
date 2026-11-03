@@ -1,10 +1,10 @@
-import { Crosshair, ListVideo, Pause, Play, SkipBack, SkipForward, StepBack, StepForward } from 'lucide-react'
+import { Crosshair, FastForward, Keyboard, ListVideo, Maximize, Minimize, Pause, Play, Rewind, SkipBack, SkipForward, StepBack, StepForward } from 'lucide-react'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { useDeviceEnvironment } from '@/app/device/useDeviceEnvironment'
 import type { CueModel } from '../model/cueModel'
 import type { LanesModel } from '../model/laneModel'
 import { formatRaceTime, type RaceModel } from '../model/raceModel'
-import { PLAYBACK_RATES } from '../playback/playbackConstants'
+import { PLAYBACK_RATES, SKIP_SECONDS } from '../playback/playbackConstants'
 import type { PlaybackController, PlaybackState } from '../playback/playbackController'
 import { usePlaybackSelector } from '../stage/usePlaybackSelector'
 import type { CompareSync } from '../url/compareUrl'
@@ -74,6 +74,13 @@ interface TransportBarProps {
     cueSync: CueSync
     syncMode: CompareSync
     onToggleSync: () => void
+    fullscreen: FullscreenControl | null
+    onShortcuts: () => void
+}
+
+export interface FullscreenControl {
+    active: boolean
+    toggle: () => void
 }
 
 interface CueControlsProps {
@@ -109,7 +116,7 @@ function CueControls({ controller, cues, cueSync }: CueControlsProps) {
     )
 }
 
-export function TransportBar({ controller, race, lanes, runsOpen, onToggleRuns, cues, cueSync, syncMode, onToggleSync }: TransportBarProps) {
+export function TransportBar({ controller, race, lanes, runsOpen, onToggleRuns, cues, cueSync, syncMode, onToggleSync, fullscreen, onShortcuts }: TransportBarProps) {
     const { playing, rate, end, buffering } = usePlaybackSelector(controller, controlsOf, sameControls)
     const touch = useDeviceEnvironment(environment => environment.touch)
     const stalled = new Set(buffering.split(','))
@@ -132,6 +139,16 @@ export function TransportBar({ controller, race, lanes, runsOpen, onToggleRuns, 
                 <button type="button" aria-label="Next frame" disabled={!controller} onClick={() => controller?.stepFrame(1)}>
                     <StepForward className="size-4" />
                 </button>
+                {!touch && (
+                    <>
+                        <button type="button" aria-label={`Back ${SKIP_SECONDS} seconds`} disabled={!controller} onClick={() => controller?.skip(-1)}>
+                            <Rewind className="size-4" />
+                        </button>
+                        <button type="button" aria-label={`Forward ${SKIP_SECONDS} seconds`} disabled={!controller} onClick={() => controller?.skip(1)}>
+                            <FastForward className="size-4" />
+                        </button>
+                    </>
+                )}
                 <select
                     aria-label="Playback rate"
                     value={String(rate)}
@@ -172,6 +189,20 @@ export function TransportBar({ controller, race, lanes, runsOpen, onToggleRuns, 
                     <ListVideo className="size-4" />
                     <span>Runs</span>
                 </button>
+                {fullscreen && (
+                    <button
+                        type="button"
+                        aria-label={fullscreen.active ? 'Exit fullscreen' : 'Fullscreen'}
+                        onClick={fullscreen.toggle}
+                    >
+                        {fullscreen.active ? <Minimize className="size-4" /> : <Maximize className="size-4" />}
+                    </button>
+                )}
+                {!touch && (
+                    <button type="button" aria-label="Shortcuts" aria-haspopup="dialog" onClick={onShortcuts}>
+                        <Keyboard className="size-4" />
+                    </button>
+                )}
             </div>
             <div className="run-compare-track">
                 <div className="run-compare-scrub">

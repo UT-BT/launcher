@@ -4,7 +4,7 @@ import type { ReplaySource, ReplayVideo } from '@/app/utils/api'
 import type { SoloRun } from '../loading/soloRuns'
 import { EMPTY_COMPARE_STATE, type CompareUrlState } from '../url/compareUrl'
 import { resolveReferences, type References } from './referenceModel'
-import { packStage, type StageBox, type StageLayout } from './stageLayout'
+import { packFocus, type StageBox, type StageLayout } from './stageLayout'
 
 export const MAX_VIDEO_TILES = 8
 export const NO_VIDEO = 'No video'
@@ -41,6 +41,7 @@ export interface RaceModel {
     references: References
     tiles: TileSlot[]
     dataOnly: RaceRun[]
+    focused: string | null
     layout: StageLayout<TileSlot>
 }
 
@@ -50,6 +51,7 @@ export interface RaceInput {
     videos: LoadedVideos
     failedVideos: ReadonlySet<string>
     stageBox: StageBox | null
+    focus?: string | null
 }
 
 const UNMEASURED: StageBox = { width: 0, height: 0 }
@@ -81,7 +83,7 @@ function offsetOf(state: CompareUrlState, capId: string, video: ReplayVideo | nu
     return entry ? entry.ms / 1000 : 0
 }
 
-export function composeRace({ runs, state, videos, failedVideos, stageBox }: RaceInput): RaceModel {
+export function composeRace({ runs, state, videos, failedVideos, stageBox, focus = null }: RaceInput): RaceModel {
     const references = resolveReferences(runs, state.refs)
     const byId = new Map(runs.map(run => [run.capId, run]))
     const dataOnly = new Set(state.data)
@@ -104,13 +106,15 @@ export function composeRace({ runs, state, videos, failedVideos, stageBox }: Rac
             result,
         }
     })
+    const focused = tiles.some(tile => tile.id === focus) ? focus : null
     return {
         runs: raceRuns,
         reference: references.lead,
         references,
         tiles,
         dataOnly: raceRuns.filter(run => !run.tile),
-        layout: packStage(tiles, stageBox ?? UNMEASURED),
+        focused,
+        layout: packFocus(tiles, focused, stageBox ?? UNMEASURED),
     }
 }
 

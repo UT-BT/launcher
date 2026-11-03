@@ -18,6 +18,7 @@ const ACTION_MODALS: Record<string, string> = {
     'components/shared/DemoDownloadStatusModal.tsx': 'DemoDownloadStatusModal',
     'components/shared/ReplayVideoModal.tsx': 'ReplayVideoModal',
     'components/pages/events/manage/MatchEditorModal.tsx': 'MatchEditorModal',
+    'components/pages/runCompare/keyboard/ShortcutSheetModal.tsx': 'ShortcutSheetModal',
 }
 
 const DESKTOP_ONLY_IMPORTERS = new Set(['components/pages/GameInstallationSettings.tsx'])
