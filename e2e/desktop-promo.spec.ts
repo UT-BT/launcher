@@ -25,10 +25,9 @@ const MODAL_BULLETS = [
     'Installs UT99 and the 469 patch for you',
     'Edit your UT99 player, controls, video and audio settings',
     'Can upload your personal-best and record demos automatically',
-    'Spectator cams for event streamers',
-    'Updates itself',
 ]
-const SMARTSCREEN_LINE = 'Windows may warn about an unrecognised app: choose More info → Run anyway.'
+const SMARTSCREEN_LINE =
+    "Due to code-signing licence fees, the installer isn't signed, so Windows may warn that you are installing an unrecognised app. To install it anyway, choose More info → Run anyway."
 
 function navRow(page: Page): Locator {
     return sidebarRail(page).getByRole('button', { name: ROW_LABEL, exact: true })
@@ -97,7 +96,7 @@ test.describe('on Windows 11', () => {
     })
 
     test.describe('signed out', () => {
-        test('with nothing stored the row shows as the last navigation row, above the user card', async ({ page }) => {
+        test('with nothing stored the gold button shows in the sidebar footer, above Login with Discord', async ({ page }) => {
             await seedDesktopPromo(page)
             await page.goto('/')
             const row = navRow(page)
@@ -159,7 +158,6 @@ test.describe('on Windows 11', () => {
             const dialog = modal(page)
             await expect(dialog.getByRole('heading', { name: MODAL_TITLE })).toBeVisible()
             await expect(dialog.getByRole('listitem')).toHaveText(MODAL_BULLETS)
-            await expect(dialog.getByText('Windows 10/11 · free', { exact: true })).toBeVisible()
             await expect(dialog.getByText(SMARTSCREEN_LINE, { exact: true })).toBeVisible()
 
             const link = dialog.getByRole('link', { name: 'Download for Windows' })

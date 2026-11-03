@@ -66,7 +66,7 @@ export function DemoDownloadStatusModal({ state, onClose }: DemoDownloadStatusMo
                             Saved to: {state.path.replace(/[/\\][^/\\]+$/, '')}
                         </div>
                     </div>
-                    <DownloadResultPromo source="demo-modal" message="The desktop app uploads your demos automatically" />
+                    <DownloadResultPromo source="demo-modal" message="The desktop app downloads demos directly into your Unreal Tournament install, and uploads demos automatically" />
                 </div>
             )}
             {state?.status === 'error' && (

@@ -56,7 +56,10 @@ These keep their literal Tailwind colour in every theme:
   `app/components/pages/capDetail/capStats.ts`); roles (`app/utils/roles.ts`),
   Patreon, verified, certified, cap type, team and compare-runner A/B colours.
 - **Brand moments**: splash, login and marketing gradients (`--utbt-*` in
-  `app/styles/shared.css`).
+  `app/styles/shared.css`); the gold desktop-app button, `promo-gold` in the `@theme`
+  block of `app/styles/theme.css` with `text-amber-950` (the Light theme remaps
+  `amber-300/400` to a dark text tone, so the fill can't use them; see
+  [Desktop promotion](#desktop-promotion-web-only)).
 - **Pick/ban sides**: team A crimson `pickban-a`, team B azure `pickban-b`, decider
   gold `pickban-gold`, defined once in the `@theme` block of `app/styles/theme.css`
   so every utility and opacity step works (`text-pickban-a`, `border-pickban-b/45`,
@@ -598,17 +601,19 @@ scale animate.
 
 ### Desktop promotion (web only)
 
-Promotion stays quiet: theme tokens only, no accent on the sidebar row, no animation. What
-shows when is in [web-target.md](web-target.md#desktop-promotion).
+The sidebar button is the one coloured surface; everything else uses theme tokens. Nothing
+animates. What shows when is in [web-target.md](web-target.md#desktop-promotion).
 
-- **Sidebar row** (`DesktopPromoNavRow`): muted like the other rows,
-  `text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors`, with
-  no icon accent. The label is `text-sm font-medium` so it fits beside the × at 16rem.
-  Collapsed it is an icon-only tile (`min-h-11`, the rail tile padding).
+- **Sidebar button** (`DesktopPromoNavRow`): a fixed gold CTA in every theme, shaped like
+  the Discord login button below it: `rounded-lg bg-promo-gold text-amber-950
+  hover:brightness-110 active:brightness-95 shadow-lg`, `w-full py-2.5 pl-3 pr-8`, label
+  `text-sm font-semibold`, so it fits beside the × at 16rem. Collapsed it is an icon-only
+  `size-11` square.
 - **Its ×** shows through opacity, not `visibility`, so it stays in the tab order:
   `opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100`,
-  no transition. Expanded it is a full-height `w-8` strip on the row's right edge;
-  collapsed, a `size-6` button in the tile's top-right corner.
+  no transition. Expanded it is a full-height `w-8` strip on the button's right edge in
+  `text-amber-950/70`; collapsed, a `size-6` round `bg-card` badge on the square's top-right
+  corner.
 - **Modal CTA** ("Download for Windows"): the Accent tinted colours at
   `h-10 px-4 text-sm` (larger than the `h-8` family shape, so it stays tappable at
   390 px), full width below `sm`.

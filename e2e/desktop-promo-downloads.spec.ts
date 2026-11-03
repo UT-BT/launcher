@@ -14,7 +14,7 @@ import {
 } from './desktopPromo'
 
 const MAP_LINE = 'The desktop app installs maps straight into UT · Download'
-const DEMO_LINE = 'The desktop app uploads your demos automatically · Download'
+const DEMO_LINE = 'The desktop app downloads demos directly into your Unreal Tournament install, and uploads demos automatically · Download'
 const DOWNLOADING_HINT = 'Downloading… If Windows warns about an unrecognised app, choose More info → Run anyway.'
 
 const CAP = runCompareFixture('capDetailCandidates')

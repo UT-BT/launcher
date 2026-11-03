@@ -280,17 +280,16 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                     ))}
                 </nav>
 
-                {capabilities.desktopPromo && desktopPromo.ambientVisible && (
-                    <Suspense fallback={null}>
-                        <DesktopPromoNavRow collapsed={collapsed} onActivate={() => setMobileNavOpen(false)} />
-                    </Suspense>
-                )}
-
                 <SidebarUserCard
                     userProfile={userProfile}
                     collapsed={collapsed}
                     patreonTier={patreonTier}
                     loginError={loginError}
+                    promo={capabilities.desktopPromo && desktopPromo.ambientVisible && (
+                        <Suspense fallback={null}>
+                            <DesktopPromoNavRow collapsed={collapsed} onActivate={() => setMobileNavOpen(false)} />
+                        </Suspense>
+                    )}
                     onLogin={() => { setLoginError(null); void auth.login() }}
                     onChangeTitle={() => setIsChangeTitleOpen(true)}
                     onSettingsIntent={() => void loadSettingsModal()}

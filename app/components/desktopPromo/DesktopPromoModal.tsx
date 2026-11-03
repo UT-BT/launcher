@@ -9,8 +9,6 @@ const DESKTOP_APP_FEATURES = [
   'Installs UT99 and the 469 patch for you',
   'Edit your UT99 player, controls, video and audio settings',
   'Can upload your personal-best and record demos automatically',
-  'Spectator cams for event streamers',
-  'Updates itself',
 ]
 
 export function DesktopPromoModal({ onClose }: { onClose: () => void }) {
@@ -34,9 +32,9 @@ export function DesktopPromoModal({ onClose }: { onClose: () => void }) {
             <Download aria-hidden className="size-4" />
             Download for Windows
           </a>
-          <p className="text-xs text-muted-foreground">Windows 10/11 · free</p>
           <p className="text-xs text-muted-foreground">
-            Windows may warn about an unrecognised app: choose More info → Run anyway.
+            Due to code-signing licence fees, the installer isn't signed, so Windows may warn that you are installing an
+            unrecognised app. To install it anyway, choose More info → Run anyway.
           </p>
         </div>
       }

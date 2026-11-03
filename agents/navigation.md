@@ -312,7 +312,7 @@ Title, the collapsed choice) and passes it down:
 | `SidebarActions` | Join Server and Launch Game; returns nothing without `capabilities.game` |
 | `SidebarNavItem` | one nav row or rail tile: icon, badge marks, label or caption, Live chip or dot, tooltip |
 | `SidebarCollapseToggle` | the icon-only collapse toggle |
-| `SidebarUserCard` | the signed-in profile menu, or the Discord login and its error |
+| `SidebarUserCard` | the signed-in profile menu, or the Discord login and its error; a `promo` slot above either |
 
 `SidebarActions` and `SidebarUserCard` read capabilities through `usePlatform()` themselves
 so the web entry chunk can drop desktop-only markup.
@@ -322,16 +322,17 @@ so the web entry chunk can drop desktop-only markup.
 (`app/components/desktopPromo/`) is not a destination and not a `sidebar/` part: it is a
 self-contained promo part that owns its modal state.
 
-- `AppLayout` mounts it lazily between `</nav>` and `SidebarUserCard`, only when
-  `capabilities.desktopPromo && useDesktopPromo().ambientVisible`. It sits outside the
-  `navigation` landmark and the scrolling nav, so it is always the last row above the user
-  card and the rail enumerations in `e2e/sidebarRail.ts` don't see it.
+- `AppLayout` mounts it lazily through `SidebarUserCard`'s `promo` slot, only when
+  `capabilities.desktopPromo && useDesktopPromo().ambientVisible`. The card renders it first
+  in its bordered footer, above Login with Discord or the profile card. It sits outside the
+  `navigation` landmark and the scrolling nav, so the rail enumerations in
+  `e2e/sidebarRail.ts` don't see it.
 - It is a `button` ("Get the desktop app"), not a `NavLink`: it never calls `navigate()`.
   A click calls `onActivate` (closes the mobile drawer, like every row) and then opens the
   lazy `DesktopPromoModal`, portalled to `document.body` and prefetched on the row's
   `pointerenter` / `focus`.
-- Collapsed it is an icon-only tile with the label `sr-only` and the right-side rail
-  `Tooltip`.
+- Collapsed it is an icon-only `size-11` square with the label `sr-only` and the right-side
+  rail `Tooltip`.
 - The × ("Dismiss the desktop app suggestion") calls `dismiss('nav')`, which also hides
   the server-browser strip. It shows on hover, on keyboard focus within the row and always
   on a coarse pointer, and stays in the tab order.

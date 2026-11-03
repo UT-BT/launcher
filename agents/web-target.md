@@ -56,7 +56,7 @@ loads on first paint. Build commands are in [build.md](build.md).
 | Back/Forward/Refresh bar (`NavHistoryBar`) | not rendered; browser chrome owns history and reload, pages revalidate on mount ([navigation.md](navigation.md)) | `IS_WEB` in `NavHistoryBar.tsx` |
 | Navigation triggers | real `<a href>` (new tab, copy link work); buttons on desktop | `NavLink` ([navigation.md](navigation.md)) |
 | Stream tab: Cams panel, Kit card, Guide | Cams shows the Red/Blue card then a "needs the desktop launcher" notice, and the Guide's launcher steps show the same notice: the installer Download for promo-eligible visitors, "Use the desktop launcher (Windows) for this." for everyone else. Kit takes a typed folder and downloads the ZIP instead of picking a folder and extracting | `capabilities.camTool` (`camsPanelView` in `events/stream/panels/camsGate.ts`, `KitSection`, `GuidePanel`); Download vs. fallback line on `eligible` inside `DesktopAppNotice` |
-| Desktop promotion: sidebar row and modal, server-browser strip | shown to promo-eligible visitors with no recent dismissal | `capabilities.desktopPromo` + `ambientVisible` at the mount in `AppLayout` / `ServerBrowserPage` ([Desktop promotion](#desktop-promotion)) |
+| Desktop promotion: sidebar button and modal, server-browser strip | shown to promo-eligible visitors with no recent dismissal | `capabilities.desktopPromo` + `ambientVisible` at the mount in `AppLayout` / `ServerBrowserPage` ([Desktop promotion](#desktop-promotion)) |
 | Desktop promotion: map and demo download result lines | shown to promo-eligible visitors on a successful download | `capabilities.desktopPromo` + `eligible` in `DownloadResultPromo` |
 | Splash screen | `WebBootScreen`; `SplashScreen` is lazy and never fetched | `IS_WEB` in `app/app.tsx` |
 | Login page | never shown; logged-out visitors browse anonymously | `IS_WEB` in `app/app.tsx` |
@@ -112,7 +112,7 @@ the job, and have no ×.
 
 | Surface | Where | Shows when | Source |
 |---|---|---|---|
-| Sidebar row "Get the desktop app", opening `DesktopPromoModal` | `DesktopPromoNavRow`, between the nav and the user card ([navigation.md](navigation.md)) | `ambientVisible` | `nav` |
+| Gold sidebar button "Get the desktop app", opening `DesktopPromoModal` | `DesktopPromoNavRow`, in the `SidebarUserCard` footer above Login with Discord or the profile card ([navigation.md](navigation.md)) | `ambientVisible` | `nav` |
 | Strip "Join servers in one click with the desktop app" | `ServerBrowserPage`, above `DataTableShell` | `ambientVisible` | `servers` |
 | Map result line | `MapDownloadStatusModal` success, through `DownloadResultPromo` | `eligible` | `map-modal` |
 | Demo result line | `DemoDownloadStatusModal` success, through `DownloadResultPromo` | `eligible` | `demo-modal` |

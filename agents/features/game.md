@@ -327,7 +327,8 @@ through `app.setDemoWatcherConfig`, and the game's own recording switch `AutoDem
   adds three lines here, never in the desktop app: the server browser's strip above the
   table ("Join servers in one click with the desktop app", dismissible), and on a
   successful map or demo download a `DownloadResultPromo` line ("The desktop app installs
-  maps straight into UT" / "The desktop app uploads your demos automatically").
+  maps straight into UT" / "The desktop app downloads demos directly into your Unreal
+  Tournament install, and uploads demos automatically").
 
 ## Adding a file that installs into the game folder
 
