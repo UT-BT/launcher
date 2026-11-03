@@ -242,6 +242,7 @@
     "e2e/mobile/fixtures/types.ts",
     "e2e/mobile/gallery-reporter.ts",
     "e2e/mobile/hide-on-scroll.spec.ts",
+    "e2e/mobile/home-records-cards.spec.ts",
     "e2e/mobile/interactions.ts",
     "e2e/mobile/leaderboard-cards.spec.ts",
     "e2e/mobile/ledger.ts",
@@ -586,7 +587,8 @@
     "app/components/pages/home/capItAllProgress.ts",
     "app/components/pages/home/news/NewsCard.tsx",
     "app/utils/api.ts",
-    "e2e/home-freshness.spec.ts"
+    "e2e/home-freshness.spec.ts",
+    "e2e/mobile/home-records-cards.spec.ts"
   ],
   "agents/features/map-uploads.md": [
     "app/components/modals/MapScreenshotModal.tsx",

@@ -5,7 +5,8 @@ import {
     type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
-import { TeamAvatarStack } from '@/app/components/shared/TeamAvatarStack'
+import { TeamAvatarStack, teamRosterLabel } from '@/app/components/shared/TeamAvatarStack'
+import { TeamHolders } from '@/app/components/shared/TeamHolders'
 import { MapNameCell } from '@/app/components/shared/MapNameCell'
 import { CapTimeLink, openCap, openTeamCap } from '@/app/components/shared/CapTimeLink'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
@@ -116,7 +117,11 @@ export function LatestRecordsCard({
         <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3">
             <div className="min-w-0 space-y-2">
                 {recordCell('map', r)}
-                {recordCell('holder', r)}
+                {isTeamRecord(r) ? (
+                    <div role="group" aria-label={teamRosterLabel(r.members ?? [])}>
+                        <TeamHolders members={r.members ?? []} currentUserId={currentUserId} />
+                    </div>
+                ) : recordCell('holder', r)}
             </div>
             <div className="flex flex-col items-end justify-between gap-2">
                 {recordCell('time', r)}

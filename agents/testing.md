@@ -735,6 +735,9 @@ spec that is red today is marked `test.fail()`, with a note naming the ticket th
   card sort flips the shown ranks, and a field picked on the cards shows as the header's
   `aria-sort` at 1920 px. A team card's panel holds Status and Date, and its sort lists Rank, Team
   Time and Date.
+- `home-records-cards.spec.ts`: Home's Latest World Records on a phone. It takes a team record
+  with more than one member from the recorded `home` set, and checks that its card names every
+  member.
 - `viewport-recovery.spec.ts`: emulation never leaves the window offset the way iOS does, so the
   spec makes the document taller than the viewport and scrolls the window (or `body`) itself.
   The shell then puts it back to 0,0: after the zoom simulation returns to scale 1 (Chromium

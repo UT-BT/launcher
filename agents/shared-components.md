@@ -342,6 +342,10 @@ whole thead through the `theadDataAttr` hook:
 Team runs and rosters still render each member through `PlayerInfo`, via:
 `TeamHolders` (a stacked list of members), `TeamAvatarStack` (overlapping avatars with
 a roster tooltip) and `TeamRosterBadge` (a "Team" pill whose tooltip lists the roster).
+`teamRosterLabel` builds `TeamAvatarStack`'s accessible label ("Team roster: …"). A phone card
+that lists the members with `TeamHolders`, where the table cell shows the avatar stack, wraps
+them in a `role="group"` carrying the same label, so the card exposes the cell's value (Home's
+Latest World Records).
 Members are `TeamHolderMember` (`userId`, `alias`, `activeTitle`); pass
 `currentUserId` to highlight the viewer.
 

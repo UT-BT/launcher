@@ -82,7 +82,8 @@ Personal widgets live only in the signed-in branch and take `userProfile.accessT
     team cap carries `isTeam` and `teamCapId`: open it with `openTeamCap(teamCapId)`, a solo
     cap with `openCap(id)`.
   - **`recentWorldRecords`**: a row with a non-empty `members` is a team record and its `id`
-    is the team cap id (`openTeamCap`); render the members with `TeamAvatarStack`.
+    is the team cap id (`openTeamCap`). The table cell renders the members with
+    `TeamAvatarStack`, and the phone card face lists them by name with `TeamHolders`.
   - `global.newMaps` is the "(n new)" count that opens Maps with `mapsNewOnly`.
 - `GET /v2/summary/hot_maps` (`fetchHotMaps`) → `HotMap[]` with `ingameSeconds` and
   `spectateSeconds`; the grid shows the first six.
