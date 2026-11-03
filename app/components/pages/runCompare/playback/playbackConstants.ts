@@ -1,0 +1,11 @@
+export const DRIFT_RESEEK_FRAMES = 1
+export const POSITION_RESEEK_SECONDS = 0.25
+export const POSITION_RATE_MIN_FACTOR = 0.5
+export const POSITION_RATE_MAX_FACTOR = 2
+export const FALLBACK_FPS = 30
+export const SKIP_SECONDS = 5
+export const PLAYBACK_RATES = [0.25, 0.5, 1, 1.5, 2] as const
+export const MIN_PLAYBACK_RATE = PLAYBACK_RATES[0]
+export const MAX_PLAYBACK_RATE = PLAYBACK_RATES[PLAYBACK_RATES.length - 1]
+export const START_GATE_LIMIT_SECONDS = 1
+export const SEEK_TOLERANCE_SECONDS = 0.001
