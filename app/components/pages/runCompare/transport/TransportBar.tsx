@@ -1,5 +1,14 @@
 import { Crosshair, FastForward, Keyboard, ListVideo, Maximize, Minimize, Pause, Play, Rewind, SkipBack, SkipForward, StepBack, StepForward } from 'lucide-react'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuLabel,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
+    DropdownMenuTrigger,
+} from '@/app/components/ui/dropdown-menu'
+import { cn } from '@/lib/utils'
 import { useDeviceEnvironment } from '@/app/device/useDeviceEnvironment'
 import type { CueModel } from '../model/cueModel'
 import type { LanesModel } from '../model/laneModel'
@@ -76,11 +85,51 @@ interface TransportBarProps {
     onToggleSync: () => void
     fullscreen: FullscreenControl | null
     onShortcuts: () => void
+    compact: boolean
 }
 
 export interface FullscreenControl {
     active: boolean
     toggle: () => void
+}
+
+interface RateControlProps {
+    controller: PlaybackController | null
+    rate: number
+}
+
+function RateSelect({ controller, rate }: RateControlProps) {
+    return (
+        <select
+            aria-label="Playback rate"
+            value={String(rate)}
+            disabled={!controller}
+            onChange={event => controller?.setRate(Number(event.currentTarget.value))}
+            style={{ colorScheme: 'dark' }}
+        >
+            {PLAYBACK_RATES.map(option => <option key={option} value={String(option)}>{option}×</option>)}
+        </select>
+    )
+}
+
+function RateMenu({ controller, rate }: RateControlProps) {
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <button type="button" aria-label="Playback rate" disabled={!controller} className="run-compare-rate-button font-mono tabular-nums">
+                    {rate}×
+                </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="run-compare-rate-menu">
+                <DropdownMenuLabel>Playback Rate</DropdownMenuLabel>
+                <DropdownMenuRadioGroup value={String(rate)} onValueChange={value => controller?.setRate(Number(value))}>
+                    {PLAYBACK_RATES.map(option => (
+                        <DropdownMenuRadioItem key={option} value={String(option)}>{option}×</DropdownMenuRadioItem>
+                    ))}
+                </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    )
 }
 
 interface CueControlsProps {
@@ -116,14 +165,14 @@ function CueControls({ controller, cues, cueSync }: CueControlsProps) {
     )
 }
 
-export function TransportBar({ controller, race, lanes, runsOpen, onToggleRuns, cues, cueSync, syncMode, onToggleSync, fullscreen, onShortcuts }: TransportBarProps) {
+export function TransportBar({ controller, race, lanes, runsOpen, onToggleRuns, cues, cueSync, syncMode, onToggleSync, fullscreen, onShortcuts, compact }: TransportBarProps) {
     const { playing, rate, end, buffering } = usePlaybackSelector(controller, controlsOf, sameControls)
     const touch = useDeviceEnvironment(environment => environment.touch)
     const stalled = new Set(buffering.split(','))
     const buffered = race.runs.filter(lane => stalled.has(lane.run.capId))
 
     return (
-        <section aria-label="Playback" className="run-compare-transport">
+        <section aria-label="Playback" className={cn('run-compare-transport', compact && 'is-compact')}>
             <div className="run-compare-controls">
                 <button
                     type="button"
@@ -149,15 +198,7 @@ export function TransportBar({ controller, race, lanes, runsOpen, onToggleRuns, 
                         </button>
                     </>
                 )}
-                <select
-                    aria-label="Playback rate"
-                    value={String(rate)}
-                    disabled={!controller}
-                    onChange={event => controller?.setRate(Number(event.currentTarget.value))}
-                    style={{ colorScheme: 'dark' }}
-                >
-                    {PLAYBACK_RATES.map(option => <option key={option} value={String(option)}>{option}×</option>)}
-                </select>
+                {compact ? <RateMenu controller={controller} rate={rate} /> : <RateSelect controller={controller} rate={rate} />}
                 <Clock controller={controller} />
                 <CueControls controller={controller} cues={cues} cueSync={cueSync} />
                 <button
@@ -167,7 +208,7 @@ export function TransportBar({ controller, race, lanes, runsOpen, onToggleRuns, 
                     onClick={onToggleSync}
                 >
                     <Crosshair className="size-4" />
-                    <span>Sync by position</span>
+                    <span className={cn(compact && 'sr-only')}>Sync by position</span>
                 </button>
                 <div aria-live="polite" className="run-compare-buffering text-muted-foreground">
                     {buffered.length > 0 && (

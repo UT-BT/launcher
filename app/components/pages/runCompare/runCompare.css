@@ -746,3 +746,125 @@
     bottom: 0;
   }
 }
+
+.run-compare-stage-area.is-phone {
+  flex: none;
+  width: 100%;
+  max-height: calc(100dvh - var(--top-bar-offset, 0px) - var(--tab-bar-offset, 0px) - 1rem);
+}
+
+.run-compare-stage.is-swipeable {
+  touch-action: pan-y pinch-zoom;
+}
+
+.run-compare-pov {
+  display: flex;
+  flex: none;
+  gap: 0.25rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.run-compare-pov-chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  max-width: 10rem;
+  min-height: 2.75rem;
+  padding: 0 0.75rem;
+  border: 1px solid rgb(var(--hairline-rgb) / 0.15);
+  border-radius: 9999px;
+  color: var(--color-muted-foreground);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.run-compare-pov-chip[aria-pressed='true'] {
+  border-color: color-mix(in srgb, var(--color-accent-400) 60%, transparent);
+  background: rgb(var(--hairline-rgb) / 0.12);
+  color: var(--color-foreground);
+}
+
+.run-compare-delta-chips {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  left: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  pointer-events: none;
+}
+
+.run-compare-tile.is-frozen .run-compare-delta-chips {
+  bottom: 2.75rem;
+}
+
+.run-compare-delta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  max-width: 9rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.375rem;
+  background: color-mix(in srgb, var(--color-card) 85%, transparent);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.run-compare-controls .run-compare-rate-button {
+  width: auto;
+  min-width: 2.75rem;
+  padding: 0 0.5rem;
+  border: 1px solid rgb(var(--hairline-rgb) / 0.15);
+}
+
+.run-compare-sheet-handle {
+  position: absolute;
+  top: 0.375rem;
+  left: 50%;
+  width: 2.5rem;
+  height: 0.25rem;
+  border-radius: 9999px;
+  background: rgb(var(--hairline-rgb) / 0.3);
+  transform: translateX(-50%);
+}
+
+@media (hover: none) {
+  .run-compare-rate-menu [role='menuitemradio'] {
+    min-height: 2.75rem;
+  }
+
+  .run-compare-drawer-layer.is-sheet {
+    top: auto;
+    right: 0;
+    bottom: max(var(--tab-bar-offset, 0px), var(--run-compare-keyboard, 0px));
+    left: 0;
+    width: auto;
+    height: min(60dvh, calc(var(--run-compare-visible-height, 100dvh) - var(--top-bar-offset, 0px) - var(--tab-bar-offset, 0px)));
+    padding: 0 var(--safe-area-right, 0px) 0 var(--safe-area-left, 0px);
+  }
+
+  .run-compare-drawer-layer.is-sheet .run-compare-drawer {
+    padding-bottom: max(0.75rem, calc(var(--safe-area-bottom, 0px) - var(--tab-bar-offset, 0px) + 0.75rem));
+    border-bottom: none;
+    border-radius: 0.75rem 0.75rem 0 0;
+  }
+
+  .run-compare-drawer-layer.is-sheet .run-compare-drawer-header {
+    position: sticky;
+    top: -0.75rem;
+    z-index: 1;
+    margin: -0.75rem -0.75rem 0;
+    padding: 1rem 0.75rem 0.25rem;
+    background: var(--color-card);
+    touch-action: none;
+  }
+
+  .run-compare-theater:fullscreen .run-compare-drawer-layer.is-sheet {
+    top: auto;
+    bottom: 0;
+  }
+}

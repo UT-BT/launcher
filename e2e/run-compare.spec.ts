@@ -39,6 +39,8 @@ const DETAILS = new Map<string, CapDetail>([
     [BLUE, detailFor(BLUE, '700000000000000008', 'Bluey', 12.9, 1)],
 ])
 
+const TOUCH_GRID = { width: 1280, height: 800 }
+
 const CONFLICT = runCompareErrors().find(entry => entry.body.code === 'no_ghost')!
 
 interface MockOptions {
@@ -114,6 +116,10 @@ function clocksOf(page: Page): Promise<VideoClock[]> {
         return { time: currentTime, paused }
     }))
 }
+
+test.beforeEach(async ({ page, isMobile }) => {
+    if (isMobile) await page.setViewportSize(TOUCH_GRID)
+})
 
 function playButton(page: Page): Locator {
     return page.getByRole('region', { name: 'Playback' }).getByRole('button', { name: 'Play', exact: true })

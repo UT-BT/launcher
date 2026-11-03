@@ -1,4 +1,4 @@
-import { useRef, type KeyboardEvent, type ReactNode } from 'react'
+import { useEffect, useRef, type KeyboardEvent, type ReactNode, type RefObject } from 'react'
 import { Pin, SlidersHorizontal, Trash2, Video, VideoOff, Volume2, VolumeX, X } from 'lucide-react'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import {
@@ -8,9 +8,12 @@ import {
     DropdownMenuLabel,
     DropdownMenuTrigger,
 } from '@/app/components/ui/dropdown-menu'
+import { sheetBounds } from '@/app/components/ui/modalSheet'
 import { useModalBehaviour } from '@/app/components/ui/useModalBehaviour'
+import { getDeviceEnvironment, subscribeDeviceEnvironment } from '@/app/device/useDeviceEnvironment'
 import { cn } from '@/lib/utils'
 import type { SetEdit } from '../model/setEdits'
+import { useSwipe } from '../stage/useSwipe'
 import { formatOffset, offsetNudges } from './offsetNudge'
 import { NOT_FRAME_SYNCED, type RosterRow } from './rosterRows'
 
@@ -129,12 +132,33 @@ interface RunsDrawerProps {
     onEdit: (edit: SetEdit) => void
     audible: string | null
     onAudio: (capId: string) => void
+    sheet: boolean
     children?: ReactNode
 }
 
-export function RunsDrawer({ open, onClose, rows, note, onEdit, audible, onAudio, children }: RunsDrawerProps) {
+function useSheetAboveKeyboard(layerRef: RefObject<HTMLElement | null>, active: boolean) {
+    useEffect(() => {
+        const layer = layerRef.current
+        if (!layer || !active) return
+        const follow = () => {
+            const bounds = sheetBounds(getDeviceEnvironment().viewport)
+            const covered = bounds ? Math.max(0, window.innerHeight - bounds.top - bounds.height) : 0
+            layer.style.setProperty('--run-compare-keyboard', `${Math.round(covered)}px`)
+            layer.style.setProperty('--run-compare-visible-height', `${Math.round(bounds?.height ?? window.innerHeight)}px`)
+        }
+        follow()
+        return subscribeDeviceEnvironment(follow)
+    }, [layerRef, active])
+}
+
+export function RunsDrawer({ open, onClose, rows, note, onEdit, audible, onAudio, sheet, children }: RunsDrawerProps) {
     const panelRef = useRef<HTMLElement>(null)
+    const layerRef = useRef<HTMLDivElement>(null)
+    const swipeClose = useSwipe(direction => {
+        if (direction === 'down') onClose()
+    })
     useModalBehaviour(panelRef, open, onClose, false)
+    useSheetAboveKeyboard(layerRef, open && sheet)
 
     if (!open) return null
 
@@ -145,9 +169,10 @@ export function RunsDrawer({ open, onClose, rows, note, onEdit, audible, onAudio
     }
 
     return (
-        <div className="run-compare-drawer-layer">
+        <div ref={layerRef} className={cn('run-compare-drawer-layer', sheet && 'is-sheet')}>
             <section ref={panelRef} id="run-compare-drawer" aria-label="Runs" className="run-compare-drawer" onKeyDown={closeOnEscape}>
-                <header className="run-compare-drawer-header">
+                <header className="run-compare-drawer-header" {...(sheet ? swipeClose : {})}>
+                    {sheet && <span aria-hidden className="run-compare-sheet-handle" />}
                     <h2 className="text-base font-semibold text-foreground">Runs</h2>
                     <button type="button" aria-label="Close Runs" className="run-compare-roster-action" onClick={onClose}>
                         <X className="size-4" />

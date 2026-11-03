@@ -199,6 +199,10 @@
     min-height: 2.75rem;
   }
 
+  .run-compare-matrix-label {
+    min-width: 2.75rem;
+  }
+
   .run-compare-speed-plot text[role='button'] {
     display: none;
   }

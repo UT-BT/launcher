@@ -31,7 +31,7 @@ doesn't run on the surfaces it names.
 | `achievements` | `achievements` | public | `/achievements` | `achievements` | 0 | 0 |
 | `news` | `news` | public | `/news` | `news` | 0 | 0 |
 | `news-detail` | `news-detail` | public | `/news/15` | `news-detail` | 0 | 0 |
-| `run-compare` | `run-compare` | public | `/compare?runs=258021df-51b1-4ed3-99cc-62d4e75892a7,418b0aec-34c5-40e7-acf4-f2bc33373063` | `run-compare` | 0 | 1 |
+| `run-compare` | `run-compare` | public | `/compare?runs=258021df-51b1-4ed3-99cc-62d4e75892a7,418b0aec-34c5-40e7-acf4-f2bc33373063` | `run-compare` | 1 | 2 |
 | `home:signed-in` | `home` | role-gated | `/` | `home-signed-in` | 0 | 2 |
 | `maps:signed-in` | `maps` | role-gated | `/maps` | `maps-signed-in` | 0 | 0 |
 | `admin` | `admin` | role-gated | `/admin` | `admin` | 19 | 4 |
@@ -504,22 +504,25 @@ No skipped rules.
 - **Tier:** public
 - **Path:** `/compare?runs=258021df-51b1-4ed3-99cc-62d4e75892a7,418b0aec-34c5-40e7-acf4-f2bc33373063`
 - **Fixture set:** `run-compare`
-- **Stress variant (PR subset):** none
+- **Stress variant (PR subset):** `long-text`
 - **Decorative columns:** none
 
 ### Sub-views
 
-No sub-views.
+| Surface | Label | Reached by | Stress variant (PR subset) |
+|---|---|---|---|
+| `run-compare/pov` | POV switcher, eight runs | URL `/compare?runs=258021df-51b1-4ed3-99cc-62d4e75892a7,418b0aec-34c5-40e7-acf4-f2bc33373063,8d742df9-2f14-4998-835c-3c16c1d1ee92,c0ffee00-0000-4000-8000-000000000000,c0ffee01-0000-4000-8000-000000000001,c0ffee02-0000-4000-8000-000000000002,c0ffee03-0000-4000-8000-000000000003,c0ffee04-0000-4000-8000-000000000004` | `long-text` |
 
 ### Modals
 
 | Surface | Label | Opened from |
 |---|---|---|
-| `run-compare/runs` | Runs drawer | `run-compare` |
+| `run-compare/runs` | Runs drawer sheet | `run-compare` |
+| `run-compare/pov/runs` | Runs drawer sheet | `run-compare/pov` |
 
 ### Skipped rules
 
-No skipped rules.
+- `table-shows-every-column` on `run-compare/pov`, its modals and its stress variants: with eight runs the sector matrix shows the run columns that fit and a run picker for the others
 
 ## home:signed-in
 

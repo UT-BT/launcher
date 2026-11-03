@@ -6,6 +6,7 @@ import { useDocumentTitle } from '@/app/components/navigation/useDocumentMeta'
 import { SITE_NAME } from '@/app/components/navigation/titles'
 import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { Spinner } from '@/app/components/ui/spinner'
+import { cn } from '@/lib/utils'
 import { displayMapName } from '@/app/utils/format'
 import type { UserProfile } from '@/app/utils/api'
 import { loadReplayVideoVolume, saveReplayVideoVolume } from '@/app/utils/replayVideoVolume'
@@ -23,11 +24,14 @@ import { audibleRun, chooseAudio } from './model/audioModel'
 import { composeCompareModel, type CompareModel } from './model/compareModel'
 import { focusAt, nextAudio, toggleFocus } from './model/focusModel'
 import { tileOverlays } from './model/overlayModel'
+import { isPhone, povForAudio, stageAspect, stageView, stepPov } from './model/phoneStage'
 import { videoReadOrder } from './model/raceModel'
 import { editableSet, editSet, type SetEdit } from './model/setEdits'
+import { PovSwitcher } from './stage/PovSwitcher'
 import { RaceStage, type StageFocus, type StageOverlays } from './stage/RaceStage'
 import { useRacePlayback } from './stage/useRacePlayback'
 import { useStageFullscreen } from './stage/useStageFullscreen'
+import { useStageEnvironment } from './stage/useStageEnvironment'
 import { useStageBox, useTheaterHeight } from './stage/useStageMeasure'
 import { TransportBar } from './transport/TransportBar'
 import { useCueSync } from './transport/useCueSync'
@@ -58,9 +62,11 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
     const [speedRun, setSpeedRun] = useNavState<string | null>('compare.speedRun', null)
     const comparisons = useComparisons(useMemo(() => composeCompareModel({ query: compare, runs: loaded }).lanes.requests, [compare, loaded]))
     const [storedFocus, setFocus] = useNavState<string | null>('compare.focus', null)
+    const stageEnvironment = useStageEnvironment()
+    const [storedPov, setPov] = useNavState<string | null>('compare.pov', null)
     const composed = useMemo(
-        () => composeCompareModel({ query: compare, runs: loaded, videos, failedVideos, stageBox, comparisons, focus: storedFocus, speedRun }),
-        [compare, loaded, videos, failedVideos, stageBox, comparisons, storedFocus, speedRun],
+        () => composeCompareModel({ query: compare, runs: loaded, videos, failedVideos, stageBox, comparisons, focus: storedFocus, speedRun, environment: stageEnvironment, pov: storedPov }),
+        [compare, loaded, videos, failedVideos, stageBox, comparisons, storedFocus, speedRun, stageEnvironment, storedPov],
     )
     const settled = useRef<CompareModel | null>(null)
     const model = useMemo(() => holdWhileAdding(composed, settled.current), [composed])
@@ -107,6 +113,20 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
         () => ({ focused: model.race.focused, onFocus: capId => focusTile(toggleFocus(model.race, model.race.focused, capId)) }),
         [model.race, focusTile],
     )
+    const view = model.race.view
+    const phone = isPhone(view.form)
+    const choosePov = useCallback((capId: string) => {
+        setPov(capId)
+        if (audible !== null && !stageView(model.race.tiles, stageEnvironment, capId).visible.includes(audible)) setAudioFrom(capId)
+    }, [model.race.tiles, stageEnvironment, audible, setPov, setAudioFrom])
+    const swipePov = useCallback((step: 1 | -1) => {
+        const next = stepPov(model.race.tiles, view, step)
+        if (next !== null && next !== view.pov) choosePov(next)
+    }, [model.race.tiles, view, choosePov])
+    const audioPov = povForAudio(view, audible)
+    useEffect(() => {
+        if (audioPov !== null) setPov(audioPov)
+    }, [audioPov, setPov])
     const fullscreen = useStageFullscreen(theater)
     const canFullscreen = fullscreen.supported && (model.race.tiles.length > 0 || fullscreen.active)
     const [sheetOpen, setSheetOpen] = useState(false)
@@ -199,12 +219,18 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
             )}
 
             {!model.loading && model.runs.length > 0 && (
-                <div ref={setTheater} className="run-compare-theater" style={fillsViewport && theaterHeight !== null && !fullscreen.active ? { height: theaterHeight } : undefined}>
+                <div ref={setTheater} className="run-compare-theater" style={fillsViewport && theaterHeight !== null && !fullscreen.active && !phone ? { height: theaterHeight } : undefined}>
                     {fillsViewport && (
-                        <div className="run-compare-stage-area">
+                        <div
+                            className={cn('run-compare-stage-area', phone && hasTiles && 'is-phone')}
+                            style={phone && hasTiles ? { aspectRatio: stageAspect(view) } : undefined}
+                        >
                             {hasTiles && (
                                 <RaceStage
                                     layout={model.race.layout}
+                                    tiles={model.race.tiles}
+                                    view={view}
+                                    onSwipe={swipePov}
                                     controller={controller}
                                     stageRef={setStage}
                                     attachMedia={attachMedia}
@@ -213,13 +239,15 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
                                     focus={stageFocus}
                                 />
                             )}
-                            <RunsDrawer open={drawerOpen} onClose={closeDrawer} rows={roster} note={editNote} onEdit={edit} audible={audible} onAudio={onAudio}>
+                            <RunsDrawer open={drawerOpen} onClose={closeDrawer} rows={roster} note={editNote} onEdit={edit} audible={audible} onAudio={onAudio} sheet={view.form === 'phone-portrait'}>
                                 <AddRuns model={model} accessToken={userProfile?.accessToken ?? ''} userId={userProfile?.id ?? null} onChange={applySetChange} />
                             </RunsDrawer>
                         </div>
                     )}
+                    {hasTiles && view.switcher && <PovSwitcher tiles={model.race.tiles} view={view} onPov={choosePov} />}
                     <TransportBar
                         controller={controller}
+                        compact={phone}
                         race={model.race}
                         lanes={model.lanes}
                         runsOpen={drawerOpen}

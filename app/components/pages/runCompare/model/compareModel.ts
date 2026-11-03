@@ -8,6 +8,7 @@ import { composeLanes, EMPTY_LANES, withLaneBadges, type LanesModel } from './la
 import { composeSync, EMPTY_SYNC, withRaceClock, type SyncModel } from './positionModel'
 import { composeRace, EMPTY_RACE, type LoadedVideos, type RaceInput, type RaceModel } from './raceModel'
 import { onePinPerSide } from './referenceModel'
+import type { StageEnvironment } from './phoneStage'
 import type { StageBox } from './stageLayout'
 
 export type LoadDropReason = 'not-found' | 'different-map' | 'disallowed'
@@ -26,6 +27,8 @@ export interface CompareModelInput {
     comparisons?: LoadedComparisons
     focus?: string | null
     speedRun?: string | null
+    environment?: StageEnvironment | null
+    pov?: string | null
 }
 
 export interface CompareModel {
@@ -129,7 +132,7 @@ function racePart(input: RaceInput, comparisons: LoadedComparisons): { race: Rac
     return { race: withLaneBadges(race, marked), lanes: marked, cues: composeCues(race, lanes, comparisons), sync }
 }
 
-export function composeCompareModel({ query, runs: loaded, videos, failedVideos, stageBox, comparisons, focus, speedRun }: CompareModelInput): CompareModel {
+export function composeCompareModel({ query, runs: loaded, videos, failedVideos, stageBox, comparisons, focus, speedRun, environment, pov }: CompareModelInput): CompareModel {
     const decoded = parseCompareQuery(query)
     const seekSeconds = decoded.state.t
 
@@ -173,6 +176,8 @@ export function composeCompareModel({ query, runs: loaded, videos, failedVideos,
             failedVideos: failedVideos ?? new Set(),
             stageBox: stageBox ?? null,
             focus,
+            environment,
+            pov,
         }, comparisons ?? new Map()), comparisons ?? new Map(), speedRun ?? null),
     }
 }
