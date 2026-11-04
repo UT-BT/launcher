@@ -1,8 +1,12 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { requestLogin } from '@/app/components/shared/AuthRequiredModal'
 import { AlertTriangle } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
+import { useNavState } from '@/app/components/navigation/useNavState'
+import { useNavigation } from '@/app/components/navigation/NavigationContext'
 import {
     fetchMap,
     fetchMapLeaderboard,
@@ -33,6 +37,7 @@ import { YourStatsCard } from './mapDetail/YourStatsCard'
 import { MedalCard } from './mapDetail/MedalCard'
 import { LeaderboardCard } from './mapDetail/LeaderboardCard'
 import { ReviewsCard } from './mapDetail/ReviewsCard'
+import { compareQueryOf, compareSelection, soloCandidates, teamCandidates, type CompareSelection } from './mapDetail/compareSelection'
 
 const ReviewModal = lazy(() => import('@/app/components/modals/ReviewModal').then(m => ({ default: m.ReviewModal })))
 const MapScreenshotModal = lazy(() => import('@/app/components/modals/MapScreenshotModal').then(m => ({ default: m.MapScreenshotModal })))
@@ -54,6 +59,31 @@ const MAP_METADATA_COLUMNS = [
     'required_players', 'url', 'preceded_by', 'superseded_by', 'changelog',
     'has_screenshot', 'screenshot_updated',
 ]
+
+function CompareSelectionButton({ selection, onCompare }: { selection: CompareSelection; onCompare: () => void }) {
+    return (
+        <div
+            className="fixed z-20 flex flex-col items-end gap-2"
+            style={{
+                right: 'calc(1rem + var(--safe-area-right))',
+                bottom: 'calc(1rem + max(var(--safe-area-bottom), var(--tab-bar-offset)))',
+            }}
+        >
+            {selection.note && (
+                <p role="status" className="rounded-md border border-amber-500/30 bg-card px-2.5 py-1.5 text-xs font-medium text-amber-300">
+                    {selection.note}
+                </p>
+            )}
+            <button
+                type="button"
+                onClick={onCompare}
+                className="h-11 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow-2xl hover:bg-primary/90 transition-colors cursor-pointer"
+            >
+                Compare ({selection.ids.length})
+            </button>
+        </div>
+    )
+}
 
 export function MapDetailPage({
     mapName, userProfile, favoriteMapNames, onToggleFavorite, onMapSelect,
@@ -82,6 +112,8 @@ export function MapDetailPage({
     const [refreshKey, setRefreshKey] = useState(0)
     const refreshCooldown = useRefreshCooldown()
     const mapDownload = useMapDownload()
+    const { navigate } = useNavigation()
+    const [compareIds, setCompareIds] = useNavState<string[]>('leaderboard.compare', [])
 
     useRegisterPageRefresh({
         onRefresh: () => refreshCooldown.trigger(() => setRefreshKey(k => k + 1)),
@@ -161,6 +193,12 @@ export function MapDetailPage({
     const isInactive = map?.active === false
     const isMapAuthor = currentUserId != null && map?.author_ref != null && String(map.author_ref) === String(currentUserId)
     const canEditScreenshot = !!accessToken && (isStaff(userProfile) || (isMapAuthor && !isInactive))
+
+    const selection = useMemo(
+        () => compareSelection(compareIds, isTeam ? teamCandidates(teamLeaderboard) : soloCandidates(leaderboard), isTeam),
+        [compareIds, isTeam, leaderboard, teamLeaderboard],
+    )
+    const comparing = selection.ids.length > 0
 
     useNavScrollRestore(!loading)
 
@@ -264,9 +302,11 @@ export function MapDetailPage({
                             currentUserId={currentUserId ?? undefined}
                             wrCapId={wrHolder?.cap_id ?? null}
                             onShowWrHistory={wrProgression.length > 0 ? () => setWrModalOpen(true) : undefined}
+                            compare={{ selection, onChange: setCompareIds }}
                         />
                     </div>
                 </div>
+                {comparing && <div aria-hidden className={cn('h-16', selection.note && 'h-32')} />}
             </div>
 
             <LazyModalGate open={reviewModalOpen}>
@@ -331,6 +371,14 @@ export function MapDetailPage({
                 state={mapDownload.download}
                 onClose={mapDownload.clear}
             />
+
+            {comparing && createPortal(
+                <CompareSelectionButton
+                    selection={selection}
+                    onCompare={() => navigate('run-compare', { compare: compareQueryOf(selection.ids) })}
+                />,
+                document.body,
+            )}
         </div>
     )
 }

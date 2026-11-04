@@ -1,15 +1,14 @@
-import { useEffect, useRef, useState, lazy } from 'react'
+import { useEffect, useState, lazy } from 'react'
 import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { ShieldAlert } from 'lucide-react'
-import { Spinner } from '@/app/components/ui/spinner'
 import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
+import { useNavState } from '@/app/components/navigation/useNavState'
 import { Modal } from '@/app/components/ui/modal'
 import { useAsync } from '@/app/hooks/useAsync'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import { useReplayWatch } from '@/app/hooks/useReplayWatch'
 import { useDemoDownload } from '@/app/hooks/useDemoDownload'
-import { useVideoCompareAvailability } from '@/app/hooks/useVideoCompareAvailability'
 import { displayMapName, formatCapTime } from '@/app/utils/format'
 import { useDocumentTitle } from '@/app/components/navigation/useDocumentMeta'
 import { SITE_NAME } from '@/app/components/navigation/titles'
@@ -20,7 +19,6 @@ import {
     fetchTeamRunStatus,
     type CapDetail,
     type LeaderboardEntry,
-    type ReplayVideo,
     type TeamRunStatus,
     type UserProfile,
 } from '@/app/utils/api'
@@ -32,11 +30,9 @@ import { RankContextCard } from './capDetail/RankContextCard'
 import { MedalThresholdsStrip } from './capDetail/MedalThresholdsStrip'
 import { ClientSettingsGrid } from './capDetail/ClientSettingsGrid'
 import { MovementAnalyticsCard } from './capDetail/MovementAnalyticsCard'
-import { VideoCompareModal } from './capDetail/videoCompare/VideoCompareModal'
 
 const ReplayVideoModal = lazy(() => import('@/app/components/shared/ReplayVideoModal').then(m => ({ default: m.ReplayVideoModal })))
 const DemoDownloadStatusModal = lazy(() => import('@/app/components/shared/DemoDownloadStatusModal').then(m => ({ default: m.DemoDownloadStatusModal })))
-const ReplayPickerModal = lazy(() => import('@/app/components/modals/ReplayPickerModal').then(m => ({ default: m.ReplayPickerModal })))
 
 interface CapDetailPageProps {
     capId: string
@@ -66,31 +62,16 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
         tooltip: refreshCooldown.canRefresh ? 'Refresh' : `Wait ${refreshCooldown.remainingSeconds}s`,
     })
 
-    const [compareCapId, setCompareCapId] = useState<string | null>(null)
+    const [storedCompareId, setStoredCompareId] = useNavState<string | null>('checkpointDeltas.target', null)
     const [compareData, setCompareData] = useState<{ checkpoints: CapDetail['checkpoints']; cap_time_seconds: number; alias: string | null; team: number | null } | null>(null)
     const [comparing, setComparing] = useState(false)
     const [comparison, setComparison] = useState<ComparisonResult | null>(null)
-
-    const [comparePickerOpen, setComparePickerOpen] = useState(false)
-    const [videoOpponent, setVideoOpponent] = useState<LeaderboardEntry | null>(null)
-    const [videoOpponentData, setVideoOpponentData] = useState<{ checkpoints: CapDetail['checkpoints']; team: number | null } | null>(null)
     const [teamRun, setTeamRun] = useState<TeamRunStatus | null>(null)
 
-    const defaultedFor = useRef<string | null>(null)
-    useEffect(() => {
-        defaultedFor.current = null
-        setCompareCapId(null)
-        setCompareData(null)
-        setComparePickerOpen(false)
-        setVideoOpponent(null)
-        setVideoOpponentData(null)
-    }, [capId])
-
-    useEffect(() => {
-        if (!detail || detail?.cap?.id !== capId || defaultedFor.current === capId) return
-        defaultedFor.current = capId
-        setCompareCapId(defaultCompareCandidate(detail.cap.cap_time_seconds, detail.cap.has_ghost, detail.compare_candidates)?.id ?? null)
-    }, [detail, capId])
+    const defaultOpponent = detail?.cap.id === capId
+        ? defaultCompareCandidate(detail.cap.cap_time_seconds, detail.cap.has_ghost, detail.compare_candidates)
+        : null
+    const compareCapId = storedCompareId ?? defaultOpponent?.id ?? null
 
     const compareTarget = detail?.cap.id === capId
         ? detail.compare_candidates.find(c => c.id === compareCapId) ?? null
@@ -147,18 +128,6 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
     const baselineTime = compareData ? compareData.cap_time_seconds : null
     const baselineLabel = compareData ? (compareData.alias ?? 'Run') : ''
 
-    useEffect(() => {
-        if (!videoOpponent?.id) { setVideoOpponentData(null); return }
-        const controller = new AbortController()
-        let cancelled = false
-        fetchCapCheckpoints(accessToken, videoOpponent.id, controller.signal)
-            .then(d => { if (!cancelled) setVideoOpponentData(d ? { checkpoints: d.checkpoints, team: d.team } : null) })
-        return () => { cancelled = true; controller.abort() }
-    }, [videoOpponent, accessToken])
-
-    const videoAvail = useVideoCompareAvailability(cap?.id, videoOpponent?.id ?? null, !!videoOpponent)
-    const videoReady = videoAvail.bothReady && videoOpponentData != null
-
     useNavScrollRestore(!loading && !!detail)
 
     return (
@@ -187,14 +156,15 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
                         onMapSelect={onMapSelect}
                         onWatch={() => replay.openReplay({
                             capId: cap.id,
+                            teamCapId: teamRun?.team_cap_id,
                             mapName: cap.map,
                             time: cap.cap_time_seconds,
                             alias: cap.alias ?? undefined,
                         })}
                         watching={replay.loadingCapId === cap.id}
                         canWatch={cap.verified}
-                        onCompareRun={() => setComparePickerOpen(true)}
-                        canCompareRun={cap.verified}
+                        compareRuns={defaultOpponent ? [cap.id, defaultOpponent.id] : [cap.id]}
+                        canCompare={!cap.disallowed}
                         onDownload={() => demoDownload.start(
                             {
                                 id: cap.id,
@@ -254,7 +224,8 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
                             baselineLabel={baselineLabel}
                             candidates={detail.compare_candidates}
                             selectedCompareId={compareCapId}
-                            onSelectCompare={setCompareCapId}
+                            onSelectCompare={setStoredCompareId}
+                            canCompare={!cap.disallowed}
                             comparing={comparing}
                             comparison={comparison}
                         />
@@ -265,75 +236,6 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
             <LazyModalGate open={replay.video !== null}>
                 <ReplayVideoModal state={replay.video} onClose={replay.clearVideo} />
             </LazyModalGate>
-
-            <LazyModalGate open={comparePickerOpen}>
-                <ReplayPickerModal
-                    open={comparePickerOpen}
-                    onClose={() => setComparePickerOpen(false)}
-                    accessToken={accessToken}
-                    userId={currentUserId}
-                    mapName={cap?.map ?? null}
-                    compareMode
-                    excludeCapId={cap?.id}
-                    onSelect={(_video, _map, entry) => {
-                        setVideoOpponent(entry)
-                        setComparePickerOpen(false)
-                    }}
-                />
-            </LazyModalGate>
-
-            <Modal
-                isOpen={!!videoOpponent && !videoReady}
-                onClose={() => setVideoOpponent(null)}
-                title="Compare runs"
-                className="w-[95%] sm:w-[440px] max-w-md"
-                offsetSidebar
-            >
-                {videoAvail.checking || videoOpponentData == null ? (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-                        <Spinner className="size-4" />
-                        Loading both replays…
-                    </div>
-                ) : (
-                    <p className="text-sm text-muted-foreground py-2">
-                        {videoAvail.videoA === null && videoAvail.videoB === null
-                            ? 'Neither replay video is available yet — try again later.'
-                            : videoAvail.videoA === null
-                                ? "This run's replay video isn't available yet — try again later."
-                                : "The other run's replay video isn't available yet — try again later."}
-                    </p>
-                )}
-            </Modal>
-
-            {videoOpponent && videoReady && detail && cap && (
-                <VideoCompareModal
-                    open
-                    onClose={() => setVideoOpponent(null)}
-                    mapName={cap.map}
-                    runs={[
-                        {
-                            capId: cap.id,
-                            alias: cap.alias ?? null,
-                            userId: cap.user,
-                            title: cap.active_title ?? null,
-                            capTime: cap.cap_time_seconds,
-                            side: cap.team ?? null,
-                            checkpoints: detail.checkpoints,
-                            video: videoAvail.videoA as ReplayVideo,
-                        },
-                        {
-                            capId: videoOpponent.id,
-                            alias: videoOpponent.alias,
-                            userId: videoOpponent.user,
-                            title: videoOpponent.active_title ?? null,
-                            capTime: videoOpponent.cap_time_seconds,
-                            side: videoOpponentData?.team ?? null,
-                            checkpoints: videoOpponentData?.checkpoints ?? [],
-                            video: videoAvail.videoB as ReplayVideo,
-                        },
-                    ]}
-                />
-            )}
 
             <Modal
                 isOpen={replay.error !== null}

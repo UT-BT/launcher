@@ -273,6 +273,7 @@ export function PersonalBestsCard({
                             loading={replay.loadingCapId === pb.id}
                             onClick={() => replay.openReplay({
                                 capId: pb.id,
+                                teamCapId: pb.isTeam ? pb.teamCapId ?? undefined : undefined,
                                 mapName: pb.mapName,
                                 time: pb.time,
                             })}

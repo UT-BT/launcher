@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { serveFixtureSet } from './mobile/fixtures/router'
-import { capDetail } from './mobile/manifest/cap-detail'
+import { maps } from './mobile/manifest/maps'
 import { centreX, contentAreaCentreX, mockApi, sidebarRail } from './sidebarRail'
 
 const TABLET = { width: 820, height: 1180 }
@@ -101,13 +101,15 @@ test.describe('desktop card', () => {
             }
 
             test('a page modal keeps its size, position, blur and sidebar offset', async ({ page }) => {
-                await page.addInitScript(() => localStorage.setItem('utbt:analyticsConsent:v1', 'denied'))
-                await serveFixtureSet(page, capDetail.fixtures)
-                await page.goto(capDetail.path)
-                await capDetail.ready(page)
-                await capDetail.modals![0].open(page)
+                await page.addInitScript(storage => {
+                    for (const [key, value] of Object.entries(storage)) localStorage.setItem(key, value)
+                }, { 'utbt:analyticsConsent:v1': 'denied', ...maps.storage })
+                await serveFixtureSet(page, maps.fixtures)
+                await page.goto(maps.path)
+                await maps.ready(page)
+                await maps.modals!.find(modal => modal.id === 'demos')!.open(page)
 
-                await expectCentredCard(page, dialog(page, /^Compare run/), 640)
+                await expectCentredCard(page, dialog(page, /^Replays —/), 640)
             })
 
             test('an app modal keeps its size, position, blur and sidebar offset', async ({ page }) => {

@@ -15,3 +15,5 @@ export function writeSidebarCollapsed(collapsed: boolean): void {
         return
     }
 }
+
+export const THEATER_VIEWS: ReadonlySet<string> = new Set(['run-compare'])

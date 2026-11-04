@@ -73,6 +73,23 @@ export function shows(locate: (page: Page) => Locator): PageStep {
     }
 }
 
+const SETTLE_CHECKS = 2
+const SETTLE_GAP_MS = 750
+
+function stageSettled(): boolean {
+    const videos = [...document.querySelectorAll<HTMLVideoElement>('.run-compare-stage video[src]')]
+    const pending = document.querySelector('.run-compare-tile-wait') !== null
+    return !pending && videos.every(video => video.error !== null || video.readyState >= HTMLMediaElement.HAVE_METADATA)
+}
+
+export const settledStage: PageStep = async page => {
+    await page.getByRole('region', { name: 'Playback' }).waitFor()
+    for (let check = 0; check < SETTLE_CHECKS; check += 1) {
+        await page.waitForTimeout(check === 0 ? 0 : SETTLE_GAP_MS)
+        await page.waitForFunction(stageSettled)
+    }
+}
+
 const REPLAY_VIDEO = /^Replay —/
 const REPLAY_UNAVAILABLE = 'Replay not available'
 

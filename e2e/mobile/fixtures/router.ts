@@ -2,6 +2,7 @@ import type { Page, Route } from '@playwright/test'
 import { mockApi } from '../../sidebarRail'
 import { replyFor } from './data'
 import { FIXTURE_SETS, fixtureSetNamed } from './index'
+import { withLocalReplayVideo } from './playableVideo'
 import type { FixtureReply, FixtureSet } from './types'
 
 const API_HOSTS = /https:\/\/(api|gateway)\.utbt\.net\/.*/
@@ -15,7 +16,8 @@ function fixtureSet(name: string): FixtureSet {
 }
 
 async function fulfil(route: Route, reply: FixtureReply) {
-    await route.fulfill({ status: reply.status ?? 200, json: reply.json }).catch(() => undefined)
+    const json = withLocalReplayVideo(new URL(route.request().url()), reply.json)
+    await route.fulfill({ status: reply.status ?? 200, json }).catch(() => undefined)
 }
 
 export async function keepOffline(route: Route) {

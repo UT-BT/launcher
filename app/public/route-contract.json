@@ -20,6 +20,7 @@
     { "path": "/achievements", "view": "achievements", "kind": "list.achievements" },
     { "path": "/news", "view": "news", "kind": "list.news" },
     { "path": "/news/:newsId", "view": "news-detail", "kind": "news", "params": ["newsId"] },
-    { "path": "/admin", "view": "admin", "kind": "admin" }
+    { "path": "/admin", "view": "admin", "kind": "admin" },
+    { "path": "/compare", "view": "run-compare", "kind": "compare" }
   ]
 }

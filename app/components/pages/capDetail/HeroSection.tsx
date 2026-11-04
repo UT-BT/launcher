@@ -4,6 +4,7 @@ import { Spinner } from '@/app/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { MapNavLink } from '@/app/components/shared/MapNavLink'
+import { CompareLink } from '@/app/components/shared/CompareLink'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { displayMapName, formatCapTime, formatAddedDate } from '@/app/utils/format'
@@ -26,8 +27,8 @@ interface HeroSectionProps {
     watching: boolean
     canWatch: boolean
     onDownload: () => void
-    onCompareRun: () => void
-    canCompareRun: boolean
+    compareRuns: string[]
+    canCompare: boolean
 }
 
 function ordinal(n: number): string {
@@ -80,7 +81,7 @@ function MiniStat({ label, children }: { label: string; children: ReactNode }) {
 
 export function HeroSection({
     cap, mapName, rank, total, deltaWr, gapToNext, isWr, teamRun,
-    onMapSelect, onWatch, watching, canWatch, onDownload, onCompareRun, canCompareRun,
+    onMapSelect, onWatch, watching, canWatch, onDownload, compareRuns, canCompare,
 }: HeroSectionProps) {
     const medalIcon = medalIconForInt(cap.medal)
     const medalLabel = medalLabelForInt(cap.medal)
@@ -129,20 +130,20 @@ export function HeroSection({
                                 {watching ? <Spinner className="size-3.5" /> : <Play className="size-3.5" />}
                                 Watch Replay
                             </button>
-                            <button
-                                type="button"
-                                onClick={onCompareRun}
-                                disabled={!canCompareRun}
+                            <CompareLink
+                                runs={compareRuns}
+                                disabled={!canCompare}
                                 className={cn(
-                                    'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border transition-colors text-xs font-semibold cursor-pointer',
-                                    'bg-rose-500/15 border-rose-500/40 text-rose-200 hover:bg-rose-500/25 hover:text-foreground hover:border-rose-500/60',
-                                    'disabled:opacity-50 disabled:cursor-not-allowed',
+                                    'inline-flex items-center gap-1.5 px-3 py-1.5 touch:h-11 rounded-md border transition-colors text-xs font-semibold',
+                                    'bg-rose-500/15 border-rose-500/40 text-rose-200',
+                                    canCompare
+                                        ? 'cursor-pointer hover:bg-rose-500/25 hover:text-foreground hover:border-rose-500/60'
+                                        : 'opacity-50 cursor-not-allowed',
                                 )}
-                                title={canCompareRun ? 'Compare this run against another, side by side' : 'No replay — cap not verified'}
                             >
                                 <Columns2 className="size-3.5" />
-                                Compare Run
-                            </button>
+                                Compare
+                            </CompareLink>
                             <button
                                 type="button"
                                 onClick={onDownload}

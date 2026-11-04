@@ -238,7 +238,7 @@ test('@live public homepage smoke test', async ({ page }) => {
 const publicRoutes = [
   '/', '/servers', '/maps', '/maps/CTF-BT-Test', '/players', '/players/1',
   '/teams', '/teams/test-team', '/world-records', '/cap-it-all', '/caps/test-cap',
-  '/team-caps/test-team-cap', '/achievements', '/news', '/news/1',
+  '/team-caps/test-team-cap', '/achievements', '/news', '/news/1', '/compare',
 ]
 
 test('every public route renders without the application error boundary', async ({ page }) => {

@@ -110,16 +110,16 @@ test('Back closes an open sheet and keeps the page; the next Back goes to the pr
     await page.waitForURL(`**${capDetail.path}`)
     await shown(page, capDetail)
 
-    const sheet = page.locator('[data-modal-backdrop]').filter({ has: page.getByRole('heading', { name: /^Compare run/ }) })
+    const sheet = page.locator('[data-modal-backdrop]').filter({ has: page.getByRole('heading', { name: /^Replay —/ }) })
     const entries = await historyLength(page)
-    await page.getByRole('button', { name: 'Compare Run' }).tap()
+    await page.getByRole('button', { name: 'Watch Replay' }).tap()
     await expect(sheet).toBeVisible()
     await expect.poll(() => historyLength(page), 'opening the sheet adds one history entry').toBe(entries + 1)
 
     await page.goBack()
     await expect(sheet).toHaveCount(0)
     await expect(page).toHaveURL(new RegExp(`${capDetail.path}$`))
-    await expect(page.getByRole('button', { name: 'Compare Run' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Watch Replay' })).toBeVisible()
 
     await page.goBack()
     await expect(page).toHaveURL(/\/maps$/)

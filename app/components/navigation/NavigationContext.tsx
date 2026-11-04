@@ -12,6 +12,7 @@ export interface NavParams {
     matchId?: string
     eventTeamId?: string
     mapsNewOnly?: boolean
+    compare?: string
 }
 
 export interface NavEntry {
@@ -25,6 +26,7 @@ export interface NavigationContextValue {
     entry: NavEntry
     currentView: string
     navigate: (view: string, params?: NavParams) => void
+    replaceParams: (params: NavParams) => void
     back: () => void
     forward: () => void
     canBack: boolean
@@ -54,4 +56,9 @@ export function paramsEqual(a: NavParams, b: NavParams): boolean {
         && a.matchId === b.matchId
         && a.eventTeamId === b.eventTeamId
         && !!a.mapsNewOnly === !!b.mapsNewOnly
+        && (a.compare ?? '') === (b.compare ?? '')
+}
+
+export function withReplacedParams(entries: NavEntry[], id: number, params: NavParams): NavEntry[] {
+    return entries.map(entry => entry.id === id ? { ...entry, params } : entry)
 }

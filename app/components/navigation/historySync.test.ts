@@ -91,6 +91,11 @@ function browserTab() {
         blocked,
         setUnsaved(message: string | null) { unsaved = message },
         push,
+        replace(url: string) {
+            urls.set(active, url)
+            sync.replacePage(url)
+            settle()
+        },
         navigate(url: string, ...unmounted: Overlay[]) {
             push(url)
             for (const overlay of unmounted) overlay.unmount()
@@ -323,5 +328,91 @@ describe('overlay history before the app attaches', () => {
 
         sync.attach({ activeId: () => 0, leaveWarning: () => null, onBlocked: () => {}, show: () => {} }, '/')
         expect(entries).toEqual([{ navId: 0, position: 0 }, { navId: 0, position: 1, overlay: 1 }])
+    })
+})
+
+describe('replacing the page in place', () => {
+    it('rewrites the address without a new entry, so one Back leaves the page', () => {
+        const tab = browserTab()
+        tab.navigate('/compare?runs=a,b,c')
+        const before = tab.length
+
+        tab.replace('/compare?runs=a,b')
+        expect(tab.url).toBe('/compare?runs=a,b')
+        expect(tab.length).toBe(before)
+
+        tab.back()
+        expect(tab.page).toBe('/')
+        tab.forward()
+        expect(tab.page).toBe('/compare?runs=a,b')
+        expect(tab.url).toBe('/compare?runs=a,b')
+    })
+
+    it('with an overlay open, the address shows the edit, still does once the overlay closes, and one Back then leaves', () => {
+        const tab = browserTab()
+        tab.navigate('/compare?runs=a,b,c')
+        const before = tab.length
+        const modal = tab.open()
+
+        tab.replace('/compare?runs=a,b')
+        expect(tab.url).toBe('/compare?runs=a,b')
+
+        tab.back()
+        expect(modal.open).toBe(false)
+        expect(tab.url).toBe('/compare?runs=a,b')
+        expect(tab.page).toBe('/compare?runs=a,b')
+
+        tab.back()
+        expect(tab.page).toBe('/')
+        tab.forward()
+        expect(tab.url).toBe('/compare?runs=a,b')
+        expect(tab.length).toBe(before + 1)
+    })
+
+    it('with an overlay closed through its own UI after the edit, the page entry carries the edit', () => {
+        const tab = browserTab()
+        tab.navigate('/compare?runs=a,b,c')
+        const before = tab.length
+        tab.open()
+        const modal = tab.open()
+
+        tab.replace('/compare?runs=a')
+        modal.closeFromUi()
+        expect(tab.url).toBe('/compare?runs=a')
+
+        tab.back()
+        expect(tab.url).toBe('/compare?runs=a')
+        expect(tab.page).toBe('/compare?runs=a')
+
+        tab.back()
+        expect(tab.page).toBe('/')
+        tab.forward()
+        expect(tab.url).toBe('/compare?runs=a')
+        expect(tab.length).toBe(before + 2)
+    })
+
+    it('an overlay opened after the edit keeps the edited address', () => {
+        const tab = browserTab()
+        tab.navigate('/compare?runs=a,b,c')
+        tab.replace('/compare?runs=a,b')
+        tab.open()
+        expect(tab.url).toBe('/compare?runs=a,b')
+
+        tab.back()
+        expect(tab.url).toBe('/compare?runs=a,b')
+        tab.back()
+        expect(tab.page).toBe('/')
+    })
+
+    it('a page pushed after the edit leaves the edited entry behind it', () => {
+        const tab = browserTab()
+        tab.navigate('/compare?runs=a,b,c')
+        const modal = tab.open()
+        tab.replace('/compare?runs=a')
+        tab.navigate('/caps/a', modal)
+
+        tab.back()
+        expect(tab.page).toBe('/compare?runs=a')
+        expect(tab.url).toBe('/compare?runs=a')
     })
 })

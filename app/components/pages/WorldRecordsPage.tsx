@@ -2,8 +2,9 @@ import { lazy, useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import {
     Search, X, Play, Download, SlidersHorizontal,
-    Trophy, Crown, ListOrdered, type LucideIcon,
+    Trophy, Crown, ListOrdered, Columns2, type LucideIcon,
 } from 'lucide-react'
+import { CompareStartLink } from '@/app/components/shared/CompareLink'
 import { cn } from '@/lib/utils'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { Modal } from '@/app/components/ui/modal'
@@ -989,7 +990,7 @@ export function WorldRecordsPage({
 
     return (
         <div className="space-y-4 flex flex-col overflow-hidden">
-            <div className="flex items-end justify-between shrink-0">
+            <div className="flex items-end justify-between gap-3 shrink-0">
                 <div>
                     <h1 className="text-2xl font-bold text-foreground leading-tight">World Records</h1>
                     <p className="text-xs text-muted-foreground mt-0.5">
@@ -1013,6 +1014,10 @@ export function WorldRecordsPage({
                         {activeHasFilter && <span className="opacity-50"> (filtered)</span>}
                     </p>
                 </div>
+                <CompareStartLink className="inline-flex shrink-0 items-center gap-2 h-9 touch:h-11 px-3 rounded-lg bg-card/50 border border-hairline/10 text-sm font-medium text-foreground hover:bg-hairline/10 transition-colors cursor-pointer">
+                    <Columns2 className="size-4" />
+                    Compare Runs
+                </CompareStartLink>
             </div>
 
             <div className="flex flex-wrap items-center gap-3 shrink-0">

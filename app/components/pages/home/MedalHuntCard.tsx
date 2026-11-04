@@ -170,6 +170,7 @@ export function MedalHuntCard({
   const [replayPickerMapMetadata, setReplayPickerMapMetadata] = useState<MapMetadata | null>(null)
   const [videoModal, setVideoModal] = useState<{
     video: ReplayVideo
+    capId: string
     mapName: string
     time?: number
     alias?: string
@@ -455,6 +456,7 @@ export function MedalHuntCard({
             setReplayPickerMap(null)
             setVideoModal({
               video,
+              capId: entry.id,
               mapName,
               time: entry.cap_time_seconds,
               alias: entry.alias ?? undefined,

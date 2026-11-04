@@ -34,6 +34,7 @@ table column, add an IPC channel, wire new API data, audit the docs) trigger on 
 | run, build, lint, commit | [agents/build.md](agents/build.md) |
 | write tests, fix a red gate, update screenshot baselines | [agents/testing.md](agents/testing.md) |
 | player, map and cap pages, World Records, Cap It All, replays | [agents/features/records.md](agents/features/records.md) |
+| the compare page: runs side by side, playback sync, team comparisons, Compare links | [agents/features/run-compare.md](agents/features/run-compare.md) |
 | teams and clans: directory, roles, lineups, tags | [agents/features/teams.md](agents/features/teams.md) |
 | Home dashboard widgets | [agents/features/home.md](agents/features/home.md) |
 | game: install, launch and join, map install, demos, window chrome | [agents/features/game.md](agents/features/game.md) |
