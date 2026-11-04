@@ -1,26 +1,9 @@
 import { EIGHT_RUN_IDS, TEAM_RUN_IDS } from '../fixtures/synthetic/run-compare'
 import { CAP_ID } from './cap-detail'
-import { tap } from './steps'
-import type { MobileModal, MobileRouteEntry, PageStep } from './types'
+import { settledStage, tap } from './steps'
+import type { MobileModal, MobileRouteEntry } from './types'
 
 const RIVAL_ID = '418b0aec-34c5-40e7-acf4-f2bc33373063'
-
-const SETTLE_CHECKS = 2
-const SETTLE_GAP_MS = 750
-
-function stageSettled(): boolean {
-    const videos = [...document.querySelectorAll<HTMLVideoElement>('.run-compare-stage video[src]')]
-    const pending = document.querySelector('.run-compare-tile-wait') !== null
-    return !pending && videos.every(video => video.error !== null || video.readyState >= HTMLMediaElement.HAVE_METADATA)
-}
-
-const settledStage: PageStep = async page => {
-    await page.getByRole('region', { name: 'Playback' }).waitFor()
-    for (let check = 0; check < SETTLE_CHECKS; check += 1) {
-        await page.waitForTimeout(check === 0 ? 0 : SETTLE_GAP_MS)
-        await page.waitForFunction(stageSettled)
-    }
-}
 
 const runsDrawer: MobileModal = {
     id: 'runs',

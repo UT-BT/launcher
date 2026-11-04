@@ -234,6 +234,7 @@ export function Home({
     const handleWatchAchievement = (cap: Summary['achievements'][number]) => {
         replay.openReplay({
             capId: cap.id,
+            teamCapId: cap.isTeam ? cap.teamCapId ?? undefined : undefined,
             mapName: cap.mapName,
             time: cap.time,
             alias: userProfile?.alias ?? undefined,

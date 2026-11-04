@@ -275,6 +275,7 @@ export function RecentCapsCard({
                             loading={replay.loadingCapId === cap.id}
                             onClick={() => replay.openReplay({
                                 capId: cap.id,
+                                teamCapId: cap.isTeam ? cap.teamCapId ?? undefined : undefined,
                                 mapName: cap.mapName,
                                 time: cap.time,
                             })}

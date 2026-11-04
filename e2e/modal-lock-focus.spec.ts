@@ -1,48 +1,73 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
+import { dataFrom, replyFor } from './mobile/fixtures/data'
+import { fixtureSetNamed } from './mobile/fixtures/index'
 import { serveFixtureSet } from './mobile/fixtures/router'
 import { capDetail, capDetailRivals } from './mobile/manifest/cap-detail'
+import { maps } from './mobile/manifest/maps'
 import { settleLayout } from './mobile/settle'
 
+const RECORDED_RUNS = fixtureSetNamed(capDetail.fixtures)!
+const MAP_RUNS = new URL('https://api.utbt.net/caps/leaderboard/map/CTF-BT-HumanResources?verified=true')
+const PICKER_RUN_COUNT = (replyFor(RECORDED_RUNS, MAP_RUNS)!.json as { data: unknown[] }).data.length
 const RIVALS = capDetailRivals()
 const RIVAL = { capId: RIVALS[0].id, userId: RIVALS[0].user }
 const FIRST_RIVAL_ALIAS = RIVALS[0].alias
 const SLOWEST_RIVAL_CAP_ID = RIVALS.at(-1)!.id
 const PATRON_BADGE = 'Tier 2 Patreon Supporter'
+const API_HOSTS = /https:\/\/(api|gateway)\.utbt\.net\/.*/
 
 interface Point {
     x: number
     y: number
 }
 
-async function openCapPage(page: Page, query = '') {
-    await page.addInitScript(rival => {
-        localStorage.setItem('utbt:analyticsConsent:v1', 'denied')
-        localStorage.setItem('utbt:patreon:v1', JSON.stringify({ tiers: { [rival]: 2 }, fetchedAtIso: new Date().toISOString() }))
-    }, RIVAL.userId)
-    await serveFixtureSet(page, capDetail.fixtures)
-    await page.goto(`${capDetail.path}${query}`)
-    await capDetail.ready(page)
+async function openMapsPage(page: Page, query = '') {
+    await page.addInitScript(storage => {
+        for (const [key, value] of Object.entries(storage)) localStorage.setItem(key, value)
+    }, {
+        'utbt:analyticsConsent:v1': 'denied',
+        'utbt:patreon:v1': JSON.stringify({ tiers: { [RIVAL.userId]: 2 }, fetchedAtIso: new Date().toISOString() }),
+        ...maps.storage,
+    })
+    await serveFixtureSet(page, maps.fixtures)
+    await page.route(API_HOSTS, async route => {
+        const url = new URL(route.request().url())
+        const mapRuns = /^\/caps\/leaderboard\/map\/[^/]+$/.test(url.pathname) && url.searchParams.get('verified') === 'true'
+        const reply = replyFor(RECORDED_RUNS, mapRuns ? MAP_RUNS : url)
+        if (!reply) return route.fallback()
+        await route.fulfill({ status: reply.status ?? 200, json: reply.json }).catch(() => undefined)
+    })
+    await page.goto(`${maps.path}${query}`)
+    await maps.ready(page, dataFrom(fixtureSetNamed(maps.fixtures)!))
+    const details = page.getByRole('main').getByRole('listitem').getByRole('button', { name: 'Details' }).first()
+    if (await details.count() > 0 && await details.getAttribute('aria-expanded') === 'false') {
+        await details.focus()
+        await page.keyboard.press('Enter')
+        await details.and(page.locator('[aria-expanded="true"]')).waitFor()
+    }
+    await demosButton(page).waitFor()
     await settleLayout(page)
 }
 
-function compareRunButton(page: Page): Locator {
-    return page.getByRole('button', { name: 'Compare Run' })
+function demosButton(page: Page): Locator {
+    return page.getByRole('main').getByRole('button', { name: 'Demos', exact: true }).filter({ visible: true }).first()
 }
 
 function picker(page: Page): Locator {
-    return page.locator('[data-modal-backdrop] > div').filter({ has: page.getByRole('heading', { name: /^Compare run/ }) })
+    return page.locator('[data-modal-backdrop] > div').filter({ has: page.getByRole('heading', { name: /^Replays —/ }) })
 }
 
 function supportModal(page: Page): Locator {
     return page.locator('[data-modal-backdrop] > div').filter({ has: page.getByRole('heading', { name: 'Support UTBT', exact: true }) })
 }
 
-function playableRows(dialog: Locator): Locator {
-    return dialog.locator('[role="button"][aria-disabled="false"]')
+function pickerRows(dialog: Locator): Locator {
+    return dialog.getByRole('button', { name: 'Download demo' })
 }
 
 async function waitForPickerRows(page: Page) {
-    await expect(playableRows(picker(page)).filter({ hasText: FIRST_RIVAL_ALIAS })).toBeVisible()
+    await expect(picker(page).getByText(FIRST_RIVAL_ALIAS, { exact: true })).toBeVisible()
+    await expect(pickerRows(picker(page))).toHaveCount(PICKER_RUN_COUNT)
 }
 
 function overlayField(page: Page, label: string): Locator {
@@ -128,20 +153,20 @@ async function activate(target: Locator, isMobile: boolean) {
 
 test.describe('scroll lock', () => {
     test('wheel and touch scrolling over an open modal leave the shell scroller where it was', async ({ page, isMobile }) => {
-        await openCapPage(page)
+        await openMapsPage(page)
         await countWheels(page)
-        expect(await shellRoom(page), 'the page is long enough to scroll').toBeGreaterThan(400)
+        expect(await shellRoom(page), 'the page is long enough to scroll').toBeGreaterThan(200)
         await scrollShellTo(page, 200)
         const contentPoint = await centreOf(page.getByRole('main'))
 
-        await activate(compareRunButton(page), isMobile)
+        await activate(demosButton(page), isMobile)
         await waitForPickerRows(page)
         const before = await shellTop(page)
 
         const panel = picker(page)
         await scrollGesturesAt(page, await centreOf(panel), 600, isMobile)
         await scrollGesturesAt(page, await centreOf(panel), -600, isMobile)
-        const heading = await centreOf(panel.getByRole('heading', { name: /^Compare run/ }))
+        const heading = await centreOf(panel.getByRole('heading', { name: /^Replays —/ }))
         await scrollGesturesAt(page, heading, 600, isMobile)
         await scrollGesturesAt(page, heading, -600, isMobile)
         if (!isMobile) {
@@ -158,16 +183,16 @@ test.describe('scroll lock', () => {
     })
 
     test('stacked modals share one lock: it holds until the last one closes, and the overlay shows the count', async ({ page, isMobile }) => {
-        await openCapPage(page, '?debug=mobile')
+        await openMapsPage(page, '?debug=mobile')
         await countWheels(page)
         await expect(overlayField(page, 'Scroll locks')).toHaveText('0')
 
-        await compareRunButton(page).focus()
+        await demosButton(page).focus()
         await page.keyboard.press('Enter')
         await waitForPickerRows(page)
         await expect(overlayField(page, 'Scroll locks')).toHaveText('1')
 
-        const badge = picker(page).getByRole('button', { name: PATRON_BADGE, exact: true })
+        const badge = picker(page).getByRole('button', { name: PATRON_BADGE, exact: true }).first()
         await badge.focus()
         await page.keyboard.press('Enter')
         await expect(supportModal(page)).toBeVisible()
@@ -190,10 +215,10 @@ test.describe('scroll lock', () => {
     })
 
     test('a route change while a modal is open frees the page', async ({ page, isMobile }) => {
-        await openCapPage(page, '?debug=mobile')
+        await openMapsPage(page, '?debug=mobile')
         await countWheels(page)
 
-        await compareRunButton(page).focus()
+        await demosButton(page).focus()
         await page.keyboard.press('Enter')
         await waitForPickerRows(page)
         await expect(overlayField(page, 'Scroll locks')).toHaveText('1')
@@ -212,23 +237,23 @@ test.describe('scroll lock', () => {
 
 test.describe('focus', () => {
     test('closing a modal returns focus to the control that opened it', async ({ page, isMobile }) => {
-        await openCapPage(page)
+        await openMapsPage(page)
 
-        await activate(compareRunButton(page), isMobile)
+        await activate(demosButton(page), isMobile)
         await waitForPickerRows(page)
         await activate(picker(page).getByRole('button', { name: 'Close modal' }), isMobile)
 
         await expect(picker(page)).toHaveCount(0)
-        await expect(compareRunButton(page)).toBeFocused()
+        await expect(demosButton(page)).toBeFocused()
     })
 
     test('a modal opened from a modal returns focus inside the first one, which then returns it to its own opener', async ({ page }) => {
-        await openCapPage(page)
+        await openMapsPage(page)
 
-        await compareRunButton(page).focus()
+        await demosButton(page).focus()
         await page.keyboard.press('Enter')
         await waitForPickerRows(page)
-        const badge = picker(page).getByRole('button', { name: PATRON_BADGE, exact: true })
+        const badge = picker(page).getByRole('button', { name: PATRON_BADGE, exact: true }).first()
         await badge.focus()
         await page.keyboard.press('Enter')
         await expect(supportModal(page)).toBeVisible()
@@ -240,19 +265,19 @@ test.describe('focus', () => {
 
         await page.keyboard.press('Escape')
         await expect(picker(page)).toHaveCount(0)
-        await expect(compareRunButton(page)).toBeFocused()
+        await expect(demosButton(page)).toBeFocused()
     })
 
     test('content added after opening joins the focus trap', async ({ page }) => {
         let releaseLeaderboard: () => void = () => undefined
         const leaderboardHeld = new Promise<void>(resolve => { releaseLeaderboard = resolve })
-        await openCapPage(page)
+        await openMapsPage(page)
         await page.route(/\/caps\/leaderboard\/map\//, async route => {
             await leaderboardHeld
             await route.fallback()
         })
 
-        await compareRunButton(page).focus()
+        await demosButton(page).focus()
         await page.keyboard.press('Enter')
         const dialog = picker(page)
         await expect(dialog.getByText('Loading leaderboard…')).toBeVisible()
@@ -261,14 +286,15 @@ test.describe('focus', () => {
 
         releaseLeaderboard()
         await waitForPickerRows(page)
-        const rows = playableRows(dialog)
-        await expect(rows).toHaveCount(RIVALS.length)
+        await expect(dialog.getByRole('button', { name: 'Watch Replay' })).toHaveCount(PICKER_RUN_COUNT)
 
         await page.keyboard.press('Tab')
-        await expect(rows.first()).toBeFocused()
+        await expect(close).not.toBeFocused()
+        expect(await dialog.evaluate(panel => panel.contains(document.activeElement)), 'Tab moves into the rows that arrived').toBe(true)
 
+        const tabbable = await dialog.evaluate(panel => panel.querySelectorAll('a[href], button:not([disabled])').length)
         const stops: string[] = []
-        for (let step = 0; step < 12; step += 1) {
+        for (let step = 0; step < tabbable + 2; step += 1) {
             await page.keyboard.press('Tab')
             stops.push(await page.evaluate(() => {
                 const active = document.activeElement
@@ -282,31 +308,30 @@ test.describe('focus', () => {
 
         await close.focus()
         await page.keyboard.press('Shift+Tab')
-        await expect(rows.last()).toBeFocused()
+        await expect(pickerRows(dialog).last()).toBeFocused()
     })
 
-    test('Tab from a clicked row that is not a tab stop wraps inside the modal', async ({ page }) => {
-        await openCapPage(page)
+    test('Tab from a clicked spot that is not a tab stop wraps inside the modal', async ({ page }) => {
+        await openMapsPage(page)
         await page.route(new RegExp(`/replays/${SLOWEST_RIVAL_CAP_ID}$`), route => route.fulfill({ status: 404, json: {} }))
 
-        await compareRunButton(page).focus()
+        await demosButton(page).focus()
         await page.keyboard.press('Enter')
         await waitForPickerRows(page)
-        const unplayable = picker(page).locator('[role="button"][aria-disabled="true"]')
+        const unplayable = picker(page).getByRole('img', { name: 'No replay available' })
         await expect(unplayable).toHaveCount(1)
 
-        const row = await centreOf(unplayable)
-        await page.mouse.click(row.x, row.y)
-        await expect(unplayable).toBeFocused()
+        const spot = await centreOf(unplayable)
+        await page.mouse.click(spot.x, spot.y)
         await page.keyboard.press('Tab')
         await expect(picker(page).getByRole('button', { name: 'Close modal' })).toBeFocused()
     })
 
     test('opening a modal leaves the window at 0 and the page where it was', async ({ page }) => {
-        await openCapPage(page)
+        await openMapsPage(page)
         await scrollShellTo(page, 200)
 
-        await compareRunButton(page).evaluate(button => (button as HTMLElement).focus({ preventScroll: true }))
+        await demosButton(page).evaluate(button => (button as HTMLElement).focus({ preventScroll: true }))
         await page.keyboard.press('Enter')
         await waitForPickerRows(page)
         await expect(picker(page).getByRole('button', { name: 'Close modal' })).toBeFocused()
@@ -317,8 +342,8 @@ test.describe('focus', () => {
     })
 
     test('returning focus to an opener the page has scrolled half out of view does not scroll the page', async ({ page }) => {
-        await openCapPage(page)
-        const opener = compareRunButton(page)
+        await openMapsPage(page)
+        const opener = demosButton(page)
         const clipped = await page.getByRole('main').evaluate((main, button) => {
             const mainTop = main.getBoundingClientRect().top
             const box = button!.getBoundingClientRect()

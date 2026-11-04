@@ -1,426 +1,307 @@
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import {
-    RUN_COMPARE_FIXTURES,
-    runCompareErrors,
-    runCompareFixture,
-    type RunCompareComparisonName,
-} from '../app/utils/fixtures/runCompareFixtures'
-import type { CapCheckpoint, CapComparisonErrorCode, CapDetail, TeamCapDetail, TeamCapDetailMember } from '../app/utils/api'
+import { runCompareErrors, runCompareFixture } from '../app/utils/fixtures/runCompareFixtures'
+import type { CapCompareCandidate, CapDetail, LeaderboardEntry } from '../app/utils/api'
 import { defaultCompareCandidate } from '../app/components/pages/capDetail/runDelta/compareCandidates'
+import { replayVideoUrl, serveReplayVideos } from './replayVideos'
+import { ALPHA, BRAVO, mockTeamComparisons, mockTeamRuns, teamFixtureOf, TEAM_POVS, type TeamFixture } from './teamRuns'
 
-const VIDEO = readFileSync(resolve(__dirname, 'next-map-flythrough.webm'))
 const AVATAR = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64')
-const MEDIA_HOST = 'https://media.replays.test'
-const VIDEO_TAIL_SECONDS = 1
-const HAVE_NOTHING = 0
-const NETWORK_EMPTY = 0
+const FIRST_LOAD = { timeout: 15_000 }
+const TOUCH_GRID = { width: 1280, height: 800 }
+const RUNNER = runCompareFixture('capDetailCandidates')
+const RUNNER_ID = RUNNER.cap.id
+const CANDIDATES = RUNNER.compare_candidates
+const DEFAULT_OPPONENT = defaultCompareCandidate(RUNNER.cap.cap_time_seconds, RUNNER.cap.has_ghost, CANDIDATES)!
+const ZONES_RUN = CANDIDATES.find(candidate => !candidate.has_ghost)!
+const SLOWER_GHOST = CANDIDATES.find(candidate => candidate.has_ghost && candidate.cap_time_seconds > RUNNER.cap.cap_time_seconds)!
+const SLOWEST = CANDIDATES.toSorted((a, b) => b.cap_time_seconds - a.cap_time_seconds)[0]
+const CONFLICT = runCompareErrors().find(entry => entry.body.code === 'no_ghost')!
+const SOLO_IDS = [RUNNER_ID, ...CANDIDATES.map(candidate => candidate.id)]
 
-const separated = runCompareFixture('separated')
-const RUNNER = separated.runner
-const REFERENCE = separated.reference
-const RUNNER_DETAIL = runCompareFixture('capDetailCandidates')
-const MAP = RUNNER_DETAIL.cap.map
-const TEAM = runCompareFixture('teamCapDetailMembers')
-const OTHER_SIDE_MEMBER = TEAM.members[2]
-const FOURTH_MEMBER = {
-    ...OTHER_SIDE_MEMBER,
-    cap_id: 'f0f0f0f0-0000-4000-8000-000000000004',
-    user: '700000000000000004',
-    alias: 'Nova.pX7',
-    cap_time_seconds: 69.5,
+const TEAM_ALIGNED = runCompareFixture('teamAligned')
+const ALIGNED_RUNNER = teamFixtureOf(TEAM_ALIGNED.runner)
+const ALIGNED_REFERENCE: TeamFixture = {
+    ...teamFixtureOf(TEAM_ALIGNED.reference),
+    members: teamFixtureOf(TEAM_ALIGNED.reference).members.map(member => ({ ...member, seconds: member.seconds - 1 })),
 }
+const ALIGNED_POVS = [ALIGNED_RUNNER, ALIGNED_REFERENCE].flatMap(team => team.members.map(member => member.capId))
 
-const REFERENCE_CHECKPOINTS: CapCheckpoint[] = [
-    { zone: 'Courtyard', cumulative: 10.077, segment: 10.077 },
-    { zone: 'Bridge', cumulative: 20.155, segment: 10.078 },
-    { zone: 'Library', cumulative: 31.367, segment: 11.212 },
-    { zone: 'Chimney', cumulative: 50.267, segment: 18.9 },
-    { zone: 'Attic', cumulative: 65.796, segment: 15.529 },
-    { zone: 'Cellar', cumulative: 83.88, segment: 18.084 },
-    { zone: 'Flag Room', cumulative: 100.77, segment: 16.89 },
-]
-
-type CompareOutcome = RunCompareComparisonName | CapComparisonErrorCode
-
-interface VideoCompareSetup {
-    referenceSide?: number
-    compare?: CompareOutcome
-    fourMembers?: boolean
-}
-
-function pairKey(runner: string, reference: string): string {
-    return `${runner}|${reference}`
-}
-
-function referenceDetail(side: number): CapDetail {
+function candidateDetail(candidate: CapCompareCandidate): CapDetail {
     return {
-        ...RUNNER_DETAIL,
+        ...RUNNER,
         cap: {
-            ...RUNNER_DETAIL.cap,
-            id: REFERENCE.cap_id,
-            user: REFERENCE.user,
-            alias: REFERENCE.alias,
-            cap_time_seconds: REFERENCE.cap_time_ms / 1000,
-            team: side,
+            ...RUNNER.cap,
+            id: candidate.id,
+            user: candidate.user,
+            alias: candidate.alias,
+            cap_time_seconds: candidate.cap_time_seconds,
+            has_ghost: candidate.has_ghost,
+            team: 0,
             active_title: null,
         },
-        checkpoints: REFERENCE_CHECKPOINTS,
+        checkpoints: RUNNER.wr_checkpoints,
         compare_candidates: [],
     }
 }
 
-function otherSideDetail(member: TeamCapDetailMember = OTHER_SIDE_MEMBER): CapDetail {
+const DETAILS = new Map<string, CapDetail>([
+    [RUNNER_ID, RUNNER],
+    ...CANDIDATES.map(candidate => [candidate.id, candidateDetail(candidate)] as const),
+])
+
+function leaderboardEntry({ cap }: CapDetail): LeaderboardEntry {
     return {
-        ...RUNNER_DETAIL,
-        cap: { ...RUNNER_DETAIL.cap, ...member.cap, id: member.cap_id, team: 1 },
-        compare_candidates: [],
+        map: cap.map,
+        user: String(cap.user),
+        cap_time_seconds: cap.cap_time_seconds,
+        added: cap.added ?? '',
+        alias: cap.alias ?? '',
+        cap_type: cap.cap_type,
+        verified: true,
+        id: cap.id,
+        team: cap.team,
+        active_title: null,
+        has_ghost: cap.has_ghost,
+        zone_checkpoints: cap.zone_checkpoints ?? null,
+        disallowed: false,
     }
 }
 
-function fourthMember(): TeamCapDetailMember {
-    return {
-        ...FOURTH_MEMBER,
-        cap: FOURTH_MEMBER.cap && {
-            ...FOURTH_MEMBER.cap,
-            id: FOURTH_MEMBER.cap_id,
-            user: FOURTH_MEMBER.user,
-            alias: FOURTH_MEMBER.alias,
-            cap_time_seconds: FOURTH_MEMBER.cap_time_seconds,
-            team: 1,
-        },
-    }
-}
-
-function teamDetail(fourMembers: boolean): TeamCapDetail {
-    const [first, second, third] = TEAM.members
-    return {
-        ...TEAM,
-        team_time_seconds: REFERENCE.cap_time_ms / 1000,
-        team_size: fourMembers ? 4 : TEAM.team_size,
-        members: [
-            {
-                ...first,
-                cap_id: RUNNER.cap_id,
-                cap_time_seconds: RUNNER.cap_time_ms / 1000,
-                cap: first.cap && { ...first.cap, id: RUNNER.cap_id, cap_time_seconds: RUNNER.cap_time_ms / 1000, team: 0 },
-            },
-            {
-                ...second,
-                cap_id: REFERENCE.cap_id,
-                cap_time_seconds: REFERENCE.cap_time_ms / 1000,
-                cap: second.cap && { ...second.cap, id: REFERENCE.cap_id, cap_time_seconds: REFERENCE.cap_time_ms / 1000, team: 0 },
-            },
-            { ...third, cap: third.cap && { ...third.cap, team: 1 } },
-            ...(fourMembers ? [fourthMember()] : []),
-        ],
-    }
-}
-
-function leaderboardEntry(id: string, user: string, alias: string | null, seconds: number, team: number) {
-    return { map: MAP, user, cap_time_seconds: seconds, added: '2026-09-01T12:00:00', alias, cap_type: 0, verified: true, id, team, active_title: null }
-}
-
-function capTimeOf(capId: string): number {
-    if (capId === RUNNER.cap_id) return RUNNER.cap_time_ms / 1000
-    if (capId === REFERENCE.cap_id) return REFERENCE.cap_time_ms / 1000
-    if (capId === FOURTH_MEMBER.cap_id) return FOURTH_MEMBER.cap_time_seconds
-    return OTHER_SIDE_MEMBER.cap_time_seconds ?? 60
-}
-
-async function serveVideos(page: Page) {
-    await page.addInitScript(() => {
-        localStorage.setItem('utbt:analyticsConsent:v1', 'denied')
-        const native = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'duration')
-        Object.defineProperty(HTMLMediaElement.prototype, 'duration', {
-            configurable: true,
-            get(this: HTMLMediaElement) {
-                const real = native?.get?.call(this) as number
-                const length = Number(new URL(this.currentSrc || this.src, location.href).searchParams.get('length'))
-                return Number.isFinite(real) && length > 0 ? length : real
-            },
-        })
-    })
-    await page.route(`${MEDIA_HOST}/**`, route => {
-        const range = /bytes=(\d+)-(\d*)/.exec(route.request().headers()['range'] ?? '')
-        const headers = { 'access-control-allow-origin': '*', 'accept-ranges': 'bytes', 'content-type': 'video/webm' }
-        if (!range) return route.fulfill({ status: 200, headers, body: VIDEO })
-        const start = Number(range[1])
-        const end = range[2] ? Math.min(Number(range[2]), VIDEO.length - 1) : VIDEO.length - 1
-        return route.fulfill({
-            status: 206,
-            headers: { ...headers, 'content-range': `bytes ${start}-${end}/${VIDEO.length}` },
-            body: VIDEO.subarray(start, end + 1),
-        })
-    })
-}
-
-async function mockApi(page: Page, setup: VideoCompareSetup): Promise<string[]> {
-    const compareRequests: string[] = []
-    const referenceSide = setup.referenceSide ?? 0
-    const details = new Map<string, CapDetail>([
-        [RUNNER.cap_id, RUNNER_DETAIL],
-        [REFERENCE.cap_id, referenceDetail(referenceSide)],
-        [OTHER_SIDE_MEMBER.cap_id, otherSideDetail()],
-        [FOURTH_MEMBER.cap_id, otherSideDetail(fourthMember())],
-    ])
-    const leaderboard = [
-        leaderboardEntry(RUNNER.cap_id, RUNNER.user, RUNNER.alias, RUNNER.cap_time_ms / 1000, 0),
-        leaderboardEntry(REFERENCE.cap_id, REFERENCE.user, REFERENCE.alias, REFERENCE.cap_time_ms / 1000, referenceSide),
-    ]
-
-    await serveVideos(page)
+async function mockApi(page: Page, videos: readonly string[] = SOLO_IDS) {
+    await page.addInitScript(() => { localStorage.setItem('utbt:analyticsConsent:v1', 'denied') })
+    await serveReplayVideos(page)
+    const leaderboard = [...DETAILS.values()].map(leaderboardEntry).toSorted((a, b) => a.cap_time_seconds - b.cap_time_seconds)
     await page.route(/https:\/\/cdn\.discordapp\.com\/.*/, route => route.fulfill({ contentType: 'image/png', body: AVATAR }))
-    await page.route(/https:\/\/(api|gateway)\.utbt\.net\/.*/, async route => {
+    await page.route(/https:\/\/(api|gateway)\.utbt\.net\/.*/, route => {
         const url = new URL(route.request().url())
         const path = url.pathname.replace(/\/$/, '')
-
         if (url.hostname === 'gateway.utbt.net') {
-            const replay = /^\/replays\/([^/]+)$/.exec(path)
-            if (replay) {
-                const length = capTimeOf(replay[1]) + VIDEO_TAIL_SECONDS
-                return route.fulfill({
-                    json: { source: 'utrecorder', mp4_url: `${MEDIA_HOST}/${replay[1]}.webm?length=${length}`, view_url: null, fps: 60 },
-                })
-            }
             if (/^\/users\/[^/]+\/avatar$/.test(path)) return route.fulfill({ contentType: 'image/png', body: AVATAR })
+            const replay = /^\/replays\/([^/]+)$/.exec(path)
+            if (replay && videos.includes(replay[1])) {
+                return route.fulfill({ json: { source: 'utrecorder', mp4_url: replayVideoUrl(replay[1]), view_url: null, fps: 60 } })
+            }
             return route.fulfill({ json: [] })
         }
-
-        const ok = (data: unknown) => route.fulfill({ json: { success: true, data } })
-
-        if (path === '/ghosts/compare') {
-            const key = pairKey(url.searchParams.get('runner') ?? '', url.searchParams.get('reference') ?? '')
-            compareRequests.push(key)
-            const outcome = key === pairKey(RUNNER.cap_id, REFERENCE.cap_id) ? setup.compare : undefined
-            if (outcome && outcome in RUN_COMPARE_FIXTURES) {
-                return route.fulfill({ json: RUN_COMPARE_FIXTURES[outcome as RunCompareComparisonName].body })
-            }
-            const error = runCompareErrors().find(e => e.body.code === (outcome ?? 'different_side'))!
-            return route.fulfill({ status: error.status, json: error.body })
-        }
+        if (path === '/ghosts/compare') return route.fulfill({ status: CONFLICT.status, json: CONFLICT.body })
         const detail = /^\/caps\/([^/]+)\/detail$/.exec(path)
-        if (detail && details.has(detail[1])) return ok(details.get(detail[1]))
-        if (path === `/caps/team_caps/${TEAM.id}/detail`) return ok(teamDetail(setup.fourMembers ?? false))
-        if (path === `/caps/leaderboard/map/${MAP}`) return ok(leaderboard)
-
-        return ok([])
-    })
-    return compareRequests
-}
-
-interface PlayTally {
-    plays: number
-    mostPlaying: number
-}
-
-async function trackPlayingVideos(page: Page) {
-    await page.addInitScript(() => {
-        const seen = new Set<HTMLVideoElement>()
-        const tally: PlayTally = { plays: 0, mostPlaying: 0 }
-        Object.assign(window, { playTally: tally })
-        document.addEventListener('play', event => {
-            if (!(event.target instanceof HTMLVideoElement)) return
-            seen.add(event.target)
-            tally.plays += 1
-            tally.mostPlaying = Math.max(tally.mostPlaying, Array.from(seen).filter(video => !video.paused).length)
-        }, true)
+        if (detail) {
+            const found = DETAILS.get(detail[1])
+            if (!found) return route.fulfill({ status: 404, json: { success: false, error: 'Cap not found' } })
+            return route.fulfill({ json: { success: true, data: found } })
+        }
+        if (path === `/caps/leaderboard/map/${RUNNER.cap.map}`) return route.fulfill({ json: { success: true, data: leaderboard } })
+        return route.fulfill({ json: { success: true, data: [] } })
     })
 }
 
-async function playTallyAfter(page: Page, plays: number): Promise<PlayTally> {
-    const read = () => page.evaluate(() => (window as Window & { playTally?: PlayTally }).playTally ?? { plays: 0, mostPlaying: 0 })
-    await expect.poll(async () => (await read()).plays).toBeGreaterThanOrEqual(plays)
-    return read()
+async function mockTeams(page: Page, teams: readonly TeamFixture[], videos: readonly string[]) {
+    await mockApi(page, videos)
+    await mockTeamRuns(page, teams, { videos })
 }
 
-function videosPlaying(scope: Locator): Promise<number> {
-    return scope.locator('video').evaluateAll(videos => videos.filter(video => !(video as HTMLVideoElement).paused).length)
+function historyLength(page: Page): Promise<number> {
+    return page.evaluate(() => window.history.length)
 }
 
-function compareModal(page: Page): Locator {
-    return page.locator('[data-modal-backdrop] > div').filter({ hasText: 'Replay Comparison' })
+function search(page: Page): string {
+    return new URL(page.url()).search
 }
 
-function pane(modal: Locator, alias: string): Locator {
-    return modal.locator('.grid > div').filter({ hasText: alias })
+async function historyAtPageEntry(page: Page) {
+    await page.waitForFunction(() => !(window.history.state && typeof window.history.state === 'object' && 'overlay' in window.history.state))
 }
 
-async function openFromCapPage(page: Page): Promise<Locator> {
-    await page.goto(`/caps/${RUNNER.cap_id}`)
-    await page.getByRole('button', { name: 'Compare Run' }).click()
-    const pick = page.getByRole('button', { name: new RegExp(REFERENCE.alias!.replace(/[[\]]/g, '\\$&')) })
-    await expect(pick).toHaveAttribute('aria-disabled', 'false')
-    await pick.click()
-    const modal = compareModal(page)
-    await expect(modal.getByRole('button', { name: 'Play', exact: true })).toBeEnabled()
-    return modal
+function mainScrollTop(page: Page): Promise<number> {
+    return page.getByRole('main').evaluate(main => main.scrollTop)
 }
 
-async function openFromTeamPage(page: Page): Promise<Locator> {
-    await page.goto(`/team-caps/${TEAM.id}`)
-    await page.getByRole('button', { name: 'Watch Team Replay' }).click()
-    const modal = compareModal(page)
-    await expect(modal.getByRole('button', { name: 'Play', exact: true })).toBeEnabled()
-    return modal
+function lanes(page: Page): Locator {
+    return page.getByRole('list', { name: 'Lanes' })
 }
 
-async function playAtQuarterSpeed(modal: Locator) {
-    await modal.getByRole('button', { name: 'Playback speed 0.25×' }).click()
-    await modal.getByRole('button', { name: 'Play', exact: true }).click()
+function lane(page: Page, alias: string): Locator {
+    return lanes(page).getByRole('listitem').filter({ hasText: alias })
 }
 
-function posters(scope: Locator): Locator {
-    return scope.getByRole('button', { name: /^Watch / })
+function tile(page: Page, alias: string): Locator {
+    return page.getByRole('region', { name: 'Stage' }).getByRole('group', { name: alias })
 }
 
-async function scrubTo(modal: Locator, seconds: number, span: number) {
-    const track = modal.getByRole('slider', { name: 'Scrub all replays' })
-    await track.scrollIntoViewIfNeeded()
-    const box = await track.boundingBox()
-    if (!box) throw new Error('scrubber not laid out')
-    await modal.page().mouse.click(box.x + (box.width * seconds) / span, box.y + box.height / 2)
+function teamHeaders(page: Page): Locator {
+    return page.getByRole('region', { name: 'Stage' }).locator('.run-compare-team-header')
 }
 
-function scrubTicks(modal: Locator): Locator {
-    return modal.getByRole('slider', { name: 'Scrub all replays' }).locator('div[style*="height"]')
+function drawer(page: Page): Locator {
+    return page.getByRole('region', { name: 'Runs' })
 }
 
-const SPAN = REFERENCE.cap_time_ms / 1000 + VIDEO_TAIL_SECONDS
-const CARD_PAIR = pairKey(
-    RUNNER.cap_id,
-    defaultCompareCandidate(RUNNER_DETAIL.cap.cap_time_seconds, RUNNER_DETAIL.cap.has_ghost, RUNNER_DETAIL.compare_candidates)!.id,
-)
-const RUNNER_STRIP = `Scrub both replays via ${RUNNER.alias}'s delta`
-const CHECKPOINT_STRIP = 'Scrub both replays via the delta'
+function runsButton(page: Page): Locator {
+    return page.getByRole('region', { name: 'Playback' }).getByRole('button', { name: 'Runs', exact: true })
+}
 
-test.beforeEach(async ({ page }) => {
+function rosterRow(page: Page, alias: string): Locator {
+    return drawer(page).getByRole('list', { name: 'Roster' }).getByRole('listitem').filter({ hasText: alias })
+}
+
+function leaderboardRow(page: Page, alias: string): Locator {
+    return drawer(page).getByRole('list', { name: 'Leaderboard' }).getByRole('listitem').filter({ hasText: alias })
+}
+
+function checkpointCard(page: Page): Locator {
+    return page
+        .getByText('Checkpoint Deltas', { exact: true })
+        .locator('xpath=ancestor::div[contains(@class, "rounded-xl")][1]')
+}
+
+function heroCompare(page: Page): Locator {
+    return page.getByRole('main').getByRole('link', { name: 'Compare', exact: true })
+}
+
+test.beforeEach(async ({ page, isMobile }) => {
     page.on('pageerror', error => console.error('BROWSER PAGE ERROR:', error.message))
+    if (isMobile) await page.setViewportSize(TOUCH_GRID)
 })
 
-test.describe('cap page Compare Run', () => {
-    test('a same-side pair follows the replay comparison', async ({ page }) => {
-        const requests = await mockApi(page, { compare: 'separated' })
-        const modal = await openFromCapPage(page)
+test.describe('Cap Detail', () => {
+    test('Compare opens the page straight away with this run and the default opponent, in a new entry', async ({ page }) => {
+        await mockApi(page)
+        await page.goto(`/caps/${RUNNER_ID}`)
+        await expect(heroCompare(page)).toHaveAttribute('href', `/compare?runs=${RUNNER_ID},${DEFAULT_OPPONENT.id}`)
+        const lengthBefore = await historyLength(page)
 
-        expect(new Set(requests)).toEqual(new Set([CARD_PAIR, pairKey(RUNNER.cap_id, REFERENCE.cap_id)]))
-        await expect(modal.getByRole('slider', { name: RUNNER_STRIP })).toBeVisible()
-        await expect(modal.getByText(`ticks = ${RUNNER.alias}'s sector splits`)).toBeVisible()
-        await expect(scrubTicks(modal)).toHaveCount(20)
+        await heroCompare(page).click()
 
-        await scrubTo(modal, 36.5, SPAN)
-        await expect(pane(modal, RUNNER.alias!)).toContainText('Different line')
-        await expect(pane(modal, RUNNER.alias!)).toContainText('(−14.726)')
-        await expect(pane(modal, REFERENCE.alias!)).toContainText('S4')
-        await expect(pane(modal, REFERENCE.alias!)).toContainText('(±0.000)')
+        await expect(page).toHaveURL(`/compare?runs=${RUNNER_ID},${DEFAULT_OPPONENT.id}`)
+        await expect(lanes(page).getByRole('listitem')).toHaveCount(2, FIRST_LOAD)
+        await expect(lane(page, RUNNER.cap.alias!)).toBeVisible()
+        await expect(lane(page, DEFAULT_OPPONENT.alias!)).toBeVisible()
+        await expect(tile(page, DEFAULT_OPPONENT.alias!).locator('video')).toHaveCount(1)
+        expect(await historyLength(page)).toBe(lengthBefore + 1)
     })
 
-    test('a failed comparison keeps the checkpoint view', async ({ page }) => {
-        const requests = await mockApi(page, { compare: 'no_ghost' })
-        const modal = await openFromCapPage(page)
+    test('editing the set in the drawer replaces the address, and one Back returns to Cap Detail as it was left', async ({ page }) => {
+        await mockApi(page)
+        await page.goto(`/caps/${RUNNER_ID}`)
+        const card = checkpointCard(page)
+        await card.getByLabel('compare vs').selectOption(SLOWER_GHOST.id)
+        const watch = card.getByRole('link', { name: 'Watch Side by Side' })
+        await watch.scrollIntoViewIfNeeded()
+        const scrolled = await mainScrollTop(page)
 
-        expect(new Set(requests)).toEqual(new Set([CARD_PAIR, pairKey(RUNNER.cap_id, REFERENCE.cap_id)]))
-        await expect(modal.getByRole('slider', { name: CHECKPOINT_STRIP })).toBeVisible()
-        await expect(modal.getByRole('slider', { name: RUNNER_STRIP })).toHaveCount(0)
+        await watch.click()
 
-        await scrubTo(modal, 16.5, SPAN)
-        await expect(pane(modal, RUNNER.alias!)).toContainText('CP2')
-        await expect(pane(modal, RUNNER.alias!)).toContainText('(−4.177)')
-        await expect(pane(modal, REFERENCE.alias!)).toContainText('CP1')
+        await expect(page).toHaveURL(`/compare?runs=${RUNNER_ID},${SLOWER_GHOST.id}`)
+        await expect(lanes(page).getByRole('listitem')).toHaveCount(2, FIRST_LOAD)
+        const lengthOnPage = await historyLength(page)
+        await runsButton(page).click()
+        await leaderboardRow(page, SLOWEST.alias!).getByRole('button', { name: 'Add', exact: true }).click()
+        await expect.poll(() => search(page)).toBe(`?runs=${RUNNER_ID},${SLOWER_GHOST.id},${SLOWEST.id}`)
+        await expect(lanes(page).getByRole('listitem')).toHaveCount(3)
+        await rosterRow(page, SLOWER_GHOST.alias!).getByRole('button', { name: 'Remove' }).click()
+        await expect.poll(() => search(page)).toBe(`?runs=${RUNNER_ID},${SLOWEST.id}`)
+        await expect(lanes(page).getByRole('listitem')).toHaveCount(2)
+        await drawer(page).getByRole('button', { name: 'Close Runs' }).click()
+        await expect(drawer(page)).toHaveCount(0)
+        await historyAtPageEntry(page)
+        expect(search(page)).toBe(`?runs=${RUNNER_ID},${SLOWEST.id}`)
+        expect(await historyLength(page)).toBe(lengthOnPage + 1)
+
+        await page.goBack()
+
+        await expect(page).toHaveURL(`/caps/${RUNNER_ID}`)
+        await expect(checkpointCard(page).getByLabel('compare vs')).toHaveValue(SLOWER_GHOST.id)
+        await expect.poll(() => mainScrollTop(page)).toBeCloseTo(scrolled, -1)
     })
 
-    test('a run on the other side gets no ticks and no delta', async ({ page }) => {
-        const requests = await mockApi(page, { referenceSide: 1, compare: 'separated' })
-        const modal = await openFromCapPage(page)
+    test("the checkpoint card's Watch Side by Side opens the pair the card shows", async ({ page }) => {
+        await mockApi(page)
+        await page.goto(`/caps/${RUNNER_ID}`)
+        const card = checkpointCard(page)
+        const watch = card.getByRole('link', { name: 'Watch Side by Side' })
+        await expect(watch).toHaveAttribute('href', `/compare?runs=${RUNNER_ID},${DEFAULT_OPPONENT.id}`)
 
-        await expect(scrubTicks(modal)).toHaveCount(9)
-        expect(new Set(requests)).toEqual(new Set([CARD_PAIR]))
-        await expect(modal.getByRole('slider', { name: RUNNER_STRIP })).toHaveCount(0)
-        await expect(modal.getByRole('slider', { name: CHECKPOINT_STRIP })).toHaveCount(0)
-        await expect(pane(modal, RUNNER.alias!)).not.toContainText('−27.894')
+        await card.getByLabel('compare vs').selectOption(ZONES_RUN.id)
+        await watch.click()
 
-        await scrubTo(modal, 30, SPAN)
-        await expect(pane(modal, RUNNER.alias!)).toContainText('Other side')
+        await expect(page).toHaveURL(`/compare?runs=${RUNNER_ID},${ZONES_RUN.id}`)
+        await expect(lane(page, ZONES_RUN.alias!)).toBeVisible(FIRST_LOAD)
+        await expect(lane(page, RUNNER.cap.alias!)).toBeVisible()
     })
-})
 
-test.describe('team cap Watch Team Replay', () => {
-    test('a mixed-side team compares only the reference side', async ({ page }) => {
-        const requests = await mockApi(page, { compare: 'separated' })
-        const modal = await openFromTeamPage(page)
-
-        await expect(modal.getByRole('slider', { name: `Scrub both replays via ${TEAM.members[0].alias}'s delta` })).toBeVisible()
-        expect(new Set(requests)).toEqual(new Set([pairKey(RUNNER.cap_id, REFERENCE.cap_id)]))
-        await expect(scrubTicks(modal)).toHaveCount(21)
-
-        await scrubTo(modal, 36.5, SPAN)
-        await expect(pane(modal, TEAM.members[0].alias!)).toContainText('Different line')
-        await expect(pane(modal, TEAM.members[0].alias!)).toContainText('(−14.726)')
-        await expect(pane(modal, TEAM.members[1].alias!)).toContainText('S4')
-        await expect(pane(modal, OTHER_SIDE_MEMBER.alias!)).toContainText('Other side')
-        await expect(pane(modal, OTHER_SIDE_MEMBER.alias!).getByText(/[+−±]\d/)).toHaveCount(0)
-    })
-})
-
-test.describe('video playback', () => {
-    test('the replay player and every compare video play inline', async ({ page }) => {
-        await mockApi(page, { compare: 'separated', fourMembers: true })
-        await page.goto(`/caps/${RUNNER.cap_id}`)
+    test("the Watch modal's Compare opens the page with that run and the drawer open", async ({ page }) => {
+        await mockApi(page)
+        await page.goto(`/caps/${RUNNER_ID}`)
         await page.getByRole('button', { name: 'Watch Replay' }).click()
-        const player = page.locator('[data-modal-backdrop] > div').filter({ hasText: 'Replay —' }).locator('video')
-        await expect(player).toHaveCount(1)
-        await expect(player).toHaveAttribute('playsinline')
+        const modal = page.locator('[data-modal-backdrop] > div').filter({ has: page.getByRole('heading', { name: /^Replay —/ }) })
+        await expect(modal.locator('video')).toHaveAttribute('playsinline')
 
-        const pair = await openFromCapPage(page)
-        await expect(pair.locator('video')).toHaveCount(2)
-        for (const video of await pair.locator('video').all()) await expect(video).toHaveAttribute('playsinline')
+        await modal.getByRole('link', { name: 'Compare', exact: true }).click()
 
-        const team = await openFromTeamPage(page)
-        await expect(team.locator('video').first()).toBeAttached()
-        for (const video of await team.locator('video').all()) await expect(video).toHaveAttribute('playsinline')
+        await expect(page).toHaveURL(`/compare?runs=${RUNNER_ID}`)
+        await expect(modal).toHaveCount(0)
+        await expect(drawer(page)).toBeVisible(FIRST_LOAD)
+        await expect(rosterRow(page, RUNNER.cap.alias!)).toBeVisible()
+    })
+})
+
+test.describe('Team Cap Detail', () => {
+    test('Watch Team Run opens this team run alone, one row with every POV', async ({ page }) => {
+        await mockTeams(page, [ALPHA, BRAVO], TEAM_POVS)
+        await page.goto(`/team-caps/${ALPHA.teamCapId}`)
+
+        await page.getByRole('main').getByRole('link', { name: 'Watch Team Run' }).click()
+
+        await expect(page).toHaveURL(`/compare?runs=${ALPHA.teamCapId}`)
+        await expect(teamHeaders(page)).toHaveCount(1, FIRST_LOAD)
+        await expect(teamHeaders(page)).toContainText('Alpha One & Alpha Two')
+        await expect(tile(page, 'Alpha One').locator('video')).toHaveCount(1)
+        await expect(tile(page, 'Alpha Two').locator('video')).toHaveCount(1)
+        await expect(page.getByRole('main').getByText('Not enough replay videos')).toHaveCount(0)
     })
 
-    test('a touch device plays two team videos at most and swaps a tapped poster in', async ({ page, hasTouch }) => {
-        test.skip(!hasTouch, 'the two-video cap is for touch devices')
-        await trackPlayingVideos(page)
-        await mockApi(page, { compare: 'separated', fourMembers: true })
-        const modal = await openFromTeamPage(page)
-        const [runner, reference] = TEAM.members.map(m => pane(modal, m.alias!))
-        const fourth = pane(modal, FOURTH_MEMBER.alias)
+    test("a member's Watch modal Compare opens that member's team run", async ({ page }) => {
+        await mockTeams(page, [ALPHA, BRAVO], TEAM_POVS)
+        await page.goto(`/team-caps/${ALPHA.teamCapId}`)
+        await page.getByRole('main').getByRole('button', { name: 'Watch', exact: true }).first().click()
+        const modal = page.locator('[data-modal-backdrop] > div').filter({ has: page.getByRole('heading', { name: /^Replay —/ }) })
+        const compare = modal.getByRole('link', { name: 'Compare', exact: true })
+        await expect(compare).toHaveAttribute('href', `/compare?runs=${ALPHA.teamCapId}`)
 
-        await expect(modal.locator('video')).toHaveCount(2)
-        await expect(runner.locator('video')).toHaveCount(1)
-        await expect(reference.locator('video')).toHaveCount(1)
-        await expect(posters(modal)).toHaveCount(2)
+        await compare.click()
 
-        await playAtQuarterSpeed(modal)
-        await expect.poll(() => videosPlaying(modal)).toBe(2)
-        const replaced = await runner.locator('video').elementHandle()
-
-        await posters(fourth).tap()
-        await expect(fourth.locator('video')).toHaveCount(1)
-        await expect.poll(() => videosPlaying(fourth)).toBe(1)
-        await expect.poll(() => videosPlaying(reference)).toBe(1)
-        await expect(runner.locator('video')).toHaveCount(0)
-        await expect(posters(runner)).toHaveCount(1)
-        expect(await replaced!.evaluate(video => {
-            const { paused, readyState, networkState } = video as HTMLVideoElement
-            return { paused, readyState, networkState }
-        })).toEqual({ paused: true, readyState: HAVE_NOTHING, networkState: NETWORK_EMPTY })
-        expect((await playTallyAfter(page, 3)).mostPlaying).toBe(2)
+        await expect(page).toHaveURL(`/compare?runs=${ALPHA.teamCapId}`)
+        await expect(modal).toHaveCount(0)
+        await expect(teamHeaders(page)).toHaveCount(1, FIRST_LOAD)
+        await expect(teamHeaders(page)).toContainText('Alpha One & Alpha Two')
     })
 
-    test('desktop plays every team video', async ({ page, hasTouch }) => {
-        test.skip(hasTouch, 'desktop has no video cap')
-        await trackPlayingVideos(page)
-        await mockApi(page, { compare: 'separated', fourMembers: true })
-        const modal = await openFromTeamPage(page)
+    test('Compare on a 2v2 adds the next faster team run: a 2×2 grid by pair and the team splits table', async ({ page, isMobile }) => {
+        await mockTeams(page, [ALIGNED_RUNNER, ALIGNED_REFERENCE], ALIGNED_POVS)
+        await mockTeamComparisons(page, [TEAM_ALIGNED])
+        await page.goto(`/team-caps/${ALIGNED_RUNNER.teamCapId}`)
+        const compare = page.getByRole('main').getByRole('link', { name: 'Compare', exact: true })
+        await expect(compare).toHaveAttribute('href', `/compare?runs=${ALIGNED_RUNNER.teamCapId},${ALIGNED_REFERENCE.teamCapId}`)
 
-        await expect(modal.locator('video')).toHaveCount(4)
-        await expect(posters(modal)).toHaveCount(0)
-        await playAtQuarterSpeed(modal)
-        await expect.poll(() => videosPlaying(modal)).toBe(4)
-        expect((await playTallyAfter(page, 4)).mostPlaying).toBe(4)
+        await compare.click()
+
+        await expect(page).toHaveURL(`/compare?runs=${ALIGNED_RUNNER.teamCapId},${ALIGNED_REFERENCE.teamCapId}`)
+        await expect(teamHeaders(page)).toHaveCount(2, FIRST_LOAD)
+        for (const alias of ['fierd_6', 'Nightwolf`', 'gxls', '[UTW]Nettlez']) await expect(tile(page, alias).locator('video')).toHaveCount(1)
+        await expect(page.getByRole('region', { name: 'Team Splits' }).getByRole('button', { name: /^(Cue .+|Seek to the cap)$/ })).toHaveText(['Bridge', 'Ramp', 'Lift', 'Pit', 'Flag', 'Cap'])
+        if (isMobile) return
+        const [nightwolf, fierd, gxls, nettlez] = await Promise.all(['Nightwolf`', 'fierd_6', 'gxls', '[UTW]Nettlez'].map(async alias => (await tile(page, alias).boundingBox())!))
+        expect(nightwolf.x).toBeCloseTo(gxls.x, 0)
+        expect(fierd.x).toBeCloseTo(nettlez.x, 0)
+        expect(nightwolf.y).toBeCloseTo(fierd.y, 0)
+        expect(gxls.y).toBeGreaterThan(nightwolf.y + nightwolf.height - 1)
+    })
+
+    test('Compare on the world record falls back to the next slower team run', async ({ page }) => {
+        await mockTeams(page, [ALIGNED_RUNNER, ALIGNED_REFERENCE], ALIGNED_POVS)
+        await page.goto(`/team-caps/${ALIGNED_REFERENCE.teamCapId}`)
+
+        await expect(page.getByRole('main').getByRole('link', { name: 'Compare', exact: true }))
+            .toHaveAttribute('href', `/compare?runs=${ALIGNED_REFERENCE.teamCapId},${ALIGNED_RUNNER.teamCapId}`)
     })
 })

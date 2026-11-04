@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { resolveCompareVideo } from '@/app/hooks/useVideoCompareAvailability'
+import { resolveCompareVideo } from '@/app/utils/replayVideoCache'
 import type { ReplayVideo } from '@/app/utils/api'
 import type { LoadedVideos } from '../model/raceModel'
 

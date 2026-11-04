@@ -2,8 +2,8 @@ import type { Page } from '@playwright/test'
 import type { CapDetail, LeaderboardEntry } from '../../../app/utils/api'
 import { dataFrom } from '../fixtures/data'
 import { fixtureSetNamed } from '../fixtures/index'
-import { modalHeading, opens, shows } from './steps'
-import type { MobileRouteEntry, PageStep } from './types'
+import { opens, settledStage, shows, tap } from './steps'
+import type { MobileRouteEntry } from './types'
 
 export const CAP_ID = '258021df-51b1-4ed3-99cc-62d4e75892a7'
 const FIXTURES = 'cap-detail'
@@ -17,13 +17,7 @@ export function capDetailRivals(): LeaderboardEntry[] {
     return leaderboard.filter(entry => entry.id !== CAP_ID).toSorted((a, b) => a.cap_time_seconds - b.cap_time_seconds)
 }
 
-const firstRival = (page: Page) => page.locator('[data-modal-backdrop] [role="button"][aria-disabled="false"]').first()
-
-const openPicker: PageStep = async page => {
-    await page.getByRole('button', { name: 'Compare Run' }).click()
-    await modalHeading(page, /^Compare run/).waitFor()
-    await firstRival(page).waitFor()
-}
+const inMain = (page: Page) => page.getByRole('main')
 
 export const capDetail: MobileRouteEntry = {
     view: 'cap-detail',
@@ -34,23 +28,23 @@ export const capDetail: MobileRouteEntry = {
     ready: shows(page => page.getByRole('button', { name: 'Watch Replay' })),
     modals: [
         {
-            id: 'compare-run',
-            label: 'Compare run picker',
-            open: openPicker,
-        },
-        {
-            id: 'compare-runs',
-            label: 'Compare runs video',
-            open: async page => {
-                await openPicker(page)
-                await firstRival(page).click()
-                await modalHeading(page, /^Replay Comparison/).waitFor()
-            },
-        },
-        {
             id: 'watch-replay',
             label: 'Replay video',
             open: opens(page => page.getByRole('button', { name: 'Watch Replay' }), /^Replay/),
+        },
+    ],
+    subViews: [
+        {
+            id: 'compare-run',
+            label: 'Compare, on the compare page',
+            open: tap(page => inMain(page).getByRole('link', { name: 'Compare', exact: true })),
+            ready: settledStage,
+        },
+        {
+            id: 'compare-runs',
+            label: 'Watch Side by Side, on the compare page',
+            open: tap(page => inMain(page).getByRole('link', { name: 'Watch Side by Side' })),
+            ready: settledStage,
         },
     ],
 }

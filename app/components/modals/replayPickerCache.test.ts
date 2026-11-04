@@ -40,21 +40,9 @@ describe('cachedReplayRows', () => {
         expect(cachedReplayRows('never-cached')).toBeNull()
     })
 
-    it('never lists the excluded cap in compare mode, even when a normal open filled the cache', () => {
-        cacheReplayRows('normal-first', replayRowsFromLeaderboard([entry('a'), entry('b'), entry('c')]))
-        expect(ids(cachedReplayRows('normal-first', 'b'))).toEqual(['a', 'c'])
-    })
-
-    it('lists the excluded cap again on a normal open after compare mode', () => {
-        cacheReplayRows('compare-first', replayRowsFromLeaderboard([entry('a'), entry('b'), entry('c')]))
-        expect(ids(cachedReplayRows('compare-first', 'b'))).toEqual(['a', 'c'])
-        expect(ids(cachedReplayRows('compare-first'))).toEqual(['a', 'b', 'c'])
-    })
-
-    it('excludes a different cap per compare open', () => {
-        cacheReplayRows('two-compares', replayRowsFromLeaderboard([entry('a'), entry('b')]))
-        expect(ids(cachedReplayRows('two-compares', 'a'))).toEqual(['b'])
-        expect(ids(cachedReplayRows('two-compares', 'b'))).toEqual(['a'])
+    it('returns every cached row of the map', () => {
+        cacheReplayRows('cached', replayRowsFromLeaderboard([entry('a'), entry('b'), entry('c')]))
+        expect(ids(cachedReplayRows('cached'))).toEqual(['a', 'b', 'c'])
     })
 
     it('expires after the TTL', () => {
@@ -73,7 +61,7 @@ describe('cachedReplayRows', () => {
 })
 
 describe('cacheReplayVideo', () => {
-    it('stores a resolved video without dropping the cap a compare open excluded', () => {
+    it('stores a resolved video on its row', () => {
         cacheReplayRows('videos', replayRowsFromLeaderboard([entry('a'), entry('b')]))
         cacheReplayVideo('videos', 'a', video)
         cacheReplayVideo('videos', 'b', null)

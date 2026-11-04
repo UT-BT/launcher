@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { resolveCompareVideo } from '@/app/hooks/useVideoCompareAvailability'
+import { resolveCompareVideo } from '@/app/utils/replayVideoCache'
 import type { ReplayVideo } from '@/app/utils/api'
 import { VIDEO_READ_CONCURRENCY } from '../loading/replayVideos'
 

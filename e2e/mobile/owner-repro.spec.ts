@@ -17,14 +17,14 @@ import { MODAL_ROOT } from './manifest/types'
 import { installProbe } from './rules/probe'
 import { settleLayout } from './settle'
 
-const compareRuns = capDetail.modals!.find(modal => modal.id === 'compare-runs')!
+const watchReplay = capDetail.modals!.find(modal => modal.id === 'watch-replay')!
 const ZOOM = 2
 
 test.beforeEach(async ({ page }) => {
     page.on('pageerror', error => console.error('BROWSER PAGE ERROR:', error.message))
 })
 
-test('owner repro: Compare runs, landscape, zoom, portrait, then close, menu and scroll all work', async ({ page }) => {
+test('owner repro: the replay video modal, landscape, zoom, portrait, then close, menu and scroll all work', async ({ page }) => {
     test.slow()
 
     await page.addInitScript(() => localStorage.setItem('utbt:analyticsConsent:v1', 'denied'))
@@ -36,8 +36,8 @@ test('owner repro: Compare runs, landscape, zoom, portrait, then close, menu and
     await settleLayout(page)
     await installProbe(page)
 
-    await test.step('open Compare runs on the cap page', async () => {
-        await compareRuns.open(page)
+    await test.step('open the replay video on the cap page', async () => {
+        await watchReplay.open(page)
         await settleLayout(page)
         expect.soft((await checkModal(page, MODAL_ROOT)).problems, 'portrait: the modal fits and its close control can be tapped').toEqual([])
     })

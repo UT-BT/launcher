@@ -26,8 +26,8 @@ doesn't run on the surfaces it names.
 | `event-team` | `event-team` | public | `/events/2v2-cup-2026/teams/01c942d8-95ac-49cd-85be-791b18e24b86` | `event-team` | 0 | 0 |
 | `world-records` | `world-records` | public | `/world-records` | `world-records` | 1 | 2 |
 | `cap-it-all` | `cap-it-all` | public | `/cap-it-all` | `cap-it-all` | 0 | 0 |
-| `cap-detail` | `cap-detail` | public | `/caps/258021df-51b1-4ed3-99cc-62d4e75892a7` | `cap-detail` | 0 | 3 |
-| `team-cap-detail` | `team-cap-detail` | public | `/team-caps/2ac2a87f-1030-45ed-b281-bdcbf926717d` | `team-cap-detail` | 0 | 2 |
+| `cap-detail` | `cap-detail` | public | `/caps/258021df-51b1-4ed3-99cc-62d4e75892a7` | `cap-detail` | 2 | 1 |
+| `team-cap-detail` | `team-cap-detail` | public | `/team-caps/2ac2a87f-1030-45ed-b281-bdcbf926717d` | `team-cap-detail` | 1 | 1 |
 | `achievements` | `achievements` | public | `/achievements` | `achievements` | 0 | 0 |
 | `news` | `news` | public | `/news` | `news` | 0 | 0 |
 | `news-detail` | `news-detail` | public | `/news/15` | `news-detail` | 0 | 0 |
@@ -399,14 +399,15 @@ No skipped rules.
 
 ### Sub-views
 
-No sub-views.
+| Surface | Label | Reached by | Stress variant (PR subset) |
+|---|---|---|---|
+| `cap-detail/compare-run` | Compare, on the compare page | a step on `/caps/258021df-51b1-4ed3-99cc-62d4e75892a7` | none |
+| `cap-detail/compare-runs` | Watch Side by Side, on the compare page | a step on `/caps/258021df-51b1-4ed3-99cc-62d4e75892a7` | none |
 
 ### Modals
 
 | Surface | Label | Opened from |
 |---|---|---|
-| `cap-detail/compare-run` | Compare run picker | `cap-detail` |
-| `cap-detail/compare-runs` | Compare runs video | `cap-detail` |
 | `cap-detail/watch-replay` | Replay video | `cap-detail` |
 
 ### Skipped rules
@@ -424,13 +425,14 @@ No skipped rules.
 
 ### Sub-views
 
-No sub-views.
+| Surface | Label | Reached by | Stress variant (PR subset) |
+|---|---|---|---|
+| `team-cap-detail/watch-team-replay` | Watch Team Run, on the compare page | a step on `/team-caps/2ac2a87f-1030-45ed-b281-bdcbf926717d` | none |
 
 ### Modals
 
 | Surface | Label | Opened from |
 |---|---|---|
-| `team-cap-detail/watch-team-replay` | Team replay video | `team-cap-detail` |
 | `team-cap-detail/watch-member-replay` | Member replay video | `team-cap-detail` |
 
 ### Skipped rules

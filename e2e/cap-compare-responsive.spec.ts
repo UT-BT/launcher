@@ -7,7 +7,7 @@ import {
     runCompareFixture,
     type RunCompareComparisonName,
 } from '../app/utils/fixtures/runCompareFixtures'
-import type { CapCheckpoint, CapComparisonErrorCode, CapDetail } from '../app/utils/api'
+import type { CapComparisonErrorCode, CapDetail } from '../app/utils/api'
 import { defaultCompareCandidate } from '../app/components/pages/capDetail/runDelta/compareCandidates'
 import { horizontalOverflow } from './layout'
 
@@ -29,23 +29,10 @@ const MAP = RUNNER_DETAIL.cap.map
 const CANDIDATES = RUNNER_DETAIL.compare_candidates
 const DEFAULT_PICK = defaultCompareCandidate(RUNNER_DETAIL.cap.cap_time_seconds, RUNNER_DETAIL.cap.has_ghost, CANDIDATES)!
 const ZONES_PICK = CANDIDATES.find(candidate => !candidate.has_ghost)!
-const VIDEO_OPPONENT = CANDIDATES.find(candidate => candidate.id === separated.reference.cap_id)!
-
-const REFERENCE_CHECKPOINTS: CapCheckpoint[] = [
-    { zone: 'Courtyard', cumulative: 10.077, segment: 10.077 },
-    { zone: 'Bridge', cumulative: 20.155, segment: 10.078 },
-    { zone: 'Library', cumulative: 31.367, segment: 11.212 },
-    { zone: 'Chimney', cumulative: 50.267, segment: 18.9 },
-    { zone: 'Attic', cumulative: 65.796, segment: 15.529 },
-    { zone: 'Cellar', cumulative: 83.88, segment: 18.084 },
-    { zone: 'Flag Room', cumulative: 100.77, segment: 16.89 },
-]
-
 type CompareOutcome = RunCompareComparisonName | CapComparisonErrorCode
 
 interface CapPageSetup {
     cardCompare?: CompareOutcome
-    videoCompare?: CompareOutcome
 }
 
 function candidateDetail(candidateId: string): CapDetail {
@@ -62,7 +49,7 @@ function candidateDetail(candidateId: string): CapDetail {
             team: 0,
             active_title: null,
         },
-        checkpoints: candidateId === VIDEO_OPPONENT.id ? REFERENCE_CHECKPOINTS : RUNNER_DETAIL.wr_checkpoints,
+        checkpoints: RUNNER_DETAIL.wr_checkpoints,
         compare_candidates: [],
     }
 }
@@ -107,7 +94,6 @@ async function serveVideos(page: Page) {
 async function mockCapPage(page: Page, setup: CapPageSetup) {
     const outcomeByReference = new Map<string, CompareOutcome | undefined>([
         [DEFAULT_PICK.id, setup.cardCompare],
-        [VIDEO_OPPONENT.id, setup.videoCompare],
     ])
     const leaderboard = [
         leaderboardEntry(RUNNER_ID, String(RUNNER_DETAIL.cap.user), RUNNER_DETAIL.cap.alias ?? null, RUNNER_DETAIL.cap.cap_time_seconds),
@@ -192,18 +178,8 @@ async function expectNoPageScroll(page: Page) {
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1)
 }
 
-function compareModal(page: Page): Locator {
-    return page.locator('[data-modal-backdrop] > div').filter({ hasText: 'Replay Comparison' })
-}
-
-async function openVideoCompare(page: Page): Promise<Locator> {
-    await page.getByRole('button', { name: 'Compare Run' }).click()
-    const pick = page.getByRole('button', { name: new RegExp(VIDEO_OPPONENT.alias!.replace(/[[\]]/g, '\\$&')) })
-    await expect(pick).toHaveAttribute('aria-disabled', 'false')
-    await pick.click()
-    const modal = compareModal(page)
-    await expect(modal.getByRole('button', { name: 'Play', exact: true })).toBeEnabled()
-    return modal
+function lanes(page: Page): Locator {
+    return page.getByRole('list', { name: 'Lanes' })
 }
 
 test.beforeEach(async ({ page }) => {
@@ -332,14 +308,18 @@ for (const viewport of VIEWPORTS) {
             await expectNoPageScroll(page)
         })
 
-        test('video compare opens with the delta strip', async ({ page }) => {
-            await openCapPage(page, { cardCompare: 'aligned', videoCompare: 'separated' })
-            const modal = await openVideoCompare(page)
-
-            await expect(modal.getByRole('slider', { name: `Scrub both replays via ${separated.runner.alias}'s delta` })).toBeVisible()
-            await expect(modal.getByText(`ticks = ${separated.runner.alias}'s sector splits`)).toBeVisible()
+        test('Watch Side by Side sits beside the picker and opens the compare page with both runs', async ({ page }) => {
+            const card = await openCapPage(page, { cardCompare: 'aligned' })
+            const watch = card.getByRole('link', { name: 'Watch Side by Side' })
+            await expect(watch).toBeVisible()
             await expectNoPageScroll(page)
-            expect(await modal.evaluate(element => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1)
+
+            await watch.click()
+
+            await expect(page).toHaveURL(`/compare?runs=${RUNNER_ID},${DEFAULT_PICK.id}`)
+            await expect(lanes(page).getByRole('listitem')).toHaveCount(2, { timeout: 15_000 })
+            await expect(page.getByRole('region', { name: 'Stage' }).locator('video').first()).toBeAttached()
+            await expectNoPageScroll(page)
         })
     })
 }
