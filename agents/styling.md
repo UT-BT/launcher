@@ -56,7 +56,10 @@ These keep their literal Tailwind colour in every theme:
   `app/components/pages/capDetail/capStats.ts`); roles (`app/utils/roles.ts`),
   Patreon, verified, certified, cap type, team and compare-runner A/B colours.
 - **Brand moments**: splash, login and marketing gradients (`--utbt-*` in
-  `app/styles/shared.css`).
+  `app/styles/shared.css`); the gold desktop-app button, `promo-gold` in the `@theme`
+  block of `app/styles/theme.css` with `text-amber-950` (the Light theme remaps
+  `amber-300/400` to a dark text tone, so the fill can't use them; see
+  [Desktop promotion](#desktop-promotion-web-only)).
 - **Pick/ban sides**: team A crimson `pickban-a`, team B azure `pickban-b`, decider
   gold `pickban-gold`, defined once in the `@theme` block of `app/styles/theme.css`
   so every utility and opacity step works (`text-pickban-a`, `border-pickban-b/45`,
@@ -284,6 +287,7 @@ ship: 600 and 700 upright, 800 and 900 italic.
   <toolbar />         {/* search / Filters / Columns, shrink-0 */}
   <filterPanel />     {/* collapsible, shrink-0 */}
   <error />           {/* conditional banner */}
+  <promoStrip />      {/* web, Server Browser only: DesktopAppNotice, shrink-0 */}
   <DataTableShell />  {/* the table's own sideways scroller */}
   <PaginationBar />   {/* optional, shrink-0 */}
   <modals />
@@ -624,6 +628,32 @@ scale animate.
   avatar: from rarity 3 a 2px ring in the title colour, at rarity 5 also a 15px glow
   with `animate-pulse-slow`. Signed out, the Discord button is a `size-10` square. The
   login-error popover is `bg-popover/95` with a red border and no backdrop blur.
+
+### Desktop promotion (web only)
+
+The sidebar button is the one coloured surface; everything else uses theme tokens. Nothing
+animates. What shows when is in [web-target.md](web-target.md#desktop-promotion).
+
+- **Sidebar button** (`DesktopPromoNavRow`): a fixed gold CTA in every theme, shaped like
+  the Discord login button below it: `rounded-lg bg-promo-gold text-amber-950
+  hover:brightness-110 shadow-lg`, `w-full py-2.5 pl-3 pr-8`, label
+  `text-sm font-semibold`, so it fits beside the × at 16rem. Collapsed it is an icon-only
+  `size-11` square.
+- **Its ×** shows through opacity, not `visibility`, so it stays in the tab order:
+  `opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 touch:opacity-100`,
+  no transition. Expanded it is a full-height `w-8` strip on the button's right edge in
+  `text-amber-950` with a `hover:bg-hairline/10` tint; collapsed, a `size-6` round `bg-card`
+  badge at `-top-1.5 right-0`, over the square's top-right corner. Every class but
+  `bg-promo-gold`, `text-amber-950` and the variants already exists elsewhere: the initial
+  CSS budget has almost no headroom.
+- **Modal CTA** ("Download for Windows"): the Accent tinted colours at
+  `h-10 px-4 text-sm` (larger than the `h-8` family shape, so it stays tappable at
+  390 px), full width below `sm`.
+- **Inline notice** (`DesktopAppNotice`): `rounded-lg border border-hairline/10 bg-card/30`,
+  muted `text-sm` text and icon, the link `text-accent-300` (underline on hover). Hosts
+  restyle through `className`: the download result lines pass `text-xs`. Tap targets reach
+  40 px without a taller line: the link is `inline-block -mx-2 -my-2.5 px-2 py-2.5` and the
+  × is `size-10`.
 
 ## Motion
 

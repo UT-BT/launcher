@@ -123,6 +123,9 @@ achievements carry a Team chip.
   `app/utils/userState.ts`, so it follows the account; the card subscribes, so a change from
   another device applies live. Key rules: [state-patterns.md](../state-patterns.md).
 - A failed fetch with no cached rows shows the empty state; with cached rows it keeps them.
+- The replay picker (`ReplayPickerModal`) is `lazy()` but always mounted inside
+  `<Suspense fallback={null}>`, so open and close and its nested demo download dialog
+  behave as before while the picker and that dialog stay out of the web entry.
 
 ### Favorite servers
 

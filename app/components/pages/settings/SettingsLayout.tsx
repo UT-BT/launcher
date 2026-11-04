@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 import { Monitor, User, Keyboard, Volume2, Gamepad2, HardDrive, Settings, FileVideo, Palette, ShieldCheck, ChevronRight, ChevronLeft } from "lucide-react"
-import { IS_WEB } from '@/app/platform'
+import { IS_WEB, capabilities } from '@/app/platform'
+import { useDesktopPromo } from '@/app/components/desktopPromo/useDesktopPromo'
 
 export type SettingsSectionId =
     | 'launcher-general'
@@ -9,6 +10,7 @@ export type SettingsSectionId =
     | 'launcher-demos'
     | 'launcher-privacy'
     | 'game-installation'
+    | 'game-web-placeholder'
     | 'game-player'
     | 'game-controls'
     | 'game-video'
@@ -30,6 +32,8 @@ export function SettingsLayout({ currentSection, onSectionChange, children, isGa
     const backRef = useRef<HTMLButtonElement>(null)
     const railRefs = useRef<Partial<Record<SettingsSectionId, HTMLButtonElement | null>>>({})
     const settled = useRef(false)
+    const desktopPromo = useDesktopPromo()
+    const showGameSettingsPlaceholder = IS_WEB && capabilities.desktopPromo && desktopPromo.eligible
 
     useEffect(() => {
         if (!settled.current) {
@@ -57,6 +61,12 @@ export function SettingsLayout({ currentSection, onSectionChange, children, isGa
                     { id: 'launcher-privacy', label: 'Privacy', icon: ShieldCheck },
                 ]
         },
+        ...(showGameSettingsPlaceholder ? [{
+            group: "Unreal Tournament",
+            items: [
+                { id: 'game-web-placeholder', label: 'Unreal Tournament settings', icon: Gamepad2 },
+            ]
+        }] : []),
         ...(!IS_WEB ? [{
             group: "Unreal Tournament",
             items: [

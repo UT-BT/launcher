@@ -17,7 +17,8 @@ gate goes red. Commands and the pre-commit gate are in [build.md](build.md).
 | `e2e/mobile/` | the mobile suite: crawl, route manifest, recorded fixtures and their refresh script, synthetic role-gated fixtures, fixture router, stress variants, rules, known-violations ledger, gallery reporter, and Vitest files for its pure logic ([Mobile suite](#mobile-suite)) |
 | `e2e/__screenshots__/` | committed screenshot baselines, one folder per spec file |
 | `e2e/streamHarness.ts` | fake API plus open, settle and screenshot helpers for scene specs |
-| `e2e/sidebarRail.ts`, `e2e/layout.ts`, `e2e/streamPanels.ts` | shared spec helpers: the catch-all `mockApi`, `horizontalOverflow`, `openStreamPanel` |
+| `e2e/sidebarRail.ts`, `e2e/layout.ts`, `e2e/streamPanels.ts`, `e2e/mapDownload.ts` | shared spec helpers: the catch-all `mockApi`, `horizontalOverflow`, `openStreamPanel`, the map-download mock `serveMapDownloadRoutes` |
+| `e2e/desktopPromo.ts` | desktop promotion helpers: storage seeds, `/users/me` variants, the installer download mock, the telemetry reader ([Desktop promotion specs](#desktop-promotion-specs)) |
 | `e2e/<name>Harness.html` + `.ts` | standalone pages that mount one component tree outside the app |
 | `playwright.config.ts`, `vitest.config.ts`, `.github/workflows/` | runner config and CI |
 | `tsconfig.e2e.json` | the TypeScript project for `e2e/` and the two runner configs: `typecheck:e2e` and ESLint read it |
@@ -155,9 +156,18 @@ The file name picks the project, and app specs run in both app projects. The app
 `e2e/mobile/`, and `npm run test:e2e` runs only the first three projects. A test that fits only one
 size skips with `test.skip(isMobile, '<reason>')` or `test.skip(!isMobile)`. Specs that sweep
 widths set `test.use({ viewport })` per `describe` (copy `e2e/event-stats-responsive.spec.ts`) and
-expect `horizontalOverflow(page)` from `e2e/layout.ts` to be at most 1. Both app projects preload
-`utbt:seasonalThemes:v1 = "off"` so seasonal decor stays out of layout checks; `seasonal.spec.ts`
-turns it on itself.
+expect `horizontalOverflow(page)` from `e2e/layout.ts` to be at most 1. Both app projects share
+one storage state (`APP_STORAGE_STATE` in `playwright.config.ts`) that preloads:
+
+- `utbt:seasonalThemes:v1 = "off"`, so seasonal decor stays out of layout checks;
+  `seasonal.spec.ts` turns it on itself.
+- `utbt:desktopSeen:v1` = the time the config loaded (the key comes from
+  `DESKTOP_SEEN_STORAGE_KEY`). This is the **quiet default**: `desktop-chromium`'s user agent is
+  Windows 10, so without it every signed-out spec would show the desktop promotion. Signed-in
+  specs stay quiet because their `/users/me` mocks have no `last_desktop_seen_at` (unknown, so not
+  eligible). A spec that pins the page clock more than 90 days after the run date needs its own
+  seed. Promo specs opt in through `e2e/desktopPromo.ts` ([Desktop promotion
+  specs](#desktop-promotion-specs)); never change the default to make a spec promote.
 
 The config runs 2 workers (6 against the built bundle), spec files in parallel and the tests inside a file in order (the mobile
 suite projects run those in parallel too), with the default 30 s test timeout,
@@ -188,6 +198,33 @@ Seed browser state with `page.addInitScript` before `goto`:
 - A signed-in web user: `utbt:webAuth:v1` with `accessToken`, `refreshToken` and an `expiresAt`
   computed inside the script, more than 5 minutes ahead of the page clock; a closer expiry makes the
   app refresh the session first.
+
+### Desktop promotion specs
+
+The promotion ([web-target.md](web-target.md#desktop-promotion)) has one spec per surface:
+`desktop-promo.spec.ts` (sidebar row and modal), `desktop-promo-servers.spec.ts`,
+`desktop-promo-downloads.spec.ts` (map and demo result lines), `desktop-promo-settings.spec.ts`
+and `desktop-promo-stream.spec.ts`. The older Stream specs (`stream-tab`, `stream-guide-panel`,
+`stream-cams-panel`) stay unpromoted and assert the fallback line. A promo spec builds on
+`e2e/desktopPromo.ts`, and a helper only one spec needs stays in that spec:
+
+- `seedDesktopPromo(page, { consent?, signedIn?, desktopSeen?, dismissed? })` overrides the quiet
+  default in an init script: consent `denied`, signed out and both keys cleared unless given;
+  `desktopSeen` is `'cleared' | 'null' | 'fresh' | 'stale'`, `dismissed` is
+  `'cleared' | 'fresh' | 'stale'` (fresh is 1 day old, stale 91). It runs once per tab, so a
+  reload keeps what the page wrote; to change storage mid-test, `page.evaluate`, then reload.
+- `routeUsersMe(page, variant)` and `routeDelayedUsersMe(page, variant)` (`{ data, requested,
+  release }`) answer `/users/me` with `last_desktop_seen_at` `'absent' | 'null' | 'recent' |
+  'stale'`, and `/launcher/activity/latest` with 404. Register them after the catch-all.
+- `routeDesktopAppDownload(page)` answers `DESKTOP_APP_DOWNLOAD_URL` with a small `.exe`
+  attachment, so no spec downloads the real installer.
+- `recordTelemetryFlushes(page).flushedOutcomes()` forces a flush and returns the last payload's
+  `outcomes`; poll it with `expect.poll` (consent `granted`).
+- `WINDOWS_11_USER_AGENT` and `MACOS_USER_AGENT` set the user agent per `describe`. Windows tests
+  skip `mobile-chromium` (Android), which expects no promotion; every spec also has a macOS
+  `describe` that expects none.
+- The promo UI is lazy, so a "nothing shows" check first waits for the page's anchor and
+  `networkidle`, then asserts the count is 0. Locate inline lines with `[data-desktop-app-notice]`.
 
 ### Live tests
 
@@ -815,7 +852,7 @@ further steps. A second drop fails the test.
 | `.github/workflows/ci.yml`, jobs `Mobile suite (webkit 1/8)` to `(webkit 8/8)` and `Mobile suite (chromium 1/2)` to `(chromium 2/2)`, then `Mobile suite` | the same | Windows, Node 20. Each shard runs `npm ci`, installs its one engine, then `npx cross-env E2E_SERVER=build playwright test --project=mobile-suite-<engine> --workers=3 --shard=<n>/<of>`. That is `npm run test:mobile` (the PR subset on the built bundle, mocked data only, [Mobile suite](#mobile-suite)) narrowed to one engine. Whatever the result, each shard uploads its gallery as `mobile-gallery-<engine>-<n>` and its HTML report as `mobile-playwright-report-<engine>-<n>`. The `Mobile suite` job needs every shard and passes only when all ten did, so branch protection requires that one check name |
 | `.github/workflows/mobile-nightly.yml`, jobs `Mobile full matrix (1/12)` to `(12/12)` | daily at 03:00 UTC on the default branch, manual (Run workflow, any branch) | Windows, Node 20: the same install, then `npm run test:mobile:full -- --workers=3 --shard=<n>/12`; each shard uploads its gallery as `mobile-gallery-full-<n>` and its report as `mobile-playwright-report-full-<n>` |
 | `.github/workflows/web.yml` | push to `main`, manual | Ubuntu, Node 20: `npm ci`, `npm run quality:web` (`typecheck:web`, `typecheck:e2e`, `lint`, `test`, `build:web`, `check:bundle`), then a deploy that waits for approval |
-| `.github/workflows/release.yml` | push to `main` | Windows: builds and publishes the installer when the `package.json` version has no tag yet; no tests |
+| `.github/workflows/release.yml` | push to `main` | Windows: builds and publishes the installer when the `package.json` version has no tag yet, plus a copy under the stable name `utbt-launcher-setup.exe` that `DESKTOP_APP_DOWNLOAD_URL` points at; no tests |
 
 `ci.yml`'s Windows jobs turn off `core.autocrlf` before checkout (Linux checks out LF already), so the runner gets each file's committed line
 endings, as a local checkout does. A newer push to the same pull request cancels its run in

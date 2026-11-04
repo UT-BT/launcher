@@ -38,6 +38,8 @@ import { FilterPresetsMenu } from '@/app/components/shared/FilterPresetsMenu'
 import { ColumnsMenu } from '@/app/components/shared/ColumnsMenu'
 import { capabilities, fetchGatewayServers } from '@/app/platform'
 import { useServerJoin } from '@/app/hooks/useServerJoin'
+import { DesktopAppNotice } from '@/app/components/desktopPromo/DesktopAppNotice'
+import { useDesktopPromo } from '@/app/components/desktopPromo/useDesktopPromo'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { ActiveFilterChip } from '@/app/components/shared/ActiveFilterChip'
 import { avatarSizeFor, getAvatarUrl } from '@/app/utils/api'
@@ -383,6 +385,7 @@ export function ServerBrowserPage({
     const [loading, setLoading] = useState(caches.servers.length === 0)
     const [error, setError] = useState<string | null>(null)
     const { join: handleJoin, notice: launchNotice, clearNotice: clearLaunchNotice } = useServerJoin()
+    const desktopPromo = useDesktopPromo()
     const [activePresetId, setActivePresetId] = useState<string | null>(null)
 
     const filtersButtonRef = useRef<HTMLButtonElement | null>(null)
@@ -1130,6 +1133,15 @@ export function ServerBrowserPage({
                         <RefreshCw className="size-4 mr-1" /> Retry
                     </Button>
                 </div>
+            )}
+
+            {capabilities.desktopPromo && desktopPromo.ambientVisible && (
+                <DesktopAppNotice
+                    source="servers"
+                    message="Join servers in one click with the desktop app"
+                    onDismiss={() => desktopPromo.dismiss('servers')}
+                    className="shrink-0"
+                />
             )}
 
             <DataTableShell

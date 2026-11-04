@@ -20,19 +20,32 @@ list.
 |---|---|---|
 | Launcher | `launcher-general`, `launcher-appearance`, `launcher-demos`, `launcher-privacy` | Appearance and Privacy only |
 | Unreal Tournament | `game-installation`, `game-player`, `game-controls`, `game-video`, `game-audio`, `game-gameplay` | hidden |
+| Unreal Tournament (web) | `game-web-placeholder` ("Unreal Tournament settings") | promo-eligible visitors only; never on desktop |
 
 The section → panel mapping lives in the target shells, not the layout:
-`DesktopSettings` (`app/components/pages/SettingsDesktop.tsx`, a `switch`) and
-`WebSettings` (`app/components/pages/SettingsWeb.tsx`). To add a section, extend the union,
-add a `sidebarItems` entry in the right `IS_WEB` branch, and add the panel to each shell
-that shows it.
+`DesktopSettings` (`app/components/pages/SettingsDesktop.tsx`) and `WebSettings`
+(`app/components/pages/SettingsWeb.tsx`), each a `switch`. To add a section, extend the
+union, add a `sidebarItems` entry in the right branch (desktop or web via `IS_WEB`, or the
+web placeholder group below), and add the panel to each shell that shows it.
+
+- **The web "Unreal Tournament settings" placeholder.** The game panels need the desktop
+  app, so the website offers one stand-in entry instead, in its own "Unreal Tournament"
+  group after Appearance and Privacy. `SettingsLayout` adds it only when
+  `IS_WEB && capabilities.desktopPromo && useDesktopPromo().eligible` (the desktop
+  promotion, [web-target.md](../../../../agents/web-target.md#desktop-promotion)). Its
+  panel, `GameSettingsPlaceholder`, is lazy: the heading, a line saying the installation,
+  player, controls, video, audio and gameplay settings live in the desktop app, and a
+  `DesktopAppNotice` with source `settings` and no ×. `WebSettings` treats a
+  `game-web-placeholder` selection as Appearance while the visitor is not eligible, so the
+  rail and the panel always agree, and keys its `Suspense` by section, so the notice's
+  post-click hint resets when the panel is left.
 
 - **Initial section.** Desktop opens `launcher-general`; web opens `launcher-appearance`,
   or `launcher-privacy` when that is requested. A requested section also sets
   `initialDetail`, so the drill-down lands on the panel.
 - **Lazy panels.** Every panel except the shell's default one (General on desktop,
   Appearance on web) is a lazy chunk, so opening Settings does not load every editor, and
-  the web shell never imports a game panel.
+  the web shell never imports a game panel (the placeholder is its own lazy panel).
 - **Install gate.** Every Unreal Tournament section except `game-installation` is disabled
   until the install is valid (`isGameValid`, from `installationStatus === 'valid'`).
   `GameInstallationSettings` lives at `app/components/pages/GameInstallationSettings.tsx`.

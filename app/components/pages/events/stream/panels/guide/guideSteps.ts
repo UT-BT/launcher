@@ -13,8 +13,6 @@ export interface GuideStep {
     blocks: GuideBlock[]
 }
 
-export const DESKTOP_LAUNCHER_URL = 'https://github.com/UT-BT/launcher/releases/latest'
-
 const text = (value: string): GuideBlock => ({ kind: 'text', text: value })
 const list = (...items: string[]): GuideBlock => ({ kind: 'list', items })
 

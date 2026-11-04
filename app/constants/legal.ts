@@ -36,7 +36,7 @@ For any questions regarding these Terms, please contact us at hello@utbt.net.
 `;
 
 export const PRIVACY_POLICY = `
-**Last Updated: July 25, 2026**
+**Last Updated: November 3, 2026**
 
 **1. Controller and Contact**
 The controller for UTBT.net is the community administrator, soupy. Privacy and data-rights requests can be sent to hello@utbt.net.
@@ -45,6 +45,7 @@ The controller for UTBT.net is the community administrator, soupy. Privacy and d
 * **Account data:** Discord identifier, username, avatar, account roles, moderation status, and selected profile information.
 * **Community and game data:** Maps, records, captures, playtime, achievements, teams, uploaded demos, and other content you submit or generate through the service. Some game statistics and submitted content are public.
 * **Security data:** IP addresses, hardware identifiers, authentication records, moderation records, and technical logs where needed to secure the service, investigate abuse, enforce bans, and prevent cheating.
+* **Desktop app use:** While you are signed in, the service records when your account last used the desktop app, so that the website can stop showing desktop download prompts.
 * **Optional analytics:** If you consent, a random visitor identifier, session times, web or desktop surface, build version, coarse operating-system/browser/viewport/referrer categories, allowlisted pages, key action counters, coarse error categories, and visible time. Analytics never include route parameters, searches, map/player identifiers, or text you enter.
 
 **3. Purposes and Legal Bases**
@@ -54,7 +55,7 @@ The controller for UTBT.net is the community administrator, soupy. Privacy and d
 * Information may be processed when necessary to comply with a legal obligation or respond to a lawful request.
 
 **4. Local Storage and Analytics Choice**
-Before consent, we do not create an analytics visitor identifier or analytics session and do not send analytics events. Your analytics preference is stored locally so the launcher can respect it. If you accept, a random visitor identifier persists locally and a session snapshot is stored for session continuity. You can change the choice at any time under Settings â†’ Privacy. Withdrawal stops collection, clears analytics storage, and requests deletion of identifiable raw visitor sessions.
+Before consent, we do not create an analytics visitor identifier or analytics session and do not send analytics events. Your analytics preference is stored locally so the launcher can respect it. If you accept, a random visitor identifier persists locally and a session snapshot is stored for session continuity. You can change the choice at any time under Settings → Privacy. Withdrawal stops collection, clears analytics storage, and requests deletion of identifiable raw visitor sessions.
 
 **5. Retention**
 Raw launcher analytics sessions are retained for no more than 90 days unless deleted sooner. Daily and monthly statistics that no longer identify a person may be retained indefinitely. Other records are retained only as long as needed for their stated purpose; security and moderation records may be retained while necessary to protect the community or enforce an active restriction.
@@ -66,7 +67,7 @@ We do not sell personal data or use analytics for advertising. Data may be proce
 Aliases, game statistics, records, achievements, teams, and content intentionally submitted to public community features may be publicly accessible. IP addresses, hardware identifiers, analytics visitor hashes, and private authentication details are excluded from public APIs.
 
 **8. Your Rights**
-Depending on the circumstances, you may request access, a copy, correction, deletion, restriction, or portability of your personal data, and may object to processing based on legitimate interests. You may withdraw analytics consent at any time without affecting processing that occurred before withdrawal. Settings â†’ Privacy provides analytics export and deletion controls; other requests can be sent to hello@utbt.net. We normally respond within one month and may need to verify your identity.
+Depending on the circumstances, you may request access, a copy, correction, deletion, restriction, or portability of your personal data, and may object to processing based on legitimate interests. You may withdraw analytics consent at any time without affecting processing that occurred before withdrawal. Settings → Privacy provides analytics export and deletion controls; other requests can be sent to hello@utbt.net. We normally respond within one month and may need to verify your identity.
 
 You may lodge a complaint with the data protection supervisory authority that is competent where you live, work, or believe an infringement occurred.
 

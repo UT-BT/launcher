@@ -400,7 +400,7 @@ On top of the locked tokens in [styling.md](../styling.md):
   medal gold (`yellow`), never the decider gold. A match's Red / Blue tag uses the pick/ban tones via
   `sideColorTag` / `sideColorTone`.
 - **Bespoke rules live in lazy stylesheets.** Tailwind puts every utility it finds into the one entry
-  stylesheet, and the initial CSS budget (36 KiB gzip) has almost no headroom. A rule that needs
+  stylesheet, and the initial CSS budget (37 KiB gzip) has almost no headroom. A rule that needs
   `--team-accent` or a one-off template goes in a stats stylesheet imported by the lazy chunk:
   `teamCards.css` (grid, card glow, avatar ring), `overviewStats.css` (map-table bars, glance tiles, scrim,
   ring, container-query grid). Reuse existing utilities otherwise; a never-used utility can fail

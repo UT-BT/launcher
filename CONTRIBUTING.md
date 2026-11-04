@@ -295,8 +295,10 @@ git push origin main
 Pushing `main` triggers the **Build and Release Windows Installer** workflow. It
 reads the version from `package.json`, tags the commit `vX.Y.Z`, builds the Windows
 installer, and publishes a GitHub Release with the artifacts (`.exe`, `.blockmap`,
-`latest.yml`). There is no manual tag step — bumping the version in step 2 and
-promoting in step 3 is all it takes.
+`latest.yml`) plus a copy of the installer under the stable name
+`utbt-launcher-setup.exe`, which the website's download links point at
+(`releases/latest/download/utbt-launcher-setup.exe`). There is no manual tag step —
+bumping the version in step 2 and promoting in step 3 is all it takes.
 
 Installed launchers pick the release up on their own: the next time a player opens
 UTBT it downloads the update, installs it with no wizard and restarts. Launchers
@@ -309,7 +311,7 @@ gh run list --workflow "Build and Release Windows Installer" --limit 1
 ```
 
 The release is done when that run is green and the GitHub Release carries the three
-artifacts.
+artifacts and `utbt-launcher-setup.exe`.
 
 > The fast-forward in step 3 keeps `main` and `staging` identical after a release.
 > Never **squash** or **back-merge** `main` into `staging` to "sync" them — that

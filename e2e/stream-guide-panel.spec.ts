@@ -95,16 +95,18 @@ test('every guide step is present, numbered and collapsible', async ({ page }) =
     await expect(panel.locator('[aria-expanded="true"]')).toHaveCount(0)
 })
 
-test('the website marks the cam steps desktop only and links to the launcher', async ({ page }) => {
+test('the website marks the cam steps desktop only and points to the launcher', async ({ page }) => {
     await openGuide(page)
     const panel = page.getByRole('region', { name: 'Guide' })
+    const fallback = panel.getByText('Use the desktop launcher (Windows) for this.')
 
     await expect(panel.getByText('Desktop only')).toHaveCount(1)
-    await expect(panel.getByRole('link', { name: 'Get the desktop launcher' })).toHaveAttribute('href', 'https://github.com/UT-BT/launcher/releases/latest')
+    await expect(fallback).toHaveCount(1)
 
     await panel.getByRole('button', { name: /Launch the cams/ }).click()
     await expect(panel.getByText(/This step is done in the desktop launcher/)).toBeVisible()
-    await expect(panel.getByRole('link', { name: 'Get the desktop launcher' })).toHaveCount(2)
+    await expect(fallback).toHaveCount(2)
+    await expect(panel.getByRole('link', { name: 'Download', exact: true })).toHaveCount(0)
 })
 
 test('a step can be linked to from its link button', async ({ page }) => {

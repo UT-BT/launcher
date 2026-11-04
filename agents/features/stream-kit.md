@@ -14,7 +14,7 @@ Paths starting `events/stream/` are under `app/components/pages/`.
 | Path | Holds |
 |---|---|
 | `events/stream/` | the Stream tab: `StreamTab`, the panel registry (`streamPanels.ts`), the access gate (`streamTabAccess.ts`), the desk store (`streamDesk.ts`) and its context, `useStreamKitState` |
-| `events/stream/panels/` | one component per panel (Match, Cams, Score, Studio, Setup, Guide) and the Setup sections |
+| `events/stream/panels/` | one component per panel (Match, Cams, Score, Studio, Setup, Guide), the Setup sections, and `DesktopLauncherNotice`, the web desktop-launcher notice Cams and Guide share (its own file, so neither lazy panel pulls in the other) |
 | `events/stream/panels/match/`, `studio/`, `channel/` | the desk-writing sections (current match, countdown, lineup, score; casters, BRB, webcam; Twitch channel), built on pure view and action modules and a write hook (`useMatchWrite`, `useShowWrite`, `useChannelWriter`) |
 | `events/stream/panels/cams/` | the cam tool's view model (`camToolView.ts`), its hooks and the Red/Blue switch |
 | `events/stream/panels/kit/`, `guide/` | OBS kit fetch, folder and banner; the Guide's steps and deep links |
@@ -282,6 +282,21 @@ The cam tool needs the `camTool` capability; on the web the panel shows a notice
 at the desktop launcher (`camsGate.ts`). The tool reads no stream route of its own: its
 server list is `gateway.fetchServers()` from `usePlatform()`, polled every 30 s
 (`cams/camToolHooks.ts`), and the rest goes through `window.conveyor.streamKit`.
+
+- **The web notice.** `CamsWebNotice` keeps its card ("The cam tool needs the desktop
+  launcher.") and renders `DesktopLauncherNotice`, which is `DesktopAppNotice`
+  ([shared-components.md](../shared-components.md)) with source `stream`. The Guide uses the
+  same notice in the Requirements step's launcher block and at the end of each
+  desktop-only step (today "Launch the cams"); the dashed "This step is done in the desktop
+  launcher…" note stays.
+  - Eligible for the desktop promotion ([web-target.md](../web-target.md#desktop-promotion)):
+    "Get the desktop launcher for Windows · Download". The link is a plain `<a>` (same tab)
+    to `DESKTOP_APP_DOWNLOAD_URL`, the direct installer download; a click records
+    `desktop_promo_click:stream` and turns the line into the SmartScreen hint.
+  - Everyone else on the web, including while eligibility is unknown: the fallback line
+    "Use the desktop launcher (Windows) for this.", with no link.
+  - Desktop is unchanged: the cam tool, and the Guide's "You are using the desktop
+    launcher already." `camsGate.ts` still decides tool vs. notice on `camTool` alone.
 
 - **Cam FPS.** A `60` / `120` group (`aria-pressed`). A click saves at once and the value
   goes on every launch and restart request; Launch waits for the preference to load. If

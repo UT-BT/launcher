@@ -1,11 +1,12 @@
 import { useEffect, useRef } from 'react'
-import { ChevronDown, Download, Link2 } from 'lucide-react'
+import { ChevronDown, Link2 } from 'lucide-react'
 import { usePlatform } from '@/app/platform'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { cn } from '@/lib/utils'
 import { StreamCard } from '../StreamCard'
+import { DesktopLauncherNotice } from './DesktopLauncherNotice'
 import { guideStepFromHash, guideStepHash, toggleStep, withStepOpen } from './guide/guideDeepLink'
-import { DESKTOP_LAUNCHER_URL, GUIDE_STEPS, guideStepIds, type GuideBlock, type GuideStep } from './guide/guideSteps'
+import { GUIDE_STEPS, guideStepIds, type GuideBlock, type GuideStep } from './guide/guideSteps'
 
 export function GuidePanel() {
     const { capabilities } = usePlatform()
@@ -114,7 +115,7 @@ function GuideStepItem({ step, number, expanded, desktop, onToggle, onLink }: {
                         </p>
                     )}
                     {step.blocks.map((block, index) => <GuideBlockView key={index} block={block} desktop={desktop} />)}
-                    {needsDesktop && <LauncherLink />}
+                    {needsDesktop && <DesktopLauncherNotice />}
                 </div>
             )}
         </li>
@@ -132,18 +133,5 @@ function GuideBlockView({ block, desktop }: { block: GuideBlock; desktop: boolea
     }
     return desktop
         ? <p className="text-xs text-muted-foreground">You are using the desktop launcher already.</p>
-        : <LauncherLink />
-}
-
-function LauncherLink() {
-    return (
-        <a
-            href={DESKTOP_LAUNCHER_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex h-8 items-center gap-2 rounded-md border border-accent-500/40 bg-accent-500/15 px-3 text-xs font-medium text-accent-200 transition-colors hover:border-accent-500/60 hover:bg-accent-500/25"
-        >
-            <Download className="size-3.5" /> Get the desktop launcher
-        </a>
-    )
+        : <DesktopLauncherNotice />
 }

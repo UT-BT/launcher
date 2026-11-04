@@ -233,6 +233,14 @@ as `utbt:login-required`). Page pref keys are the `*_STATE_STORAGE_KEY` constant
   React mounts (the synced store mirrors to localStorage, so this works). Change one of
   these shapes and update that script in the same commit.
 - `utbt:syncAccount:v1` is internal to the synced store.
+- The desktop promotion's two keys are device-local and never account-synced, on purpose:
+  they describe this browser. `utbt:desktopSeen:v1` holds the last `last_desktop_seen_at`
+  a signed-in session received (ISO string or `null`); `utbt:desktopPromoDismissed:v1`
+  holds the ISO time of the last dismissal of the sidebar row or the server strip. Both are
+  JSON-encoded, read and written only through `desktopPromo/desktopPromoStorage.ts`, which
+  guards every access and treats a failure or a wrongly shaped value as no value. Only the
+  website writes them. The rules that read them are in
+  [web-target.md](web-target.md#desktop-promotion).
 - Legacy badge markers and the `utbt:highlightSince:<view>` sessionStorage hand-off:
   [navigation.md](navigation.md). Web auth (`utbt:webAuth:v1`, `utbt:webAuthFlow:v1`):
   [web-target.md](web-target.md).

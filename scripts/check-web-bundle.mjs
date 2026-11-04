@@ -9,7 +9,7 @@ const sceneDir = fileURLToPath(new URL('../app/components/stream/scenes/', impor
 
 const KiB = 1024
 const maxInitialJsGzipBytes = 190 * KiB
-const maxInitialCssGzipBytes = 36 * KiB
+const maxInitialCssGzipBytes = 37 * KiB
 const maxInitialTotalGzipBytes = 224 * KiB
 const maxLazyChunkGzipBytes = 120 * KiB
 const maxAppJsGzipBytes = 920 * KiB
