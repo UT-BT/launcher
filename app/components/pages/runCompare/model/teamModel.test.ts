@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { composeCompareModel } from './compareModel'
 import { liveDelta } from './laneModel'
 import { tileOverlays } from './overlayModel'
-import { NO_VIDEO } from './raceModel'
-import { packTeamRows, TEAM_COLOURS, TEAM_HEADER_HEIGHT, teamVideoOrder } from './teamModel'
+import { GRAPH_ONLY } from './raceModel'
+import { packTeamRows, TEAM_COLOURS, TEAM_HEADER_HEIGHT, TEAM_HEADER_WIDTH, teamVideoOrder } from './teamModel'
 import { composeTeams as compose, INDUSTRY, testId as id, testMember as member, testSolo as solo, testTeam as team } from './teamTestRuns'
 
 const A = INDUSTRY.teamCapId
@@ -106,19 +106,21 @@ describe('team cap ids as team runs', () => {
 })
 
 describe('team rows, colours and role indices', () => {
-    it('packs one row per team run, members in columns, with a header above each row', () => {
+    it('packs one row per team run, members in columns, with a header on the left of each row', () => {
         const other = team(1, 70)
-        const model = compose(`runs=${A},${other.teamCapId}`, [INDUSTRY, other])
+        const model = compose(`runs=${A},${other.teamCapId}`, [INDUSTRY, other], { stageBox: { width: 1800, height: 650 } })
         const rects = new Map(model.race.layout.placed.map(placed => [placed.slot.id, placed.rect]))
         const [first, second] = model.teams.rows
+        const giorgio = rects.get(GIORGIO)!
 
+        expect(model.teams.transposed).toBe(false)
         expect(model.race.layout.columns).toBe(3)
         expect(model.race.layout.rows).toBe(2)
         expect(new Set([GIORGIO, KRAD, PATRIK].map(capId => rects.get(capId)!.y)).size).toBe(1)
-        expect(rects.get(other.members[0].capId)!.y).toBeGreaterThan(rects.get(GIORGIO)!.y)
-        expect(rects.get(other.members[0].capId)!.x).toBe(rects.get(GIORGIO)!.x)
-        expect(first.header).toMatchObject({ y: rects.get(GIORGIO)!.y - TEAM_HEADER_HEIGHT, height: TEAM_HEADER_HEIGHT })
-        expect(second.header!.y).toBeGreaterThan(first.header!.y)
+        expect(rects.get(other.members[0].capId)!.y).toBeGreaterThan(giorgio.y)
+        expect(rects.get(other.members[0].capId)!.x).toBe(giorgio.x)
+        expect(first.header).toEqual({ x: giorgio.x - 4 - TEAM_HEADER_WIDTH, y: giorgio.y, width: TEAM_HEADER_WIDTH, height: giorgio.height })
+        expect(second.header).toMatchObject({ x: first.header!.x, y: rects.get(other.members[0].capId)!.y })
     })
 
     it('gives each team run its own colour, on its tiles with the member index', () => {
@@ -134,7 +136,7 @@ describe('team rows, colours and role indices', () => {
 
     it('labels each row with the member aliases joined by " & " and the team time', () => {
         const model = compose(`runs=${A}`, [INDUSTRY])
-        expect(model.teams.rows[0]).toMatchObject({ label: 'GiorgiO.pX5 & <Krad.pX4 & PatriK.pX3', time: '1:07.116' })
+        expect(model.teams.rows[0]).toMatchObject({ label: 'GiorgiO.pX5 & <Krad.pX4 & PatriK.pX3', time: '01:07.116' })
     })
 
     it('packs no row header outside the grid, and none for a team run without a tile', () => {
@@ -149,6 +151,33 @@ describe('team rows, colours and role indices', () => {
 
     it('packs nothing into an unmeasured stage', () => {
         expect(packTeamRows([[{ kind: 'video', id: 'a' }]], { width: 0, height: 0 }).layout.placed).toEqual([])
+    })
+
+    it('centres the rows with their header column beside them', () => {
+        const slot = (id: string) => ({ kind: 'video', id })
+        const box = { width: 1800, height: 650 }
+        const packed = packTeamRows([[slot('a'), slot('b')], [slot('c'), slot('d')]], box, 4)
+        const [a, b] = packed.layout.placed.map(placed => placed.rect)
+        const header = packed.headers[0]
+        const gridWidth = TEAM_HEADER_WIDTH + 4 + 2 * a.width + 4
+
+        expect(packed.transposed).toBe(false)
+        expect(header.x).toBeCloseTo((box.width - gridWidth) / 2, 6)
+        expect(a.x).toBeCloseTo(header.x + TEAM_HEADER_WIDTH + 4, 6)
+        expect(b.x).toBeCloseTo(a.x + a.width + 4, 6)
+        expect(header.height).toBe(a.height)
+        expect(a.height).toBeCloseTo(a.width / (16 / 9), 6)
+        expect(2 * a.height + 4).toBeLessThanOrEqual(box.height + 1e-6)
+    })
+
+    it('puts a header band above each team column when the grid transposes', () => {
+        const slot = (id: string) => ({ kind: 'video', id })
+        const packed = packTeamRows([[slot('a'), slot('b')], [slot('c'), slot('d')], [slot('e'), slot('f')], [slot('g'), slot('h')]], { width: 1920, height: 1080 })
+        const rects = new Map(packed.layout.placed.map(placed => [placed.slot.id, placed.rect]))
+
+        expect(packed.transposed).toBe(true)
+        expect(packed.headers[1]).toEqual({ x: rects.get('c')!.x, y: rects.get('c')!.y - TEAM_HEADER_HEIGHT - 4, width: rects.get('c')!.width, height: TEAM_HEADER_HEIGHT })
+        expect(rects.get('d')!.x).toBe(rects.get('c')!.x)
     })
 
     it('makes the whole team run the unit a tile removes and pins', () => {
@@ -187,13 +216,19 @@ describe('one team run alone', () => {
             expect(lane.reference).toBe(false)
             expect([0, 30, 66, 80].map(seconds => liveDelta(lane, seconds))).toEqual([null, null, null, null])
         })
-        expect(model.race.runs.map(run => run.result)).toEqual(['CAP 1:05.453', 'CAP 1:06.157', 'CAP 1:07.116'])
+        expect(model.race.runs.map(run => run.result)).toEqual(['CAP 01:05.453', 'CAP 01:06.157', 'CAP 01:07.116'])
         expect(model.analysis.runs).toEqual([])
     })
 
-    it('gives each member the rung badge its own data reaches', () => {
+    it('notes on each member only what its own data lacks', () => {
         const model = compose(`runs=${A}`, [INDUSTRY])
-        expect(model.lanes.lanes.map(lane => lane.badges)).toEqual([['Replay'], ['Zones'], ['Replay']])
+        expect(model.lanes.lanes.map(lane => lane.badges)).toEqual([[], ['Checkpoints only'], []])
+    })
+
+    it('tags members with their side only when the team runs mix sides', () => {
+        expect(compose(`runs=${A}`, [INDUSTRY]).lanes.lanes.map(lane => lane.sideLabel)).toEqual([null, null, null])
+        const mixed = { ...INDUSTRY, members: INDUSTRY.members.map((run, i) => (i === 2 ? { ...run, side: 1 } : run)) }
+        expect(compose(`runs=${A}`, [mixed]).lanes.lanes.map(lane => lane.sideLabel)).toEqual(['Red', 'Red', 'Blue'])
     })
 
     it('cues the team as a unit to its own first crossing of each zone', () => {
@@ -218,7 +253,7 @@ describe('team limits, hidden POVs and the team reference', () => {
 
         expect(model.race.tiles.map(tile => tile.id)).toEqual([GIORGIO, PATRIK])
         expect(model.race.dataOnly.map(run => run.run.capId)).toEqual([KRAD])
-        expect(model.lanes.lanes.find(lane => lane.capId === KRAD)?.badges).toEqual(['Zones', NO_VIDEO])
+        expect(model.lanes.lanes.find(lane => lane.capId === KRAD)?.badges).toEqual(['Checkpoints only', GRAPH_ONLY])
     })
 
     it('plays at most eight POVs and keeps the rest as data-only lanes', () => {

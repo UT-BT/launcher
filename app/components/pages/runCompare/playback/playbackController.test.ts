@@ -155,7 +155,7 @@ describe('the stall hold', () => {
 })
 
 describe('drift correction in Race', () => {
-    it('re-seeks a video more than one frame off its target, and only that video', () => {
+    it('re-seeks a video more than a quarter second off its target, and only that video', () => {
         const { time, controller } = setup()
         const a = time.media()
         const b = time.media()
@@ -163,7 +163,7 @@ describe('drift correction in Race', () => {
         controller.play()
         time.seconds(1)
 
-        b.drift(0.03)
+        b.drift(0.3)
         time.frames(1)
 
         expect(a.seeks()).toEqual([])
@@ -174,21 +174,70 @@ describe('drift correction in Race', () => {
         expect(a.position).toBeCloseTo(controller.getState().t, 6)
     })
 
-    it('leaves a video less than one frame off alone', () => {
+    it('leaves a video within 50 ms of its target alone, so timing jitter never seeks or holds', () => {
         const { time, controller } = setup()
         const a = time.media()
-        controller.setRuns([video('a', a)])
+        const b = time.media()
+        controller.setRuns([video('a', a), video('b', b)])
+        controller.play()
+        time.seconds(1)
+        a.clearCommands()
+
+        a.drift(-0.03)
+        time.seconds(1)
+        a.drift(0.045)
+        time.seconds(1)
+
+        expect(a.commands).toEqual([])
+        expect([a.playing, b.playing]).toEqual([true, true])
+        expect(a.rate).toBe(1)
+    })
+
+    it('pulls a video further off back in step with its playback rate instead of a seek', () => {
+        const { time, controller } = setup()
+        const ahead = time.media()
+        const behind = time.media()
+        const other = time.media()
+        controller.setRuns([video('ahead', ahead), video('behind', behind), video('other', other)])
         controller.play()
         time.seconds(1)
 
-        a.drift(-0.012)
-        time.seconds(1)
+        ahead.drift(0.15)
+        behind.drift(-0.15)
+        time.frames(1)
 
-        expect(a.seeks()).toEqual([])
-        expect(a.playing).toBe(true)
+        expect(ahead.rate).toBeLessThan(1)
+        expect(behind.rate).toBeGreaterThan(1)
+        expect(ahead.rate).toBeGreaterThanOrEqual(0.9)
+        expect(behind.rate).toBeLessThanOrEqual(1.1)
+        expect(other.rate).toBe(1)
+
+        time.seconds(3)
+
+        const { t } = controller.getState()
+        expect([ahead.seeks(), behind.seeks(), other.seeks()]).toEqual([[], [], []])
+        expect([ahead.playing, behind.playing, other.playing]).toEqual([true, true, true])
+        expect([ahead.rate, behind.rate]).toEqual([1, 1])
+        expect(Math.abs(ahead.position - t)).toBeLessThan(0.05)
+        expect(Math.abs(behind.position - t)).toBeLessThan(0.05)
     })
 
-    it('takes the frame from each video\'s own fps, 30 when unknown', () => {
+    it('scales the nudge with the global rate', () => {
+        const { time, controller } = setup()
+        const a = time.media()
+        controller.setRuns([video('a', a)])
+        controller.setRate(0.5)
+        controller.play()
+        time.seconds(1)
+
+        a.drift(-0.15)
+        time.frames(1)
+
+        expect(a.rate).toBeGreaterThan(0.5)
+        expect(a.rate).toBeLessThanOrEqual(0.55)
+    })
+
+    it('lines each video up to one of its own frames before starting, 30 fps when unknown', () => {
         const { time, controller } = setup()
         const at60 = time.media()
         const at30 = time.media()
@@ -198,13 +247,14 @@ describe('drift correction in Race', () => {
             video('at30', at30, { fps: 30 }),
             video('unknown', unknown, { fps: null }),
         ])
-        controller.play()
-        time.seconds(1)
+        controller.seek(1)
+        time.frames(2)
+        for (const media of [at60, at30, unknown]) media.clearCommands()
 
         at60.drift(0.025)
         at30.drift(0.025)
         unknown.drift(0.025)
-        time.frames(1)
+        controller.play()
 
         expect(at60.seeks()).toHaveLength(1)
         expect(at30.seeks()).toEqual([])
@@ -742,7 +792,7 @@ describe('media that report their events at once', () => {
         controller.play()
         time.seconds(1)
 
-        a.drift(0.05)
+        a.drift(0.3)
         time.frames(1)
         expect(a.seeks()).toHaveLength(1)
         expect([a.playing, b.playing]).toEqual([false, false])

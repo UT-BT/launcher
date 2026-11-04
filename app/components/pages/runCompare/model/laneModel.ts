@@ -15,16 +15,28 @@ import type { CapComparison, CapComparisonPoint } from '@/app/utils/api'
 import { comparisonKey, type ComparisonRequest, type LoadedComparisons } from '../loading/comparisons'
 import type { SoloRun } from '../loading/soloRuns'
 import type { RaceModel, RaceRun } from './raceModel'
-import { isSideReference, leadSide, type References } from './referenceModel'
+import { isSideReference, type References } from './referenceModel'
 
-export const REPLAY = 'Replay'
-export const ZONES = 'Zones'
-export const TIME_ONLY = 'Time only'
-export const SET_ON = ['Set on Red', 'Set on Blue'] as const
+export const CHECKPOINTS_ONLY = 'Checkpoints only'
+export const FINAL_TIME_ONLY = 'Final time only'
+export const SIDE_TAGS = ['Red', 'Blue'] as const
 
 export type Rung = 'replay' | 'zones' | 'time'
 
-export const RUNG_BADGES: Record<Rung, string> = { replay: REPLAY, zones: ZONES, time: TIME_ONLY }
+export const RUNG_NOTES: Record<Rung, string | null> = { replay: null, zones: CHECKPOINTS_ONLY, time: FINAL_TIME_ONLY }
+
+export function rungNotes(rung: Rung | null): string[] {
+    const note = rung ? RUNG_NOTES[rung] : null
+    return note ? [note] : []
+}
+
+export function mixedSides(runs: readonly SoloRun[]): boolean {
+    return new Set(runs.flatMap(run => (run.side === 0 || run.side === 1 ? [run.side] : []))).size > 1
+}
+
+export function sideTagOf(side: number | null, mixed: boolean): string | null {
+    return mixed && (side === 0 || side === 1) ? SIDE_TAGS[side] : null
+}
 
 export interface LaneSplit {
     index: number
@@ -224,14 +236,13 @@ function compareData(run: SoloRun, reference: SoloRun, comparisons: LoadedCompar
 export interface LaneContext {
     partner: SoloRun
     isReference: boolean
-    lead: number | null
+    mixed: boolean
     comparisons: LoadedComparisons
 }
 
-export function laneFor(raceRun: RaceRun, { partner, isReference, lead, comparisons }: LaneContext): Lane {
+export function laneFor(raceRun: RaceRun, { partner, isReference, mixed, comparisons }: LaneContext): Lane {
     const { run } = raceRun
     const data = run.capId === partner.capId ? referenceData(run) : isReference ? TIME_ONLY_DATA : compareData(run, partner, comparisons)
-    const sideLabel = run.side !== null && lead !== null && run.side !== lead ? SET_ON[run.side] : null
     const capMs = msOf(run.timeSeconds)
     const finalMs = capMs - msOf(partner.timeSeconds)
     return {
@@ -239,10 +250,9 @@ export function laneFor(raceRun: RaceRun, { partner, isReference, lead, comparis
         run,
         reference: isReference,
         rung: data.rung,
-        sideLabel,
+        sideLabel: sideTagOf(run.side, mixed),
         badges: [
-            ...(data.rung ? [RUNG_BADGES[data.rung]] : []),
-            ...(sideLabel ? [sideLabel] : []),
+            ...(isReference ? [] : rungNotes(data.rung)),
             ...(raceRun.tile ? [] : raceRun.badges),
         ],
         capMs,
@@ -260,12 +270,12 @@ export function composeLanes(race: RaceModel, comparisons: LoadedComparisons): L
     if (!reference) return EMPTY_LANES
     const runs = race.runs.map(raceRun => raceRun.run)
     const byId = new Map(runs.map(run => [run.capId, run]))
-    const lead = leadSide(runs)
+    const mixed = mixedSides(runs)
     return {
         lanes: race.runs.map(raceRun => laneFor(raceRun, {
             partner: partnerOf(byId, race.references, raceRun.run),
             isReference: isSideReference(race.references, raceRun.run.capId),
-            lead,
+            mixed,
             comparisons,
         })),
         requests: comparisonRequests(runs, race.references),

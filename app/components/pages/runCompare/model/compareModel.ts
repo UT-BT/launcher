@@ -9,7 +9,7 @@ import { composeCues, EMPTY_CUES, type CueModel } from './cueModel'
 import { composeLanes, EMPTY_LANES, withLaneBadges, type LanesModel } from './laneModel'
 import { composeSync, EMPTY_SYNC, withRaceClock, type SyncModel } from './positionModel'
 import { composeRace, EMPTY_RACE, type LoadedVideos, type RaceInput, type RaceModel } from './raceModel'
-import { onePinPerSide } from './referenceModel'
+import { onePinPerSide, onFocusSide } from './referenceModel'
 import type { StageEnvironment } from './phoneStage'
 import type { StageBox } from './stageLayout'
 import { composeTeamAnalysis, NO_TEAM_ANALYSIS, type TeamAnalysisModel } from './teamAnalysisModel'
@@ -32,6 +32,7 @@ export interface CompareModelInput {
     stageBox?: StageBox | null
     comparisons?: LoadedComparisons
     focus?: string | null
+    side?: number | null
     speedRun?: string | null
     environment?: StageEnvironment | null
     pov?: string | null
@@ -58,6 +59,7 @@ export interface CompareModel {
 }
 
 const NOUNS: Record<CompareParam, [string, string]> = {
+    map: ['map', 'maps'],
     runs: ['run', 'runs'],
     ref: ['reference', 'references'],
     data: ['data-only entry', 'data-only entries'],
@@ -207,7 +209,7 @@ function teamPart(input: CompareModelInput, teams: LoadedTeamRuns, seekSeconds: 
         pov: input.pov,
     }, withPairSeats(composed, grid), grid?.cells ?? null)
     const versus = reads.length > 0
-    const lanes = versus ? composeVersusLanes(placed.race, placed.teams, reads, comparisons ?? new Map()) : composeTeamLanes(placed.race, placed.teams)
+    const lanes = versus ? composeVersusLanes(placed.race, reads, comparisons ?? new Map()) : composeTeamLanes(placed.race)
     const teamSync = versus ? composeTeamSync(placed.teams, reads, lanes, comparisons ?? new Map(), state.sync, state.drive) : null
     const sync = teamSync?.sync ?? composeSync(placed.race, lanes, comparisons ?? new Map(), state.sync)
     const marked = withRaceClock(lanes, sync)
@@ -243,8 +245,13 @@ export function stateOf(model: Pick<CompareModel, 'query' | 'teams'>): CompareUr
 
 type RacePart = ReturnType<typeof racePart>
 
+function focusLanes(race: RaceModel, lanes: LanesModel): LanesModel {
+    if (race.sides.options.length === 0) return lanes
+    return { ...lanes, lanes: lanes.lanes.filter(lane => onFocusSide(race.sides, lane.run)) }
+}
+
 function analysisPart(part: RacePart, comparisons: LoadedComparisons, speedRun: string | null): RacePart & { analysis: AnalysisModel } {
-    const analysis = composeAnalysis(part.race, part.lanes, part.cues, comparisons, speedRun)
+    const analysis = composeAnalysis(part.race, focusLanes(part.race, part.lanes), part.cues, comparisons, speedRun)
     return { ...part, race: withTileHighlight(part.race, analysis.speed.highlighted), analysis }
 }
 
@@ -257,7 +264,7 @@ function racePart(input: RaceInput, comparisons: LoadedComparisons): { race: Rac
 }
 
 export function composeCompareModel(input: CompareModelInput): CompareModel {
-    const { query, runs: loaded, videos, failedVideos, stageBox, comparisons, focus, speedRun, environment, pov } = input
+    const { query, runs: loaded, videos, failedVideos, stageBox, comparisons, focus, side, speedRun, environment, pov } = input
     const teams: LoadedTeamRuns = input.teams ?? new Map()
     const decoded = parseCompareQuery(query)
     const seekSeconds = decoded.state.t
@@ -290,7 +297,7 @@ export function composeCompareModel(input: CompareModelInput): CompareModel {
     return {
         loading: false,
         runs: kept,
-        map,
+        map: map ?? state.map,
         drops,
         noticeLine: noticeLineFor(drops),
         title: compareTitle(kept, map),
@@ -303,6 +310,7 @@ export function composeCompareModel(input: CompareModelInput): CompareModel {
             failedVideos: failedVideos ?? new Set(),
             stageBox: stageBox ?? null,
             focus,
+            side,
             environment,
             pov,
         }, comparisons ?? new Map()), comparisons ?? new Map(), speedRun ?? null),

@@ -58,16 +58,34 @@ describe('the team leaderboard in the drawer', () => {
         expect(listedTeamEntries(ENTRIES).map(entry => entry.id)).toEqual([FASTER, INDUSTRY, SLOWER, SLOWEST].map(team => team.teamCapId))
         const view = viewOf(`runs=${A}`)
         expect(view.rows.map(row => row.teamCapId)).toEqual([A, FASTER.teamCapId, SLOWER.teamCapId, SLOWEST.teamCapId])
-        expect(view.rows[0]).toMatchObject({ reference: true, inComparison: true, time: '1:07.116' })
+        expect(view.rows[0]).toMatchObject({ reference: true, inComparison: true, time: '01:07.116' })
     })
 
-    it('badges every member with its video, its replay or zones and its side', () => {
+    it('numbers each team run by its place on the map, the pinned reference included', () => {
+        expect(viewOf(`runs=${A}`).rows.map(row => [row.teamCapId, row.rank])).toEqual([
+            [A, 2],
+            [FASTER.teamCapId, 1],
+            [SLOWER.teamCapId, 3],
+            [SLOWEST.teamCapId, 4],
+        ])
+    })
+
+    it('notes only what each member lacks, and keeps each member’s side', () => {
         const [s1, s2] = SLOWER.members.map(member => member.capId)
         const view = viewOf(`runs=${A}`, { videos: new Map([[s1, VIDEO], [s2, null]]) })
         const slower = view.rows.find(row => row.teamCapId === SLOWER.teamCapId)!
-        expect(slower.members.map(member => member.badges)).toEqual([['Video', 'Zones', 'Set on Blue'], ['No video', 'Set on Blue']])
+        expect(slower.members.map(member => [member.video, member.side, member.badges])).toEqual([
+            ['video', 1, ['Checkpoints only']],
+            ['none', 1, ['Graph only', 'Final time only']],
+        ])
         const industry = view.rows.find(row => row.teamCapId === A)!
-        expect(industry.members.map(member => member.badges)).toEqual([['Replay', 'Set on Red'], ['Zones', 'Set on Red'], ['Replay', 'Set on Red']])
+        expect(industry.members.map(member => [member.side, member.badges])).toEqual([[0, []], [0, ['Checkpoints only']], [0, []]])
+    })
+
+    it('says the board mixes sides only when members were set on both', () => {
+        expect(viewOf(`runs=${A}`).mixed).toBe(true)
+        const red = [INDUSTRY, FASTER, SLOWEST].map(team => entryOf(team))
+        expect(viewOf(`runs=${A}`, { entries: red }).mixed).toBe(false)
     })
 
     it('offers the quick-add chips for team runs around the reference', () => {
@@ -80,12 +98,14 @@ describe('the team leaderboard in the drawer', () => {
         expect(viewOf(`runs=${A}`).chips.some(chip => chip.id === 'pb')).toBe(false)
     })
 
-    it('searches member aliases and filters by replay, video and side', () => {
+    it('searches member aliases and filters by video and side', () => {
         expect(viewOf(`runs=${A}`, { filters: { ...NO_FILTERS, search: 'krad' } }).rows.map(row => row.teamCapId)).toEqual([A])
-        expect(viewOf(`runs=${A}`, { filters: { ...NO_FILTERS, hasReplay: true } }).rows.map(row => row.teamCapId)).not.toContain(SLOWER.teamCapId)
         expect(viewOf(`runs=${A}`, { filters: { ...NO_FILTERS, colour: 'blue' } }).rows.map(row => row.teamCapId)).toEqual([SLOWER.teamCapId])
-        const withVideo = viewOf(`runs=${A}`, { videos: new Map([[FASTER.members[1].capId, VIDEO]]), filters: { ...NO_FILTERS, hasVideo: true } })
+        const withVideo = viewOf(`runs=${A}`, { videos: new Map([[FASTER.members[1].capId, VIDEO]]), filters: { ...NO_FILTERS, video: 'video' } })
         expect(withVideo.rows.map(row => row.teamCapId)).toEqual([FASTER.teamCapId])
+        const recorded = viewOf(`runs=${A}`, { videos: new Map([[FASTER.members[1].capId, VIDEO]]), filters: { ...NO_FILTERS, video: 'utrecorder' } })
+        expect(recorded.rows.map(row => row.teamCapId)).toEqual([FASTER.teamCapId])
+        expect(viewOf(`runs=${A}`, { picked: [SLOWER.teamCapId] }).rows.filter(row => row.inComparison).map(row => row.teamCapId)).toEqual([SLOWER.teamCapId])
     })
 })
 
@@ -106,10 +126,10 @@ describe('adding team runs from the drawer', () => {
         expect(addTeamRunsEdit(three, [FASTER.teamCapId, A, extra.teamCapId], ENTRIES, new Map()).outcome.blocked).toBe(TEAM_LIMIT_REACHED)
     })
 
-    it('says when the added POVs join as data-only past eight videos', () => {
+    it('says when the added POVs join as a graph only past eight videos', () => {
         const three = composeTeams(`runs=${A},${SLOWER.teamCapId},${SLOWEST.teamCapId}`, TEAMS)
         expect(three.race.tiles).toHaveLength(7)
         const videos = new Map(FASTER.members.map(member => [member.capId, VIDEO]))
-        expect(addTeamRunsEdit(three, [FASTER.teamCapId], ENTRIES, videos).note).toBe('Joined as data-only: 8 videos already play.')
+        expect(addTeamRunsEdit(three, [FASTER.teamCapId], ENTRIES, videos).note).toBe('Joined as a graph only: 8 videos already play.')
     })
 })

@@ -1,5 +1,8 @@
-export const DRIFT_RESEEK_FRAMES = 1
-export const POSITION_RESEEK_SECONDS = 0.25
+export const START_ALIGN_FRAMES = 1
+export const DRIFT_DEADBAND_SECONDS = 0.05
+export const DRIFT_CATCH_UP_SECONDS = 1
+export const DRIFT_RATE_MAX_NUDGE = 0.1
+export const RESEEK_SECONDS = 0.25
 export const POSITION_RATE_MIN_FACTOR = 0.5
 export const POSITION_RATE_MAX_FACTOR = 2
 export const POSITION_CATCH_UP_SECONDS = 1

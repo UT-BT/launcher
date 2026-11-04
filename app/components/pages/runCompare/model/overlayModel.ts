@@ -1,13 +1,13 @@
 import { signedGap, type SignedGap } from '@/app/components/pages/capDetail/runDelta/deltaCurve'
-import { NOT_FRAME_SYNCED } from '../drawer/rosterRows'
 import type { SoloRun } from '../loading/soloRuns'
+import { FALLBACK_FPS } from '../playback/playbackConstants'
 import { parseCompareQuery } from '../url/compareUrl'
 import type { CompareModel } from './compareModel'
 import { liveDelta, type Lane } from './laneModel'
+import { focusRuns, onFocusSide } from './referenceModel'
 import { formatRaceTime } from './raceModel'
 import type { PairMenu } from './teamPairing'
 
-export const OVERLAY_IDLE_MS = 2000
 export const SECTOR_FLASH_MS = 1000
 
 export interface TileOverlay {
@@ -16,12 +16,22 @@ export interface TileOverlay {
     time: string
     reference: boolean
     pinned: boolean
+    versus: SoloRun | null
     badges: string[]
+    sideLabel: string | null
+    olderVideo: boolean
+    offsetMs: number
+    fps: number
+    colour: string | null
     teamColour: string | null
     teamIndex: number | null
     removable: boolean
     lane: Lane | null
     pairMenu: PairMenu | null
+}
+
+function pairedWith(menu: PairMenu | null): SoloRun | null {
+    return menu?.groups.flatMap(group => group.options).find(option => option.current)?.run ?? null
 }
 
 export interface SectorFlash {
@@ -41,27 +51,42 @@ export interface ReadoutClock {
 }
 
 export function tileOverlays(model: CompareModel): ReadonlyMap<string, TileOverlay> {
-    const pins = new Set(parseCompareQuery(model.query).state.refs)
+    const { refs, offsets } = parseCompareQuery(model.query).state
+    const pins = new Set(refs)
     const lanes = new Map(model.lanes.lanes.map(lane => [lane.capId, lane]))
-    const sources = new Map(model.race.runs.map(raceRun => [raceRun.run.capId, raceRun.source]))
+    const raceRuns = new Map(model.race.runs.map(raceRun => [raceRun.run.capId, raceRun]))
+    const runs = new Map(model.runs.map(run => [run.capId, run]))
+    const colours = new Map(model.analysis.runs.map(run => [run.capId, run.colour]))
     const { seats, rows } = model.teams
     const removable = rows.length > 0 ? rows.length > 1 : model.runs.length > 1
+    const measured = rows.length > 0 || focusRuns(model.race.sides, model.runs.length) >= 2
     return new Map(model.race.tiles.map(tile => {
-        const lane = lanes.get(tile.id) ?? null
-        const source = sources.get(tile.id) ?? null
+        const onSide = onFocusSide(model.race.sides, tile.run)
+        const lane = onSide ? lanes.get(tile.id) ?? null : null
+        const raceRun = raceRuns.get(tile.id)
+        const source = raceRun?.source ?? null
         const seat = seats.get(tile.id) ?? null
+        const pairMenu = model.teams.pairing.menus.get(tile.id) ?? null
+        const partner = runs.get(model.race.references.partners.get(tile.id) ?? '') ?? null
+        const reference = (lane?.reference ?? false) && measured
         return [tile.id, {
             capId: tile.id,
             run: tile.run,
             time: formatRaceTime(tile.run.timeSeconds),
-            reference: lane?.reference ?? false,
+            reference,
             pinned: pins.has(seat?.teamCapId ?? tile.id),
-            badges: [...tile.badges, ...(source !== null && source !== 'utrecorder' ? [NOT_FRAME_SYNCED] : [])],
+            versus: seat ? pairedWith(pairMenu) : reference || !onSide || partner?.capId === tile.id ? null : partner,
+            badges: tile.badges,
+            sideLabel: lanes.get(tile.id)?.sideLabel ?? null,
+            olderVideo: source !== null && source !== 'utrecorder',
+            offsetMs: offsets.find(offset => offset.capId === tile.id)?.ms ?? 0,
+            fps: raceRun?.fps ?? FALLBACK_FPS,
+            colour: colours.get(tile.id) ?? null,
             teamColour: seat?.colour ?? null,
             teamIndex: seat?.index ?? null,
             removable,
             lane,
-            pairMenu: model.teams.pairing.menus.get(tile.id) ?? null,
+            pairMenu,
         }]
     }))
 }

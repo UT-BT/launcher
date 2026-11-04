@@ -117,6 +117,17 @@ describe('the loaded comparison', () => {
         expect(model.runs).toEqual([])
         expect(model.noticeLine).toBeNull()
     })
+
+    it('keeps the picked map of an empty set until a run joins', () => {
+        const picking = composeCompareModel({ query: 'map=CTF-BT-NaliRealm', runs: loaded() })
+        expect(picking.map).toBe('CTF-BT-NaliRealm')
+        expect(picking.query).toBe('map=CTF-BT-NaliRealm')
+        expect(picking.title).toBeNull()
+
+        const started = composeCompareModel({ query: `map=CTF-BT-Other&runs=${A}`, runs: loaded([A, run(A, 'fierd_6')]) })
+        expect(started.map).toBe('CTF-BT-NaliRealm')
+        expect(started.query).toBe(`runs=${A}`)
+    })
 })
 
 describe('the comparison title', () => {

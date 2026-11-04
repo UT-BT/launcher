@@ -109,8 +109,8 @@ const [sortDir, setSortDir] = useNavState<'asc' | 'desc'>('wrs.sortDir', 'desc')
 
 - **Keys** are `<area>.<field>`: a card prefix on detail pages (`wrs.query`), `event.*` on
   the event page, `admin.<section>.<field>` in admin sections, `compare.*` on the compare page
-  (`notice`, `seekSeconds`, `drawerOpen`, `audioFrom`, `focus`, `pov`, `speedRun`, `matrixRun`,
-  `speedZoom`, `splitsTeam`; [run-compare.md](features/run-compare.md#the-page)). Other keys
+  (`notice`, `seekSeconds`, `drawerOpen`, `audio`, `focus`, `pov`, `speedRun`, `sectorView`,
+  `speedZoom`, `speedFollow`, `splitsTeam`, `picked`, `side`; [run-compare.md](features/run-compare.md#the-page)). Other keys
   the compare entry points added: `leaderboard.compare` (the map leaderboard's ticked runs),
   `checkpointDeltas.target` (the cap page's card target, `null` until the user picks one) and
   `teamCap.member` (the team cap page's selected member).

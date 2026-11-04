@@ -3,7 +3,7 @@ import type { CapCheckpoint, ReplayVideo } from '@/app/utils/api'
 import { runCompareFixture } from '@/app/utils/fixtures/runCompareFixtures'
 import type { LoadedComparisons } from '../loading/comparisons'
 import type { SoloRun } from '../loading/soloRuns'
-import { audibleRun, chooseAudio } from './audioModel'
+import { audibleRuns, audioOnFocus, toggleAudio } from './audioModel'
 import { composeCompareModel } from './compareModel'
 import { SECTOR_FLASH_MS, tileOverlays, tileReadout, type TileOverlay } from './overlayModel'
 
@@ -45,15 +45,17 @@ interface ComposeOptions {
     query?: string
     comparisons?: LoadedComparisons
     videos?: Map<string, ReplayVideo | null>
+    side?: number | null
 }
 
-function compose(runs: SoloRun[], { query, comparisons = new Map(), videos }: ComposeOptions = {}) {
+function compose(runs: SoloRun[], { query, comparisons = new Map(), videos, side = null }: ComposeOptions = {}) {
     return composeCompareModel({
         query: query ?? `runs=${runs.map(r => r.capId).join(',')}`,
         runs: new Map(runs.map(r => [r.capId, r])),
         videos: videos ?? new Map(runs.map(r => [r.capId, video(r.capId)])),
         stageBox: { width: 1920, height: 1080 },
         comparisons,
+        side,
     })
 }
 
@@ -65,13 +67,25 @@ function overlayOf(model: ReturnType<typeof compose>, capId: string): TileOverla
 }
 
 describe('the tile overlay', () => {
-    it('gives every video tile its player, final time, reference pin and badges', () => {
+    it('gives every video tile its player, final time, reference pin, the run its gap is against and no note when its data is full', () => {
         const model = compose([runner, reference], { comparisons: aligned })
         const overlays = tileOverlays(model)
 
         expect([...overlays.keys()]).toEqual([RUNNER, REFERENCE])
-        expect(overlays.get(RUNNER)).toMatchObject({ run: runner, time: '0:12.342', reference: false, pinned: false, badges: ['Replay'], removable: true })
-        expect(overlays.get(REFERENCE)).toMatchObject({ run: reference, time: '0:11.830', reference: true, pinned: false, badges: ['Replay'] })
+        expect(overlays.get(RUNNER)).toMatchObject({
+            run: runner,
+            time: '00:12.342',
+            reference: false,
+            pinned: false,
+            versus: reference,
+            badges: [],
+            sideLabel: null,
+            olderVideo: false,
+            offsetMs: 0,
+            fps: 60,
+            removable: true,
+        })
+        expect(overlays.get(REFERENCE)).toMatchObject({ run: reference, time: '00:11.830', reference: true, pinned: false, versus: null, badges: [] })
     })
 
     it('leaves the team colour slot empty for solo runs', () => {
@@ -83,23 +97,41 @@ describe('the tile overlay', () => {
     it('moves the reference pin to a pinned run and marks it pinned', () => {
         const model = compose([runner, reference], { query: `runs=${RUNNER},${REFERENCE}&ref=${RUNNER}` })
 
-        expect(overlayOf(model, RUNNER)).toMatchObject({ reference: true, pinned: true })
-        expect(overlayOf(model, REFERENCE)).toMatchObject({ reference: false, pinned: false })
+        expect(overlayOf(model, RUNNER)).toMatchObject({ reference: true, pinned: true, versus: null })
+        expect(overlayOf(model, REFERENCE)).toMatchObject({ reference: false, pinned: false, versus: runner })
     })
 
-    it('marks one reference per side and labels the run set on the other side', () => {
+    it('shows a baseline and live gaps only on the analysed side, and tags every tile with its side', () => {
         const model = compose([runner, reference, run(BLUE, 12.9, { side: 1 })], { comparisons: aligned })
 
-        expect(overlayOf(model, BLUE)).toMatchObject({ reference: true, badges: ['Time only', 'Set on Blue'] })
-        expect(overlayOf(model, REFERENCE).reference).toBe(true)
+        expect(overlayOf(model, BLUE)).toMatchObject({ reference: false, versus: null, lane: null, badges: [], sideLabel: 'Blue' })
+        expect(overlayOf(model, REFERENCE)).toMatchObject({ reference: true, sideLabel: 'Red' })
+        expect(overlayOf(model, RUNNER)).toMatchObject({ versus: reference, sideLabel: 'Red' })
     })
 
-    it('flags a video not from UTRecorder as not frame-synced', () => {
-        const videos = new Map([[RUNNER, video(RUNNER, 'democonverter')], [REFERENCE, video(REFERENCE)]])
-        const model = compose([runner, reference], { comparisons: refused, videos })
+    it('moves the baseline and the live gaps to the other side when that side is chosen', () => {
+        const blueRunner = run(SLOW, 14, { side: 1 })
+        const blueBaseline = run(BLUE, 12.9, { side: 1 })
+        const model = compose([runner, reference, blueBaseline, blueRunner], { comparisons: aligned, side: 1 })
 
-        expect(overlayOf(model, RUNNER).badges).toEqual(['Zones', 'Not frame-synced'])
-        expect(overlayOf(model, REFERENCE).badges).not.toContain('Not frame-synced')
+        expect(overlayOf(model, SLOW).versus).toEqual(blueBaseline)
+        expect(overlayOf(model, BLUE).reference).toBe(true)
+        expect(overlayOf(model, RUNNER)).toMatchObject({ versus: null, lane: null })
+        expect(overlayOf(model, REFERENCE).reference).toBe(false)
+    })
+
+    it('flags a video not from UTRecorder as an older video, with its offset and frame rate', () => {
+        const videos = new Map([[RUNNER, { ...video(RUNNER, 'democonverter'), fps: 25 }], [REFERENCE, video(REFERENCE)]])
+        const model = compose([runner, reference], { query: `runs=${RUNNER},${REFERENCE}&off=${RUNNER}:-120`, comparisons: refused, videos })
+
+        expect(overlayOf(model, RUNNER)).toMatchObject({ olderVideo: true, offsetMs: -120, fps: 25, badges: ['Checkpoints only'] })
+        expect(overlayOf(model, REFERENCE)).toMatchObject({ olderVideo: false, offsetMs: 0 })
+    })
+
+    it('reads the frame rate as 30 for a video that does not report one', () => {
+        const videos = new Map([[RUNNER, { ...video(RUNNER, 'democonverter'), fps: null }], [REFERENCE, video(REFERENCE)]])
+
+        expect(overlayOf(compose([runner, reference], { videos }), RUNNER).fps).toBe(30)
     })
 
     it('has no overlay for a data-only run, and forbids removing the only run', () => {
@@ -125,7 +157,7 @@ describe('the live readout on a tile', () => {
         expect(tileReadout(overlay, { seconds: 11.83, playing: false }).delta).toMatchObject({ label: '−0.512', tone: 'ahead' })
     })
 
-    it('shows no delta on a reference tile, where the REF pin stands instead', () => {
+    it('shows no delta on a reference tile, where the Baseline tag stands instead', () => {
         const overlay = overlayOf(compose([runner, reference], { comparisons: aligned }), REFERENCE)
 
         expect(tileReadout(overlay, { seconds: 5, playing: true })).toEqual({ delta: null, flash: null })
@@ -193,32 +225,36 @@ describe('the sector flash', () => {
 })
 
 describe('the audio choice', () => {
-    it('is muted until a tile is chosen, and only one tile is ever audible', () => {
+    it('is muted until a tile is chosen, and several tiles can be audible at once', () => {
         const { race } = compose([runner, reference])
 
-        expect(audibleRun(race, null)).toBeNull()
-        const first = chooseAudio(race, null, RUNNER)
-        expect(first).toBe(RUNNER)
-        expect(chooseAudio(race, first, REFERENCE)).toBe(REFERENCE)
+        expect(audibleRuns(race, null)).toEqual([])
+        const first = toggleAudio(race, [], RUNNER)
+        expect(first).toEqual([RUNNER])
+        expect(toggleAudio(race, first, REFERENCE)).toEqual([RUNNER, REFERENCE])
     })
 
-    it('mutes everything when the audible tile is chosen again', () => {
+    it('mutes only the tile that is chosen again', () => {
         const { race } = compose([runner, reference])
 
-        expect(chooseAudio(race, RUNNER, RUNNER)).toBeNull()
+        expect(toggleAudio(race, [RUNNER, REFERENCE], RUNNER)).toEqual([REFERENCE])
     })
 
     it('cannot be given to a data-only run', () => {
         const { race } = compose([runner, reference], { query: `runs=${RUNNER},${REFERENCE}&data=${RUNNER}` })
 
-        expect(chooseAudio(race, REFERENCE, RUNNER)).toBe(REFERENCE)
-        expect(chooseAudio(race, null, RUNNER)).toBeNull()
+        expect(toggleAudio(race, [REFERENCE], RUNNER)).toEqual([REFERENCE])
+        expect(toggleAudio(race, [], RUNNER)).toEqual([])
     })
 
-    it('falls silent when the audible run loses its tile', () => {
+    it('drops a run that loses its tile', () => {
         const { race } = compose([runner, reference], { query: `runs=${RUNNER},${REFERENCE}&data=${RUNNER}` })
 
-        expect(audibleRun(race, RUNNER)).toBeNull()
-        expect(audibleRun(race, REFERENCE)).toBe(REFERENCE)
+        expect(audibleRuns(race, [RUNNER, REFERENCE])).toEqual([REFERENCE])
+    })
+
+    it('solos the focused tile unless it is already audible', () => {
+        expect(audioOnFocus([RUNNER], REFERENCE)).toEqual([REFERENCE])
+        expect(audioOnFocus([RUNNER, REFERENCE], REFERENCE)).toEqual([RUNNER, REFERENCE])
     })
 })

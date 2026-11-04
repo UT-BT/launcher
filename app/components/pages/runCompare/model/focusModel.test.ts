@@ -96,13 +96,19 @@ describe('cycling the audio', () => {
     it('goes from muted through every video tile in stage order and back to muted', () => {
         const { race } = compose(null, `runs=${A},${B},${C},${D}&data=${B}`)
 
-        const order = [null, A, C, D, null]
-        order.slice(0, -1).forEach((audible, i) => expect(nextAudio(race, audible)).toBe(order[i + 1]))
+        const order = [[], [A], [C], [D], []]
+        order.slice(0, -1).forEach((audible, i) => expect(nextAudio(race, audible)).toEqual(order[i + 1]))
     })
 
     it('starts from the first tile when the chosen run has no tile', () => {
         const { race } = compose(null, `runs=${A},${B},${C},${D}&data=${B}`)
 
-        expect(nextAudio(race, B)).toBe(A)
+        expect(nextAudio(race, [B])).toEqual([A])
+    })
+
+    it('moves on from the run turned on last when several play at once', () => {
+        const { race } = compose(null, `runs=${A},${B},${C},${D}&data=${B}`)
+
+        expect(nextAudio(race, [D, A])).toEqual([C])
     })
 })

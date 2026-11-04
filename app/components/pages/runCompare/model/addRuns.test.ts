@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { LeaderboardEntry, ReplayVideo } from '@/app/utils/api'
 import type { SoloRun } from '../loading/soloRuns'
-import { addRunsEdit, addRunsModel, holdWhileAdding, IN_COMPARISON, NO_FILTERS, toggleRunEdit, VIDEO, type AddRunsFilters } from './addRuns'
+import { activeFilters, addRunsEdit, addRunsModel, holdWhileAdding, NO_FILTERS, toggleRunEdit, type AddRunsFilters } from './addRuns'
 import { composeCompareModel } from './compareModel'
 import { RUN_LIMIT_REACHED } from './setEdits'
 
@@ -88,29 +88,29 @@ function chip(query: string, id: string, options: Parameters<typeof addRuns>[1] 
 }
 
 describe('quick-add chips', () => {
-    it('WR targets the fastest verified run', () => {
+    it('World Record targets the fastest verified run', () => {
         const entries = [entry(IDS[9], 65, { verified: false }), ...BOARD]
-        expect(chip(`runs=${IDS[3]}`, 'wr', { entries })).toMatchObject({ label: 'WR', capIds: [IDS[0]], disabled: false })
+        expect(chip(`runs=${IDS[3]}`, 'wr', { entries })).toMatchObject({ label: 'World Record', capIds: [IDS[0]], disabled: false })
     })
 
-    it('WR is disabled, not hidden, when the record is already in the comparison', () => {
+    it('World Record is disabled, not hidden, when the record is already in the comparison', () => {
         expect(chip(`runs=${IDS[0]}`, 'wr')).toMatchObject({ capIds: [IDS[0]], disabled: true })
     })
 
-    it('Your PB shows only when signed in and targets the player’s fastest run', () => {
+    it('Your Best shows only when signed in and targets the player’s fastest run', () => {
         const entries = [...BOARD, entry(IDS[7], 77, { user: userOf(IDS[4]) })]
         expect(chip(`runs=${IDS[0]}`, 'pb', { entries })).toBeUndefined()
-        expect(chip(`runs=${IDS[0]}`, 'pb', { entries, userId: userOf(IDS[4]) })).toMatchObject({ label: 'Your PB', capIds: [IDS[7]], disabled: false })
+        expect(chip(`runs=${IDS[0]}`, 'pb', { entries, userId: userOf(IDS[4]) })).toMatchObject({ label: 'Your Best', capIds: [IDS[7]], disabled: false })
     })
 
-    it('Your PB is disabled when the player has no run on the map', () => {
+    it('Your Best is disabled when the player has no run on the map', () => {
         expect(chip(`runs=${IDS[0]}`, 'pb', { userId: '799999999999999999' })).toMatchObject({ capIds: [], disabled: true })
     })
 
     it('next faster and next slower sit around the default reference, the fastest run of the set', () => {
         const query = `runs=${IDS[4]},${IDS[2]}`
-        expect(chip(query, 'faster')).toMatchObject({ label: 'Next faster', capIds: [IDS[1]], disabled: false })
-        expect(chip(query, 'slower')).toMatchObject({ label: 'Next slower', capIds: [IDS[3]], disabled: false })
+        expect(chip(query, 'faster')).toMatchObject({ label: 'Next Faster', capIds: [IDS[1]], disabled: false })
+        expect(chip(query, 'slower')).toMatchObject({ label: 'Next Slower', capIds: [IDS[3]], disabled: false })
     })
 
     it('next faster and next slower follow a pinned reference', () => {
@@ -158,10 +158,23 @@ describe('leaderboard rows', () => {
         expect(ids(model.rows)).toEqual([IDS[3], IDS[0], IDS[1], IDS[2], IDS[4], IDS[5]])
         expect(model.reference).toBe(IDS[3])
         expect(model.rows.map(row => row.reference)).toEqual([true, false, false, false, false, false])
-        expect(model.rows[0].time).toBe('1:16.000')
+        expect(model.rows[0].time).toBe('01:16.000')
     })
 
-    it('badge what each run gives: video, Replay or Zones, its side and whether it is in', () => {
+    it('number each row by its place on the map, the pinned reference included', () => {
+        const entries = [entry(IDS[9], 60, { disallowed: true }), ...[...BOARD].reverse()]
+        const model = addRuns(`runs=${IDS[3]},${IDS[4]}`, { entries })
+        expect(model.rows.map(row => [row.capId, row.rank])).toEqual([
+            [IDS[3], 4],
+            [IDS[0], 1],
+            [IDS[1], 2],
+            [IDS[2], 3],
+            [IDS[4], 5],
+            [IDS[5], 6],
+        ])
+    })
+
+    it('note only what a run lacks: no video, no ghost, or neither ghost nor zones', () => {
         const entries = [
             entry(IDS[0], 70),
             entry(IDS[1], 72, { has_ghost: false, team: BLUE }),
@@ -169,13 +182,21 @@ describe('leaderboard rows', () => {
             entry(IDS[3], 76, { has_ghost: false, zone_checkpoints: ';', team: '' as unknown as number }),
         ]
         const videos = new Map([[IDS[0], video(IDS[0])], [IDS[1], null]])
-        const badges = Object.fromEntries(addRuns(`runs=${IDS[0]}`, { entries, videos }).rows.map(row => [row.capId, row.badges]))
-        expect(badges).toEqual({
-            [IDS[0]]: [VIDEO, 'Replay', 'Set on Red', IN_COMPARISON],
-            [IDS[1]]: ['No video', 'Zones', 'Set on Blue'],
-            [IDS[2]]: ['Set on Red'],
-            [IDS[3]]: [],
-        })
+        const rows = addRuns(`runs=${IDS[0]}`, { entries, videos }).rows
+        expect(rows.map(row => [row.capId, row.video, row.side, row.inComparison, row.badges])).toEqual([
+            [IDS[0], 'video', RED, true, []],
+            [IDS[1], 'none', BLUE, false, ['Graph only', 'Checkpoints only']],
+            [IDS[2], 'pending', RED, false, ['Final time only']],
+            [IDS[3], 'pending', null, false, ['Final time only']],
+        ])
+    })
+
+    it('say the leaderboard mixes sides only when both sides have a run', () => {
+        expect(addRuns(`runs=${IDS[0]}`).mixed).toBe(false)
+        const noSide = [...BOARD, entry(IDS[6], 82, { team: null })]
+        expect(addRuns(`runs=${IDS[0]}`, { entries: noSide }).mixed).toBe(false)
+        const both = BOARD.map(row => (row.id === IDS[2] ? { ...row, team: BLUE } : row))
+        expect(addRuns(`runs=${IDS[0]}`, { entries: both }).mixed).toBe(true)
     })
 
     it('search by player is case-insensitive over the rows', () => {
@@ -184,19 +205,39 @@ describe('leaderboard rows', () => {
         expect(ids(addRuns(`runs=${IDS[0]}`, { filters: { search: 'player 2' } }).rows)).toEqual([IDS[1]])
     })
 
-    it('filter by has video, has replay and team colour', () => {
+    it('filter by video source, by run data and by side', () => {
         const entries = [
             entry(IDS[0], 70),
-            entry(IDS[1], 72, { has_ghost: false, team: BLUE }),
-            entry(IDS[2], 74, { team: BLUE }),
+            entry(IDS[1], 72, { has_ghost: false, zone_checkpoints: 'Door;Hall', team: BLUE }),
+            entry(IDS[2], 74, { has_ghost: false, zone_checkpoints: '', team: BLUE }),
             entry(IDS[3], 76),
         ]
-        const videos = new Map([[IDS[0], video(IDS[0])], [IDS[1], video(IDS[1])], [IDS[2], null]])
+        const older: ReplayVideo = { ...video(IDS[1]), source: 'democonverter' }
+        const videos = new Map<string, ReplayVideo | null>([[IDS[0], video(IDS[0])], [IDS[1], older], [IDS[2], null]])
         const rowsWith = (filters: Partial<AddRunsFilters>) => ids(addRuns(`runs=${IDS[0]}`, { entries, videos, filters }).rows)
-        expect(rowsWith({ hasVideo: true })).toEqual([IDS[0], IDS[1]])
-        expect(rowsWith({ hasReplay: true })).toEqual([IDS[0], IDS[2], IDS[3]])
+
+        expect(rowsWith({ video: 'video' })).toEqual([IDS[0], IDS[1]])
+        expect(rowsWith({ video: 'utrecorder' })).toEqual([IDS[0]])
+        expect(rowsWith({ video: 'democonverter' })).toEqual([IDS[1]])
+        expect(rowsWith({ video: 'none' })).toEqual([IDS[2]])
+        expect(rowsWith({ data: 'replay' })).toEqual([IDS[0], IDS[3]])
+        expect(rowsWith({ data: 'zones' })).toEqual([IDS[1]])
+        expect(rowsWith({ data: 'time' })).toEqual([IDS[2]])
         expect(rowsWith({ colour: 'blue' })).toEqual([IDS[1], IDS[2]])
-        expect(rowsWith({ colour: 'red', hasVideo: true })).toEqual([IDS[0]])
+        expect(rowsWith({ colour: 'red', video: 'video' })).toEqual([IDS[0]])
+        expect(activeFilters({ ...NO_FILTERS, video: 'none', data: 'zones' })).toBe(2)
+        expect(activeFilters(NO_FILTERS)).toBe(0)
+    })
+
+    it('tags a DemoConverter video as an older video', () => {
+        const older: ReplayVideo = { ...video(IDS[1]), source: 'democonverter' }
+        const rows = addRuns(`runs=${IDS[0]}`, { videos: new Map([[IDS[0], video(IDS[0])], [IDS[1], older]]) }).rows
+        expect(rows.filter(row => row.older).map(row => row.capId)).toEqual([IDS[1]])
+    })
+
+    it('marks a picked selection instead of the set when the start view picks runs', () => {
+        const view = addRunsModel({ entries: BOARD, model: modelOf('map=CTF-BT-NaliRealm', BOARD), videos: new Map(), userId: null, filters: NO_FILTERS, picked: [IDS[2]] })
+        expect(view.rows.filter(row => row.inComparison).map(row => row.capId)).toEqual([IDS[2]])
     })
 })
 
@@ -219,11 +260,11 @@ describe('adding and removing from the drawer', () => {
         expect(addRunsEdit(modelOf(`runs=${nine}`, all), [IDS[10], IDS[11]], new Map()).outcome).toEqual({ query: null, blocked: RUN_LIMIT_REACHED })
     })
 
-    it('a run past eight video tiles joins as data-only with a one-line note', () => {
+    it('a run past eight video tiles joins as a graph only with a one-line note', () => {
         const eight = IDS.slice(0, 8).join(',')
         const change = addRunsEdit(modelOf(`runs=${eight}`, TEN), [IDS[8]], new Map())
         expect(change.outcome.query).toBe(`runs=${eight},${IDS[8]}`)
-        expect(change.note).toBe('Joined as data-only: 8 videos already play.')
+        expect(change.note).toBe('Joined as a graph only: 8 videos already play.')
         const after = modelOf(change.outcome.query!, TEN)
         expect(after.race.tiles).toHaveLength(8)
         expect(after.race.dataOnly.map(run => run.run.capId)).toEqual([IDS[8]])
@@ -232,11 +273,11 @@ describe('adding and removing from the drawer', () => {
     it('counts only the runs that would want a tile toward the note', () => {
         const seven = IDS.slice(0, 7).join(',')
         const change = addRunsEdit(modelOf(`runs=${seven}`, TEN), [IDS[7], IDS[8], IDS[9]], new Map([[IDS[8], null]]))
-        expect(change.note).toBe('Joined as data-only: 8 videos already play.')
+        expect(change.note).toBe('Joined as a graph only: 8 videos already play.')
         expect(addRunsEdit(modelOf(`runs=${seven}`, TEN), [IDS[7]], new Map()).note).toBeNull()
     })
 
-    it('a run without a video joins with no note, and its lane says No video', () => {
+    it('a run without a video joins with no note, and its lane says Graph only', () => {
         const change = addRunsEdit(modelOf(`runs=${IDS[0]}`), [IDS[1]], new Map([[IDS[1], null]]))
         expect(change.note).toBeNull()
         const runs = BOARD.map(runOf)
@@ -246,7 +287,7 @@ describe('adding and removing from the drawer', () => {
             videos: new Map([[IDS[0], video(IDS[0])], [IDS[1], null]]),
         })
         expect(after.race.tiles.map(slot => slot.id)).toEqual([IDS[0]])
-        expect(after.lanes.lanes.find(lane => lane.capId === IDS[1])?.badges).toContain('No video')
+        expect(after.lanes.lanes.find(lane => lane.capId === IDS[1])?.badges).toContain('Graph only')
     })
 
     it('a row toggle adds a run that is out and removes one that is in', () => {

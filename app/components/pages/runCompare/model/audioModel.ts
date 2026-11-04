@@ -1,10 +1,18 @@
 import type { RaceModel } from './raceModel'
 
-export function audibleRun(race: RaceModel, audioFrom: string | null): string | null {
-    return audioFrom !== null && race.tiles.some(tile => tile.id === audioFrom) ? audioFrom : null
+function hasTile(race: RaceModel, capId: string): boolean {
+    return race.tiles.some(tile => tile.id === capId)
 }
 
-export function chooseAudio(race: RaceModel, audible: string | null, capId: string): string | null {
-    if (capId === audible) return null
-    return race.tiles.some(tile => tile.id === capId) ? capId : audible
+export function audibleRuns(race: RaceModel, audioFrom: readonly string[] | null): string[] {
+    return (audioFrom ?? []).filter(capId => hasTile(race, capId))
+}
+
+export function toggleAudio(race: RaceModel, audible: readonly string[], capId: string): string[] {
+    if (audible.includes(capId)) return audible.filter(id => id !== capId)
+    return hasTile(race, capId) ? [...audible, capId] : [...audible]
+}
+
+export function audioOnFocus(audible: readonly string[], capId: string): string[] {
+    return audible.includes(capId) ? [...audible] : [capId]
 }

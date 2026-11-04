@@ -39,7 +39,7 @@ import { SidebarNavItem } from '@/app/components/layout/sidebar/SidebarNavItem'
 import { SidebarReloadApp } from '@/app/components/layout/sidebar/SidebarReloadApp'
 import { SidebarUserCard } from '@/app/components/layout/sidebar/SidebarUserCard'
 import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
-import { readSidebarCollapsed, writeSidebarCollapsed } from '@/app/components/layout/sidebarPreference'
+import { readSidebarCollapsed, THEATER_VIEWS, writeSidebarCollapsed } from '@/app/components/layout/sidebarPreference'
 import { DiagnosticOverlayTrigger } from '@/app/device/diagnostics/DiagnosticOverlayTrigger'
 
 const SIDEBAR_WIDTH_EXPANDED = '16rem'
@@ -75,7 +75,9 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
     const [mobileNavOpen, setMobileNavOpen] = useState(false)
     const isMobileViewport = useDeviceEnvironment(isBelowLg)
     const [collapsePreference, setCollapsePreference] = useState(readSidebarCollapsed)
-    const collapsed = collapsePreference && !isMobileViewport
+    const [theaterExpanded, setTheaterExpanded] = useState(false)
+    const theater = THEATER_VIEWS.has(currentView)
+    const collapsed = !isMobileViewport && (theater ? !theaterExpanded : collapsePreference)
     const mobileMenuButtonRef = useRef<HTMLButtonElement>(null)
     const drawerOpenerRef = useRef<HTMLElement | null>(null)
     const sidebarRef = useRef<HTMLElement>(null)
@@ -141,10 +143,14 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
     }, [isMobileViewport, collapsed])
 
     const toggleCollapsed = useCallback(() => {
+        if (theater) {
+            setTheaterExpanded(expanded => !expanded)
+            return
+        }
         const next = !collapsePreference
         writeSidebarCollapsed(next)
         setCollapsePreference(next)
-    }, [collapsePreference])
+    }, [collapsePreference, theater])
 
     useEffect(() => {
         if (isMobileViewport) return

@@ -51,7 +51,7 @@ describe('focusing a team row', () => {
     it('moves the audio into the row unless it is already there', () => {
         const model = composeVersus(ALIGNED)
 
-        expect(rowAudio(model.race, model.teams, ALIGNED.reference.teamCapId, NIGHTWOLF)).toBe(GXLS)
-        expect(rowAudio(model.race, model.teams, ALIGNED.runner.teamCapId, FIERD)).toBe(FIERD)
+        expect(rowAudio(model.race, model.teams, ALIGNED.reference.teamCapId, [NIGHTWOLF])).toEqual([GXLS])
+        expect(rowAudio(model.race, model.teams, ALIGNED.runner.teamCapId, [FIERD])).toEqual([FIERD])
     })
 })

@@ -5,6 +5,7 @@ import type { LoadedComparisons } from '../loading/comparisons'
 import type { SoloRun } from '../loading/soloRuns'
 import { RUN_COLOURS, type MatrixRow } from './analysisModel'
 import { composeCompareModel } from './compareModel'
+import { gapShade, sectorTable, type SectorView } from './sectorTable'
 
 const SHORT = runCompareFixture('short')
 const SEPARATED = runCompareFixture('separated')
@@ -49,7 +50,7 @@ function video(capId: string): ReplayVideo {
     return { source: 'utrecorder', mp4_url: `https://media.test/${capId}.mp4`, view_url: null, fps: 60 }
 }
 
-function compose(runs: SoloRun[], comparisons: [string, string, CapComparison | null][], query = '', speedRun: string | null = null) {
+function compose(runs: SoloRun[], comparisons: [string, string, CapComparison | null][], query = '', speedRun: string | null = null, side: number | null = null) {
     const loaded: LoadedComparisons = new Map(comparisons.map(([from, to, comparison]) => [`${from}:${to}`, comparison]))
     return composeCompareModel({
         query: `runs=${runs.map(r => r.capId).join(',')}${query}`,
@@ -58,6 +59,7 @@ function compose(runs: SoloRun[], comparisons: [string, string, CapComparison | 
         stageBox: { width: 1920, height: 1080 },
         comparisons: loaded,
         speedRun,
+        side,
     })
 }
 
@@ -116,12 +118,25 @@ describe('the cumulative model', () => {
         expect(model.analysis.runs.map(r => r.rung)).toEqual([null, 'replay'])
     })
 
-    it('measures each side against its own reference and never across sides', () => {
-        const model = compose([runner(), reference(), blueRunner(), blueReference()], [[RUNNER, REFERENCE, SHORT], [BLUE_RUNNER, BLUE_REFERENCE, BLUE]], PIN_BLUE)
-        const { lines, timeOnly } = model.analysis.cumulative
+    it('analyses one side at a time when the sides mix, against that side\'s own reference', () => {
+        const runs = [runner(), reference(), blueRunner(), blueReference()]
+        const comparisons: [string, string, CapComparison][] = [[RUNNER, REFERENCE, SHORT], [BLUE_RUNNER, BLUE_REFERENCE, BLUE]]
+        const red = compose(runs, comparisons, PIN_BLUE, null, 0)
+        const blue = compose(runs, comparisons, PIN_BLUE, null, 1)
 
-        expect(lines.map(line => [line.capId, line.cap[1]])).toEqual([[RUNNER, 512], [BLUE_RUNNER, BLUE.runner.cap_time_ms - BLUE.reference.cap_time_ms]])
-        expect(timeOnly).toEqual([])
+        expect(red.race.sides).toMatchObject({ focus: 0, switchable: true })
+        expect(red.analysis.cumulative.lines.map(line => [line.capId, line.cap[1]])).toEqual([[RUNNER, 512]])
+        expect(red.analysis.runs.map(run => run.capId)).toEqual([RUNNER, REFERENCE])
+        expect(blue.race.sides.focus).toBe(1)
+        expect(blue.analysis.cumulative.lines.map(line => [line.capId, line.cap[1]])).toEqual([[BLUE_RUNNER, BLUE.runner.cap_time_ms - BLUE.reference.cap_time_ms]])
+        expect(blue.analysis.runs.map(run => run.capId)).toEqual([BLUE_RUNNER, BLUE_REFERENCE])
+    })
+
+    it('analyses the side with two or more runs when the other side has one', () => {
+        const model = compose([blueReference(), runner(), reference()], [[RUNNER, REFERENCE, SHORT]], '', null, 1)
+
+        expect(model.race.sides).toMatchObject({ focus: 0, switchable: false })
+        expect(model.analysis.runs.map(run => run.capId)).toEqual([RUNNER, REFERENCE])
     })
 })
 
@@ -141,7 +156,7 @@ describe('the sector matrix', () => {
 
         expect(values(row(rows, 'S1'))).toEqual(['1.500 +0.317', '1.183'])
         expect(values(row(rows, 'S2'))).toEqual(['1.144 −0.039', '1.183'])
-        expect(values(row(rows, 'cap'))).toEqual(['0:12.342 +0.512', '0:11.830'])
+        expect(values(row(rows, 'cap'))).toEqual(['00:12.342 +0.512', '00:11.830'])
     })
 
     it('highlights the best split per sector', () => {
@@ -165,30 +180,111 @@ describe('the sector matrix', () => {
 
         expect(values(row(rows, 'S4'))).toEqual(['1.215 +0.032', '1.183', null, null])
         expect(rows.filter(r => r.kind === 'zone').map(r => r.label)).toEqual(['Door', 'Hall'])
-        expect(values(row(rows, 'zone:Door'))).toEqual([null, '0:03.000', null, null])
-        expect(values(row(rows, 'zone:Hall'))).toEqual([null, '0:07.000', '0:07.900 +0.900', null])
+        expect(values(row(rows, 'zone:Door'))).toEqual([null, '00:03.000', null, null])
+        expect(values(row(rows, 'zone:Hall'))).toEqual([null, '00:07.000', '00:07.900 +0.900', null])
         expect(row(rows, 'zone:Hall').cue).toBe(model.cues.zones[1])
-        expect(values(row(rows, 'cap'))).toEqual(['0:12.342 +0.512', '0:11.830', '0:12.900 +1.070', '0:14.000 +2.170'])
+        expect(values(row(rows, 'cap'))).toEqual(['00:12.342 +0.512', '00:11.830', '00:12.900 +1.070', '00:14.000 +2.170'])
     })
 
-    it('picks the best split on each side against that side\'s reference', () => {
-        const model = compose([runner(), reference(), blueRunner(), blueReference()], [[RUNNER, REFERENCE, SHORT], [BLUE_RUNNER, BLUE_REFERENCE, BLUE]], PIN_BLUE)
+    it('splits the analysed side against its own reference', () => {
+        const model = compose([runner(), reference(), blueRunner(), blueReference()], [[RUNNER, REFERENCE, SHORT], [BLUE_RUNNER, BLUE_REFERENCE, BLUE]], PIN_BLUE, null, 1)
         const s1 = row(model.analysis.matrix, 'S1')
         const blueTenth = Math.round(BLUE.reference.cap_time_ms / 10)
 
-        expect(values(s1).slice(2)).toEqual([
+        expect(values(s1)).toEqual([
             `${(BLUE.sectors[0].split_ms / 1000).toFixed(3)} ${BLUE.sectors[0].delta_split_ms < 0 ? '−' : '+'}${(Math.abs(BLUE.sectors[0].delta_split_ms) / 1000).toFixed(3)}`,
             (blueTenth / 1000).toFixed(3),
         ])
-        expect(best(s1)).toEqual([false, true, BLUE.sectors[0].split_ms < blueTenth, BLUE.sectors[0].split_ms > blueTenth])
+        expect(best(s1)).toEqual([BLUE.sectors[0].split_ms < blueTenth, BLUE.sectors[0].split_ms > blueTenth])
     })
 
-    it('shows another side\'s reference with its race gap at the cap only', () => {
+    it('has nothing to analyse when each side has a single run', () => {
         const model = compose([reference(), blueReference()], [], PIN_BLUE)
-        const rows = model.analysis.matrix
 
-        expect(values(row(rows, 'cap'))[1]).toMatch(/^1:22\.421 \+/)
+        expect(model.analysis.runs.every(run => run.reference)).toBe(true)
         expect(model.analysis.cumulative.lines).toEqual([])
+        expect(model.race.sides.switchable).toBe(false)
+    })
+})
+
+describe('the sector table', () => {
+    function tableOf(model: ReturnType<typeof compose>, view: SectorView | null = null) {
+        return sectorTable(model.analysis.runs, model.analysis.matrix, view)
+    }
+
+    function gaps(table: ReturnType<typeof tableOf>): (string | null)[][] {
+        return table.rows.map(r => r.cells.map(cell => cell?.delta?.label ?? null))
+    }
+
+    it('has one row per run and one column per sector, with each run\'s gap in the sector', () => {
+        const table = tableOf(compose([runner(), reference()], [[RUNNER, REFERENCE, SHORT]]))
+
+        expect(table.view).toBe('sectors')
+        expect(table.views).toEqual(['sectors'])
+        expect(table.columns.map(column => column.label)).toEqual(['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10'])
+        expect(table.rows.map(r => r.run.capId)).toEqual([RUNNER, REFERENCE])
+        expect(gaps(table)[0].slice(0, 2)).toEqual(['+0.317', '−0.039'])
+        expect(table.rows[0].total).toMatchObject({ value: '00:12.342', delta: { label: '+0.512' } })
+        expect(table.cap?.kind).toBe('cap')
+    })
+
+    it('gives the baseline no splits, since each of its sectors is a tenth of its run', () => {
+        const [, baseline] = tableOf(compose([runner(), reference()], [[RUNNER, REFERENCE, SHORT]])).rows
+
+        expect(baseline.run.reference).toBe(true)
+        expect(baseline.sectorMs).toBe(1183)
+        expect(baseline.total).toMatchObject({ value: '00:11.830', delta: null })
+    })
+
+    it('scales the shading by the largest sector gap', () => {
+        const table = tableOf(compose([runner(), reference()], [[RUNNER, REFERENCE, SHORT]]))
+        const largest = Math.max(...table.rows[0].cells.map(cell => Math.abs(cell?.delta?.ms ?? 0)))
+
+        expect(table.scaleMs).toBe(largest)
+        expect(gapShade(largest, table.scaleMs)).toBe(1)
+        expect(gapShade(largest / 2, table.scaleMs)).toBe(0.5)
+        expect(gapShade(-largest * 3, table.scaleMs)).toBe(1)
+    })
+
+    it('offers Checkpoints beside Sectors when a run only has zone crossings, and notes what each run lacks', () => {
+        const model = compose([runner(), reference(), zoned(), timed()], [[RUNNER, REFERENCE, SHORT]])
+        const sectors = tableOf(model)
+        const zones = tableOf(model, 'zones')
+
+        expect(sectors.views).toEqual(['sectors', 'zones'])
+        expect(sectors.rows.map(r => r.note)).toEqual([null, null, 'Checkpoints only', 'Final time only'])
+        expect(zones.view).toBe('zones')
+        expect(zones.columns.map(column => column.label)).toEqual(['Door', 'Hall'])
+        expect(gaps(zones)).toEqual([[null, null], [null, null], [null, '+0.900'], [null, null]])
+        expect(zones.rows.map(r => r.note)).toEqual(['Sector times only', null, null, 'Final time only'])
+        expect(zones.rows[1].cells.map(cell => cell?.value ?? null)).toEqual(['00:03.000', '00:07.000'])
+        expect(zones.rows[1].sectorMs).toBeNull()
+    })
+
+    it('opens on Checkpoints when no run has sector times, and falls back from a view that is gone', () => {
+        const model = compose([reference(), zoned()], [])
+
+        expect(tableOf(model).views).toEqual(['zones'])
+        expect(tableOf(model, 'sectors').view).toBe('zones')
+        expect(tableOf(compose([runner(), reference()], [[RUNNER, REFERENCE, SHORT]]), 'zones').view).toBe('sectors')
+    })
+
+    it('marks the fastest only when a side has two runs to rank', () => {
+        const pair = tableOf(compose([runner(), reference()], [[RUNNER, REFERENCE, SHORT]]))
+        const twoRunners = tableOf(compose([runner(), reference(), run('a7a7a7a7-0000-4000-8000-0000000000a7', 12.5)], [[RUNNER, REFERENCE, SHORT], ['a7a7a7a7-0000-4000-8000-0000000000a7', REFERENCE, SHORT]]))
+
+        expect(pair.ranked).toBe(false)
+        expect(pair.rows.flatMap(r => r.cells).some(cell => cell?.best)).toBe(false)
+        expect(twoRunners.ranked).toBe(true)
+        expect(twoRunners.rows.flatMap(r => r.cells).some(cell => cell?.best)).toBe(true)
+    })
+
+    it('holds one side, so it leaves the side to the note above it', () => {
+        const mixed = tableOf(compose([runner(), reference(), blueRunner(), blueReference()], [[RUNNER, REFERENCE, SHORT], [BLUE_RUNNER, BLUE_REFERENCE, BLUE]], PIN_BLUE, null, 0))
+
+        expect(mixed.rows.map(r => r.sideLabel)).toEqual([null, null])
+        expect(mixed.rows.map(r => r.sectorMs !== null)).toEqual([false, true])
+        expect(tableOf(compose([runner(), reference()], [[RUNNER, REFERENCE, SHORT]])).rows.map(r => r.sideLabel)).toEqual([null, null])
     })
 })
 
@@ -214,11 +310,11 @@ describe('the speed selector', () => {
         expect(model.race.layout.placed.find(placed => placed.slot.id === RUNNER)?.slot.highlighted).toBe(true)
     })
 
-    it('measures a chosen run on the other side against its own side\'s reference', () => {
-        const model = compose([runner(), reference(), blueRunner(), blueReference()], [[RUNNER, REFERENCE, SHORT], [BLUE_RUNNER, BLUE_REFERENCE, BLUE]], PIN_BLUE, BLUE_RUNNER)
+    it('offers the analysed side\'s runs, measured against that side\'s reference', () => {
+        const model = compose([runner(), reference(), blueRunner(), blueReference()], [[RUNNER, REFERENCE, SHORT], [BLUE_RUNNER, BLUE_REFERENCE, BLUE]], PIN_BLUE, BLUE_RUNNER, 1)
         const { speed } = model.analysis
 
-        expect(speed.options.map(option => option.capId)).toEqual([RUNNER, BLUE_RUNNER])
+        expect(speed.options.map(option => option.capId)).toEqual([BLUE_RUNNER])
         expect(speed.chosen).toBe(BLUE_RUNNER)
         expect(speed.reference?.capId).toBe(BLUE_REFERENCE)
         expect(speed.highlighted).toBe(BLUE_RUNNER)

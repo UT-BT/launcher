@@ -201,6 +201,8 @@ segments and anything else under `/events/:slug` stays on `event-detail`.
 and puts the search string minus its `?` into `params.compare` (left out when empty), and
 `viewToPath('run-compare', params)` writes `/compare?<compare>`. The compare page parses and
 normalises the query itself; the route layer passes it through untouched, `utm_*` and all.
+A bare `/compare` (or `/compare?map=<map>`) is the page's start view, where a map and its runs
+are picked ([run-compare.md](features/run-compare.md#start-view)).
 
 On web (`useUrlSync.ts`; on desktop `useUrlSync` returns `null` and `pushUrlForEntry`
 no-ops) the in-memory stack is master and browser history mirrors it. The bookkeeping lives in
@@ -453,7 +455,10 @@ Title, the collapsed choice) and passes it down:
 so the web entry chunk can drop desktop-only markup.
 
 **Modes.** At `lg` and up the rail is expanded (16rem) or collapsed (5rem). The effective
-mode is `collapsePreference && !isMobileViewport`. Below `lg` the sidebar is always the
+mode is `collapsePreference && !isMobileViewport`, except on a theater view (`THEATER_VIEWS` in
+`sidebarPreference.ts`: the compare page), which opens collapsed whatever the preference; there
+the toggle expands it for the session (`theaterExpanded`) and never writes the preference. Below
+`lg` the sidebar is always the
 full drawer, the toggle isn't rendered and the shortcut isn't attached; the stored choice
 returns when the window is wide again. `AppLayout` publishes the width as
 `--sidebar-width` on `document.documentElement` (`16rem`, `5rem`, `0px` below `lg`) in a
@@ -463,7 +468,7 @@ instant.
 **Preference.** `utbt:sidebarCollapsed:v1` in `app/components/layout/sidebarPreference.ts`,
 device-local. `readSidebarCollapsed()` is the `useState` initialiser, so a collapsed rail
 paints collapsed on the first frame; only a stored `true` counts. Only `toggleCollapsed`
-writes it.
+writes it, and only outside a theater view.
 
 **Toggle.** A `button` named "Collapse sidebar" / "Expand sidebar" with
 `aria-expanded={!collapsed}` and `aria-controls="app-navigation"` (the `aside`'s id), and

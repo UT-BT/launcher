@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { liveDelta, type Lane } from './laneModel'
 import { tileOverlays } from './overlayModel'
-import { TEAM_HEADER_HEIGHT } from './teamModel'
+import { pairRouteNote, pairSummaries } from './teamAnalysisModel'
+import { TEAM_HEADER_HEIGHT, TEAM_HEADER_WIDTH } from './teamModel'
 import { teamDeltaAt } from './teamVersus'
 import { alignedComparisons, composeTeams as compose, composeVersus, testTeam as team, versusOf, WIDE } from './teamTestRuns'
 import type { CompareModel } from './compareModel'
@@ -9,6 +10,7 @@ import type { CompareModel } from './compareModel'
 const ALIGNED = versusOf('teamAligned')
 const MIXED = versusOf('teamMixed')
 const OPPOSITE = versusOf('teamOppositeSides')
+const THEATER = { width: 1800, height: 650 }
 
 const [GXLS, NETTLEZ] = ALIGNED.reference.members.map(run => run.capId)
 const [FIERD, NIGHTWOLF] = ALIGNED.runner.members.map(run => run.capId)
@@ -33,7 +35,7 @@ function gapAt(lane: Lane | null, seconds: number): number | null {
 
 describe('the pairing grid', () => {
     it('puts each paired member in its reference partner\'s column, whatever its finish order', () => {
-        const model = composeVersus(ALIGNED)
+        const model = composeVersus(ALIGNED, { stageBox: THEATER })
         const rects = rectsOf(model)
 
         expect(ALIGNED.runner.members.map(run => run.alias)).toEqual(['fierd_6', 'Nightwolf`'])
@@ -48,7 +50,7 @@ describe('the pairing grid', () => {
     })
 
     it('puts unpaired members at the row end, and a hidden paired member leaves its column empty', () => {
-        const model = composeVersus(MIXED)
+        const model = composeVersus(MIXED, { stageBox: THEATER })
         const rects = rectsOf(model)
 
         expect(model.race.layout).toMatchObject({ columns: 3, rows: 2 })
@@ -57,7 +59,7 @@ describe('the pairing grid', () => {
         expect(rects.get(PATRIK)!.x).toBe(rects.get(NAMELESS)!.x)
         expect(rects.get(PATRIK)!.x).toBeGreaterThan(rects.get(KRAD)!.x)
 
-        const hidden = composeVersus(MIXED, {}, `${MIXED.query}&data=${KRAD}`)
+        const hidden = composeVersus(MIXED, { stageBox: THEATER }, `${MIXED.query}&data=${KRAD}`)
         const placed = rectsOf(hidden)
         expect(placed.has(KRAD)).toBe(false)
         expect(placed.get(GIORGIO)!.x).toBe(placed.get(BUN)!.x)
@@ -67,7 +69,7 @@ describe('the pairing grid', () => {
     })
 
     it('lines members up in finish order until the team read answers', () => {
-        const model = composeVersus(ALIGNED, { teamComparisons: new Map() })
+        const model = composeVersus(ALIGNED, { teamComparisons: new Map(), stageBox: THEATER })
         const rects = rectsOf(model)
 
         expect(rects.get(FIERD)!.x).toBe(rects.get(GXLS)!.x)
@@ -110,18 +112,24 @@ describe('the pairing grid', () => {
             const header = model.teams.rows[i].header!
             expect(second.x).toBe(first.x)
             expect(second.y).toBeGreaterThan(first.y)
-            expect(header).toMatchObject({ x: first.x, y: first.y - TEAM_HEADER_HEIGHT, width: first.width, height: TEAM_HEADER_HEIGHT })
+            expect(header).toMatchObject({ x: first.x, y: first.y - TEAM_HEADER_HEIGHT - 4, width: first.width, height: TEAM_HEADER_HEIGHT })
         })
         expect(rects.get(teams[1].members[0].capId)!.x).toBeGreaterThan(rects.get(teams[0].members[0].capId)!.x)
-        const inRows = ((WIDE.height - 4 * TEAM_HEADER_HEIGHT - 3 * 4) / 4) * (16 / 9)
+        const inRows = Math.min((WIDE.width - TEAM_HEADER_WIDTH - 4 - 4) / 2, ((WIDE.height - 3 * 4) / 4) * (16 / 9))
         expect(model.race.layout.tileWidth).toBeGreaterThan(inRows)
     })
 
-    it('keeps teams in rows when both orientations give the same tile', () => {
-        const model = composeVersus(ALIGNED)
+    it('keeps teams in rows when that gives the larger tile, each header in a column on the left of its row', () => {
+        const model = composeVersus(ALIGNED, { stageBox: THEATER })
+        const rects = rectsOf(model)
+
         expect(model.teams.transposed).toBe(false)
-        expect(model.teams.rows.map(row => row.header!.width)).toEqual([model.race.layout.columns * model.race.layout.tileWidth + 4, model.race.layout.columns * model.race.layout.tileWidth + 4])
+        model.teams.rows.forEach(row => {
+            const first = row.team.members.map(run => rects.get(run.capId)!).sort((a, b) => a.x - b.x)[0]
+            expect(row.header).toEqual({ x: first.x - 4 - TEAM_HEADER_WIDTH, y: first.y, width: TEAM_HEADER_WIDTH, height: first.height })
+        })
     })
+
 })
 
 describe('deltas against the paired member', () => {
@@ -135,10 +143,25 @@ describe('deltas against the paired member', () => {
         ])
         expect(lane).toMatchObject({ rung: 'replay', reference: false })
         expect(lane.trace.kind).toBe('strip')
-        expect(lane.badges).toEqual(['Replay'])
+        expect(lane.badges).toEqual([])
         expect(gapAt(lane, 20)).not.toBeNull()
         expect(laneOf(model, GXLS).trace.kind).toBe('none')
         expect(composeVersus(MIXED).lanes.requests).toEqual([])
+    })
+
+    it('says on each tile which member its delta is against: its pair partner, or nobody when unpaired', () => {
+        const aligned = tileOverlays(composeVersus(ALIGNED))
+        expect([NIGHTWOLF, FIERD].map(capId => aligned.get(capId)?.versus?.capId)).toEqual([GXLS, NETTLEZ])
+
+        const mixed = tileOverlays(composeVersus(MIXED))
+        expect(mixed.get(GIORGIO)?.versus?.capId).toBe(BUN)
+        expect(mixed.get(PATRIK)?.versus).toBeNull()
+        expect(mixed.get(GIORGIO)?.reference).toBe(false)
+    })
+
+    it('follows a pairing override on the tile', () => {
+        const overlays = tileOverlays(composeVersus(ALIGNED, {}, `${ALIGNED.query}&pair=${FIERD}:${GXLS},${NIGHTWOLF}:${NETTLEZ}`))
+        expect([FIERD, NIGHTWOLF].map(capId => overlays.get(capId)?.versus?.capId)).toEqual([GXLS, NETTLEZ])
     })
 
     it('waits for a pending pairwise read, and drops a failed one to the zone delta', () => {
@@ -156,7 +179,7 @@ describe('deltas against the paired member', () => {
         const lane = laneOf(composeVersus(MIXED), KRAD)
 
         expect(lane.rung).toBe('zones')
-        expect(lane.badges).toEqual(['Zones'])
+        expect(lane.badges).toEqual(['Checkpoints only'])
         expect(gapAt(lane, 5)).toBe(0)
         expect(gapAt(lane, 11)).toBe(10402 - 9700)
         expect(gapAt(lane, 67)).toBe(66157 - 65990)
@@ -165,7 +188,7 @@ describe('deltas against the paired member', () => {
     it('shows a pair on different routes as such, with the gap only at the shared anchors and no curve', () => {
         const lane = laneOf(composeVersus(MIXED), GIORGIO)
 
-        expect(lane.badges).toEqual(['Zones', 'Different route'])
+        expect(lane.badges).toEqual(['Different route', 'Checkpoints only'])
         expect(lane.curves).toEqual([])
         expect(lane.bands).toEqual([])
         expect([5, 10, 30, 50, 66].map(seconds => gapAt(lane, seconds))).toEqual([0, 359, 462, 463, 65453 - 64870])
@@ -175,7 +198,7 @@ describe('deltas against the paired member', () => {
         const model = composeVersus(MIXED)
         const lane = laneOf(model, PATRIK)
 
-        expect(lane.badges).toEqual(['Time only'])
+        expect(lane.badges).toEqual(['Final time only'])
         expect([5, 30, 70].map(seconds => gapAt(lane, seconds))).toEqual([null, null, null])
         expect(laneOf(model, NAMELESS).trace.kind).toBe('none')
     })
@@ -233,14 +256,14 @@ describe('the team analysis', () => {
 
         expect(splits.map(row => row.label)).toEqual(['Gate', 'Crane', 'Furnace', 'Flag', 'Cap'])
         const crane = splits[1]
-        expect(crane.cells[reference]).toMatchObject({ time: '0:26.810', delta: null })
+        expect(crane.cells[reference]).toMatchObject({ time: '00:26.810', delta: null })
         expect(crane.cells[reference]?.member?.capId).toBe(FIERD_2)
-        expect(crane.cells[runner]).toMatchObject({ time: '0:27.402', delta: { ms: 592 } })
+        expect(crane.cells[runner]).toMatchObject({ time: '00:27.402', delta: { ms: 592 } })
         expect(crane.cells[runner]?.member?.capId).toBe(GIORGIO)
         expect(crane.cue?.key).toBe('zone:Crane')
         const cap = splits[4]
         expect(cap).toMatchObject({ kind: 'cap', cue: null, atMs: 66841 })
-        expect(cap.cells[runner]).toMatchObject({ time: '1:07.116', delta: { ms: 275 } })
+        expect(cap.cells[runner]).toMatchObject({ time: '01:07.116', delta: { ms: 275 } })
         expect(cap.cells[runner]?.member?.capId).toBe(PATRIK)
         expect(cap.cells[reference]?.member?.capId).toBe(NAMELESS)
     })
@@ -258,7 +281,7 @@ describe('the team analysis', () => {
         expect(first.analysis.speed.options.map(option => option.capId)).toEqual([NIGHTWOLF])
     })
 
-    it('gives a zones pair a section on zone deltas, and a pair on different routes a card of its shared anchors', () => {
+    it('gives a zones pair a section on zone deltas, and lists a pair on different routes on its own', () => {
         const { pairs, routes } = composeVersus(MIXED).teamAnalysis
 
         expect(pairs.map(pair => pair.runner.run.capId)).toEqual([KRAD])
@@ -266,15 +289,6 @@ describe('the team analysis', () => {
         expect(routes).toHaveLength(1)
         const [card] = routes
         expect([card.runner.run.capId, card.reference.run.capId]).toEqual([GIORGIO, BUN])
-        expect(card.anchors.map(anchor => [anchor.label, anchor.runner, anchor.reference, anchor.gap.ms])).toEqual([
-            ['Spawn', '0:00.000', '0:00.000', 0],
-            ['Gate', '0:09.871', '0:09.512', 359],
-            ['Crane', '0:27.402', '0:26.940', 462],
-            ['Furnace', '0:44.118', '0:43.655', 463],
-            ['Cap', '1:05.453', '1:04.870', 583],
-        ])
-        expect(card.anchors[0].cue).toBeNull()
-        expect([...card.anchors[2].cue!.runTimesMs]).toEqual([[MIXED.reference.teamCapId, 26940], [MIXED.runner.teamCapId, 27402]])
     })
 
     it('highlights the tile of the pair run chosen for speed', () => {
@@ -288,12 +302,13 @@ describe('teams set on opposite sides', () => {
         const model = composeVersus(OPPOSITE)
         const runner = rowOf(model, OPPOSITE.runner.teamCapId)
 
-        expect(runner.badges).toEqual(['Time only'])
+        expect(runner.badges).toEqual(['Final time only'])
         expect(runner.lane!.trace.kind).toBe('cap')
         expect([30, 68].map(seconds => gapAt(runner.lane, seconds))).toEqual([null, -1874])
         expect(model.cues.points).toEqual([])
         expect(model.lanes.requests).toEqual([])
-        expect(laneOf(model, GIORGIO).badges).toEqual(['Time only', 'Set on Red'])
+        expect(laneOf(model, GIORGIO).badges).toEqual(['Final time only'])
+        expect(laneOf(model, GIORGIO).sideLabel).toBe('Red')
         expect(model.teamAnalysis.splits.map(row => row.label)).toEqual(['Cap'])
         expect(model.teamAnalysis.pairs).toEqual([])
         expect(model.teamAnalysis.routes).toEqual([])
@@ -305,9 +320,9 @@ describe('a failed team read', () => {
         const model = composeVersus(MIXED, { teamComparisons: new Map([[MIXED.key, null]]) })
         const runner = rowOf(model, MIXED.runner.teamCapId)
 
-        expect(runner.badges).toEqual(['Time only'])
+        expect(runner.badges).toEqual(['Final time only'])
         expect([30, 67.2].map(seconds => gapAt(runner.lane, seconds))).toEqual([null, 275])
-        expect(MIXED.runner.members.map(run => laneOf(model, run.capId).badges)).toEqual([['Time only'], ['Time only'], ['Time only']])
+        expect(MIXED.runner.members.map(run => laneOf(model, run.capId).badges)).toEqual([['Final time only'], ['Final time only'], ['Final time only']])
         expect(model.lanes.requests).toEqual([])
         expect(model.cues.points).toEqual([])
         expect(model.teamAnalysis.splits.map(row => row.label)).toEqual(['Cap'])
@@ -317,5 +332,23 @@ describe('a failed team read', () => {
         const model = composeVersus(MIXED, { teamComparisons: new Map() })
         expect(rowOf(model, MIXED.runner.teamCapId).badges).toEqual([])
         expect(laneOf(model, GIORGIO).badges).toEqual([])
+    })
+})
+
+describe('the member pairs list', () => {
+    it('sums up each pair by how much of the run it spent on another line, then the pairs on different routes', () => {
+        const aligned = pairSummaries(composeVersus(ALIGNED).teamAnalysis)
+        expect(aligned.map(summary => [summary.runner.run.capId, summary.reference.run.capId])).toEqual([[NIGHTWOLF, GXLS], [FIERD, NETTLEZ]])
+        expect(aligned.every(summary => summary.route !== 'different' && summary.apartShare >= 0 && summary.apartShare <= 1)).toBe(true)
+
+        const mixed = pairSummaries(composeVersus(MIXED).teamAnalysis)
+        expect(mixed.map(summary => [summary.runner.run.capId, summary.route])).toEqual([[KRAD, 'same'], [GIORGIO, 'different']])
+        expect(pairRouteNote(mixed[1])).toBe('Different routes')
+    })
+
+    it('words the share of the run spent apart', () => {
+        const [summary] = pairSummaries(composeVersus(ALIGNED).teamAnalysis)
+        expect(pairRouteNote({ ...summary, route: 'apart', apartShare: 0.456 })).toBe('Took another line for 46% of the run')
+        expect(pairRouteNote({ ...summary, route: 'same', apartShare: 0.01 })).toBe('Same line')
     })
 })

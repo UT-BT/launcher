@@ -191,10 +191,10 @@ describe('sync by position', () => {
 
         const lane = (capId: string) => model.lanes.lanes.find(entry => entry.capId === capId)!.badges
         const tile = (capId: string) => model.race.tiles.find(entry => entry.id === capId)!.badges
-        expect(lane(ZONED)).toEqual(['Zones', 'Race clock'])
-        expect(tile(ZONED)).toEqual(['Zones', 'Race clock'])
-        expect(lane(RUNNER)).toEqual(['Replay'])
-        expect(lane(REFERENCE)).not.toContain('Race clock')
+        expect(lane(ZONED)).toEqual(['Checkpoints only', 'Plays in race time'])
+        expect(tile(ZONED)).toEqual(['Checkpoints only', 'Plays in race time'])
+        expect(lane(RUNNER)).toEqual([])
+        expect(lane(REFERENCE)).not.toContain('Plays in race time')
     })
 
     it('marks nothing on the race clock', () => {
@@ -202,7 +202,7 @@ describe('sync by position', () => {
 
         expect(model.sync.mode).toBe('race')
         expect(model.sync.raceClock).toEqual([])
-        expect(model.lanes.lanes.flatMap(lane => lane.badges)).not.toContain('Race clock')
+        expect(model.lanes.lanes.flatMap(lane => lane.badges)).not.toContain('Plays in race time')
         expect(model.sync.links.map(link => link.capId)).toEqual([RUNNER])
     })
 

@@ -11,13 +11,14 @@ export function runName(run: Pick<SoloRun, 'alias' | 'user'>): string {
 interface RunIdentityProps {
     run: Identity
     presentation?: 'full' | 'name'
+    withTitle?: boolean
     className?: string
 }
 
-export function RunIdentity({ run, presentation = 'name', className }: RunIdentityProps) {
+export function RunIdentity({ run, presentation = 'name', withTitle = true, className }: RunIdentityProps) {
     return (
         <span inert className={cn('flex min-w-0', className)}>
-            <PlayerInfo userId={run.user} alias={run.alias} title={run.title} size="sm" presentation={presentation} interactive={false} className="min-w-0" />
+            <PlayerInfo userId={run.user} alias={run.alias} title={withTitle ? run.title : null} size="sm" presentation={presentation} interactive={false} className="min-w-0" />
         </span>
     )
 }

@@ -332,6 +332,7 @@ export default function RunDeltaChart({ card, view, onViewChange, referenceLabel
                         width={width}
                         height={height}
                         description={speedDescription(card, referenceLabel)}
+                        names={{ runner: 'This run', reference: referenceLabel }}
                         onZoomRange={(from, to) => onZoom(rangeZoom(pair, from, to, duration))}
                         onZoomSector={index => onZoom(sectorZoom(pair, card.chart.sectors, index))}
                         onZoomOut={() => onZoom(null)}

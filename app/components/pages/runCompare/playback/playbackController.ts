@@ -1,15 +1,18 @@
 import { RACE_TARGET, type ClockTarget } from './clockTargets'
 import {
-    DRIFT_RESEEK_FRAMES,
+    DRIFT_CATCH_UP_SECONDS,
+    DRIFT_DEADBAND_SECONDS,
+    DRIFT_RATE_MAX_NUDGE,
     FALLBACK_FPS,
     MAX_PLAYBACK_RATE,
     MIN_PLAYBACK_RATE,
     POSITION_CATCH_UP_SECONDS,
     POSITION_RATE_MAX_FACTOR,
     POSITION_RATE_MIN_FACTOR,
-    POSITION_RESEEK_SECONDS,
+    RESEEK_SECONDS,
     SEEK_TOLERANCE_SECONDS,
     SKIP_SECONDS,
+    START_ALIGN_FRAMES,
     START_GATE_LIMIT_SECONDS,
 } from './playbackConstants'
 import type { PlaybackMedia, PlaybackMediaEvent, PlaybackTimeSource } from './playbackMedia'
@@ -152,8 +155,10 @@ export function createPlaybackController({ time }: PlaybackControllerOptions): P
 
     function rateFactorOf(track: Track, gap = 0): number {
         const { slope } = targetOf(track.run)
-        if (!slope) return 1
-        return clamp(slope(t) + gap / POSITION_CATCH_UP_SECONDS, POSITION_RATE_MIN_FACTOR, POSITION_RATE_MAX_FACTOR)
+        if (slope) return clamp(slope(t) + gap / POSITION_CATCH_UP_SECONDS, POSITION_RATE_MIN_FACTOR, POSITION_RATE_MAX_FACTOR)
+        const deadband = track.rateFactor === 1 ? DRIFT_DEADBAND_SECONDS : DRIFT_DEADBAND_SECONDS / 2
+        if (Math.abs(gap) <= deadband) return 1
+        return 1 + clamp(gap / DRIFT_CATCH_UP_SECONDS, -DRIFT_RATE_MAX_NUDGE, DRIFT_RATE_MAX_NUDGE)
     }
 
     function applyRateFactor(track: Track, rateFactor: number) {
@@ -204,8 +209,8 @@ export function createPlaybackController({ time }: PlaybackControllerOptions): P
         return run.fps != null && run.fps > 0 ? run.fps : FALLBACK_FPS
     }
 
-    function driftToleranceOf(run: PlaybackRun): number {
-        return DRIFT_RESEEK_FRAMES / fpsOf(run)
+    function startToleranceOf(run: PlaybackRun): number {
+        return START_ALIGN_FRAMES / fpsOf(run)
     }
 
     function lowestFps(): number {
@@ -301,7 +306,7 @@ export function createPlaybackController({ time }: PlaybackControllerOptions): P
     }
 
     function alignAndStart() {
-        blocking().forEach(track => align(track, driftToleranceOf(track.run)))
+        blocking().forEach(track => align(track, startToleranceOf(track.run)))
         if (stalledTracks().length === 0) startMedia()
     }
 
@@ -359,13 +364,8 @@ export function createPlaybackController({ time }: PlaybackControllerOptions): P
             if (!track.playing || !media.canPlay()) return
             const { position } = placement(track)
             const gap = position - media.currentTime()
-            if (!targetOf(track.run).slope) {
-                if (Math.abs(gap) > driftToleranceOf(track.run)) media.seek(position)
-            } else if (Math.abs(gap) > POSITION_RESEEK_SECONDS) {
-                media.seek(position)
-            } else {
-                applyRateFactor(track, rateFactorOf(track, gap))
-            }
+            if (Math.abs(gap) > RESEEK_SECONDS) media.seek(position)
+            else applyRateFactor(track, rateFactorOf(track, gap))
         })
     }
 

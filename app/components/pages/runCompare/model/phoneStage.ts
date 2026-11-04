@@ -67,8 +67,9 @@ export function stepPov(tiles: readonly StageSlot[], view: StageView, step: 1 | 
     return ids[(at + step + ids.length) % ids.length]
 }
 
-export function povForAudio(view: StageView, audible: string | null): string | null {
-    return audible !== null && view.mode !== 'grid' && !view.visible.includes(audible) ? audible : null
+export function povForAudio(view: StageView, audible: readonly string[]): string | null {
+    if (view.mode === 'grid' || audible.length === 0 || audible.some(capId => view.visible.includes(capId))) return null
+    return audible[audible.length - 1]
 }
 
 export function swipeOf(dx: number, dy: number): Swipe | null {

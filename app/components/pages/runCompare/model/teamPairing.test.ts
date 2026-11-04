@@ -24,8 +24,9 @@ function pairsOf(model: CompareModel): string[] {
     return [...model.teams.pairing.teams.values()].flatMap(team => team.current.map(pair => `${pair.runner}:${pair.reference}`))
 }
 
-function xOf(model: CompareModel, capId: string): number {
-    return model.race.layout.placed.find(placed => placed.slot.id === capId)!.rect.x
+function lineOf(model: CompareModel, capId: string): number {
+    const { rect } = model.race.layout.placed.find(placed => placed.slot.id === capId)!
+    return model.teams.transposed ? rect.y : rect.x
 }
 
 function laneOf(model: CompareModel, capId: string) {
@@ -43,8 +44,8 @@ describe('overriding a pairing', () => {
         expect(query).toBe(`${ALIGNED.query}&pair=${FIERD}:${GXLS},${NIGHTWOLF}:${NETTLEZ}`)
         const model = composeVersus(ALIGNED, {}, query!)
         expect(pairsOf(model)).toEqual([`${FIERD}:${GXLS}`, `${NIGHTWOLF}:${NETTLEZ}`])
-        expect(xOf(model, FIERD)).toBe(xOf(model, GXLS))
-        expect(xOf(model, NIGHTWOLF)).toBe(xOf(model, NETTLEZ))
+        expect(lineOf(model, FIERD)).toBe(lineOf(model, GXLS))
+        expect(lineOf(model, NIGHTWOLF)).toBe(lineOf(model, NETTLEZ))
         expect(model.noticeLine).toBeNull()
     })
 
@@ -60,9 +61,9 @@ describe('overriding a pairing', () => {
         expect(query).toBe(`${MIXED.query}&pair=${PATRIK}:${BUN},${KRAD}:${FIERD_2}`)
         const model = composeVersus(MIXED, {}, query!)
         expect(pairsOf(model)).toEqual([`${PATRIK}:${BUN}`, `${KRAD}:${FIERD_2}`])
-        expect(xOf(model, PATRIK)).toBe(xOf(model, BUN))
-        expect(xOf(model, GIORGIO)).toBeGreaterThan(xOf(model, KRAD))
-        expect(laneOf(model, GIORGIO).badges).toContain('Time only')
+        expect(lineOf(model, PATRIK)).toBe(lineOf(model, BUN))
+        expect(lineOf(model, GIORGIO)).toBeGreaterThan(lineOf(model, KRAD))
+        expect(laneOf(model, GIORGIO).badges).toContain('Final time only')
     })
 
     it('offers only the other team\'s members on the same side, with their route or zone match and the current pair marked', () => {
@@ -81,7 +82,7 @@ describe('overriding a pairing', () => {
         expect(pairsOf(linked)).toEqual([`${GIORGIO}:${BUN}`, `${KRAD}:${FIERD_2}`])
         expect(linked.query).toBe(MIXED.query)
         expect(linked.noticeLine).toBe('Dropped 1 pairing outside the comparison.')
-        expect(laneOf(linked, PATRIK).badges).toContain('Time only')
+        expect(laneOf(linked, PATRIK).badges).toContain('Final time only')
     })
 
     it('reads the pairwise comparison for an override pair whose route match is aligned, and the zone delta otherwise', () => {

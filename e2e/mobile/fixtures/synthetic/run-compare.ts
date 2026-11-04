@@ -126,6 +126,35 @@ function extraDetail(capId: string, i: number): FixtureRoute {
     }
 }
 
+export const START_MAP = 'CTF-BT-HumanResources'
+
+function latestRecord(index: number, map: string, seconds: number, team: TeamFixture | null = null) {
+    const someone = person(70 + index)
+    return {
+        cap_id: `c0ffee9${index}-0000-4000-8000-00000000009${index}`,
+        user_id: syntheticId(70 + index),
+        map,
+        added: `2026-10-2${index}T12:00:00Z`,
+        cap_time_seconds: seconds,
+        alias: someone.alias,
+        active_title: null,
+        members: team && team.members.map(member => ({
+            user: member.user,
+            alias: member.alias,
+            cap_id: member.capId,
+            cap_time_seconds: member.seconds,
+            verified: true,
+            active_title: null,
+        })),
+    }
+}
+
+const latestRecordsRoute: FixtureRoute = {
+    host: 'api',
+    path: '/v2/world_records',
+    reply: { json: { success: true, data: [latestRecord(1, START_MAP, 61.25), latestRecord(2, TEAM_MAP, 44.5, TEAMS[0]), latestRecord(3, START_MAP, 62.5)] } },
+}
+
 function playableReplay(capId: string): FixtureRoute {
     return {
         host: 'gateway',
@@ -143,6 +172,7 @@ export const RUN_COMPARE_SET: FixtureSet = {
         ...TEAMS.map(teamDetailRoute),
         { host: 'api', path: `/caps/leaderboard/team/map/${TEAM_MAP}`, reply: { json: { success: true, data: TEAMS.map(teamEntry) } } },
         teamComparisonRoute,
+        latestRecordsRoute,
         ...RECORDED.routes,
     ],
 }

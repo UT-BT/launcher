@@ -31,6 +31,14 @@ export interface StageLayout<S extends StageSlot> {
     placed: PlacedSlot<S>[]
 }
 
+export function tileHeightOf(width: number): number {
+    return width / TILE_ASPECT
+}
+
+export function tileWidthIn(height: number): number {
+    return height * TILE_ASPECT
+}
+
 function tileWidthFor(count: number, columns: number, box: StageBox, gap: number): number {
     const rows = Math.ceil(count / columns)
     const byWidth = (box.width - (columns - 1) * gap) / columns
@@ -158,4 +166,15 @@ export function packGroupFocus<S extends StageSlot>(slots: readonly S[], focus: 
         tileHeight: main.tileHeight,
         placed: slots.map(slot => ({ slot, rect: rects.get(slot.id)! })),
     }
+}
+
+export interface UsedBounds {
+    top: number
+    height: number
+}
+
+export function usedBounds(rects: readonly SlotRect[]): UsedBounds {
+    if (rects.length === 0) return { top: 0, height: 0 }
+    const top = Math.min(...rects.map(r => r.y))
+    return { top, height: Math.max(...rects.map(r => r.y + r.height)) - top }
 }

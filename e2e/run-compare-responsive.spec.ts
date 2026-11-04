@@ -107,6 +107,14 @@ function timeline(page: Page): Locator {
     return page.getByRole('slider', { name: 'Timeline' })
 }
 
+function runsButton(page: Page): Locator {
+    return page.getByRole('button', { name: /^Runs · \d+$/ })
+}
+
+function phoneCaptions(page: Page): Locator {
+    return page.locator('.run-compare-phone-captions')
+}
+
 interface VideoClock {
     time: number
     paused: boolean
@@ -176,7 +184,18 @@ test.describe('the compare page on a phone', () => {
         expect(streamed).toEqual([DECL.capId])
         expect(await streaming(page)).toEqual([true, false, false])
         expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0)
-        await expect(page.getByRole('list', { name: 'Lanes' }).getByRole('listitem')).toHaveCount(3)
+        await expect(page.getByRole('list', { name: 'Gap to the baseline' }).getByRole('listitem')).toHaveCount(3)
+
+        await expect(phoneCaptions(page).locator('.run-compare-caption')).toHaveCount(1)
+        await expect(phoneCaptions(page)).toContainText('Decl')
+        await expect(phoneCaptions(page)).toContainText('Baseline')
+        const caption = (await phoneCaptions(page).boundingBox())!
+        const stageBox = (await stage(page).boundingBox())!
+        expect(caption.y).toBeGreaterThanOrEqual(stageBox.y + stageBox.height - 1)
+        for (const name of ['Sound from Decl', 'More for Decl']) {
+            const box = (await phoneCaptions(page).getByRole('button', { name }).boundingBox())!
+            expect(Math.min(box.width, box.height)).toBeGreaterThanOrEqual(44)
+        }
     })
 
     test('switching POV keeps the master time and lands the new video on its target', async ({ page }) => {
@@ -190,7 +209,7 @@ test.describe('the compare page on a phone', () => {
 
         await expect(tiles(page)).toHaveCount(1)
         await expect(tile(page, 'ShX')).toBeVisible()
-        await expect(timeline(page)).toHaveAttribute('aria-valuetext', '0:12.500')
+        await expect(timeline(page)).toHaveAttribute('aria-valuetext', '00:12.500')
         await expect.poll(async () => (await clockOf(tile(page, 'ShX'))).time).toBe(12.5)
         expect((await clockOf(tile(page, 'ShX'))).paused).toBe(true)
         await expect(switcher(page).getByRole('button', { name: 'ShX' })).toHaveAttribute('aria-pressed', 'true')
@@ -201,7 +220,7 @@ test.describe('the compare page on a phone', () => {
 
         await swipe(page, tile(page, 'ShX'), -160, 10)
         await expect(tile(page, 'Cubic')).toBeVisible()
-        await expect(timeline(page)).toHaveAttribute('aria-valuetext', '0:12.500')
+        await expect(timeline(page)).toHaveAttribute('aria-valuetext', '00:12.500')
         await expect.poll(async () => (await clockOf(tile(page, 'Cubic'))).time).toBe(12.5)
 
         await swipe(page, tile(page, 'Cubic'), 160, 0)
@@ -225,7 +244,7 @@ test.describe('the compare page on a phone', () => {
         expect(Math.abs(video - master)).toBeLessThan(0.2)
     })
 
-    test('the transport is compact with the rate behind a menu, and the lanes stay', async ({ page }) => {
+    test('the transport is compact with the rate behind a menu, and the gap graph stays', async ({ page }) => {
         await page.setViewportSize({ width: 390, height: 844 })
         await mockApi(page)
         await page.goto(compareUrl([DECL, SHX, CUBIC]))
@@ -237,7 +256,7 @@ test.describe('the compare page on a phone', () => {
         await rate.click()
         await page.getByRole('menuitemradio', { name: '0.5×' }).click()
         await expect(rate).toHaveText('0.5×')
-        await expect(page.getByRole('list', { name: 'Lanes' }).getByRole('listitem')).toHaveCount(3)
+        await expect(page.getByRole('list', { name: 'Gap to the baseline' }).getByRole('listitem')).toHaveCount(3)
         expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0)
     })
 
@@ -247,7 +266,7 @@ test.describe('the compare page on a phone', () => {
         await page.goto(compareUrl([DECL, SHX, CUBIC]))
         await expect(tiles(page)).toHaveCount(1)
 
-        await transport(page).getByRole('button', { name: 'Runs', exact: true }).click()
+        await runsButton(page).click()
         const sheet = page.locator('.run-compare-drawer-layer')
         await expect(page.getByRole('region', { name: 'Runs' })).toBeVisible()
         const box = (await sheet.boundingBox())!
@@ -268,11 +287,11 @@ test.describe('the compare page on a phone', () => {
         await page.goto(compareUrl([DECL, SHX, CUBIC]))
         await expect(tile(page, 'Decl')).toBeVisible()
 
-        await transport(page).getByRole('button', { name: 'Runs', exact: true }).click()
-        const cubic = page.getByRole('region', { name: 'Runs' }).getByRole('listitem').filter({ hasText: 'Cubic' })
-        await cubic.getByRole('button', { name: 'Audio' }).click()
+        await runsButton(page).click()
+        const cubic = page.getByRole('region', { name: 'Runs' }).getByRole('list', { name: 'Roster' }).getByRole('listitem').filter({ hasText: 'Cubic' })
+        await cubic.getByRole('button', { name: 'Sound from Cubic' }).click()
 
-        await expect(cubic.getByRole('button', { name: 'Audio' })).toHaveAttribute('aria-pressed', 'true')
+        await expect(cubic.getByRole('button', { name: 'Sound from Cubic' })).toHaveAttribute('aria-pressed', 'true')
         await expect(tile(page, 'Cubic')).toBeVisible()
         await expect(tiles(page)).toHaveCount(1)
         await expect(switcher(page).getByRole('button', { name: 'Cubic' })).toHaveAttribute('aria-pressed', 'true')
@@ -362,16 +381,22 @@ test.describe('the compare page on a wide screen', () => {
 
         await expect(tiles(page)).toHaveCount(3)
         const boxes = await Promise.all([DECL, SHX, CUBIC].map(async racer => (await tile(page, racer.alias).boundingBox())!))
-        for (const box of boxes) {
+        const videos = await Promise.all([DECL, SHX, CUBIC].map(async racer => (await tile(page, racer.alias).locator('video').boundingBox())!))
+        for (const [i, box] of boxes.entries()) {
             expect(box.width).toBeCloseTo(boxes[0].width, 0)
-            expect(box.width / box.height).toBeCloseTo(16 / 9, 1)
+            expect(videos[i].width / videos[i].height).toBeCloseTo(16 / 9, 1)
+            await expect(tile(page, [DECL, SHX, CUBIC][i].alias).locator('.run-compare-tile-name')).toBeVisible()
         }
         for (let i = 1; i < boxes.length; i += 1) {
             const [a, b] = [boxes[i - 1], boxes[i]]
             expect(b.x >= a.x + a.width - 1 || b.y >= a.y + a.height - 1).toBe(true)
         }
         await expect(switcher(page)).toHaveCount(0)
-        await expect(transport(page).getByRole('combobox', { name: 'Playback rate' })).toBeVisible()
+        await expect(phoneCaptions(page)).toHaveCount(0)
+        await expect(transport(page).getByRole('button', { name: 'Playback rate' })).toHaveText('1×')
+        const lastTile = Math.max(...boxes.map(box => box.y + box.height))
+        const bar = (await transport(page).boundingBox())!
+        expect(bar.y - lastTile).toBeLessThan(40)
         expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0)
     })
 })

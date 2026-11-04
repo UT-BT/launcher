@@ -3,13 +3,13 @@ import { formatCapTime } from '@/app/utils/format'
 import type { ReplaySource, ReplayVideo } from '@/app/utils/api'
 import type { SoloRun } from '../loading/soloRuns'
 import { EMPTY_COMPARE_STATE, type CompareUrlState } from '../url/compareUrl'
-import { resolveReferences, type References } from './referenceModel'
+import { resolveReferences, sideChoice, type References, type SideChoice } from './referenceModel'
 import { packView, stageView, type StageEnvironment, type StageView } from './phoneStage'
 import type { StageBox, StageLayout } from './stageLayout'
 
 export const MAX_VIDEO_TILES = 8
-export const NO_VIDEO = 'No video'
-export const VIDEO_UNAVAILABLE = 'Video unavailable'
+export const GRAPH_ONLY = 'Graph only'
+export const VIDEO_FAILED = 'Video didn’t load'
 
 export type LoadedVideos = ReadonlyMap<string, ReplayVideo | null>
 
@@ -42,6 +42,7 @@ export interface RaceModel {
     runs: RaceRun[]
     reference: string | null
     references: References
+    sides: SideChoice
     tiles: TileSlot[]
     dataOnly: RaceRun[]
     focused: string | null
@@ -56,6 +57,7 @@ export interface RaceInput {
     failedVideos: ReadonlySet<string>
     stageBox: StageBox | null
     focus?: string | null
+    side?: number | null
     environment?: StageEnvironment | null
     pov?: string | null
 }
@@ -74,7 +76,7 @@ function ordinal(n: number): string {
 }
 
 export function formatRaceTime(seconds: number): string {
-    return formatCapTime(seconds).replace(/^0(?=\d:)/, '')
+    return formatCapTime(seconds)
 }
 
 function resultLine(run: SoloRun, runs: readonly SoloRun[], reference: SoloRun): string {
@@ -89,8 +91,8 @@ function offsetOf(state: CompareUrlState, capId: string, video: ReplayVideo | nu
     return entry ? entry.ms / 1000 : 0
 }
 
-export function composeRace({ runs, state, videos, failedVideos, stageBox, focus = null, environment = null, pov = null }: RaceInput): RaceModel {
-    const references = resolveReferences(runs, state.refs)
+export function composeRace({ runs, state, videos, failedVideos, stageBox, focus = null, side = null, environment = null, pov = null }: RaceInput): RaceModel {
+    const references = resolveReferences(runs, state.refs, side)
     const byId = new Map(runs.map(run => [run.capId, run]))
     const dataOnly = new Set(state.data)
     const tiles: TileSlot[] = []
@@ -108,7 +110,7 @@ export function composeRace({ runs, state, videos, failedVideos, stageBox, focus
             source: video?.source ?? null,
             fps: video?.fps ?? null,
             tile,
-            badges: tile ? [] : [failed ? VIDEO_UNAVAILABLE : NO_VIDEO],
+            badges: tile ? [] : [failed ? VIDEO_FAILED : GRAPH_ONLY],
             result,
         }
     })
@@ -120,6 +122,7 @@ export function composeRace({ runs, state, videos, failedVideos, stageBox, focus
         runs: placedRuns,
         reference: references.lead,
         references,
+        sides: sideChoice(runs, references.sides[0]?.side ?? null),
         tiles,
         dataOnly: placedRuns.filter(run => !run.tile),
         focused,

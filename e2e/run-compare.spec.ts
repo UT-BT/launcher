@@ -88,15 +88,48 @@ async function mockApi(page: Page, { gate = Promise.resolve(), videos = [], miss
 }
 
 function lanes(page: Page) {
-    return page.getByRole('list', { name: 'Lanes' })
+    return page.getByRole('list', { name: 'Gap to the baseline' })
 }
 
 function lane(page: Page, alias: string): Locator {
     return lanes(page).getByRole('listitem').filter({ hasText: alias })
 }
 
+function capIdOf(alias: string): string {
+    return [...DETAILS].find(([, detail]) => detail.cap.alias === alias)![0]
+}
+
+function gapPlot(page: Page): Locator {
+    return page.locator('.run-compare-gap-plot')
+}
+
+function gapLine(page: Page, alias: string): Locator {
+    return gapPlot(page).locator(`g[data-run="${capIdOf(alias)}"] path`)
+}
+
 function tile(page: Page, alias: string): Locator {
     return page.getByRole('region', { name: 'Stage' }).getByRole('group', { name: alias })
+}
+
+function moreButton(scope: Locator, name: string): Locator {
+    return scope.getByRole('button', { name: `More for ${name}` })
+}
+
+async function openMenu(scope: Locator, name: string): Promise<Locator> {
+    await moreButton(scope, name).click()
+    const menu = scope.page().getByRole('menu')
+    await expect(menu).toBeVisible()
+    return menu
+}
+
+async function chooseFromMenu(scope: Locator, name: string, item: string) {
+    const menu = await openMenu(scope, name)
+    await menu.getByRole('menuitem', { name: item, exact: true }).click()
+}
+
+async function expectAligned(page: Page, alias: string) {
+    await expect(gapLine(page, alias).first()).toBeAttached()
+    await expect(tile(page, alias)).not.toContainText('Checkpoints only')
 }
 
 interface VideoClock {
@@ -131,16 +164,16 @@ test.describe('the compare runs page', () => {
         await mockApi(page)
         await page.goto(`/compare?runs=${FIERD},${BUN}`)
 
-        const rows = lanes(page).getByRole('listitem')
-        await expect(rows).toHaveCount(2)
-        await expect(rows.nth(0)).toContainText('fierd_6')
-        await expect(rows.nth(0)).toContainText('1:21.234')
-        await expect(rows.nth(1)).toContainText('Bun`')
-        await expect(rows.nth(1)).toContainText('1:19.500')
-        await expect(page.getByRole('heading', { name: 'Compare Runs' })).toBeVisible()
+        await expect(page.getByRole('heading', { name: `Compare Runs: ${displayMapName(MAP)}` })).toBeVisible()
+        await expect(page.getByText('Solo · 2 runs')).toBeVisible()
         await expect(page).toHaveTitle(`fierd_6 vs Bun\` on ${displayMapName(MAP)} — UTBT.net`)
         await expect(page.getByRole('status')).toHaveCount(0)
         expect(new URL(page.url()).search).toBe(`?runs=${FIERD},${BUN}`)
+
+        await runsButton(page).click()
+        await expect(drawer(page).getByRole('list', { name: 'Roster' }).getByRole('listitem')).toHaveCount(2)
+        await expect(rosterRow(page, 'fierd_6')).toContainText('01:21.234')
+        await expect(rosterRow(page, 'Bun`')).toContainText('01:19.500')
     })
 
     test('drops a malformed id and a repeated run with one notice, and normalises the address in place', async ({ page }) => {
@@ -153,7 +186,7 @@ test.describe('the compare runs page', () => {
 
         release()
 
-        await expect(lanes(page).getByRole('listitem')).toHaveCount(2)
+        await expect(page.getByText('Solo · 2 runs')).toBeVisible()
         await expect(page.getByRole('status')).toHaveText('Dropped 1 malformed run id and 1 repeated run.')
         await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${FIERD},${BUN}`)
         expect(await page.evaluate(() => window.history.length)).toBe(lengthBefore)
@@ -163,11 +196,11 @@ test.describe('the compare runs page', () => {
         await expect.poll(() => new URL(page.url()).pathname).toBe('/news')
     })
 
-    test('shows the empty state with its notice when no run is valid', async ({ page }) => {
+    test('shows the start view with its notice when no run is valid', async ({ page }) => {
         await mockApi(page)
         await page.goto('/compare?runs=not-a-cap,c3c3c3c3-0000-4000-8000-0000000000c3')
 
-        await expect(page.getByText('No runs to compare')).toBeVisible()
+        await expect(page.getByRole('heading', { name: 'Pick a Map' })).toBeVisible()
         await expect(page.getByRole('status')).toHaveText('Dropped 1 malformed run id and 1 run that could not be loaded.')
         await expect.poll(() => new URL(page.url()).search).toBe('')
         await expect(page).toHaveTitle('Compare Runs — UTBT.net')
@@ -204,16 +237,19 @@ test.describe('race playback', () => {
         await expect.poll(async () => (await clocksOf(page)).map(clock => clock.time)).toEqual([12.5, 12.5])
         expect((await clocksOf(page)).map(clock => clock.paused)).toEqual([true, true])
         await expect(playButton(page)).toBeVisible()
-        await expect(page.getByRole('slider', { name: 'Timeline' })).toHaveAttribute('aria-valuetext', '0:12.500')
+        await expect(page.getByRole('slider', { name: 'Timeline' })).toHaveAttribute('aria-valuetext', '00:12.500')
         await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${DECL},${SHX}`)
     })
 
-    test('a video that fails to load drops its run to a data-only lane and the other still plays', async ({ page }) => {
+    test('a video that fails to load drops its run to a graph-only lane and the other still plays', async ({ page }) => {
         await mockApi(page, { videos: [DECL, SHX], missingVideos: [DECL] })
         await page.goto(`/compare?runs=${DECL},${SHX}`)
 
-        await expect(lanes(page).getByRole('listitem').filter({ hasText: 'Decl' })).toContainText('Video unavailable')
         await expect(tile(page, 'Decl')).toHaveCount(0)
+        await expect(lane(page, 'Decl')).toBeVisible()
+        await runsButton(page).click()
+        await expect(rosterRow(page, 'Decl')).toContainText('Video didn’t load')
+        await drawer(page).getByRole('button', { name: 'Close Runs' }).click()
 
         await playButton(page).click()
 
@@ -230,78 +266,102 @@ test.describe('race playback', () => {
 
         await playButton(page).click()
 
-        await expect(decl.getByText('CAP 0:13.000 · ±0.000 · 1st')).toBeVisible({ timeout: 15_000 })
+        await expect(decl.getByText('CAP 00:13.000 · ±0.000 · 1st')).toBeVisible({ timeout: 15_000 })
         const frozen = await clockOf(decl)
         expect(frozen.paused).toBe(true)
         expect(frozen.time).toBeCloseTo(13, 2)
         await expect.poll(async () => (await clockOf(shx)).time).toBeGreaterThan(13.2)
 
-        await expect(shx.getByText('CAP 0:14.250 · +1.250 · 2nd')).toBeVisible({ timeout: 15_000 })
+        await expect(shx.getByText('CAP 00:14.250 · +1.250 · 2nd')).toBeVisible({ timeout: 15_000 })
         expect((await clockOf(shx)).time).toBeCloseTo(14.25, 2)
         await expect(playButton(page)).toBeVisible()
     })
 })
 
 test.describe('delta lanes and data rungs', () => {
-    test('an aligned pair shows two lanes, the Replay badge and the reference sector ticks', async ({ page }) => {
+    test('an aligned pair shows two lanes with no note, the baseline and the reference sector ticks', async ({ page }) => {
         const compared: string[] = []
         await mockApi(page, { videos: [PATRIK, ARTUREK], comparisons: { [PATRIK]: 'short' }, compared })
         await page.goto(`/compare?runs=${PATRIK},${ARTUREK}`)
 
         await expect(lanes(page).getByRole('listitem')).toHaveCount(2)
-        await expect(lane(page, 'PatriK')).toContainText('Replay')
-        await expect(tile(page, 'PatriK')).toContainText('Replay')
-        await expect(lane(page, 'Arturek')).toContainText('REF')
-        await expect(lane(page, 'PatriK').locator('.run-compare-lane-plot path').first()).toBeAttached()
+        await expectAligned(page, 'PatriK')
+        await expect(tile(page, 'PatriK')).not.toContainText('Final time only')
+        await expect(lane(page, 'Arturek')).toContainText('Baseline')
+        await expect(tile(page, 'Arturek')).toContainText('Baseline')
+        await expect(tile(page, 'PatriK')).toContainText('vs Arturek')
         await expect(page.getByRole('list', { name: 'Sectors' }).getByRole('listitem')).toHaveCount(10)
         expect(compared).toEqual([`${PATRIK}:${ARTUREK}`])
     })
 
-    test('a comparison the server refuses falls back to the zone delta', async ({ page }) => {
+    test('a comparison the server refuses falls back to checkpoint gaps', async ({ page }) => {
         await mockApi(page, { videos: [PATRIK, ARTUREK], comparisons: { [PATRIK]: 'conflict' } })
         await page.goto(`/compare?runs=${PATRIK},${ARTUREK}`)
 
-        await expect(lane(page, 'PatriK')).toContainText('Zones')
-        await expect(lane(page, 'PatriK')).not.toContainText('Replay')
-        await expect(tile(page, 'PatriK')).toContainText('Zones')
-        await expect(lane(page, 'PatriK').locator('.run-compare-lane-plot path').first()).toBeAttached()
+        await expect(tile(page, 'PatriK')).toContainText('Checkpoints only')
+        await expect(gapLine(page, 'PatriK').first()).toBeAttached()
     })
 
-    test('a run set on the other side compares on time only and says which side it was set on', async ({ page }) => {
+    test('one run on each side carries its side tag and compares by final time only, with no baseline, graph or analysis', async ({ page }) => {
         const compared: string[] = []
         await mockApi(page, { videos: [ARTUREK, BLUE], compared })
         await page.goto(`/compare?runs=${ARTUREK},${BLUE}`)
 
-        await expect(lane(page, 'Bluey')).toContainText('Time only')
-        await expect(lane(page, 'Bluey')).toContainText('Set on Blue')
-        await expect(tile(page, 'Bluey')).toContainText('Set on Blue')
-        await expect(lane(page, 'Bluey').locator('.run-compare-lane-plot path')).toHaveCount(0)
-        await expect(lane(page, 'Bluey').locator('.run-compare-lane-cap')).toBeVisible()
+        await expect(tile(page, 'Bluey')).toContainText('Blue')
+        await expect(tile(page, 'Arturek')).toContainText('Red')
+        await expect(tile(page, 'Bluey')).not.toContainText('Baseline')
+        await expect(tile(page, 'Arturek')).not.toContainText('Baseline')
+        await expect(tile(page, 'Bluey')).not.toContainText('Final time only')
+        await expect(lanes(page)).toHaveCount(0)
+        await expect(gapPlot(page)).toHaveCount(0)
+        await expect(transport(page)).toContainText('Red and blue take different routes')
+        await expect(page.getByRole('region', { name: 'Analysis' })).toHaveCount(0)
+        await expect(transport(page).getByRole('group', { name: 'Analyse Side' })).toHaveCount(0)
         expect(compared).toEqual([])
     })
 
-    test('a click on a lane seeks every video to that time', async ({ page }) => {
+    test('a click on the gap graph seeks every video to that time', async ({ page }) => {
         await mockApi(page, { videos: [DECL, SHX] })
         await page.goto(`/compare?runs=${DECL},${SHX}`)
         await expect.poll(async () => (await clocksOf(page)).length).toBe(2)
 
-        const plot = lane(page, 'Decl').locator('.run-compare-lane-plot')
+        const plot = gapPlot(page)
         const box = (await plot.boundingBox())!
         await plot.click({ position: { x: box.width / 2, y: box.height / 2 } })
 
         await expect.poll(async () => (await clocksOf(page)).map(clock => Math.round(clock.time * 10) / 10)).toEqual([7.1, 7.1])
         expect((await clocksOf(page)).map(clock => clock.paused)).toEqual([true, true])
-        await expect(page.getByRole('slider', { name: 'Timeline' })).toHaveAttribute('aria-valuetext', /^0:07\.1/)
+        await expect(page.getByRole('slider', { name: 'Timeline' })).toHaveAttribute('aria-valuetext', /^00:07.1/)
     })
 
-    test('on touch a vertical swipe across a lane leaves the playhead and a tap seeks', async ({ page, isMobile }) => {
+    test('dragging across the gap graph scrubs every video along with the pointer', async ({ page, isMobile }) => {
+        test.skip(isMobile, 'touch scrubbing has its own test')
+        await mockApi(page, { videos: [DECL, SHX] })
+        await page.goto(`/compare?runs=${DECL},${SHX}`)
+        await expect.poll(async () => (await clocksOf(page)).length).toBe(2)
+        await expect(gapLine(page, 'ShX').first()).toBeAttached()
+
+        const box = (await gapPlot(page).boundingBox())!
+        const y = box.y + box.height / 2
+        await page.mouse.move(box.x + box.width * 0.2, y)
+        await page.mouse.down()
+        await page.mouse.move(box.x + box.width * 0.5, y, { steps: 6 })
+        await expect(page.getByRole('slider', { name: 'Timeline' })).toHaveAttribute('aria-valuetext', /^00:07.1/)
+        await page.mouse.move(box.x + box.width * 0.8, y, { steps: 6 })
+        await page.mouse.up()
+
+        await expect.poll(async () => (await clocksOf(page)).map(clock => Math.round(clock.time))).toEqual([11, 11])
+        expect((await clocksOf(page)).map(clock => clock.paused)).toEqual([true, true])
+    })
+
+    test('on touch a vertical swipe across the gap graph leaves the playhead and a tap seeks', async ({ page, isMobile }) => {
         test.skip(!isMobile, 'touch gestures run on the phone project')
         await mockApi(page, { videos: [DECL, SHX] })
         await page.goto(`/compare?runs=${DECL},${SHX}`)
         await expect.poll(async () => (await clocksOf(page)).length).toBe(2)
 
         const timeline = page.getByRole('slider', { name: 'Timeline' })
-        const plot = lane(page, 'Decl').locator('.run-compare-lane-plot')
+        const plot = gapPlot(page)
         await plot.scrollIntoViewIfNeeded()
         const from = (await plot.boundingBox())!
         const x = from.x + from.width / 4
@@ -314,12 +374,12 @@ test.describe('delta lanes and data rungs', () => {
         }
         await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [], timestamp: start + 0.2 })
         await cdp.detach()
-        await expect(timeline).toHaveAttribute('aria-valuetext', '0:00.000')
+        await expect(timeline).toHaveAttribute('aria-valuetext', '00:00.000')
 
         const to = (await plot.boundingBox())!
         await page.touchscreen.tap(to.x + to.width / 2, to.y + to.height / 2)
         await expect.poll(async () => (await clocksOf(page)).map(clock => Math.round(clock.time * 10) / 10)).toEqual([7.1, 7.1])
-        await expect(timeline).toHaveAttribute('aria-valuetext', /^0:07\.1/)
+        await expect(timeline).toHaveAttribute('aria-valuetext', /^00:07.1/)
     })
 })
 
@@ -332,7 +392,7 @@ function rosterRow(page: Page, alias: string): Locator {
 }
 
 function runsButton(page: Page): Locator {
-    return page.getByRole('region', { name: 'Playback' }).getByRole('button', { name: 'Runs', exact: true })
+    return page.getByRole('button', { name: /^Runs · \d+$/ })
 }
 
 function historyLength(page: Page): Promise<number> {
@@ -343,13 +403,25 @@ async function stageBox(page: Page) {
     return page.getByRole('region', { name: 'Stage' }).boundingBox()
 }
 
+async function settledStageBox(page: Page) {
+    let last = await stageBox(page)
+    await expect.poll(async () => {
+        const now = await stageBox(page)
+        const same = JSON.stringify(now) === JSON.stringify(last)
+        last = now
+        return same
+    }, { intervals: [400] }).toBe(true)
+    return last
+}
+
 test.describe('the runs drawer', () => {
     test('opens over the stage without resizing it, and removing a run replaces the address in place', async ({ page }) => {
         await mockApi(page, { videos: [DECL, SHX, PATRIK] })
         await page.goto(`/compare?runs=${DECL},${SHX},${PATRIK}`)
         await expect(tile(page, 'PatriK').locator('video')).toHaveCount(1)
         await expect(drawer(page)).toHaveCount(0)
-        const closed = await stageBox(page)
+        await expect(gapLine(page, 'ShX').first()).toBeAttached()
+        const closed = await settledStageBox(page)
 
         await runsButton(page).click()
 
@@ -358,7 +430,7 @@ test.describe('the runs drawer', () => {
         expect(await stageBox(page)).toEqual(closed)
         const lengthBefore = await historyLength(page)
 
-        await rosterRow(page, 'PatriK').getByRole('button', { name: 'Remove' }).click()
+        await chooseFromMenu(rosterRow(page, 'PatriK'), 'PatriK', 'Remove')
 
         await expect(tile(page, 'PatriK')).toHaveCount(0)
         await expect(lane(page, 'PatriK')).toHaveCount(0)
@@ -369,20 +441,23 @@ test.describe('the runs drawer', () => {
         await expect(drawer(page).getByRole('list', { name: 'Roster' }).getByRole('listitem')).toHaveCount(2)
     })
 
-    test('pinning a reference measures the other runs against it', async ({ page }) => {
+    test('setting another baseline measures the other runs against it', async ({ page }) => {
         const compared: string[] = []
         await mockApi(page, { videos: [PATRIK, ARTUREK], comparisons: { [PATRIK]: 'short' }, compared })
         await page.goto(`/compare?runs=${PATRIK},${ARTUREK}`)
-        await expect(lane(page, 'PatriK')).toContainText('Replay')
-        await expect(lane(page, 'Arturek')).toContainText('REF')
+        await expectAligned(page, 'PatriK')
+        await expect(lane(page, 'Arturek')).toContainText('Baseline')
 
         await runsButton(page).click()
-        await rosterRow(page, 'PatriK').getByRole('button', { name: 'Pin' }).click()
+        await chooseFromMenu(rosterRow(page, 'PatriK'), 'PatriK', 'Set as Baseline')
 
-        await expect(lane(page, 'PatriK')).toContainText('REF')
-        await expect(lane(page, 'Arturek')).not.toContainText('REF')
-        await expect(lane(page, 'Arturek')).toContainText('Zones')
-        await expect(rosterRow(page, 'PatriK').getByRole('button', { name: 'Pin' })).toHaveAttribute('aria-pressed', 'true')
+        await expect(lane(page, 'PatriK')).toContainText('Baseline')
+        await expect(lane(page, 'Arturek')).not.toContainText('Baseline')
+        await expect(rosterRow(page, 'Arturek')).toContainText('Checkpoints only')
+        await expect(rosterRow(page, 'PatriK')).toContainText('Baseline')
+        const menu = await openMenu(rosterRow(page, 'PatriK'), 'PatriK')
+        await expect(menu.getByRole('menuitem', { name: 'Unpin Baseline' })).toBeVisible()
+        await page.keyboard.press('Escape')
         await expect(drawer(page).getByRole('listitem').first()).toContainText('PatriK')
         await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${PATRIK},${ARTUREK}&ref=${PATRIK}`)
         expect(compared).toEqual([`${PATRIK}:${ARTUREK}`, `${ARTUREK}:${PATRIK}`])
@@ -394,37 +469,48 @@ test.describe('the runs drawer', () => {
         await expect(tile(page, 'ShX').locator('video')).toHaveCount(1)
         await runsButton(page).click()
 
-        await rosterRow(page, 'ShX').getByRole('button', { name: 'Video' }).click()
+        await chooseFromMenu(rosterRow(page, 'ShX'), 'ShX', 'Hide Video, Keep the Graph')
 
         await expect(tile(page, 'ShX')).toHaveCount(0)
         await expect(lane(page, 'ShX')).toBeVisible()
-        await expect(rosterRow(page, 'ShX').getByRole('button', { name: 'Video' })).toHaveAttribute('aria-pressed', 'false')
+        const menu = await openMenu(rosterRow(page, 'ShX'), 'ShX')
+        await expect(menu.getByRole('menuitem', { name: 'Show Video' })).toBeVisible()
+        await page.keyboard.press('Escape')
         await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${DECL},${SHX}&data=${SHX}`)
     })
 
-    test('a video not from UTRecorder is flagged and its offset is nudged from the row menu', async ({ page }) => {
+    test('an older video is flagged and its sync is adjusted from the row menu', async ({ page }) => {
         await mockApi(page, { videos: [DECL, SHX], converted: [SHX] })
         await page.goto(`/compare?runs=${DECL},${SHX}`)
         await expect(tile(page, 'ShX').locator('video')).toHaveCount(1)
+        await expect(tile(page, 'ShX')).toContainText('Older video')
+        await expect(tile(page, 'Decl')).not.toContainText('Older video')
         await runsButton(page).click()
-        await expect(rosterRow(page, 'ShX')).toContainText('Not frame-synced')
-        await expect(rosterRow(page, 'Decl')).not.toContainText('Not frame-synced')
-        await expect(rosterRow(page, 'Decl').getByRole('button', { name: /^Offset/ })).toHaveCount(0)
+        await expect(rosterRow(page, 'ShX')).toContainText('Older video')
+        await expect(rosterRow(page, 'Decl')).not.toContainText('Older video')
+        const declMenu = await openMenu(rosterRow(page, 'Decl'), 'Decl')
+        await expect(declMenu.getByRole('menuitem', { name: /^Adjust Sync/ })).toHaveCount(0)
+        await page.keyboard.press('Escape')
         const lengthBefore = await historyLength(page)
 
-        await rosterRow(page, 'ShX').getByRole('button', { name: 'Offset 0 ms' }).click()
-        await page.getByRole('menuitem', { name: '+1 frame' }).click()
-        await page.getByRole('menuitem', { name: '+100 ms' }).click()
+        const menu = await openMenu(rosterRow(page, 'ShX'), 'ShX')
+        await menu.getByRole('menuitem', { name: 'Adjust Sync · 0 ms' }).focus()
+        await page.keyboard.press('ArrowRight')
+        await expect(page.getByRole('menuitem', { name: '−100 ms' })).toBeFocused()
+        await page.getByRole('menuitem', { name: '+1 frame' }).focus()
+        await page.keyboard.press('Enter')
+        await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${DECL},${SHX}&off=${SHX}:17`)
+        await page.getByRole('menuitem', { name: '+100 ms' }).focus()
+        await page.keyboard.press('Enter')
 
-        await expect(page.getByRole('menu').getByText('Offset +117 ms')).toBeVisible()
         await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${DECL},${SHX}&off=${SHX}:117`)
         expect(await historyLength(page)).toBe(lengthBefore)
 
         await page.keyboard.press('Escape')
         await expect(page.getByRole('menu')).toHaveCount(0)
         await expect(drawer(page)).toBeVisible()
-        await expect(rosterRow(page, 'ShX').getByRole('button', { name: 'Offset +117 ms' })).toBeVisible()
-        await expect(tile(page, 'ShX')).not.toContainText('Offset')
+        const again = await openMenu(rosterRow(page, 'ShX'), 'ShX')
+        await expect(again.getByRole('menuitem', { name: 'Adjust Sync · +117 ms' })).toBeVisible()
     })
 
     test('a link with one run opens with the drawer open', async ({ page }) => {
@@ -432,8 +518,10 @@ test.describe('the runs drawer', () => {
         await page.goto(`/compare?runs=${DECL}`)
 
         await expect(drawer(page)).toBeVisible()
-        await expect(rosterRow(page, 'Decl')).toContainText('REF')
-        await expect(rosterRow(page, 'Decl').getByRole('button', { name: 'Remove' })).toBeDisabled()
+        await expect(drawer(page)).toContainText('1 of 10')
+        await expect(rosterRow(page, 'Decl')).not.toContainText('Baseline')
+        const menu = await openMenu(rosterRow(page, 'Decl'), 'Decl')
+        await expect(menu.getByRole('menuitem', { name: 'Remove' })).toBeDisabled()
     })
 
     test('Back closes the open drawer and keeps the page and its edits; the next Back leaves the page', async ({ page }) => {
@@ -442,18 +530,53 @@ test.describe('the runs drawer', () => {
         await page.evaluate(path => { window.location.assign(path) }, `/compare?runs=${DECL},${SHX},${PATRIK}`)
         await expect(lanes(page).getByRole('listitem')).toHaveCount(3)
         await runsButton(page).click()
-        await rosterRow(page, 'PatriK').getByRole('button', { name: 'Remove' }).click()
+        await chooseFromMenu(rosterRow(page, 'PatriK'), 'PatriK', 'Remove')
         await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${DECL},${SHX}`)
 
         await page.goBack()
 
         await expect(drawer(page)).toHaveCount(0)
-        await expect(page.getByRole('heading', { name: 'Compare Runs' })).toBeVisible()
+        await expect(page.getByRole('heading', { name: /^Compare Runs/ })).toBeVisible()
         await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${DECL},${SHX}`)
         await expect(lanes(page).getByRole('listitem')).toHaveCount(2)
 
         await page.goBack()
         await expect.poll(() => new URL(page.url()).pathname).toBe('/news')
+    })
+
+    test('clicks on the open drawer stay in the drawer, even where it covers a tile', async ({ page, isMobile }) => {
+        test.skip(isMobile, 'the phone sheet sits under the stage')
+        await mockApi(page, { videos: [DECL, SHX] })
+        await page.goto(`/compare?runs=${DECL},${SHX}`)
+        await expect(tile(page, 'ShX').locator('video')).toHaveCount(1)
+        await runsButton(page).click()
+        await expect(drawer(page)).toBeVisible()
+
+        const panel = (await drawer(page).boundingBox())!
+        const covered = (await tile(page, 'ShX').boundingBox())!
+        const area = {
+            left: Math.max(panel.x, covered.x),
+            right: Math.min(panel.x + panel.width, covered.x + covered.width),
+            top: Math.max(panel.y, covered.y),
+            bottom: Math.min(panel.y + panel.height, covered.y + covered.height),
+        }
+        expect(area.right).toBeGreaterThan(area.left)
+        expect(area.bottom).toBeGreaterThan(area.top)
+        const escaped = await page.evaluate(({ left, right, top, bottom }) => {
+            const misses: string[] = []
+            for (let y = top + 4; y < bottom; y += 24) {
+                for (let x = left + 4; x < right; x += 24) {
+                    const hit = document.elementFromPoint(x, y)
+                    if (!hit?.closest('.run-compare-drawer')) misses.push(`${Math.round(x)},${Math.round(y)}`)
+                }
+            }
+            return misses
+        }, area)
+        expect(escaped).toEqual([])
+
+        await page.mouse.click(area.left + 6, area.top + 6)
+        await expect(focusButton(page, 'ShX')).toHaveAttribute('aria-pressed', 'false')
+        await expect(drawer(page)).toBeVisible()
     })
 
     test('Escape closes the drawer and its own close button does too', async ({ page }) => {
@@ -479,8 +602,17 @@ function transport(page: Page): Locator {
     return page.getByRole('region', { name: 'Playback' })
 }
 
-function syncToggle(page: Page): Locator {
-    return transport(page).getByRole('button', { name: 'Sync by position' })
+function syncButton(page: Page, mode: 'Race' | 'Same Spot'): Locator {
+    return transport(page).getByRole('group', { name: 'Sync' }).getByRole('button', { name: mode, exact: true })
+}
+
+function sectorTick(page: Page, label: string): Locator {
+    return page.getByRole('list', { name: 'Sectors' }).getByRole('listitem').nth(Number(label.slice(1)) - 1)
+}
+
+async function jumpTo(page: Page, label: string) {
+    await transport(page).getByRole('button', { name: 'Jump to Sector' }).click()
+    await page.getByRole('menuitemradio', { name: new RegExp(`^${label}(?!\\d)`) }).click()
 }
 
 async function rounded(page: Page): Promise<number[]> {
@@ -488,21 +620,21 @@ async function rounded(page: Page): Promise<number[]> {
 }
 
 test.describe('sector cue and sync by position', () => {
-    test('clicking sector 4\'s tick puts each video at its own entry into it, and a lane click clears the cue', async ({ page, isMobile }) => {
-        test.skip(isMobile, 'on touch the ticks are marks and the Cue menu cues')
+    test('clicking sector 4\'s tick puts each video at its own entry into it, and a click on the gap graph clears the cue', async ({ page, isMobile }) => {
+        test.skip(isMobile, 'on touch the ticks are marks and the Jump to Sector menu cues')
         await mockApi(page, { videos: [PATRIK, ARTUREK], comparisons: { [PATRIK]: 'short' } })
         await page.goto(`/compare?runs=${PATRIK},${ARTUREK}`)
-        await expect(lane(page, 'PatriK')).toContainText('Replay')
+        await expectAligned(page, 'PatriK')
         await expect.poll(async () => (await clocksOf(page)).length).toBe(2)
 
-        await page.getByRole('list', { name: 'Sectors' }).getByRole('button', { name: 'Cue S4' }).click()
+        await page.getByRole('list', { name: 'Sectors' }).getByRole('button', { name: 'Jump to S4' }).click()
 
         await expect.poll(() => rounded(page)).toEqual([3.74, 3.549])
         expect((await clocksOf(page)).map(clock => clock.paused)).toEqual([true, true])
-        await expect(transport(page).getByRole('slider', { name: 'Timeline' })).toHaveAttribute('aria-valuetext', '0:03.549')
-        await expect(transport(page).getByRole('combobox', { name: 'Cue' })).toHaveValue('S4')
+        await expect(transport(page).getByRole('slider', { name: 'Timeline' })).toHaveAttribute('aria-valuetext', '00:03.549')
+        await expect(sectorTick(page, 'S4')).toHaveClass(/is-active/)
 
-        const plot = lane(page, 'Arturek').locator('.run-compare-lane-plot')
+        const plot = gapPlot(page)
         const box = (await plot.boundingBox())!
         await plot.click({ position: { x: box.width / 2, y: box.height / 2 } })
 
@@ -510,78 +642,78 @@ test.describe('sector cue and sync by position', () => {
             const [patrik, arturek] = await rounded(page)
             return Math.abs(patrik - arturek)
         }).toBeLessThan(0.002)
-        await expect(transport(page).getByRole('combobox', { name: 'Cue' })).toHaveValue('')
+        await expect(sectorTick(page, 'S4')).not.toHaveClass(/is-active/)
     })
 
-    test('the Cue menu and the next and previous cue buttons cue every run', async ({ page }) => {
+    test('the Jump to Sector menu cues every run and checks the sector it cued', async ({ page }) => {
         await mockApi(page, { videos: [PATRIK, ARTUREK], comparisons: { [PATRIK]: 'short' } })
         await page.goto(`/compare?runs=${PATRIK},${ARTUREK}`)
-        await expect(lane(page, 'PatriK')).toContainText('Replay')
+        await expectAligned(page, 'PatriK')
         await expect.poll(async () => (await clocksOf(page)).length).toBe(2)
 
-        await transport(page).getByRole('combobox', { name: 'Cue' }).selectOption('S4')
+        await jumpTo(page, 'S4')
         await expect.poll(() => rounded(page)).toEqual([3.74, 3.549])
 
-        await transport(page).getByRole('button', { name: 'Next cue' }).click()
+        await jumpTo(page, 'S5')
         await expect.poll(() => rounded(page)).toEqual([4.955, 4.732])
-        await expect(transport(page).getByRole('combobox', { name: 'Cue' })).toHaveValue('S5')
+        await transport(page).getByRole('button', { name: 'Jump to Sector' }).click()
+        await expect(page.getByRole('menuitemradio', { name: /^S5(?!\d)/ })).toHaveAttribute('aria-checked', 'true')
+        await page.keyboard.press('Escape')
 
-        await transport(page).getByRole('button', { name: 'Previous cue' }).click()
-        await transport(page).getByRole('button', { name: 'Previous cue' }).click()
+        await jumpTo(page, 'S3')
         await expect.poll(() => rounded(page)).toEqual([2.644, 2.366])
     })
 
-    test('pinning another reference clears the cue', async ({ page }) => {
+    test('setting another baseline clears the cue', async ({ page }) => {
         await mockApi(page, { videos: [PATRIK, ARTUREK], comparisons: { [PATRIK]: 'short' } })
         await page.goto(`/compare?runs=${PATRIK},${ARTUREK}`)
-        await expect(lane(page, 'PatriK')).toContainText('Replay')
+        await expectAligned(page, 'PatriK')
         await expect.poll(async () => (await clocksOf(page)).length).toBe(2)
-        await transport(page).getByRole('combobox', { name: 'Cue' }).selectOption('S4')
+        await jumpTo(page, 'S4')
         await expect.poll(() => rounded(page)).toEqual([3.74, 3.549])
 
-        await runsButton(page).click()
-        await rosterRow(page, 'PatriK').getByRole('button', { name: 'Pin' }).click()
+        await chooseFromMenu(tile(page, 'PatriK'), 'PatriK', 'Set as Baseline')
 
-        await expect(lane(page, 'PatriK')).toContainText('REF')
-        await expect(transport(page).getByRole('combobox', { name: 'Cue' })).toHaveValue('')
+        await expect(lane(page, 'PatriK')).toContainText('Baseline')
+        await expect(sectorTick(page, 'S4')).not.toHaveClass(/is-active/)
         await expect.poll(() => rounded(page)).toEqual([3.549, 3.549])
     })
 
-    test('the toggle writes sync=position in place and marks a run that stays on the race clock', async ({ page }) => {
+    test('Same Spot writes sync=position in place and marks a run that plays in race time', async ({ page }) => {
         await mockApi(page, { videos: [PATRIK, ARTUREK, DECL], comparisons: { [PATRIK]: 'short' } })
         await page.goto(`/compare?runs=${PATRIK},${ARTUREK},${DECL}`)
-        await expect(lane(page, 'PatriK')).toContainText('Replay')
-        await expect(lane(page, 'Decl')).toContainText('Zones')
-        await expect(page.getByText('Race clock')).toHaveCount(0)
-        await expect(syncToggle(page)).toHaveAttribute('aria-pressed', 'false')
+        await expectAligned(page, 'PatriK')
+        await expect(tile(page, 'Decl')).toContainText('Checkpoints only')
+        await expect(page.getByText('Plays in race time')).toHaveCount(0)
+        await expect(syncButton(page, 'Race')).toHaveAttribute('aria-pressed', 'true')
+        await expect(syncButton(page, 'Same Spot')).toHaveAttribute('aria-pressed', 'false')
         const lengthBefore = await historyLength(page)
 
-        await syncToggle(page).click()
+        await syncButton(page, 'Same Spot').click()
 
         await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${PATRIK},${ARTUREK},${DECL}&sync=position`)
         expect(await historyLength(page)).toBe(lengthBefore)
-        await expect(syncToggle(page)).toHaveAttribute('aria-pressed', 'true')
-        await expect(lane(page, 'Decl')).toContainText('Race clock')
-        await expect(tile(page, 'Decl')).toContainText('Race clock')
-        await expect(lane(page, 'PatriK')).not.toContainText('Race clock')
-        await expect(lane(page, 'Arturek')).not.toContainText('Race clock')
+        await expect(syncButton(page, 'Same Spot')).toHaveAttribute('aria-pressed', 'true')
+        await expect(tile(page, 'Decl')).toContainText('Plays in race time')
+        await expect(tile(page, 'PatriK')).not.toContainText('Plays in race time')
+        await expect(tile(page, 'Arturek')).not.toContainText('Plays in race time')
 
-        await syncToggle(page).click()
+        await syncButton(page, 'Race').click()
 
         await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${PATRIK},${ARTUREK},${DECL}`)
-        await expect(page.getByText('Race clock')).toHaveCount(0)
+        await expect(page.getByText('Plays in race time')).toHaveCount(0)
         expect(await historyLength(page)).toBe(lengthBefore)
     })
 
     test('a link with sync=position holds each aligned run at the reference\'s position', async ({ page }) => {
         await mockApi(page, { videos: [PATRIK, ARTUREK, DECL], comparisons: { [PATRIK]: 'short' } })
         await page.goto(`/compare?runs=${PATRIK},${ARTUREK},${DECL}&sync=position&t=6.000`)
-        await expect(lane(page, 'PatriK')).toContainText('Replay')
+        await expectAligned(page, 'PatriK')
 
         await expect.poll(() => rounded(page)).toEqual([6.038, 6, 6])
         expect((await clocksOf(page)).map(clock => clock.paused)).toEqual([true, true, true])
 
-        await syncToggle(page).click()
+        await syncButton(page, 'Race').click()
 
         await expect.poll(() => rounded(page)).toEqual([6, 6, 6])
     })
@@ -646,30 +778,29 @@ test.describe('adding runs from the leaderboard', () => {
         await page.goto(`/compare?runs=${DECL}`)
         await expect(drawer(page)).toBeVisible()
         await expect(leaderboard(page).getByRole('listitem').first()).toContainText('Decl')
-        await expect(leaderboardRow(page, 'Decl')).toContainText('REF')
-        await expect(leaderboardRow(page, 'Decl')).toContainText('In comparison')
+        await expect(leaderboardRow(page, 'Decl').getByRole('button', { name: 'Remove Decl' })).toHaveAttribute('aria-pressed', 'true')
         await expect(leaderboard(page)).not.toContainText('Banned')
-        await expect(quickAdd(page, 'WR')).toBeEnabled()
+        await expect(quickAdd(page, 'World Record')).toBeEnabled()
         await expect(quickAdd(page, 'Top 3')).toBeEnabled()
-        await expect(quickAdd(page, 'Your PB')).toHaveCount(0)
+        await expect(quickAdd(page, 'Your Best')).toHaveCount(0)
         const lengthBefore = await historyLength(page)
 
-        await quickAdd(page, 'Next slower').click()
+        await quickAdd(page, 'Next Slower').click()
 
         await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${DECL},${SHX}`)
         await expect(tile(page, 'Decl').locator('video')).toHaveCount(1)
         await expect(drawer(page)).toBeVisible()
-        await expect(leaderboardRow(page, 'ShX')).toContainText('In comparison')
+        await expect(leaderboardRow(page, 'ShX').getByRole('button', { name: 'Remove ShX' })).toHaveAttribute('aria-pressed', 'true')
         release()
         await expect(tile(page, 'ShX').locator('video')).toHaveCount(1)
         await expect(lane(page, 'ShX')).toBeVisible()
         await expect(rosterRow(page, 'ShX')).toBeVisible()
         await expect(drawer(page)).toBeVisible()
-        await expect(quickAdd(page, 'Next slower')).toBeDisabled()
+        await expect(quickAdd(page, 'Next Slower')).toBeDisabled()
         expect(await historyLength(page)).toBe(lengthBefore)
     })
 
-    test('a search result adds its run with its badges, and removing it from the list drops it', async ({ page }) => {
+    test('a search result adds its run with its video mark and side tag, and removing it from the list drops it', async ({ page }) => {
         await mockApi(page, { videos: [DECL, SHX, BLUE] })
         await mockLeaderboard(page, [BLUE, DECL, SHX, FIERD, BUN])
         await page.goto(`/compare?runs=${DECL},${SHX}`)
@@ -679,24 +810,26 @@ test.describe('adding runs from the leaderboard', () => {
         const lengthBefore = await historyLength(page)
         await drawer(page).getByRole('searchbox', { name: 'Search Players' }).fill('blue')
         await expect(leaderboard(page).getByRole('listitem')).toHaveCount(1)
-        await expect(leaderboardRow(page, 'Bluey')).toContainText('Video')
-        await expect(leaderboardRow(page, 'Bluey')).toContainText('Replay')
-        await expect(leaderboardRow(page, 'Bluey')).toContainText('Set on Blue')
-        await leaderboardRow(page, 'Bluey').getByRole('button', { name: 'Add' }).click()
+        await expect(leaderboardRow(page, 'Bluey').getByRole('img', { name: 'Has video' })).toBeVisible()
+        await expect(leaderboardRow(page, 'Bluey')).not.toContainText('Checkpoints only')
+        await expect(leaderboardRow(page, 'Bluey')).toContainText('Blue')
+        await expect(drawer(page).getByRole('group', { name: 'Side' })).toBeVisible()
+        await leaderboardRow(page, 'Bluey').getByRole('button', { name: 'Add Bluey' }).click()
 
         await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${DECL},${SHX},${BLUE}`)
         await expect(tile(page, 'Bluey').locator('video')).toHaveCount(1)
-        await expect(lane(page, 'Bluey')).toBeVisible()
+        await expect(lane(page, 'Bluey')).toHaveCount(0)
+        await expect(transport(page)).toContainText('1 blue run on the other route')
         await expect(drawer(page)).toBeVisible()
         expect(await historyLength(page)).toBe(lengthBefore)
 
         await drawer(page).getByRole('searchbox', { name: 'Search Players' }).fill('')
-        await leaderboardRow(page, 'ShX').getByRole('button', { name: 'Remove' }).click()
+        await leaderboardRow(page, 'ShX').getByRole('button', { name: 'Remove ShX' }).click()
 
         await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${DECL},${BLUE}`)
         await expect(tile(page, 'ShX')).toHaveCount(0)
         await expect(lane(page, 'ShX')).toHaveCount(0)
-        await expect(leaderboardRow(page, 'ShX')).not.toContainText('In comparison')
+        await expect(leaderboardRow(page, 'ShX').getByRole('button', { name: 'Add ShX' })).toHaveAttribute('aria-pressed', 'false')
         await expect(drawer(page)).toBeVisible()
     })
 
@@ -705,19 +838,31 @@ test.describe('adding runs from the leaderboard', () => {
         await mockApi(page)
         await mockLeaderboard(page, [...ten, EXTRA[3]])
         await page.goto(`/compare?runs=${ten.join(',')}`)
-        await expect(lanes(page).getByRole('listitem')).toHaveCount(10)
+        await expect(runsButton(page)).toContainText('10')
         await runsButton(page).click()
 
-        await leaderboardRow(page, 'Extra 4').getByRole('button', { name: 'Add' }).click()
+        await leaderboardRow(page, 'Extra 4').getByRole('button', { name: 'Add Extra 4' }).click()
 
         await expect(drawer(page).getByText('A comparison holds at most 10 runs. Remove one before adding another.')).toBeVisible()
-        await expect(lanes(page).getByRole('listitem')).toHaveCount(10)
+        await expect(drawer(page).getByRole('list', { name: 'Roster' }).getByRole('listitem')).toHaveCount(10)
         expect(new URL(page.url()).search).toBe(`?runs=${ten.join(',')}`)
     })
 })
 
-function overlayOf(scope: Locator): Locator {
-    return scope.locator('.run-compare-overlay')
+function nameTag(scope: Locator): Locator {
+    return scope.locator('.run-compare-tile-name')
+}
+
+function liveTag(scope: Locator): Locator {
+    return scope.locator('.run-compare-tile-live')
+}
+
+function tagsMenu(page: Page): Locator {
+    return transport(page).getByRole('button', { name: 'Show on Videos' })
+}
+
+function soundButton(scope: Locator, alias: string): Locator {
+    return scope.getByRole('button', { name: `Sound from ${alias}` })
 }
 
 function mutedOf(page: Page): Promise<{ muted: boolean; volume: number }[]> {
@@ -727,99 +872,164 @@ function mutedOf(page: Page): Promise<{ muted: boolean; volume: number }[]> {
     }))
 }
 
-test.describe('tile overlays and audio', () => {
-    test('each tile shows its player, final time, live delta and the reference pin', async ({ page }) => {
+test.describe('tags on the videos and sound', () => {
+    test('each video shows its player and final time top left, and its live gap against the baseline or the baseline chip top right', async ({ page }) => {
         await mockApi(page, { videos: [DECL, SHX] })
         await page.goto(`/compare?runs=${DECL},${SHX}&t=14.250`)
         const [decl, shx] = [tile(page, 'Decl'), tile(page, 'ShX')]
         await expect.poll(async () => (await clocksOf(page)).map(clock => clock.time)).toEqual([13, 14.25])
 
-        await expect(overlayOf(decl)).toContainText('0:13.000')
-        await expect(overlayOf(decl).getByText('REF', { exact: true })).toBeVisible()
-        await expect(overlayOf(decl).locator('.run-compare-tile-delta')).toHaveCount(0)
-        await expect(overlayOf(shx)).toContainText('0:14.250')
-        await expect(overlayOf(shx).getByText('REF', { exact: true })).toHaveCount(0)
-        await expect(overlayOf(shx).locator('.run-compare-tile-delta')).toHaveText('+1.250')
-        await expect(overlayOf(shx).locator('.run-compare-tile-delta')).toHaveClass(/text-red-300/)
-        await expect(overlayOf(shx)).toContainText('Zones')
+        await expect(nameTag(decl)).toContainText('Decl')
+        await expect(nameTag(decl)).toContainText('00:13.000')
+        await expect(liveTag(decl).getByText('Baseline', { exact: true })).toBeVisible()
+        await expect(liveTag(decl).locator('.run-compare-gap-value')).toHaveCount(0)
+        await expect(nameTag(shx)).toContainText('00:14.250')
+        await expect(nameTag(shx)).toContainText('Checkpoints only')
+        await expect(liveTag(shx).getByText('Baseline', { exact: true })).toHaveCount(0)
+        await expect(liveTag(shx).locator('.run-compare-gap-value')).toHaveText('+1.250')
+        await expect(liveTag(shx).locator('.run-compare-gap-value')).toHaveClass(/text-red-300/)
+        await expect(liveTag(shx)).toContainText('vs Decl')
+        await expect(page.getByText('REF', { exact: true })).toHaveCount(0)
     })
 
-    test('while playing the overlays hide after 2 s idle and return on a pointer move; paused they stay', async ({ page, isMobile }) => {
+    test('the tags sit on the picture, in the top corners, and stay visible while playing', async ({ page, isMobile }) => {
+        test.skip(isMobile, 'phones show the captions under the stage')
         await mockApi(page, { videos: [DECL, SHX] })
         await page.goto(`/compare?runs=${DECL},${SHX}`)
         const shx = tile(page, 'ShX')
         await expect.poll(async () => (await clocksOf(page)).length).toBe(2)
-        await expect(overlayOf(shx)).toBeVisible()
+        const video = (await shx.locator('video').boundingBox())!
+        const name = (await nameTag(shx).boundingBox())!
+        const live = (await liveTag(shx).boundingBox())!
+        const actions = (await shx.locator('.run-compare-tile-actions').boundingBox())!
+        expect(name.x).toBeLessThan(video.x + video.width / 2)
+        expect(name.y).toBeLessThan(video.y + video.height / 4)
+        expect(live.x).toBeGreaterThan(video.x + video.width / 2)
+        expect(live.y).toBeLessThan(video.y + video.height / 4)
+        expect(actions.y + actions.height).toBeLessThanOrEqual(video.y + video.height + 1)
+        expect(actions.y).toBeGreaterThan(video.y + video.height / 2)
+        expect(name.y + name.height).toBeLessThanOrEqual(video.y + video.height)
 
         await playButton(page).click()
-
-        await expect(overlayOf(shx)).toBeVisible()
-        await expect(overlayOf(shx)).toBeHidden({ timeout: 6_000 })
-        const box = (await shx.boundingBox())!
-        if (isMobile) await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2)
-        else await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
-        await expect(overlayOf(shx)).toBeVisible()
-        await expect(overlayOf(shx)).toBeHidden({ timeout: 6_000 })
-
-        await page.getByRole('region', { name: 'Playback' }).getByRole('button', { name: 'Pause', exact: true }).click()
-
-        await expect(overlayOf(shx)).toBeVisible()
+        await expect.poll(async () => (await clocksOf(page)).every(clock => !clock.paused)).toBe(true)
         await page.waitForTimeout(2_500)
-        await expect(overlayOf(shx)).toBeVisible()
+
+        await expect(nameTag(shx)).toBeVisible()
+        await expect(liveTag(shx)).toBeVisible()
     })
 
-    test('every video starts muted and choosing audio on one tile unmutes it and mutes the other', async ({ page }) => {
+    test('Show on Videos turns the names and the live gap off one at a time, and the choice survives a reload', async ({ page, isMobile }) => {
+        test.skip(isMobile, 'phones show the captions under the stage instead')
+        await mockApi(page, { videos: [DECL, SHX] })
+        await page.goto(`/compare?runs=${DECL},${SHX}`)
+        const shx = tile(page, 'ShX')
+        await expect(nameTag(shx)).toBeVisible()
+        await expect(liveTag(shx)).toBeVisible()
+
+        await tagsMenu(page).click()
+        const menu = page.getByRole('menu')
+        await expect(menu.getByRole('menuitemcheckbox', { name: 'Names' })).toHaveAttribute('aria-checked', 'true')
+        await menu.getByRole('menuitemcheckbox', { name: 'Names' }).click()
+        await expect(menu.getByRole('menuitemcheckbox', { name: 'Names' })).toHaveAttribute('aria-checked', 'false')
+        await expect(menu.getByRole('menuitemcheckbox', { name: 'Live Gap' })).toHaveAttribute('aria-checked', 'true')
+        await page.keyboard.press('Escape')
+        await expect(menu).toHaveCount(0)
+        await expect(nameTag(shx)).toHaveCount(0)
+        await expect(liveTag(shx)).toBeVisible()
+
+        await tagsMenu(page).click()
+        await page.getByRole('menu').getByRole('menuitemcheckbox', { name: 'Live Gap' }).click()
+        await page.keyboard.press('Escape')
+        await expect(page.getByRole('menu')).toHaveCount(0)
+        await expect(liveTag(shx)).toHaveCount(0)
+        await expect(shx.getByRole('button', { name: 'Sound from ShX' })).toBeVisible()
+        expect(JSON.parse((await page.evaluate(() => localStorage.getItem('utbt:compareVideoTags:v1')))!)).toEqual({ names: false, gap: false })
+
+        await page.reload()
+        await expect(shx.locator('video')).toHaveCount(1)
+        await expect(nameTag(shx)).toHaveCount(0)
+        await expect(liveTag(shx)).toHaveCount(0)
+
+        await tagsMenu(page).click()
+        await page.getByRole('menu').getByRole('menuitemcheckbox', { name: 'Names' }).click()
+        await page.keyboard.press('Escape')
+        await expect(nameTag(shx)).toBeVisible()
+        await expect(liveTag(shx)).toHaveCount(0)
+    })
+
+    test('the videos never offer the picture-in-picture pop-out', async ({ page }) => {
+        await mockApi(page, { videos: [DECL, SHX] })
+        await page.goto(`/compare?runs=${DECL},${SHX}`)
+        await expect.poll(async () => (await clocksOf(page)).length).toBe(2)
+
+        expect(await page.getByRole('region', { name: 'Stage' }).locator('video').evaluateAll(videos => videos.map(video => (video as HTMLVideoElement).disablePictureInPicture))).toEqual([true, true])
+    })
+
+    test('every video starts muted, and each speaker turns its own sound on and off so several can play at once', async ({ page, isMobile }) => {
         await page.addInitScript(() => { localStorage.setItem('utbt:replayVideoVolume:v1', '0.4') })
         await mockApi(page, { videos: [DECL, SHX] })
         await page.goto(`/compare?runs=${DECL},${SHX}`)
         const [decl, shx] = [tile(page, 'Decl'), tile(page, 'ShX')]
         await expect.poll(async () => (await mutedOf(page)).map(video => video.muted)).toEqual([true, true])
 
-        await shx.getByRole('button', { name: 'Audio' }).click()
+        await soundButton(shx, 'ShX').click()
 
         await expect.poll(() => mutedOf(page)).toEqual([{ muted: true, volume: 0.4 }, { muted: false, volume: 0.4 }])
-        await expect(shx.getByRole('button', { name: 'Audio' })).toHaveAttribute('aria-pressed', 'true')
-        await expect(decl.getByRole('slider', { name: 'Volume' })).toHaveCount(0)
+        await expect(soundButton(shx, 'ShX')).toHaveAttribute('aria-pressed', 'true')
 
-        await decl.getByRole('button', { name: 'Audio' }).click()
+        await soundButton(decl, 'Decl').click()
+
+        await expect.poll(async () => (await mutedOf(page)).map(video => video.muted)).toEqual([false, false])
+        await expect(soundButton(shx, 'ShX')).toHaveAttribute('aria-pressed', 'true')
+        await expect(soundButton(decl, 'Decl')).toHaveAttribute('aria-pressed', 'true')
+
+        await soundButton(shx, 'ShX').click()
 
         await expect.poll(async () => (await mutedOf(page)).map(video => video.muted)).toEqual([false, true])
-        await expect(shx.getByRole('button', { name: 'Audio' })).toHaveAttribute('aria-pressed', 'false')
-        await decl.getByRole('slider', { name: 'Volume' }).fill('0.7')
-        await expect.poll(async () => (await mutedOf(page))[0].volume).toBeCloseTo(0.7)
-        expect(await page.evaluate(() => localStorage.getItem('utbt:replayVideoVolume:v1'))).toBe('0.7')
+        await expect(soundButton(shx, 'ShX')).toHaveAttribute('aria-pressed', 'false')
+        if (isMobile) {
+            await expect(transport(page).getByRole('slider', { name: 'Volume' })).toHaveCount(0)
+        } else {
+            await transport(page).getByRole('slider', { name: 'Volume' }).fill('0.7')
+            await expect.poll(async () => (await mutedOf(page))[0].volume).toBeCloseTo(0.7)
+            expect(await page.evaluate(() => localStorage.getItem('utbt:replayVideoVolume:v1'))).toBe('0.7')
+        }
 
         await runsButton(page).click()
-        await expect(rosterRow(page, 'Decl').getByRole('button', { name: 'Audio' })).toHaveAttribute('aria-pressed', 'true')
-        await rosterRow(page, 'ShX').getByRole('button', { name: 'Audio' }).click()
+        await expect(soundButton(rosterRow(page, 'Decl'), 'Decl')).toHaveAttribute('aria-pressed', 'true')
+        await soundButton(rosterRow(page, 'ShX'), 'ShX').click()
+        await expect.poll(async () => (await mutedOf(page)).map(video => video.muted)).toEqual([false, false])
+        await soundButton(rosterRow(page, 'Decl'), 'Decl').click()
         await expect.poll(async () => (await mutedOf(page)).map(video => video.muted)).toEqual([true, false])
 
-        await rosterRow(page, 'ShX').getByRole('button', { name: 'Video' }).click()
+        await chooseFromMenu(rosterRow(page, 'ShX'), 'ShX', 'Hide Video, Keep the Graph')
         await expect(tile(page, 'ShX')).toHaveCount(0)
-        await expect(rosterRow(page, 'ShX').getByRole('button', { name: 'Audio' })).toBeDisabled()
+        await expect(soundButton(rosterRow(page, 'ShX'), 'ShX')).toBeDisabled()
         await expect.poll(async () => (await mutedOf(page)).map(video => video.muted)).toEqual([true])
     })
 
-    test('removing and pinning from a tile change the set and replace the address in place', async ({ page, isMobile }) => {
+    test('setting the baseline and removing from a tile menu change the set and replace the address in place', async ({ page, isMobile }) => {
         await mockApi(page, { videos: [DECL, SHX, PATRIK] })
         await page.goto(`/compare?runs=${DECL},${SHX},${PATRIK}`)
         await expect(tile(page, 'PatriK').locator('video')).toHaveCount(1)
         if (isMobile) {
-            for (const name of ['Audio', 'Pin', 'Remove']) {
-                const target = (await tile(page, 'ShX').getByRole('button', { name }).boundingBox())!
-                expect(Math.min(target.width, target.height)).toBeGreaterThanOrEqual(44)
+            for (const target of [soundButton(tile(page, 'ShX'), 'ShX'), moreButton(tile(page, 'ShX'), 'ShX')]) {
+                const box = (await target.boundingBox())!
+                expect(Math.min(box.width, box.height)).toBeGreaterThanOrEqual(44)
             }
         }
         const lengthBefore = await historyLength(page)
 
-        await tile(page, 'ShX').getByRole('button', { name: 'Pin' }).click()
+        await chooseFromMenu(tile(page, 'ShX'), 'ShX', 'Set as Baseline')
 
         await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${DECL},${SHX},${PATRIK}&ref=${SHX}`)
-        await expect(overlayOf(tile(page, 'ShX')).getByText('REF', { exact: true })).toBeVisible()
-        await expect(overlayOf(tile(page, 'Decl')).getByText('REF', { exact: true })).toHaveCount(0)
-        await expect(tile(page, 'ShX').getByRole('button', { name: 'Pin' })).toHaveAttribute('aria-pressed', 'true')
+        await expect(tile(page, 'ShX').getByText('Baseline', { exact: true })).toBeVisible()
+        await expect(tile(page, 'Decl').getByText('Baseline', { exact: true })).toHaveCount(0)
+        const menu = await openMenu(tile(page, 'ShX'), 'ShX')
+        await expect(menu.getByRole('menuitem', { name: 'Unpin Baseline' })).toBeVisible()
+        await page.keyboard.press('Escape')
 
-        await tile(page, 'PatriK').getByRole('button', { name: 'Remove' }).click()
+        await chooseFromMenu(tile(page, 'PatriK'), 'PatriK', 'Remove')
 
         await expect(tile(page, 'PatriK')).toHaveCount(0)
         await expect(lane(page, 'PatriK')).toHaveCount(0)
@@ -890,6 +1100,34 @@ test.describe('focus, fullscreen and keyboard', () => {
         await expect.poll(async () => new Set(await tileWidths(page, ['Decl', 'ShX', 'PatriK'])).size).toBe(1)
     })
 
+    test('focusing a tile keeps the sound when that tile already plays, and M moves a single sound along the tiles', async ({ page }) => {
+        await mockApi(page, { videos: [DECL, SHX, PATRIK] })
+        await page.goto(`/compare?runs=${DECL},${SHX},${PATRIK}`)
+        const muted = async () => (await mutedOf(page)).map(video => video.muted)
+        await expect.poll(muted).toEqual([true, true, true])
+
+        await soundButton(tile(page, 'Decl'), 'Decl').click()
+        await soundButton(tile(page, 'ShX'), 'ShX').click()
+        await expect.poll(muted).toEqual([false, false, true])
+
+        await clickTile(page, 'ShX')
+        await expect(focusButton(page, 'ShX')).toHaveAttribute('aria-pressed', 'true')
+        await expect.poll(muted).toEqual([false, false, true])
+        await page.keyboard.press('0')
+
+        await clickTile(page, 'PatriK')
+        await expect(focusButton(page, 'PatriK')).toHaveAttribute('aria-pressed', 'true')
+        await expect.poll(muted).toEqual([true, true, false])
+        await page.keyboard.press('0')
+
+        await page.keyboard.press('m')
+        await expect.poll(muted).toEqual([true, true, true])
+        await page.keyboard.press('m')
+        await expect.poll(muted).toEqual([false, true, true])
+        await page.keyboard.press('m')
+        await expect.poll(muted).toEqual([true, false, true])
+    })
+
     test('Space plays and pauses, and F requests fullscreen on the stage with the transport bar inside', async ({ page }) => {
         await spyOnFullscreen(page)
         await mockApi(page, { videos: [DECL, SHX] })
@@ -920,27 +1158,29 @@ test.describe('focus, fullscreen and keyboard', () => {
         await spyOnFullscreen(page)
         await mockApi(page)
         await page.goto(`/compare?runs=${FIERD},${BUN}`)
-        await expect(lanes(page).getByRole('listitem')).toHaveCount(2)
+        await expect(page.getByText('Solo · 2 runs')).toBeVisible()
+        await expect(transport(page).getByRole('button', { name: 'Play', exact: true })).toBeVisible()
 
         await expect(transport(page).getByRole('button', { name: 'Fullscreen' })).toHaveCount(0)
         await page.keyboard.press('f')
         expect(await fullscreenRequested(page)).toBeNull()
     })
 
-    test('[ and ] step through the cues of every run', async ({ page }) => {
+    test('[ and ] step through the sectors of every run', async ({ page }) => {
         await mockApi(page, { videos: [PATRIK, ARTUREK], comparisons: { [PATRIK]: 'short' } })
         await page.goto(`/compare?runs=${PATRIK},${ARTUREK}`)
-        await expect(lane(page, 'PatriK')).toContainText('Replay')
+        await expectAligned(page, 'PatriK')
         await expect.poll(async () => (await clocksOf(page)).length).toBe(2)
-        const cue = transport(page).getByRole('combobox', { name: 'Cue' })
+        const active = () => page.getByRole('list', { name: 'Sectors' }).getByRole('listitem')
+            .evaluateAll(items => items.findIndex(item => item.classList.contains('is-active')))
 
         await page.keyboard.press(']')
-        await expect(cue).not.toHaveValue('')
-        const first = await cue.inputValue()
+        await expect.poll(active).toBeGreaterThanOrEqual(0)
+        const first = await active()
         await page.keyboard.press(']')
-        await expect(cue).not.toHaveValue(first)
+        await expect.poll(active).toBe(first + 1)
         await page.keyboard.press('[')
-        await expect(cue).toHaveValue(first)
+        await expect.poll(active).toBe(first)
     })
 
     test('? opens the shortcut sheet, which lists every shortcut with its control', async ({ page, isMobile }) => {
@@ -1010,40 +1250,81 @@ test.describe('solo analysis', () => {
         release()
 
         await expect(analysis(page)).toBeVisible()
-        await expect(analysis(page).getByRole('heading', { name: 'Sector Matrix' })).toBeVisible()
+        await expect(analysis(page).getByRole('heading', { name: 'Sector Times' })).toBeVisible()
     })
 
     test('clicking a sector row cues every video', async ({ page }) => {
         await mockApi(page, { videos: [PATRIK, ARTUREK], comparisons: { [PATRIK]: 'short' } })
         await page.goto(`/compare?runs=${PATRIK},${ARTUREK}`)
-        await expect(lane(page, 'PatriK')).toContainText('Replay')
+        await expectAligned(page, 'PatriK')
         await expect.poll(async () => (await clocksOf(page)).length).toBe(2)
 
         await analysis(page).getByRole('button', { name: 'Cue S4' }).click()
 
         await expect.poll(() => rounded(page)).toEqual([3.74, 3.549])
-        await expect(transport(page).getByRole('combobox', { name: 'Cue' })).toHaveValue('S4')
+        await expect(page.getByRole('list', { name: 'Sectors' }).getByRole('listitem').nth(3)).toHaveClass(/is-active/)
     })
 
-    test('clicking the cumulative chart seeks every video', async ({ page }) => {
+    test('the gap over the run lives in the transport only, and a click on it seeks every video', async ({ page }) => {
         await mockApi(page, { videos: [PATRIK, ARTUREK], comparisons: { [PATRIK]: 'short' } })
         await page.goto(`/compare?runs=${PATRIK},${ARTUREK}`)
-        await expect(lane(page, 'PatriK')).toContainText('Replay')
+        await expectAligned(page, 'PatriK')
         await expect.poll(async () => (await clocksOf(page)).length).toBe(2)
+        await expect(analysis(page).getByRole('heading', { name: 'Sector Times' })).toBeVisible()
+        await expect(analysis(page).locator('.run-compare-cumulative')).toHaveCount(0)
+        await expect(analysis(page).getByRole('heading', { name: 'Gap Over the Run' })).toHaveCount(0)
 
-        const chart = analysis(page).locator('.run-compare-cumulative')
+        const chart = transport(page).locator('.run-compare-gap-plot')
         await chart.scrollIntoViewIfNeeded()
         const box = (await chart.boundingBox())!
         await chart.click({ position: { x: box.width / 2, y: box.height / 2 } })
 
         await expect.poll(async () => Math.min(...(await clocksOf(page)).map(clock => clock.time))).toBeGreaterThan(1)
-        await expect(transport(page).getByRole('slider', { name: 'Timeline' })).not.toHaveAttribute('aria-valuetext', /^0:00\.000/)
+        await expect(transport(page).getByRole('slider', { name: 'Timeline' })).not.toHaveAttribute('aria-valuetext', /^00:00.000/)
+    })
+
+    test('hovering the speed chart reads out both runs\' speed at that moment', async ({ page, isMobile }) => {
+        test.skip(isMobile, 'the readout follows a mouse')
+        await mockApi(page, { videos: [PATRIK, ARTUREK], comparisons: { [PATRIK]: 'short' } })
+        await page.goto(`/compare?runs=${PATRIK},${ARTUREK}`)
+        await expectAligned(page, 'PatriK')
+        const plot = analysis(page).locator('.run-compare-speed-plot')
+        await plot.scrollIntoViewIfNeeded()
+        const readout = plot.locator('g[data-readout]')
+        await expect(readout).toHaveCount(0)
+
+        const box = (await plot.boundingBox())!
+        await page.mouse.move(box.x + box.width * 0.4, box.y + box.height * 0.45)
+
+        await expect(readout).toHaveCount(1)
+        await expect(readout).toContainText('PatriK')
+        await expect(readout).toContainText('Arturek')
+        await expect(readout).toContainText('Difference')
+        await expect(readout).toContainText('UU/s')
+
+        await page.mouse.move(box.x + box.width * 0.4, box.y - 60)
+        await expect(readout).toHaveCount(0)
+    })
+
+    test('the baseline row in Sector Times carries no per-sector numbers or note', async ({ page, isMobile }) => {
+        test.skip(isMobile, 'phones show the table as cards')
+        await mockApi(page, { videos: [PATRIK, ARTUREK], comparisons: { [PATRIK]: 'short' } })
+        await page.goto(`/compare?runs=${PATRIK},${ARTUREK}`)
+        await expectAligned(page, 'PatriK')
+        const panel = analysis(page).getByRole('region', { name: 'Sector Times' })
+        await expect(panel).toBeVisible()
+        await expect(panel).not.toContainText('Sectors are')
+        await expect(panel).not.toContainText('Each sector is')
+        const baseline = panel.locator('tr.is-baseline')
+        await expect(baseline).toHaveCount(1)
+        await expect(baseline).toContainText('Arturek')
+        await expect(baseline.locator('.run-compare-sector-gap, .run-compare-sector-time')).toHaveCount(0)
     })
 
     test('choosing a run for speed highlights its tile', async ({ page }) => {
         await mockApi(page, { videos: [PATRIK, ARTUREK, DECL], comparisons: { [PATRIK]: 'short' } })
         await page.goto(`/compare?runs=${ARTUREK},${PATRIK},${DECL}`)
-        await expect(lane(page, 'PatriK')).toContainText('Replay')
+        await expectAligned(page, 'PatriK')
         await expect(tile(page, 'PatriK')).not.toHaveClass(/is-highlighted/)
 
         await analysis(page).getByRole('button', { name: 'Speed for PatriK' }).click()
@@ -1057,7 +1338,7 @@ test.describe('solo analysis', () => {
         await page.setViewportSize({ width: 390, height: 844 })
         await mockApi(page, { videos: [PATRIK, ARTUREK], comparisons: { [PATRIK]: 'short' } })
         await page.goto(`/compare?runs=${ARTUREK},${PATRIK},${DECL},${SHX},${FIERD},${BUN},${BLUE}`)
-        await expect(analysis(page).getByRole('heading', { name: 'Sector Matrix' })).toBeVisible()
+        await expect(analysis(page).getByRole('heading', { name: 'Sector Times' })).toBeVisible()
 
         expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1)
         for (const panel of await analysis(page).locator('.run-compare-panel').all()) {
@@ -1073,8 +1354,11 @@ function teamHeaders(page: Page): Locator {
     return page.getByRole('region', { name: 'Stage' }).locator('.run-compare-team-header')
 }
 
-function crossings(page: Page, alias: string): Locator {
-    return lane(page, alias).getByRole('list', { name: 'Crossings' }).getByRole('listitem')
+function zoneCues(page: Page): Promise<string[]> {
+    return page.getByRole('list', { name: 'Zones' }).getByRole('listitem').evaluateAll(items => items.map(item => {
+        const name = item.querySelector('[aria-label]')?.getAttribute('aria-label') ?? item.textContent ?? ''
+        return /Zone \S+/.exec(name)?.[0] ?? name
+    }))
 }
 
 test.describe('team runs', () => {
@@ -1088,18 +1372,19 @@ test.describe('team runs', () => {
         await expect(two.locator('video')).toHaveCount(1)
         await expect(teamHeaders(page)).toHaveCount(1)
         await expect(teamHeaders(page)).toContainText('Alpha One & Alpha Two')
-        await expect(teamHeaders(page)).toContainText('0:13.500')
+        await expect(teamHeaders(page)).toContainText('00:13.500')
+        await expect(teamHeaders(page)).toContainText('Baseline')
         const [left, right] = [await one.boundingBox(), await two.boundingBox()]
         expect(right!.y).toBeCloseTo(left!.y, 0)
         expect(right!.x).toBeGreaterThanOrEqual(left!.x + left!.width)
         await expect(page).toHaveTitle(/^Alpha One & Alpha Two on /)
         await expect(drawer(page)).toHaveCount(0)
 
-        await expect(crossings(page, 'Alpha One')).toHaveText(['Gate at 0:03.000', 'Crane at 0:07.500', 'CAP at 0:12.000'])
-        await expect(crossings(page, 'Alpha Two')).toHaveText(['Gate at 0:03.400', 'CAP at 0:13.500'])
-        await expect(lane(page, 'Alpha One')).toContainText('Zones')
-        await expect(lane(page, 'Alpha Two')).toContainText('Replay')
-        await expect(page.getByRole('region', { name: 'Stage' }).locator('.run-compare-tile-delta')).toHaveCount(0)
+        await expect.poll(() => zoneCues(page)).toEqual(['Zone Gate', 'Zone Crane'])
+        await expect(lanes(page)).toHaveCount(0)
+        await expect(one).toContainText('Checkpoints only')
+        await expect(two).not.toContainText('Checkpoints only')
+        await expect(page.getByRole('region', { name: 'Stage' }).locator('.run-compare-gap-value')).toHaveCount(0)
 
         await playButton(page).click()
 
@@ -1121,9 +1406,11 @@ test.describe('team runs', () => {
         const bravo = leaderboard(page).locator(':scope > li').filter({ hasText: 'Bravo One' })
         const members = bravo.getByRole('list', { name: 'Members' }).getByRole('listitem')
         await expect(members).toHaveCount(2)
-        await expect(members.first()).toContainText('Zones')
-        await expect(members.first()).toContainText('Set on Red')
-        await bravo.getByRole('button', { name: 'Add', exact: true }).click()
+        await expect(members.first()).toContainText('Checkpoints only')
+        await expect(members.nth(1)).toContainText('Final time only')
+        await expect(members.first()).not.toContainText('Red')
+        await expect(drawer(page).getByRole('group', { name: 'Side' })).toHaveCount(0)
+        await bravo.getByRole('button', { name: 'Add Bravo One & Bravo Two' }).click()
 
         await expect(teamHeaders(page)).toHaveCount(2)
         await expect(tile(page, 'Bravo Two').locator('video')).toHaveCount(1)
@@ -1137,10 +1424,14 @@ test.describe('team runs', () => {
 
         const roster = drawer(page).getByRole('list', { name: 'Roster' })
         await expect(roster.locator(':scope > li')).toHaveCount(2)
-        await roster.getByRole('list', { name: 'Members' }).getByRole('listitem').filter({ hasText: 'Bravo Two' }).getByRole('button', { name: 'POV' }).click()
+        await expect(drawer(page)).toContainText('2 of 4 team runs')
+        const bravoTwo = roster.getByRole('list', { name: 'Members' }).getByRole('listitem').filter({ hasText: 'Bravo Two' })
+        await chooseFromMenu(bravoTwo, 'Bravo Two', 'Hide Video, Keep the Graph')
 
         await expect(tile(page, 'Bravo Two')).toHaveCount(0)
-        await expect(roster.getByRole('list', { name: 'Members' }).getByRole('listitem').filter({ hasText: 'Bravo Two' }).getByRole('button', { name: 'POV' })).toHaveAttribute('aria-pressed', 'false')
+        const menu = await openMenu(bravoTwo, 'Bravo Two')
+        await expect(menu.getByRole('menuitem', { name: 'Show Video' })).toBeVisible()
+        await page.keyboard.press('Escape')
         await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${ALPHA.teamCapId},${BRAVO.teamCapId}&data=${BRAVO.members[1].capId}`)
     })
 })
@@ -1186,28 +1477,41 @@ test.describe('team vs team', () => {
         expect(teamReads).toEqual([`${ALIGNED_RUNNER.teamCapId}:${ALIGNED_REFERENCE.teamCapId}`])
 
         await expect(lanes(page).locator(':scope > li')).toHaveCount(2)
-        await expect(tile(page, 'Nightwolf`').locator('.run-compare-tile-delta')).toHaveCount(1)
-        await expect(tile(page, 'gxls').locator('.run-compare-tile-delta')).toHaveCount(0)
+        await expect(tile(page, 'Nightwolf`').locator('.run-compare-gap-value')).toHaveCount(1)
+        await expect(tile(page, 'Nightwolf`')).toContainText('vs gxls')
+        await expect(tile(page, 'gxls').locator('.run-compare-gap-value')).toHaveCount(0)
+        const [header, firstTile] = await Promise.all([teamHeaders(page).first().boundingBox(), tile(page, 'Nightwolf`').boundingBox()])
+        expect(header!.x + header!.width).toBeLessThanOrEqual(firstTile!.x + 1)
+        expect(header!.y).toBeCloseTo(firstTile!.y, 0)
+        await expect(teamHeaders(page).filter({ hasText: 'Baseline' })).toHaveCount(1)
+        await expect(teamHeaders(page).first()).not.toContainText('Baseline')
         expect(new URL(page.url()).search).toBe(new URL(ALIGNED_URL, page.url()).search)
     })
 
-    test('the analysis lists the team splits, then one section per matched pair, and a split row cues each team to its own crossing', async ({ page }) => {
+    test('the analysis lists the team splits, then a member pair list linking each pair to its own comparison, and a split row cues each team to its own crossing', async ({ page }) => {
         await openAligned(page)
 
-        await expect(splitRows(page)).toHaveText(['Bridge', 'Ramp', 'Lift', 'Pit', 'Flag', 'Cap'])
+        await expect(splitRows(page)).toHaveText(['Zone Bridge', 'Zone Ramp', 'Zone Lift', 'Zone Pit', 'Zone Flag', 'Finish'])
         const flag = teamSplits(page).getByRole('row').filter({ has: page.getByRole('button', { name: 'Cue Flag' }) })
-        await expect(flag).toContainText('1:18.433')
+        await expect(flag).toContainText('01:18.433')
         await expect(flag).toContainText('−0.517')
         await expect(flag).toContainText('fierd_6')
-        await expect(page.getByRole('region', { name: 'Nightwolf` vs gxls' })).toBeVisible()
-        await expect(page.getByRole('region', { name: 'fierd_6 vs [UTW]Nettlez' })).toBeVisible()
+        const pairs = page.getByRole('list', { name: 'Member Pairs' }).getByRole('listitem')
+        await expect(pairs).toHaveCount(2)
+        await expect(pairs.nth(0)).toContainText('Nightwolf`')
+        await expect(pairs.nth(0)).toContainText('gxls')
+        await expect(pairs.nth(1)).toContainText('fierd_6')
+        await expect(pairs.nth(1)).toContainText('[UTW]Nettlez')
+        await expect(pairs.nth(0).getByRole('link', { name: 'Compare Pair' })).toHaveAttribute('href', /\/compare\?runs=/)
+        await expect(page.getByRole('region', { name: 'Nightwolf` vs gxls' })).toHaveCount(0)
 
         await teamSplits(page).getByRole('button', { name: 'Cue Bridge' }).click()
 
         await expect.poll(async () => (await Promise.all(['fierd_6', 'Nightwolf`'].map(async alias => (await clockOf(tile(page, alias))).time))).map(time => time.toFixed(1))).toEqual(['12.2', '12.2'])
         const reference = await Promise.all(['gxls', '[UTW]Nettlez'].map(async alias => (await clockOf(tile(page, alias))).time))
         reference.forEach(time => expect(time).toBeCloseTo(12.517, 1))
-        await expect(page.getByRole('region', { name: 'Playback' }).getByRole('combobox', { name: 'Cue' })).toHaveValue('zone:Bridge')
+        await expect.poll(() => page.getByRole('list', { name: 'Zones' }).locator('.run-compare-cue.is-active')
+            .evaluateAll(items => items.map(item => item.querySelector('button')?.getAttribute('aria-label') ?? item.textContent ?? ''))).toEqual([expect.stringContaining('Zone Bridge')])
     })
 
     test('a team read that fails leaves that team run on final time only', async ({ page }) => {
@@ -1217,9 +1521,8 @@ test.describe('team vs team', () => {
         await page.goto(ALIGNED_URL)
 
         await expect(tile(page, 'fierd_6').locator('video')).toHaveCount(1)
-        await expect(lanes(page).locator(':scope > li').filter({ hasText: 'fierd_6' })).toContainText('Time only')
-        await expect(tile(page, 'fierd_6')).toContainText('Time only')
-        await expect(splitRows(page)).toHaveText(['Cap'])
+        await expect(tile(page, 'fierd_6')).toContainText('Final time only')
+        await expect(splitRows(page)).toHaveText(['Finish'])
     })
 })
 
@@ -1240,8 +1543,8 @@ test.describe('pairing override and driving pair', () => {
         await openAligned(page)
         const lengthBefore = await historyLength(page)
 
-        await tile(page, 'fierd_6').getByRole('button', { name: 'Paired With' }).click()
-        const menu = page.getByRole('menu')
+        const menu = await openMenu(tile(page, 'fierd_6'), 'fierd_6')
+        await expect(menu.getByText('Compare fierd_6 With')).toBeVisible()
         await expect(menu.getByRole('menuitemradio')).toHaveCount(2)
         await expect(menu.getByRole('menuitemradio', { name: /Nettlez/ })).toHaveAttribute('aria-checked', 'true')
         await expect(menu.getByRole('menuitemradio', { name: /Nettlez/ })).toContainText('route match 95 %')
@@ -1259,8 +1562,8 @@ test.describe('pairing override and driving pair', () => {
         for (const alias of ['fierd_6', 'Nightwolf`', 'gxls', '[UTW]Nettlez']) await expect(tile(page, alias).locator('video')).toHaveCount(1)
         expect(new URL(page.url()).search).toBe(paired)
         await expect.poll(async () => Math.round(await xOf(page, 'fierd_6')) - Math.round(await xOf(page, 'gxls'))).toBe(0)
-        await tile(page, 'gxls').getByRole('button', { name: 'Paired With' }).click()
-        await expect(page.getByRole('menu').getByRole('menuitemradio', { name: /fierd_6/ })).toHaveAttribute('aria-checked', 'true')
+        const again = await openMenu(tile(page, 'gxls'), 'gxls')
+        await expect(again.getByRole('menuitemradio', { name: /fierd_6/ })).toHaveAttribute('aria-checked', 'true')
     })
 
     test('Shift+1 focuses the first team row', async ({ page, isMobile }) => {
@@ -1269,30 +1572,34 @@ test.describe('pairing override and driving pair', () => {
 
         await page.keyboard.press('Shift+Digit1')
 
-        await expect.poll(async () => (await tile(page, 'fierd_6').boundingBox())!.width).toBeGreaterThan((await tile(page, 'gxls').boundingBox())!.width * 2)
+        await expect.poll(async () => (await tile(page, 'fierd_6').boundingBox())!.width).toBeGreaterThan((await tile(page, 'gxls').boundingBox())!.width * 1.5)
         const [fierd, nightwolf, gxls] = await Promise.all(['fierd_6', 'Nightwolf`', 'gxls'].map(async alias => (await tile(page, alias).boundingBox())!))
         expect(nightwolf.width).toBeCloseTo(fierd.width, 0)
         expect(gxls.x).toBeGreaterThan(fierd.x + fierd.width - 1)
 
         await page.keyboard.press('Shift+Digit2')
-        await expect.poll(async () => (await tile(page, 'gxls').boundingBox())!.width).toBeGreaterThan((await tile(page, 'fierd_6').boundingBox())!.width * 2)
-        await expect(tile(page, 'gxls').getByRole('button', { name: 'Audio' })).toHaveAttribute('aria-pressed', 'true')
+        await expect.poll(async () => (await tile(page, 'gxls').boundingBox())!.width).toBeGreaterThan((await tile(page, 'fierd_6').boundingBox())!.width * 1.5)
+        await expect(soundButton(tile(page, 'gxls'), 'gxls')).toHaveAttribute('aria-pressed', 'true')
 
         await page.keyboard.press('0')
         await expect.poll(async () => Math.round((await tile(page, 'fierd_6').boundingBox())!.width)).toBe(Math.round((await tile(page, 'gxls').boundingBox())!.width))
     })
 
-    test('with Sync by position on, the roster offers the driving pair and writes drive in place', async ({ page }) => {
+    test('with Same Spot on, the roster offers the leading pair and writes drive in place', async ({ page }) => {
         await openAligned(page)
-        await syncToggle(page).click()
+        await syncButton(page, 'Same Spot').click()
         await runsButton(page).click()
 
-        await expect(memberRow(page, 'fierd_6').getByRole('button', { name: 'Drives Sync' })).toHaveAttribute('aria-pressed', 'true')
-        await expect(memberRow(page, 'gxls').getByRole('button', { name: 'Drives Sync' })).toHaveCount(0)
-        await memberRow(page, 'Nightwolf`').getByRole('button', { name: 'Drives Sync' }).click()
+        const leads = (menu: Locator) => menu.getByRole('menuitemcheckbox', { name: 'Leads Same Spot Sync' })
+        await expect(leads(await openMenu(memberRow(page, 'fierd_6'), 'fierd_6'))).toHaveAttribute('aria-checked', 'true')
+        await page.keyboard.press('Escape')
+        await expect(leads(await openMenu(memberRow(page, 'gxls'), 'gxls'))).toHaveCount(0)
+        await page.keyboard.press('Escape')
+        await leads(await openMenu(memberRow(page, 'Nightwolf`'), 'Nightwolf`')).click()
 
         await expect.poll(() => new URL(page.url()).search).toBe(`${ALIGNED_URL.slice('/compare'.length)}&drive=${NIGHTWOLF}&sync=position`)
-        await expect(memberRow(page, 'Nightwolf`').getByRole('button', { name: 'Drives Sync' })).toHaveAttribute('aria-pressed', 'true')
-        await expect(memberRow(page, 'fierd_6').getByRole('button', { name: 'Paired With' })).toBeVisible()
+        await expect(leads(await openMenu(memberRow(page, 'Nightwolf`'), 'Nightwolf`'))).toHaveAttribute('aria-checked', 'true')
+        await page.keyboard.press('Escape')
+        await expect((await openMenu(memberRow(page, 'fierd_6'), 'fierd_6')).getByText('Compare fierd_6 With')).toBeVisible()
     })
 })

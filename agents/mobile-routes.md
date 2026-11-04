@@ -31,7 +31,7 @@ doesn't run on the surfaces it names.
 | `achievements` | `achievements` | public | `/achievements` | `achievements` | 0 | 0 |
 | `news` | `news` | public | `/news` | `news` | 0 | 0 |
 | `news-detail` | `news-detail` | public | `/news/15` | `news-detail` | 0 | 0 |
-| `run-compare` | `run-compare` | public | `/compare?runs=258021df-51b1-4ed3-99cc-62d4e75892a7,418b0aec-34c5-40e7-acf4-f2bc33373063` | `run-compare` | 2 | 3 |
+| `run-compare` | `run-compare` | public | `/compare?runs=258021df-51b1-4ed3-99cc-62d4e75892a7,418b0aec-34c5-40e7-acf4-f2bc33373063` | `run-compare` | 4 | 6 |
 | `home:signed-in` | `home` | role-gated | `/` | `home-signed-in` | 0 | 2 |
 | `maps:signed-in` | `maps` | role-gated | `/maps` | `maps-signed-in` | 0 | 0 |
 | `admin` | `admin` | role-gated | `/admin` | `admin` | 19 | 4 |
@@ -517,6 +517,8 @@ No skipped rules.
 |---|---|---|---|
 | `run-compare/pov` | POV switcher, eight runs | URL `/compare?runs=258021df-51b1-4ed3-99cc-62d4e75892a7,418b0aec-34c5-40e7-acf4-f2bc33373063,8d742df9-2f14-4998-835c-3c16c1d1ee92,c0ffee00-0000-4000-8000-000000000000,c0ffee01-0000-4000-8000-000000000001,c0ffee02-0000-4000-8000-000000000002,c0ffee03-0000-4000-8000-000000000003,c0ffee04-0000-4000-8000-000000000004` | `long-text` |
 | `run-compare/teams` | Two team runs, POVs grouped by team | URL `/compare?runs=c0ffee10-0000-4000-8000-000000000010,c0ffee20-0000-4000-8000-000000000020` | `long-text` |
+| `run-compare/start` | Start: pick a map | URL `/compare` | `long-text` |
+| `run-compare/start-map` | Start: pick runs on a map | URL `/compare?map=CTF-BT-HumanResources` | `long-text` |
 
 ### Modals
 
@@ -524,11 +526,15 @@ No skipped rules.
 |---|---|---|
 | `run-compare/runs` | Runs drawer sheet | `run-compare` |
 | `run-compare/pov/runs` | Runs drawer sheet | `run-compare/pov` |
+| `run-compare/pov/run-menu` | Run menu of the first roster row | `run-compare/pov` |
 | `run-compare/teams/runs` | Runs drawer sheet | `run-compare/teams` |
+| `run-compare/start/help` | How Compare Works, from How it works | `run-compare/start` |
+| `run-compare/start-map/help` | How Compare Works, from About these runs | `run-compare/start-map` |
 
 ### Skipped rules
 
-- `table-shows-every-column` on `run-compare/pov`, its modals and its stress variants: with eight runs the sector matrix shows the run columns that fit and a run picker for the others
+- `modal-fits` on `run-compare/pov/run-menu`: a dropdown menu has no close control: an outside tap or Escape closes it, and Radix keeps it inside the viewport
+- `rotation-recovers` on `run-compare/pov/run-menu`: it measures and taps the close control after the rotation, and a dropdown menu has none
 
 ## home:signed-in
 

@@ -1,21 +1,24 @@
 import type { TeamLeaderboardEntry, TeamRunMember } from '@/app/utils/api'
 import { serializeCompareQuery } from '../url/compareUrl'
-import { VIDEO, type AddChip, type AddRunsFilters, type ChipId, type RowVideo, type SetChange, type TeamColour } from './addRuns'
+import { dataMatches, isOlderVideo, mixedEntrySides, runDataOf, videoMatches, type AddChip, type AddRunsFilters, type ChipId, type RowVideo, type SetChange, type TeamColour } from './addRuns'
 import { stateOf, type CompareModel } from './compareModel'
-import { REPLAY, SET_ON, ZONES } from './laneModel'
-import { formatRaceTime, MAX_VIDEO_TILES, NO_VIDEO, type LoadedVideos } from './raceModel'
+import { CHECKPOINTS_ONLY, FINAL_TIME_ONLY } from './laneModel'
+import { formatRaceTime, GRAPH_ONLY, MAX_VIDEO_TILES, type LoadedVideos } from './raceModel'
 import { editableSet, editSet, type EditOutcome } from './setEdits'
 
 export interface TeamAddMember {
     capId: string
     member: TeamRunMember
     video: RowVideo
+    older: boolean
+    side: number | null
     badges: string[]
 }
 
 export interface TeamAddRow {
     teamCapId: string
     entry: TeamLeaderboardEntry
+    rank: number
     time: string
     members: TeamAddMember[]
     inComparison: boolean
@@ -28,12 +31,14 @@ export interface TeamAddRunsInput {
     videos: LoadedVideos
     userId: string | null
     filters: AddRunsFilters
+    picked?: readonly string[]
 }
 
 export interface TeamAddRunsModel {
     chips: AddChip[]
     rows: TeamAddRow[]
     reference: string | null
+    mixed: boolean
 }
 
 const COLOUR_SIDE: Record<Exclude<TeamColour, 'any'>, number> = { red: 0, blue: 1 }
@@ -55,19 +60,17 @@ function rowVideo(videos: LoadedVideos, capId: string): RowVideo {
 }
 
 function memberBadges(member: TeamRunMember, video: RowVideo): string[] {
-    const side = sideOf(member)
     return [
-        ...(video === 'video' ? [VIDEO] : video === 'none' ? [NO_VIDEO] : []),
-        ...(member.has_ghost === true ? [REPLAY] : member.has_zones === true ? [ZONES] : []),
-        ...(side === null ? [] : [SET_ON[side]]),
+        ...(video === 'none' ? [GRAPH_ONLY] : []),
+        ...(member.has_ghost === true ? [] : member.has_zones === true ? [CHECKPOINTS_ONLY] : [FINAL_TIME_ONLY]),
     ]
 }
 
-function matches(entry: TeamLeaderboardEntry, members: readonly TeamAddMember[], filters: AddRunsFilters): boolean {
+function matches(entry: TeamLeaderboardEntry, members: readonly TeamAddMember[], videos: LoadedVideos, filters: AddRunsFilters): boolean {
     const search = filters.search.trim().toLowerCase()
     if (search && !entry.members.some(member => (member.alias ?? '').toLowerCase().includes(search))) return false
-    if (filters.hasVideo && !members.some(member => member.video === 'video')) return false
-    if (filters.hasReplay && !entry.members.some(member => member.has_ghost === true)) return false
+    if (!members.some(member => videoMatches(filters.video, videos.get(member.capId)))) return false
+    if (!entry.members.some(member => dataMatches(filters.data, runDataOf(member.has_ghost, member.has_zones === true)))) return false
     if (filters.colour !== 'any' && !entry.members.some(member => sideOf(member) === COLOUR_SIDE[filters.colour as Exclude<TeamColour, 'any'>])) return false
     return true
 }
@@ -85,41 +88,45 @@ function chipsFor(listed: readonly TeamLeaderboardEntry[], model: CompareModel, 
         return { id, label, capIds, disabled: capIds.length === 0 || capIds.every(capId => inSet.has(capId)) }
     }
     return [
-        chip('wr', 'WR', [verified[0]]),
-        ...(userId === null ? [] : [chip('pb', 'Your PB', [own[0]])]),
-        chip('faster', 'Next faster', [faster[faster.length - 1]]),
-        chip('slower', 'Next slower', [slower[0]]),
+        chip('wr', 'World Record', [verified[0]]),
+        ...(userId === null ? [] : [chip('pb', 'Your Best', [own[0]])]),
+        ...(model.teams.rows.length === 0 ? [] : [
+            chip('faster', 'Next Faster', [faster[faster.length - 1]]),
+            chip('slower', 'Next Slower', [slower[0]]),
+        ]),
         chip('top3', 'Top 3', verified.slice(0, 3)),
     ]
 }
 
-export function teamAddRunsModel({ entries, model, videos, userId, filters }: TeamAddRunsInput): TeamAddRunsModel {
+export function teamAddRunsModel({ entries, model, videos, userId, filters, picked }: TeamAddRunsInput): TeamAddRunsModel {
     const listed = listedTeamEntries(entries)
-    const inSet = new Set(stateOf(model).runs)
+    const inSet = new Set(picked ?? stateOf(model).runs)
     const reference = model.teams.reference
+    const ranks = new Map(listed.map((entry, i) => [entry.id, i + 1]))
     const pinned = [...listed.filter(entry => entry.id === reference), ...listed.filter(entry => entry.id !== reference)]
     const rows = pinned.flatMap((entry): TeamAddRow[] => {
         const members = entry.members.map((member): TeamAddMember => {
             const video = rowVideo(videos, member.cap_id)
-            return { capId: member.cap_id, member, video, badges: memberBadges(member, video) }
+            return { capId: member.cap_id, member, video, older: isOlderVideo(videos.get(member.cap_id)), side: sideOf(member), badges: memberBadges(member, video) }
         })
-        if (!matches(entry, members, filters)) return []
+        if (!matches(entry, members, videos, filters)) return []
         return [{
             teamCapId: entry.id,
             entry,
+            rank: ranks.get(entry.id) ?? 0,
             time: formatRaceTime(entry.cap_time_seconds),
             members,
             inComparison: inSet.has(entry.id),
             reference: entry.id === reference,
         }]
     })
-    return { chips: chipsFor(listed, model, inSet, userId), rows, reference }
+    return { chips: chipsFor(listed, model, inSet, userId), rows, reference, mixed: mixedEntrySides(listed.flatMap(entry => entry.members.map(sideOf))) }
 }
 
 export function pastVideoPovsNote(count: number): string | null {
     if (count === 0) return null
     const who = count === 1 ? 'Joined' : `${count} POVs joined`
-    return `${who} as data-only: ${MAX_VIDEO_TILES} videos already play.`
+    return `${who} as a graph only: ${MAX_VIDEO_TILES} videos already play.`
 }
 
 function freeVideoTiles(model: CompareModel, entries: readonly TeamLeaderboardEntry[], videos: LoadedVideos): number {

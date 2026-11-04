@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { packFocus, packStage, STAGE_GAP, type StageBox, type StageLayout } from './stageLayout'
+import { packFocus, packStage, STAGE_GAP, usedBounds, type StageBox, type StageLayout } from './stageLayout'
 
 interface Slot {
     kind: 'video' | 'map'
@@ -181,5 +181,20 @@ describe('packing the stage around a focused tile', () => {
         expect(packFocus(slots(3), 'gone', box)).toEqual(packStage(slots(3), box))
         expect(packFocus(slots(3), null, box)).toEqual(packStage(slots(3), box))
         expect(packFocus(slots(3), 'slot-1', { width: 0, height: 0 }).placed).toEqual([])
+    })
+})
+
+describe('the height the packed tiles use', () => {
+    it('spans the topmost to the lowest tile, so a stage can hug its tiles', () => {
+        const layout = packStage(slots(2), { width: 1800, height: 900 }, STAGE_GAP)
+        const bounds = usedBounds(layout.placed.map(placed => placed.rect))
+
+        expect(bounds.top).toBeGreaterThan(0)
+        expect(bounds.height).toBeCloseTo(layout.tileHeight, 6)
+        expect(bounds.top + bounds.height).toBeLessThanOrEqual(900)
+    })
+
+    it('uses nothing when nothing is placed', () => {
+        expect(usedBounds([])).toEqual({ top: 0, height: 0 })
     })
 })

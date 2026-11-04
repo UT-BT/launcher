@@ -1,57 +1,20 @@
 import { useEffect, useRef, type KeyboardEvent, type ReactNode, type RefObject } from 'react'
-import { Gauge, Pin, SlidersHorizontal, Trash2, Video, VideoOff, Volume2, VolumeX, X } from 'lucide-react'
-import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuTrigger,
-} from '@/app/components/ui/dropdown-menu'
+import { Volume2, VolumeX, X } from 'lucide-react'
+import { TONE_TEXT } from '@/app/components/pages/capDetail/runDelta/deltaStyles'
 import { sheetBounds } from '@/app/components/ui/modalSheet'
 import { useModalBehaviour } from '@/app/components/ui/useModalBehaviour'
 import { getDeviceEnvironment, subscribeDeviceEnvironment } from '@/app/device/useDeviceEnvironment'
 import { cn } from '@/lib/utils'
+import { RunIdentity, runName } from '../analysis/RunIdentity'
+import { MAX_TEAM_RUNS } from '../model/teamModel'
 import type { SetEdit } from '../model/setEdits'
 import type { PairMenu } from '../model/teamPairing'
-import { PairMenu as PairMenuControl } from '../stage/PairMenu'
-import { useSwipe } from '../stage/useSwipe'
-import { formatOffset, offsetNudges } from './offsetNudge'
+import { RunMenu } from '../stage/RunMenu'
+import { BaselineTag, NoteTags, OlderVideoTag, SideTag } from '../stage/Tags'
 import { TeamIndex, TeamLabel } from '../stage/TeamLabel'
-import { NOT_FRAME_SYNCED, type RosterRow, type TeamRosterGroup } from './rosterRows'
-
-function OffsetMenu({ row, onEdit }: { row: RosterRow; onEdit: (edit: SetEdit) => void }) {
-    return (
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <button type="button" className="run-compare-roster-action">
-                    <SlidersHorizontal className="size-4" />
-                    <span>Offset {formatOffset(row.offsetMs)}</span>
-                </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="run-compare-offset-menu">
-                <DropdownMenuLabel>Offset {formatOffset(row.offsetMs)}</DropdownMenuLabel>
-                {offsetNudges(row.fps).map(nudge => (
-                    <DropdownMenuItem
-                        key={nudge.label}
-                        onSelect={event => {
-                            event.preventDefault()
-                            onEdit({ kind: 'offset', capId: row.capId, ms: row.offsetMs + nudge.ms })
-                        }}
-                    >
-                        {nudge.label}
-                    </DropdownMenuItem>
-                ))}
-                <DropdownMenuItem
-                    disabled={row.offsetMs === 0}
-                    onSelect={() => onEdit({ kind: 'offset', capId: row.capId, ms: 0 })}
-                >
-                    Reset
-                </DropdownMenuItem>
-            </DropdownMenuContent>
-        </DropdownMenu>
-    )
-}
+import { useSwipe } from '../stage/useSwipe'
+import { MAX_COMPARE_RUNS } from '../url/compareUrl'
+import type { RosterRow, TeamRosterGroup } from './rosterRows'
 
 interface RosterItemProps {
     row: RosterRow
@@ -64,83 +27,45 @@ interface RosterItemProps {
     driving?: boolean | null
 }
 
-function AudioToggle({ row, audible, onAudio }: Pick<RosterItemProps, 'row' | 'audible' | 'onAudio'>) {
-    return (
-        <button
-            type="button"
-            aria-pressed={audible}
-            disabled={row.video !== 'on'}
-            className="run-compare-roster-action"
-            onClick={() => onAudio(row.capId)}
-        >
-            {audible ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
-            <span>Audio</span>
-        </button>
-    )
-}
-
 function RosterItem({ row, only, onEdit, audible, onAudio, seat, pairMenu = null, driving = null }: RosterItemProps) {
     const { run, capId } = row
-    const videoOn = row.video === 'on'
     return (
-        <li className="run-compare-roster-row">
-            <div className="run-compare-roster-who run-compare-row">
-                {seat && <TeamIndex index={seat.index} colour={seat.colour} />}
-                <PlayerInfo userId={run.user} alias={run.alias} title={run.title} size="sm" interactive={false} className="min-w-0" />
-                <span className="font-mono tabular-nums text-foreground">{row.time}</span>
+        <li className={cn('run-compare-roster-row', seat && 'is-member')}>
+            {seat && <TeamIndex index={seat.index} colour={seat.colour} />}
+            <div className="run-compare-roster-who">
+                <RunIdentity run={run} presentation="full" withTitle={false} />
+                <span className="run-compare-roster-tags">
+                    <span className="run-compare-roster-time font-mono tabular-nums">{row.time}</span>
+                    <SideTag side={run.side} label={row.sideLabel} />
+                    <OlderVideoTag shown={!row.frameSynced} />
+                    <NoteTags notes={row.badges} />
+                </span>
             </div>
-            <div className="run-compare-roster-badges">
-                {row.reference && <span className="run-compare-badge is-reference">REF</span>}
-                {row.badges.map(badge => <span key={badge} className="run-compare-badge">{badge}</span>)}
-                {row.sideLabel && <span className="run-compare-badge">{row.sideLabel}</span>}
-                {!row.frameSynced && <span className="run-compare-badge">{NOT_FRAME_SYNCED}</span>}
-            </div>
-            <div className="run-compare-roster-actions">
-                {!seat && <button
-                    type="button"
-                    aria-pressed={row.pinned}
-                    className="run-compare-roster-action"
-                    onClick={() => onEdit({ kind: row.pinned ? 'unpin' : 'pin', capId })}
-                >
-                    <Pin className="size-4" />
-                    <span>Pin</span>
-                </button>}
-                <button
-                    type="button"
-                    aria-pressed={videoOn}
-                    disabled={row.video === 'none'}
-                    className="run-compare-roster-action"
-                    onClick={() => onEdit({ kind: 'video', capId, on: !videoOn })}
-                >
-                    {videoOn ? <Video className="size-4" /> : <VideoOff className="size-4" />}
-                    <span>{seat ? 'POV' : 'Video'}</span>
-                </button>
-                <AudioToggle row={row} audible={audible} onAudio={onAudio} />
-                {pairMenu && <PairMenuControl menu={pairMenu} onEdit={onEdit} variant="roster" />}
-                {driving !== null && (
-                    <button
-                        type="button"
-                        aria-pressed={driving}
-                        className="run-compare-roster-action"
-                        onClick={() => onEdit({ kind: 'drive', capId })}
-                    >
-                        <Gauge className="size-4" />
-                        <span>Drives Sync</span>
-                    </button>
-                )}
-                {!row.frameSynced && <OffsetMenu row={row} onEdit={onEdit} />}
-                {!seat && <RemoveButton disabled={only} onRemove={() => onEdit({ kind: 'remove', capId })} />}
-            </div>
+            {!seat && (row.gap
+                ? <span className={cn('run-compare-roster-gap font-mono tabular-nums', TONE_TEXT[row.gap.tone])}>{row.gap.label}</span>
+                : row.reference && <BaselineTag />)}
+            <button
+                type="button"
+                aria-label={`Sound from ${runName(run)}`}
+                aria-pressed={audible}
+                disabled={row.video !== 'on'}
+                className="run-compare-icon-button run-compare-sound"
+                onClick={() => onAudio(capId)}
+            >
+                {audible ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
+            </button>
+            <RunMenu
+                capId={capId}
+                run={run}
+                baseline={seat ? null : { pinned: row.pinned, reference: row.reference }}
+                video={row.video}
+                offset={row.frameSynced ? null : { offsetMs: row.offsetMs, fps: row.fps }}
+                pairMenu={pairMenu}
+                driving={driving}
+                removable={seat ? null : !only}
+                onEdit={onEdit}
+            />
         </li>
-    )
-}
-
-function RemoveButton({ disabled, onRemove }: { disabled: boolean; onRemove: () => void }) {
-    return (
-        <button type="button" disabled={disabled} className="run-compare-roster-action" onClick={onRemove}>
-            <Trash2 className="size-4" />
-            <span>Remove</span>
-        </button>
     )
 }
 
@@ -148,7 +73,7 @@ interface TeamRosterItemProps {
     group: TeamRosterGroup
     only: boolean
     onEdit: (edit: SetEdit) => void
-    audible: string | null
+    audible: readonly string[]
     onAudio: (capId: string) => void
 }
 
@@ -156,30 +81,26 @@ function TeamRosterItem({ group, only, onEdit, audible, onAudio }: TeamRosterIte
     const { row, members } = group
     return (
         <li className="run-compare-roster-team">
-            <div className="run-compare-roster-row">
-                <div className="run-compare-roster-who run-compare-row">
-                    <span className="run-compare-team-bar" style={{ background: row.colour }} />
-                    <TeamLabel row={row} className="min-w-0" />
-                    <span className="font-mono tabular-nums text-foreground">{row.time}</span>
+            <div className="run-compare-roster-row is-team">
+                <span className="run-compare-team-swatch" style={{ background: row.colour }} />
+                <div className="run-compare-roster-who">
+                    <TeamLabel row={row} withTitle={false} />
+                    <span className="run-compare-roster-tags"><NoteTags notes={row.badges} /></span>
                 </div>
-                {(row.reference || row.badges.length > 0) && (
-                    <div className="run-compare-roster-badges">
-                        {row.reference && <span className="run-compare-badge is-reference">REF</span>}
-                        {row.badges.map(badge => <span key={badge} className="run-compare-badge">{badge}</span>)}
-                    </div>
-                )}
-                <div className="run-compare-roster-actions">
-                    <button
-                        type="button"
-                        aria-pressed={row.pinned}
-                        className="run-compare-roster-action"
-                        onClick={() => onEdit({ kind: row.pinned ? 'unpin' : 'pin', capId: row.teamCapId })}
-                    >
-                        <Pin className="size-4" />
-                        <span>Pin</span>
-                    </button>
-                    <RemoveButton disabled={only} onRemove={() => onEdit({ kind: 'remove', capId: row.teamCapId })} />
-                </div>
+                <span className="run-compare-roster-time font-mono tabular-nums">{row.time}</span>
+                {row.reference && <BaselineTag />}
+                <RunMenu
+                    capId={row.teamCapId}
+                    run={row.team.members[0]}
+                    name={row.label}
+                    baseline={{ pinned: row.pinned, reference: row.reference }}
+                    video={null}
+                    offset={null}
+                    pairMenu={null}
+                    driving={null}
+                    removable={!only}
+                    onEdit={onEdit}
+                />
             </div>
             <ol aria-label="Members" className="run-compare-roster-members">
                 {members.map(({ roster, index, menu, driving }) => (
@@ -188,7 +109,7 @@ function TeamRosterItem({ group, only, onEdit, audible, onAudio }: TeamRosterIte
                         row={roster}
                         only={false}
                         onEdit={onEdit}
-                        audible={audible === roster.capId}
+                        audible={audible.includes(roster.capId)}
                         onAudio={onAudio}
                         seat={{ index, colour: row.colour }}
                         pairMenu={menu}
@@ -206,7 +127,7 @@ interface RunsDrawerProps {
     rows: readonly RosterRow[]
     note: string | null
     onEdit: (edit: SetEdit) => void
-    audible: string | null
+    audible: readonly string[]
     onAudio: (capId: string) => void
     sheet: boolean
     teams?: readonly TeamRosterGroup[]
@@ -226,6 +147,10 @@ function useSheetAboveKeyboard(layerRef: RefObject<HTMLElement | null>, active: 
         follow()
         return subscribeDeviceEnvironment(follow)
     }, [layerRef, active])
+}
+
+export function runsCount(rows: number, teams: number): string {
+    return teams > 0 ? `${teams} of ${MAX_TEAM_RUNS} team runs` : `${rows} of ${MAX_COMPARE_RUNS}`
 }
 
 export function RunsDrawer({ open, onClose, rows, note, onEdit, audible, onAudio, sheet, teams = [], children }: RunsDrawerProps) {
@@ -251,16 +176,20 @@ export function RunsDrawer({ open, onClose, rows, note, onEdit, audible, onAudio
                 <header className="run-compare-drawer-header" {...(sheet ? swipeClose : {})}>
                     {sheet && <span aria-hidden className="run-compare-sheet-handle" />}
                     <h2 className="text-base font-semibold text-foreground">Runs</h2>
-                    <button type="button" aria-label="Close Runs" className="run-compare-roster-action" onClick={onClose}>
+                    <span className="text-sm text-muted-foreground">{runsCount(rows.length, teams.length)}</span>
+                    <button type="button" aria-label="Close Runs" className="run-compare-icon-button run-compare-drawer-close" onClick={onClose}>
                         <X className="size-4" />
                     </button>
                 </header>
                 <p aria-live="polite" className={cn('run-compare-drawer-note text-sm text-muted-foreground', !note && 'sr-only')}>{note}</p>
-                <ol aria-label="Roster" className="run-compare-roster">
-                    {teams.length > 0
-                        ? teams.map(group => <TeamRosterItem key={group.row.teamCapId} group={group} only={teams.length === 1} onEdit={onEdit} audible={audible} onAudio={onAudio} />)
-                        : rows.map(row => <RosterItem key={row.capId} row={row} only={rows.length === 1} onEdit={onEdit} audible={audible === row.capId} onAudio={onAudio} />)}
-                </ol>
+                <div className="run-compare-drawer-section">
+                    <h3 className="run-compare-section-label">In This Comparison</h3>
+                    <ol aria-label="Roster" className="run-compare-roster">
+                        {teams.length > 0
+                            ? teams.map(group => <TeamRosterItem key={group.row.teamCapId} group={group} only={teams.length === 1} onEdit={onEdit} audible={audible} onAudio={onAudio} />)
+                            : rows.map(row => <RosterItem key={row.capId} row={row} only={rows.length === 1} onEdit={onEdit} audible={audible.includes(row.capId)} onAudio={onAudio} />)}
+                    </ol>
+                </div>
                 {children}
             </section>
         </div>

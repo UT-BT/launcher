@@ -401,10 +401,11 @@ replay. The Maps page's Demos and reviews (`maps/demos`, `maps/reviews`) open th
 the first panel's Demos button and Community Review. The reviews modal lists the recorded public
 reviews; the replay picker shows "No runs found", because the `maps` recording has no leaderboard
 for it. The compare page crawls the open Runs drawer (`run-compare/runs`), eight runs
-(`run-compare/pov`, which skips `table-shows-every-column`: its sector matrix shows the run
-columns that fit and a run picker for the rest) and two team runs (`run-compare/teams`).
+(`run-compare/pov`, which also opens the first roster row's run menu, `run-compare/pov/run-menu`,
+a dropdown with no close control, so it skips `modal-fits` and `rotation-recovers`) and two team
+runs (`run-compare/teams`).
 Playwright's Windows WebKit can't decode the synthetic `data:` WebM (`MediaError` 4), so there
-every compare tile drops to a data-only lane and the surfaces crawl lanes instead of tiles. The
+every compare tile drops to a graph-only lane and the surfaces crawl lanes instead of tiles. The
 map page's `maps-detail/compare-selection` ticks the first leaderboard box. Event tabs that show only while signups are open (`players`, `signup`) are not crawled on
 the public event; the staff-only `manage` and `stream` tabs are crawled by `event-detail:manager`.
 

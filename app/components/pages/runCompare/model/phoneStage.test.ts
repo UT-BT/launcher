@@ -204,16 +204,17 @@ describe('switching the point of view', () => {
 
     it('moves the point of view to an audible run outside the view, and only then', () => {
         const phone = compose({ ids: [A, B, C], environment: PHONE, stageBox: BOX }).race
-        expect(povForAudio(phone.view, C)).toBe(C)
-        expect(povForAudio(phone.view, A)).toBeNull()
-        expect(povForAudio(phone.view, null)).toBeNull()
+        expect(povForAudio(phone.view, [C])).toBe(C)
+        expect(povForAudio(phone.view, [A])).toBeNull()
+        expect(povForAudio(phone.view, [C, A])).toBeNull()
+        expect(povForAudio(phone.view, [])).toBeNull()
 
         const tablet = compose({ ids: [A, B, C], environment: touchAt(820, 1180), stageBox: { width: 820, height: 900 } }).race
-        expect(povForAudio(tablet.view, B)).toBeNull()
-        expect(povForAudio(tablet.view, C)).toBe(C)
+        expect(povForAudio(tablet.view, [B])).toBeNull()
+        expect(povForAudio(tablet.view, [C])).toBe(C)
 
         const wide = compose({ ids: [A, B, C], environment: null, stageBox: { width: 1280, height: 720 } }).race
-        expect(povForAudio(wide.view, C)).toBeNull()
+        expect(povForAudio(wide.view, [C])).toBeNull()
     })
 
     it('reads a swipe only when it is long enough and mostly along one axis', () => {

@@ -194,6 +194,8 @@ unlocks favourite toggling, Change Title and the screenshot actions on Maps Auth
 progression, and for a signed-in viewer their cap count and team stats. Every card derives from
 those rows; none fetches for itself except the version bar.
 
+- **Compare Runs** in the hero, beside Download Map, opens the compare start view with this map
+  picked (`CompareStartLink`, [run-compare.md](run-compare.md#entry-points)).
 - **Solo or team** comes from `required_players` ([api.md](../api.md)). Team maps render
   `TeamLeaderboardTable` (tabs Verified / All on `state`), team medal thresholds and team stats.
 - **Solo leaderboard tabs**: Verified (default), Certified (`cap_type 2`), All, filtered
@@ -338,6 +340,8 @@ signature in a ref, prefetches the neighbouring pages, and gates its skeleton on
 `caches.querySig` ([state-patterns.md](../state-patterns.md)). The count cache ignores sort, so
 re-sorting reuses the total.
 
+- **Compare Runs** in the header opens the compare start view (`CompareStartLink`,
+  [run-compare.md](run-compare.md#entry-points)).
 - **Filters to params**: difficulty tiers expand to a CSV of levels (`expandDifficultyTiers`,
   `app/utils/difficulty.ts`); time buckets become `min-max` second ranges; the timeframe becomes
   `added_since` (now minus 7 / 30 / 90 / 365 days); holders are user ids from

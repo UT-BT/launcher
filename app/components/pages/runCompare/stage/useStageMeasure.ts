@@ -47,3 +47,18 @@ export function useStageBox(stage: HTMLElement | null): StageBox | null {
 
     return box
 }
+
+export function useElementHeight(element: HTMLElement | null): number | null {
+    const [height, setHeight] = useState<number | null>(null)
+
+    useLayoutEffect(() => {
+        if (!element) return
+        const measure = () => setHeight(Math.ceil(element.getBoundingClientRect().height))
+        measure()
+        const observer = new ResizeObserver(measure)
+        observer.observe(element)
+        return () => observer.disconnect()
+    }, [element])
+
+    return height
+}

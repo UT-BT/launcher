@@ -92,7 +92,7 @@ function overlaps(a: Box, b: Box): boolean {
 }
 
 function lanes(page: Page): Locator {
-    return page.getByRole('list', { name: 'Lanes' }).getByRole('listitem')
+    return page.getByRole('list', { name: 'Gap to the baseline' }).getByRole('listitem')
 }
 
 test.describe('map leaderboard selection', () => {
@@ -124,6 +124,22 @@ test.describe('map leaderboard selection', () => {
         await expect(tick(page, 'Decl')).toBeChecked()
         await expect(tick(page, 'ShX')).not.toBeChecked()
         await expect(compareButton(page)).toHaveText('Compare (2)')
+    })
+
+    test('Compare Runs in the map header opens the compare start view with this map picked', async ({ page }) => {
+        await mockApi(page, [FIERD, SHX, DECL, BLUEY])
+        await page.goto(`/maps/${MAP}`)
+
+        const link = page.getByRole('main').getByRole('link', { name: 'Compare Runs' })
+        await expect(link).toBeVisible({ timeout: 15_000 })
+        await link.click()
+
+        await expect.poll(() => new URL(page.url()).pathname).toBe('/compare')
+        expect(new URLSearchParams(new URL(page.url()).search).get('map')).toBe(MAP)
+        await expect(page.getByRole('heading', { name: 'Pick Runs' })).toBeVisible()
+
+        await page.goBack()
+        await expect.poll(() => new URL(page.url()).pathname).toBe(`/maps/${MAP}`)
     })
 
     test('a disallowed run can not be ticked, and unticking the last run hides the button', async ({ page }) => {

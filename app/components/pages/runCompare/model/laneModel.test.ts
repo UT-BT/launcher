@@ -77,13 +77,13 @@ function tileBadges(model: ReturnType<typeof compose>): Record<string, string[]>
 }
 
 describe('the data rung of each run', () => {
-    it('puts a run with a video and a ghost aligned with the reference on Replay, on its tile and its lane', () => {
+    it('puts a run with a video and a ghost aligned with the reference on Replay with no note, on its tile and its lane', () => {
         const model = compose([runner(), reference()], compared([[RUNNER, SHORT]]))
 
         expect(laneOf(model, RUNNER).rung).toBe('replay')
-        expect(badges(model)[RUNNER]).toEqual(['Replay'])
-        expect(tileBadges(model)[RUNNER]).toEqual(['Replay'])
-        expect(model.race.layout.placed.find(placed => placed.slot.id === RUNNER)!.slot.badges).toEqual(['Replay'])
+        expect(badges(model)[RUNNER]).toEqual([])
+        expect(tileBadges(model)[RUNNER]).toEqual([])
+        expect(model.race.layout.placed.find(placed => placed.slot.id === RUNNER)!.slot.badges).toEqual([])
     })
 
     it('asks for the pairwise comparison only for runs on the reference side where both have a ghost', () => {
@@ -107,14 +107,14 @@ describe('the data rung of each run', () => {
         const model = compose([runner(), reference()], compared([[RUNNER, null]]))
 
         expect(laneOf(model, RUNNER).rung).toBe('zones')
-        expect(badges(model)[RUNNER]).toEqual(['Zones'])
+        expect(badges(model)[RUNNER]).toEqual(['Checkpoints only'])
     })
 
     it('drops a failed comparison to time only when the runs share no zone', () => {
         const model = compose([runner({ checkpoints: checkpoints(['Roof', 4]) }), reference()], compared([[RUNNER, null]]))
 
         expect(laneOf(model, RUNNER).rung).toBe('time')
-        expect(badges(model)[RUNNER]).toEqual(['Time only'])
+        expect(badges(model)[RUNNER]).toEqual(['Final time only'])
     })
 
     it('puts a comparison whose routes differ on Zones', () => {
@@ -122,7 +122,7 @@ describe('the data rung of each run', () => {
         const model = compose([runner(), reference()], compared([[RUNNER, routesDiffer]]))
 
         expect(laneOf(model, RUNNER).rung).toBe('zones')
-        expect(badges(model)[RUNNER]).toEqual(['Zones'])
+        expect(badges(model)[RUNNER]).toEqual(['Checkpoints only'])
         expect(laneOf(model, RUNNER).bands).toEqual([])
     })
 
@@ -130,44 +130,62 @@ describe('the data rung of each run', () => {
         const model = compose([runner({ hasGhost: false }), reference()], new Map())
 
         expect(model.lanes.requests).toEqual([])
-        expect(badges(model)[RUNNER]).toEqual(['Zones'])
+        expect(badges(model)[RUNNER]).toEqual(['Checkpoints only'])
     })
 
     it('puts a run with neither a ghost nor zones on Time only', () => {
         const model = compose([runner({ hasGhost: false, checkpoints: [] }), reference()], new Map())
 
-        expect(badges(model)[RUNNER]).toEqual(['Time only'])
+        expect(badges(model)[RUNNER]).toEqual(['Final time only'])
     })
 
-    it('puts a run set on the other side on Time only with its side, and never compares it', () => {
+    it('makes a run set alone on the other side that side’s baseline, never compared and with no note', () => {
         const model = compose([run(OTHER, 12.9, { side: 1, checkpoints: RUNNER_ZONES }), reference()], new Map())
 
         expect(model.lanes.requests).toEqual([])
-        expect(laneOf(model, OTHER)).toMatchObject({ rung: 'time', sideLabel: 'Set on Blue', curves: [], bands: [], splits: [] })
-        expect(badges(model)[OTHER]).toEqual(['Time only', 'Set on Blue'])
-        expect(tileBadges(model)[OTHER]).toEqual(['Time only', 'Set on Blue'])
+        expect(laneOf(model, OTHER)).toMatchObject({ reference: true, rung: 'time', sideLabel: 'Blue', curves: [], bands: [], splits: [] })
+        expect(badges(model)[OTHER]).toEqual([])
+        expect(tileBadges(model)[OTHER]).toEqual([])
     })
 
-    it('labels a run set on Red against a Blue reference', () => {
+    it('tags every run with its side when the set mixes sides', () => {
         const model = compose([run(OTHER, 12.9, { side: 0 }), reference({ side: 1 })], new Map())
 
-        expect(badges(model)[OTHER]).toEqual(['Time only', 'Set on Red'])
+        expect([laneOf(model, OTHER).sideLabel, laneOf(model, REFERENCE).sideLabel]).toEqual(['Red', 'Blue'])
+    })
+
+    it('tags no side when every run was set on the same side, or its side is unknown', () => {
+        const model = compose([runner(), reference(), run(OTHER, 14, { side: null })], compared([[RUNNER, SHORT]]))
+
+        expect(model.lanes.lanes.map(lane => lane.sideLabel)).toEqual([null, null, null])
+    })
+
+    it('gives no note to the baseline of either side, and notes the other runs against their own side’s baseline', () => {
+        const model = compose(
+            [runner(), reference(), run(OTHER, 12.9, { side: 1 }), run(FOURTH, 14, { side: 1, hasGhost: false })],
+            compared([[RUNNER, SHORT]]),
+        )
+
+        expect([REFERENCE, OTHER].map(capId => [laneOf(model, capId).reference, badges(model)[capId]])).toEqual([[true, []], [true, []]])
+        expect(badges(model)[FOURTH]).toEqual(['Final time only'])
+        expect(laneOf(model, FOURTH).sideLabel).toBe('Blue')
+        expect(badges(model)[RUNNER]).toEqual([])
     })
 
     it('keeps a data-only run at the rung its data reaches, still marked as without a video', () => {
         const model = compose([runner(), reference()], compared([[RUNNER, SHORT]]), { failedVideos: new Set([RUNNER]) })
 
         expect(laneOf(model, RUNNER).rung).toBe('replay')
-        expect(badges(model)[RUNNER]).toEqual(['Replay', 'Video unavailable'])
-        expect(model.race.dataOnly.map(row => row.badges)).toEqual([['Replay', 'Video unavailable']])
+        expect(badges(model)[RUNNER]).toEqual(['Video didn’t load'])
+        expect(model.race.dataOnly.map(row => row.badges)).toEqual([['Video didn’t load']])
     })
 
-    it('marks a run with no video at all and a failed comparison as Zones and No video', () => {
+    it('marks a run with no video at all and a failed comparison as Checkpoints only and Graph only', () => {
         const model = compose([runner(), reference()], compared([[RUNNER, null]]), {
             videos: new Map([[RUNNER, null], [REFERENCE, video(REFERENCE)]]),
         })
 
-        expect(badges(model)[RUNNER]).toEqual(['Zones', 'No video'])
+        expect(badges(model)[RUNNER]).toEqual(['Checkpoints only', 'Graph only'])
     })
 
     it('gives the reference the rung of its own data and a flat lane', () => {

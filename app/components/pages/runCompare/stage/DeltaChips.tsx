@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { RunIdentity } from '../analysis/RunIdentity'
 import { sameReadout, tileReadout, type TileOverlay, type TileReadout } from '../model/overlayModel'
 import type { PlaybackController, PlaybackState } from '../playback/playbackController'
+import { BaselineTag } from './Tags'
 import { usePlaybackSelector } from './usePlaybackSelector'
 
 function DeltaChip({ overlay, controller }: { overlay: TileOverlay; controller: PlaybackController | null }) {
@@ -15,7 +16,7 @@ function DeltaChip({ overlay, controller }: { overlay: TileOverlay; controller: 
     return (
         <li className="run-compare-delta-chip">
             <RunIdentity run={overlay.run} />
-            {overlay.reference && <span className="run-compare-badge is-reference">REF</span>}
+            {overlay.reference && <BaselineTag />}
             {!overlay.reference && delta && <span className={cn('font-mono tabular-nums', TONE_TEXT[delta.tone])}>{delta.label}</span>}
         </li>
     )

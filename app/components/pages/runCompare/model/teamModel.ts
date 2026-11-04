@@ -6,15 +6,16 @@ import type { LoadedSoloRuns, SoloRun } from '../loading/soloRuns'
 import type { LoadedTeamRuns, TeamRun } from '../loading/teamRuns'
 import { parseCompareQuery } from '../url/compareUrl'
 import type { CueModel, CuePoint } from './cueModel'
-import { RUNG_BADGES, SET_ON, type Lane, type LaneMark, type LanesModel, type Rung } from './laneModel'
+import { mixedSides, rungNotes, sideTagOf, type Lane, type LaneMark, type LanesModel, type Rung } from './laneModel'
 import { composeRace, formatRaceTime, type RaceInput, type RaceModel, type RaceRun, type TileSlot } from './raceModel'
-import { leadSide, type References } from './referenceModel'
+import { NO_SIDE_CHOICE, type References } from './referenceModel'
 import { NO_PAIRING, type PairingModel } from './teamPairing'
-import { packGroupFocus, STAGE_GAP, TILE_ASPECT, type SlotRect, type StageBox, type StageLayout, type StageSlot } from './stageLayout'
+import { packGroupFocus, STAGE_GAP, tileHeightOf, tileWidthIn, type SlotRect, type StageBox, type StageLayout, type StageSlot } from './stageLayout'
 
 export const MAX_TEAM_RUNS = 4
 export const TEAM_COLOURS = ['#fbbf24', '#e879f9', '#22d3ee', '#a78bfa'] as const
-export const TEAM_HEADER_HEIGHT = 28
+export const TEAM_HEADER_WIDTH = 200
+export const TEAM_HEADER_HEIGHT = 64
 export const TEAM_JOIN = ' & '
 
 export interface TeamRow {
@@ -119,30 +120,31 @@ const NOTHING_PLACED = { columns: 0, rows: 0, tileWidth: 0, tileHeight: 0, place
 
 type GridRow<S> = readonly (S | null)[]
 
-function gridTileWidth(lines: number, across: number, box: StageBox, bands: number, header: number, gap: number): number {
-    const byWidth = (box.width - (across - 1) * gap) / across
-    const byHeight = ((box.height - bands * header - (lines - 1) * gap) / lines) * TILE_ASPECT
+function gridTileWidth(lines: number, across: number, box: StageBox, aside: number, above: number, gap: number): number {
+    const byWidth = (box.width - aside - (across - 1) * gap) / across
+    const byHeight = tileWidthIn((box.height - above - (lines - 1) * gap) / lines)
     return Math.min(byWidth, byHeight)
 }
 
-export function packTeamRows<S extends StageSlot>(rows: readonly GridRow<S>[], box: StageBox, header = TEAM_HEADER_HEIGHT, gap = STAGE_GAP): TeamRowLayout<S> {
+export function packTeamRows<S extends StageSlot>(rows: readonly GridRow<S>[], box: StageBox, gap = STAGE_GAP): TeamRowLayout<S> {
     const count = rows.length
     const columns = Math.max(0, ...rows.map(row => row.length))
-    const transposed = count > 0 && columns > 0 && gridTileWidth(columns, count, box, 0, 0, gap) > gridTileWidth(count, columns, box, 0, 0, gap)
-    const tileWidth = transposed ? gridTileWidth(columns, count, box, 1, header, gap) : gridTileWidth(count, columns, box, count, header, gap)
+    const aside = TEAM_HEADER_WIDTH + gap
+    const above = TEAM_HEADER_HEIGHT + gap
+    const asRows = gridTileWidth(count, columns, box, aside, 0, gap)
+    const asColumns = gridTileWidth(columns, count, box, 0, above, gap)
+    const transposed = count > 0 && columns > 0 && asColumns > asRows
+    const tileWidth = transposed ? asColumns : asRows
     if (count === 0 || columns === 0 || !(tileWidth > 0)) return { layout: NOTHING_PLACED, headers: [], transposed: false }
-    const tileHeight = tileWidth / TILE_ASPECT
+    const tileHeight = tileHeightOf(tileWidth)
     const [across, down] = transposed ? [count, columns] : [columns, count]
-    const gridWidth = across * tileWidth + (across - 1) * gap
+    const gridWidth = (transposed ? 0 : aside) + across * tileWidth + (across - 1) * gap
+    const gridHeight = (transposed ? above : 0) + down * tileHeight + (down - 1) * gap
     const left = (box.width - gridWidth) / 2
-    const place = (r: number, c: number): SlotRect => {
-        if (transposed) {
-            const top = (box.height - (header + down * tileHeight + (down - 1) * gap)) / 2
-            return { x: left + r * (tileWidth + gap), y: top + header + c * (tileHeight + gap), width: tileWidth, height: tileHeight }
-        }
-        const top = (box.height - (down * (header + tileHeight) + (down - 1) * gap)) / 2
-        return { x: left + c * (tileWidth + gap), y: top + r * (header + tileHeight + gap) + header, width: tileWidth, height: tileHeight }
-    }
+    const top = (box.height - gridHeight) / 2
+    const place = (r: number, c: number): SlotRect => (transposed
+        ? { x: left + r * (tileWidth + gap), y: top + above + c * (tileHeight + gap), width: tileWidth, height: tileHeight }
+        : { x: left + aside + c * (tileWidth + gap), y: top + r * (tileHeight + gap), width: tileWidth, height: tileHeight })
     return {
         layout: {
             columns: across,
@@ -151,12 +153,9 @@ export function packTeamRows<S extends StageSlot>(rows: readonly GridRow<S>[], b
             tileHeight,
             placed: rows.flatMap((row, r) => row.flatMap((slot, c) => (slot ? [{ slot, rect: place(r, c) }] : []))),
         },
-        headers: rows.map((_, r) => {
-            const first = place(r, 0)
-            return transposed
-                ? { x: first.x, y: first.y - header, width: tileWidth, height: header }
-                : { x: left, y: first.y - header, width: gridWidth, height: header }
-        }),
+        headers: rows.map((_, r) => (transposed
+            ? { x: left + r * (tileWidth + gap), y: top, width: tileWidth, height: TEAM_HEADER_HEIGHT }
+            : { x: left, y: top + r * (tileHeight + gap), width: TEAM_HEADER_WIDTH, height: tileHeight })),
         transposed,
     }
 }
@@ -215,7 +214,7 @@ export function composeTeamRace(input: RaceInput, teams: TeamModel, grid: TeamGr
     const headers = new Map(placedRows.map((entry, i) => [entry.row.teamCapId, packed?.headers[i] ?? null]))
     const focusLayout = rowFocus ? packGroupFocus(tiles, rowFocus.cells.flatMap(cell => (cell ? [cell.id] : [])), box) : null
     const layout = packed?.layout ?? focusLayout ?? { ...base.layout, placed: base.layout.placed.map(placed => ({ ...placed, slot: byId.get(placed.slot.id) ?? placed.slot })) }
-    const race: RaceModel = { ...base, runs, tiles, dataOnly: runs.filter(raceRun => !raceRun.tile), layout, focused: rowFocus?.row.teamCapId ?? base.focused }
+    const race: RaceModel = { ...base, sides: NO_SIDE_CHOICE, runs, tiles, dataOnly: runs.filter(raceRun => !raceRun.tile), layout, focused: rowFocus?.row.teamCapId ?? base.focused }
     const references = teamReferences(race, teams)
     return {
         race: { ...race, references, reference: references.lead },
@@ -244,17 +243,16 @@ function rungOf(run: SoloRun): Rung {
     return run.checkpoints.length > 0 ? 'zones' : 'time'
 }
 
-export function memberLane(raceRun: RaceRun, lead: number | null): Lane {
+export function memberLane(raceRun: RaceRun, mixed: boolean): Lane {
     const { run } = raceRun
     const rung = rungOf(run)
-    const sideLabel = run.side !== null && lead !== null && run.side !== lead ? SET_ON[run.side] : null
     return {
         capId: run.capId,
         run,
         reference: false,
         rung,
-        sideLabel,
-        badges: [RUNG_BADGES[rung], ...(sideLabel ? [sideLabel] : []), ...(raceRun.tile ? [] : raceRun.badges)],
+        sideLabel: sideTagOf(run.side, mixed),
+        badges: [...rungNotes(rung), ...(raceRun.tile ? [] : raceRun.badges)],
         capMs: msOf(run.timeSeconds),
         finalGap: signedGap(0),
         domainMs: deltaAxis(0, 0).domainMs,
@@ -266,10 +264,9 @@ export function memberLane(raceRun: RaceRun, lead: number | null): Lane {
     }
 }
 
-export function composeTeamLanes(race: RaceModel, teams: TeamModel): LanesModel {
-    const reference = teams.rows.find(row => row.reference)
-    const lead = reference ? leadSide(reference.team.members) : null
-    return { lanes: race.runs.map(raceRun => memberLane(raceRun, lead)), requests: [], sectors: [] }
+export function composeTeamLanes(race: RaceModel): LanesModel {
+    const mixed = mixedSides(race.runs.map(raceRun => raceRun.run))
+    return { lanes: race.runs.map(raceRun => memberLane(raceRun, mixed)), requests: [], sectors: [] }
 }
 
 export function teamCrossings(team: TeamRun): Map<string, number> {

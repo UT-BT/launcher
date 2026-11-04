@@ -6,9 +6,8 @@ import type { SoloRun } from '../loading/soloRuns'
 import type { LoadedTeamComparisons } from '../loading/teamComparisons'
 import type { ComparePair } from '../url/compareUrl'
 import { EMPTY_CUES, type CueModel, type CuePoint } from './cueModel'
-import { laneFor, liveDelta, RUNG_BADGES, stepPoints, TIME_ONLY, type Lane, type LaneMark, type LanesModel, type Rung } from './laneModel'
+import { FINAL_TIME_ONLY, laneFor, liveDelta, mixedSides, rungNotes, stepPoints, type Lane, type LaneMark, type LanesModel, type Rung } from './laneModel'
 import type { RaceModel, RaceRun } from './raceModel'
-import { leadSide } from './referenceModel'
 import { firstCrossings, memberLane, type TeamGridRow, type TeamModel, type TeamRow } from './teamModel'
 import { overridePair } from './teamPairing'
 
@@ -129,16 +128,15 @@ function withBadges(lane: Lane, raceRun: RaceRun, rung: Rung | null, extra: read
         ...lane,
         rung,
         badges: [
-            ...(rung ? [RUNG_BADGES[rung]] : []),
             ...extra,
-            ...(lane.sideLabel ? [lane.sideLabel] : []),
+            ...rungNotes(rung),
             ...(raceRun.tile ? [] : raceRun.badges),
         ],
     }
 }
 
-function routeLane(raceRun: RaceRun, pair: TeamPair, lead: number | null): Lane {
-    const base = laneFor(raceRun, { partner: pair.reference, isReference: false, lead, comparisons: new Map([[pair.key, null]]) })
+function routeLane(raceRun: RaceRun, pair: TeamPair, mixed: boolean): Lane {
+    const base = laneFor(raceRun, { partner: pair.reference, isReference: false, mixed, comparisons: new Map([[pair.key, null]]) })
     const anchors = sharedAnchors(pair.runner, pair.reference)
     const steps = anchors
         .map((anchor): CapComparisonPoint => [anchor.runnerMs, anchor.runnerMs - anchor.referenceMs])
@@ -147,28 +145,27 @@ function routeLane(raceRun: RaceRun, pair: TeamPair, lead: number | null): Lane 
     return withBadges({ ...base, curves: [], bands: [], splits: [], trace }, raceRun, 'zones', [DIFFERENT_ROUTE])
 }
 
-function pairLane(raceRun: RaceRun, pair: TeamPair, lead: number | null, comparisons: LoadedComparisons): Lane {
+function pairLane(raceRun: RaceRun, pair: TeamPair, mixed: boolean, comparisons: LoadedComparisons): Lane {
     switch (pair.state) {
         case 'aligned':
-            return laneFor(raceRun, { partner: pair.reference, isReference: false, lead, comparisons })
+            return laneFor(raceRun, { partner: pair.reference, isReference: false, mixed, comparisons })
         case 'zones':
-            return laneFor(raceRun, { partner: pair.reference, isReference: false, lead, comparisons: new Map([[pair.key, null]]) })
+            return laneFor(raceRun, { partner: pair.reference, isReference: false, mixed, comparisons: new Map([[pair.key, null]]) })
         case 'routes_differ':
-            return routeLane(raceRun, pair, lead)
+            return routeLane(raceRun, pair, mixed)
     }
 }
 
-export function composeVersusLanes(race: RaceModel, teams: TeamModel, reads: readonly TeamRead[], comparisons: LoadedComparisons): LanesModel {
-    const reference = referenceRow(teams)
-    const lead = reference ? leadSide(reference.team.members) : null
+export function composeVersusLanes(race: RaceModel, reads: readonly TeamRead[], comparisons: LoadedComparisons): LanesModel {
+    const mixed = mixedSides(race.runs.map(raceRun => raceRun.run))
     const pairs = new Map(reads.flatMap(read => read.pairs.map(pair => [pair.runner.capId, pair] as const)))
     const readOf = new Map(reads.flatMap(read => read.row.team.members.map(member => [member.capId, read] as const)))
     const lanes = race.runs.map(raceRun => {
-        const base = memberLane(raceRun, lead)
+        const base = memberLane(raceRun, mixed)
         const read = readOf.get(raceRun.run.capId)
         if (!read) return base
         const pair = pairs.get(raceRun.run.capId)
-        if (pair) return pairLane(raceRun, pair, lead, comparisons)
+        if (pair) return pairLane(raceRun, pair, mixed, comparisons)
         return withBadges(base, raceRun, read.comparison === undefined ? null : 'time')
     })
     const requests = reads.flatMap(read => read.pairs
@@ -221,7 +218,7 @@ export function withTeamLanes(teams: TeamModel, reads: readonly TeamRead[]): Tea
             if (row.reference) return { ...row, lane: teamLane(row, capMs, 0, []) }
             const comparison = byRow.get(row.teamCapId)?.comparison
             const splits = zoneSplits(comparison)
-            const badges = comparison !== undefined && splits.length === 0 ? [TIME_ONLY] : []
+            const badges = comparison !== undefined && splits.length === 0 ? [FINAL_TIME_ONLY] : []
             const finalMs = comparison ? comparison.final_delta_ms : capMs - referenceMs
             const marked = { ...row, badges }
             return { ...marked, lane: teamLane(marked, capMs, finalMs, splits) }

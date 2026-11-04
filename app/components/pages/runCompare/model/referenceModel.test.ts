@@ -78,10 +78,10 @@ describe('one reference per side', () => {
             { runner: BLUE_SLOW, reference: BLUE_FAST },
         ])
         expect(model.race.runs.map(r => r.result)).toEqual([
-            'CAP 1:20.000 · +1.000 · 2nd',
-            'CAP 1:19.000 · ±0.000 · 1st',
-            'CAP 1:22.000 · +1.000 · 2nd',
-            'CAP 1:21.000 · +2.000 · 1st',
+            'CAP 01:20.000 · +1.000 · 2nd',
+            'CAP 01:19.000 · ±0.000 · 1st',
+            'CAP 01:22.000 · +1.000 · 2nd',
+            'CAP 01:21.000 · +2.000 · 1st',
         ])
     })
 
@@ -152,15 +152,15 @@ describe('a pinned reference', () => {
 describe('runs on different sides', () => {
     const comparison = { state: 'aligned' } as CapComparison
 
-    it('compare the other side’s reference with the lead reference on final time only', () => {
+    it('compare the other side’s reference with the lead reference on final time only, without a note on that baseline', () => {
         const comparisons: LoadedComparisons = new Map([[`${BLUE_FAST}:${RED_FAST}`, comparison]])
         const model = compose(runsQuery(), MIXED, comparisons)
         const blue = laneOf(model, BLUE_FAST)
 
         expect(partnersOf(model)[BLUE_FAST]).toBe(RED_FAST)
-        expect(blue).toMatchObject({ rung: 'time', reference: true, sideLabel: 'Set on Blue', curves: [], bands: [], splits: [] })
+        expect(blue).toMatchObject({ rung: 'time', reference: true, sideLabel: 'Blue', curves: [], bands: [], splits: [] })
         expect(blue.finalGap.label).toBe('+2.000')
-        expect(blue.badges).toEqual(['Time only', 'Set on Blue'])
+        expect(blue.badges).toEqual([])
     })
 
     it('never ask for a comparison across sides', () => {
@@ -172,10 +172,10 @@ describe('runs on different sides', () => {
         })).toBe(true)
     })
 
-    it('label the runs set on the side the fastest run was not set on', () => {
+    it('tag every run with the side it was set on', () => {
         const model = compose(runsQuery())
 
-        expect(model.lanes.lanes.map(lane => lane.sideLabel)).toEqual([null, null, 'Set on Blue', 'Set on Blue'])
+        expect(model.lanes.lanes.map(lane => lane.sideLabel)).toEqual(['Red', 'Red', 'Blue', 'Blue'])
     })
 
     it('stay on final time only when the lead reference has an unknown side', () => {

@@ -5,17 +5,18 @@ import type { TeamRow } from '../model/teamModel'
 
 interface TeamLabelProps {
     row: Pick<TeamRow, 'label' | 'team'>
+    withTitle?: boolean
     className?: string
 }
 
-export function TeamLabel({ row, className }: TeamLabelProps) {
+export function TeamLabel({ row, withTitle = true, className }: TeamLabelProps) {
     return (
         <span className={cn('run-compare-team-label', className)}>
             <span className="sr-only">{row.label}</span>
             {row.team.members.map((member, i) => (
                 <Fragment key={member.capId}>
                     {i > 0 && <span aria-hidden className="run-compare-team-join">&amp;</span>}
-                    <RunIdentity run={member} />
+                    <RunIdentity run={member} withTitle={withTitle} />
                 </Fragment>
             ))}
         </span>

@@ -19,13 +19,17 @@ export function rowFocusAt(race: RaceModel, teams: Pick<TeamModel, 'rows' | 'sea
     return shown[n - 1]?.teamCapId ?? null
 }
 
-export function rowAudio(race: RaceModel, teams: Pick<TeamModel, 'seats'>, teamCapId: string, audible: string | null): string | null {
+export function rowAudio(race: RaceModel, teams: Pick<TeamModel, 'seats'>, teamCapId: string, audible: readonly string[]): string[] {
     const row = race.tiles.filter(tile => teams.seats.get(tile.id)?.teamCapId === teamCapId).map(tile => tile.id)
-    return audible !== null && row.includes(audible) ? audible : row[0] ?? audible
+    const inRow = audible.filter(capId => row.includes(capId))
+    if (inRow.length > 0) return inRow
+    return row.length > 0 ? [row[0]] : [...audible]
 }
 
-export function nextAudio(race: RaceModel, audible: string | null): string | null {
+export function nextAudio(race: RaceModel, audible: readonly string[]): string[] {
     const ids = race.tiles.map(tile => tile.id)
-    if (!hasTile(race, audible)) return ids[0] ?? null
-    return ids[ids.indexOf(audible) + 1] ?? null
+    const last = audible.length > 0 ? audible[audible.length - 1] : null
+    if (!hasTile(race, last)) return ids.slice(0, 1)
+    const next = ids[ids.indexOf(last) + 1]
+    return next ? [next] : []
 }

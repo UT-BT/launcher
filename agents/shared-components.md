@@ -145,10 +145,11 @@ cut-down table on touch.
 The one exception is a table that reads best as a table at every width: it passes
 `tableOnly: true` instead of `cards` and keeps the desktop rule on every device. Only numeric
 comparisons do: the cap page's checkpoint split, sector and speed tables (their widths fit
-360 px; see [records.md](features/records.md)), and the compare page's Sector Matrix, Team
-Splits and Different Route tables. The first two show the run columns that fit by priority and
-a picker for the rest (`onResolve`; [run-compare.md](features/run-compare.md#analysis-below-the-fold)). The types allow `cards` or `tableOnly`, never both or
-neither.
+360 px; see [records.md](features/records.md)), and the compare page's Team Splits and
+Different Route tables. Team Splits shows the run columns that fit by priority and a picker for
+the rest (`onResolve`); the compare page's Sector Times, one row per run, renders cards instead
+([run-compare.md](features/run-compare.md#analysis-below-the-fold)). The types allow `cards` or
+`tableOnly`, never both or neither.
 
 Every `ResponsiveColumn<Row>` declares, and the compiler rejects a column without them:
 

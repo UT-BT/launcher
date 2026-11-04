@@ -14,6 +14,7 @@ describe('the compare url round trip', () => {
 
         expect(notices).toEqual([])
         expect(state).toEqual({
+            map: null,
             runs: [A, B, C],
             refs: [B],
             data: [C],
@@ -189,5 +190,33 @@ describe('parameters outside the grammar', () => {
         const { state, notices } = parseCompareQuery(`runs=${A}&utm_source=discord`)
         expect(notices).toEqual([])
         expect(serializeCompareQuery(state)).toBe(`runs=${A}`)
+    })
+})
+
+describe('the map of an empty set', () => {
+    it('reads and writes the map while no run is in the set', () => {
+        const { state, notices } = parseCompareQuery('map=CTF-BT-(Fran)PureJump')
+        expect(notices).toEqual([])
+        expect(state.map).toBe('CTF-BT-(Fran)PureJump')
+        expect(serializeCompareQuery(state)).toBe('map=CTF-BT-(Fran)PureJump')
+    })
+
+    it('encodes characters the query would otherwise split on', () => {
+        const query = serializeCompareQuery({ ...parseCompareQuery('').state, map: 'CTF-BT-Rock & Roll' })
+        expect(query).toBe('map=CTF-BT-Rock%20%26%20Roll')
+        expect(parseCompareQuery(query).state.map).toBe('CTF-BT-Rock & Roll')
+    })
+
+    it('drops the map once the set has runs', () => {
+        const { state } = parseCompareQuery(`map=CTF-BT-Other&runs=${A}`)
+        expect(state.map).toBeNull()
+        expect(serializeCompareQuery({ ...state, map: 'CTF-BT-Other' })).toBe(`runs=${A}`)
+    })
+
+    it('reports a map name that cannot be one', () => {
+        const { state, notices } = parseCompareQuery(`map=${'x'.repeat(200)}`)
+        expect(state.map).toBeNull()
+        expect(notices).toEqual([{ param: 'map', reason: 'malformed', value: 'x'.repeat(200) }])
+        expect(parseCompareQuery('map=maps/evil').state.map).toBeNull()
     })
 })

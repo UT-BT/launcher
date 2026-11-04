@@ -39,10 +39,10 @@ export const SHORTCUT_SHEET: readonly ShortcutEntry[] = [
     { keys: [`1–${MAX_VIDEO_TILES}`], action: 'Focus that tile', control: 'Click a tile' },
     { keys: [`Shift+1–${MAX_TEAM_RUNS}`], action: 'Focus that team row', control: 'Click the team’s row header' },
     { keys: ['0'], action: 'Back to the grid', control: 'Click the focused tile' },
-    { keys: ['[', ']'], action: 'Previous or next cue', control: 'Previous cue, Next cue' },
+    { keys: ['[', ']'], action: 'Jump to the previous or next sector', control: 'Jump to Sector' },
     { keys: ['F'], action: 'Stage fullscreen', control: 'Fullscreen' },
-    { keys: ['R'], action: 'Make the focused tile its side’s reference', control: 'Pin on the tile' },
-    { keys: ['M'], action: 'Move the audio to the next tile', control: 'Audio on the tile' },
+    { keys: ['R'], action: 'Make the focused tile its side’s baseline', control: 'Set as Baseline in the tile’s ⋯ menu' },
+    { keys: ['M'], action: 'Move the sound to the next tile', control: 'The speaker on the tile' },
     { keys: ['?'], action: 'This list', control: 'Shortcuts' },
 ]
 

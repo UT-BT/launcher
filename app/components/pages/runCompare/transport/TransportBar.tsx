@@ -1,7 +1,8 @@
-import { Crosshair, FastForward, Keyboard, ListVideo, Maximize, Minimize, Pause, Play, Rewind, SkipBack, SkipForward, StepBack, StepForward } from 'lucide-react'
-import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import type { CSSProperties } from 'react'
+import { Captions, ChevronDown, Keyboard, Maximize, Minimize, Pause, Play, StepBack, StepForward, Volume2 } from 'lucide-react'
 import {
     DropdownMenu,
+    DropdownMenuCheckboxItem,
     DropdownMenuContent,
     DropdownMenuLabel,
     DropdownMenuRadioGroup,
@@ -10,17 +11,26 @@ import {
 } from '@/app/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { useDeviceEnvironment } from '@/app/device/useDeviceEnvironment'
-import type { CueModel } from '../model/cueModel'
-import type { LanesModel } from '../model/laneModel'
+import { RunIdentity } from '../analysis/RunIdentity'
+import { zoneLabel } from '../analysis/analysisLabels'
+import type { CueModel, CuePoint } from '../model/cueModel'
+import type { GapGraph as GapGraphModel } from '../model/gapGraphModel'
+import { SIDE_TAGS } from '../model/laneModel'
+import type { SideChoice } from '../model/referenceModel'
 import { formatRaceTime, type RaceModel } from '../model/raceModel'
-import type { TeamRow } from '../model/teamModel'
 import { PLAYBACK_RATES, SKIP_SECONDS } from '../playback/playbackConstants'
 import type { PlaybackController, PlaybackState } from '../playback/playbackController'
 import { usePlaybackSelector } from '../stage/usePlaybackSelector'
+import type { VideoTags } from '../stage/videoTags'
 import type { CompareSync } from '../url/compareUrl'
 import { CueTicks } from './CueTicks'
-import { DeltaLanes, TeamDeltaLanes } from './DeltaLanes'
+import { GapGraph } from './GapGraph'
 import type { CueSync } from './useCueSync'
+
+export const SYNC_MODES: { mode: CompareSync; label: string }[] = [
+    { mode: 'race', label: 'Race' },
+    { mode: 'position', label: 'Same Spot' },
+]
 
 interface Controls {
     playing: boolean
@@ -46,9 +56,14 @@ function playheadOf(state: PlaybackState): number {
     return state.t
 }
 
-function Clock({ controller }: { controller: PlaybackController | null }) {
+function Clock({ controller, end }: { controller: PlaybackController | null; end: number }) {
     const t = usePlaybackSelector(controller, playheadOf)
-    return <span className="run-compare-clock font-mono tabular-nums text-foreground">{formatRaceTime(t)}</span>
+    return (
+        <span className="run-compare-clock font-mono tabular-nums">
+            <span className="text-foreground">{formatRaceTime(t)}</span>
+            <span className="text-muted-foreground"> / {formatRaceTime(end)}</span>
+        </span>
+    )
 }
 
 function Timeline({ controller, end }: { controller: PlaybackController | null; end: number }) {
@@ -64,6 +79,7 @@ function Timeline({ controller, end }: { controller: PlaybackController | null; 
             step="any"
             value={Math.min(t, end)}
             disabled={!controller || end <= 0}
+            style={{ '--run-compare-progress': `${end > 0 ? (Math.min(t, end) / end) * 100 : 0}%` } as CSSProperties}
             onPointerDown={event => {
                 event.currentTarget.setPointerCapture(event.pointerId)
                 controller?.beginScrub()
@@ -74,20 +90,19 @@ function Timeline({ controller, end }: { controller: PlaybackController | null; 
     )
 }
 
-interface TransportBarProps {
-    controller: PlaybackController | null
-    race: RaceModel
-    lanes: LanesModel
-    runsOpen: boolean
-    onToggleRuns: () => void
-    cues: CueModel
-    cueSync: CueSync
-    syncMode: CompareSync
-    onToggleSync: () => void
-    fullscreen: FullscreenControl | null
-    onShortcuts: () => void
-    compact: boolean
-    teams?: readonly TeamRow[]
+export interface TransportAudio {
+    volume: number
+    onVolume: (volume: number) => void
+}
+
+export interface TransportSides {
+    choice: SideChoice
+    onSide: (side: number) => void
+}
+
+export interface TransportTags {
+    shown: VideoTags
+    onChange: (next: VideoTags) => void
 }
 
 export interface FullscreenControl {
@@ -95,34 +110,33 @@ export interface FullscreenControl {
     toggle: () => void
 }
 
-interface RateControlProps {
+interface TransportBarProps {
     controller: PlaybackController | null
-    rate: number
+    race: RaceModel
+    graph: GapGraphModel
+    cues: CueModel
+    cueSync: CueSync
+    syncMode: CompareSync
+    onSync: (mode: CompareSync) => void
+    sides?: TransportSides | null
+    audio: TransportAudio
+    tags: TransportTags | null
+    fullscreen: FullscreenControl | null
+    onShortcuts: () => void
+    compact: boolean
+    sectionRef?: (element: HTMLElement | null) => void
 }
 
-function RateSelect({ controller, rate }: RateControlProps) {
-    return (
-        <select
-            aria-label="Playback rate"
-            value={String(rate)}
-            disabled={!controller}
-            onChange={event => controller?.setRate(Number(event.currentTarget.value))}
-            style={{ colorScheme: 'dark' }}
-        >
-            {PLAYBACK_RATES.map(option => <option key={option} value={String(option)}>{option}×</option>)}
-        </select>
-    )
-}
-
-function RateMenu({ controller, rate }: RateControlProps) {
+function RateMenu({ controller, rate }: { controller: PlaybackController | null; rate: number }) {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <button type="button" aria-label="Playback rate" disabled={!controller} className="run-compare-rate-button font-mono tabular-nums">
+                <button type="button" aria-label="Playback rate" disabled={!controller} className="run-compare-pill-button font-mono tabular-nums">
                     {rate}×
+                    <ChevronDown className="size-3.5" />
                 </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="run-compare-rate-menu">
+            <DropdownMenuContent align="end" className="run-compare-menu">
                 <DropdownMenuLabel>Playback Rate</DropdownMenuLabel>
                 <DropdownMenuRadioGroup value={String(rate)} onValueChange={value => controller?.setRate(Number(value))}>
                     {PLAYBACK_RATES.map(option => (
@@ -134,129 +148,203 @@ function RateMenu({ controller, rate }: RateControlProps) {
     )
 }
 
-interface CueControlsProps {
-    controller: PlaybackController | null
-    cues: CueModel
-    cueSync: CueSync
-}
-
-function CueControls({ controller, cues, cueSync }: CueControlsProps) {
-    const idle = !controller || cues.points.length === 0
+function VideoTagsMenu({ tags }: { tags: TransportTags }) {
+    const { shown, onChange } = tags
     return (
-        <>
-            <button type="button" aria-label="Previous cue" disabled={idle} onClick={cueSync.previousCue}>
-                <SkipBack className="size-4" />
-            </button>
-            <select
-                aria-label="Cue"
-                value={cueSync.active ?? ''}
-                disabled={idle}
-                onChange={event => {
-                    const point = cues.points.find(candidate => candidate.key === event.currentTarget.value)
-                    if (point) cueSync.cue(point)
-                }}
-                style={{ colorScheme: 'dark' }}
-            >
-                <option value="" disabled>Cue</option>
-                {cues.points.map(point => <option key={point.key} value={point.key}>{point.label}</option>)}
-            </select>
-            <button type="button" aria-label="Next cue" disabled={idle} onClick={cueSync.nextCue}>
-                <SkipForward className="size-4" />
-            </button>
-        </>
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <button type="button" aria-label="Show on Videos" className="run-compare-icon-button">
+                    <Captions className="size-4" />
+                </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="run-compare-menu">
+                <DropdownMenuLabel>Show on Videos</DropdownMenuLabel>
+                <DropdownMenuCheckboxItem
+                    checked={shown.names}
+                    onSelect={event => {
+                        event.preventDefault()
+                        onChange({ ...shown, names: !shown.names })
+                    }}
+                >
+                    Names
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                    checked={shown.gap}
+                    onSelect={event => {
+                        event.preventDefault()
+                        onChange({ ...shown, gap: !shown.gap })
+                    }}
+                >
+                    Live Gap
+                </DropdownMenuCheckboxItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
     )
 }
 
-export function TransportBar({ controller, race, lanes, runsOpen, onToggleRuns, cues, cueSync, syncMode, onToggleSync, fullscreen, onShortcuts, compact, teams = [] }: TransportBarProps) {
+function cueLabel(point: CuePoint): string {
+    return point.kind === 'zone' ? zoneLabel(point.label) : point.label
+}
+
+export function jumpLabel(points: readonly CuePoint[]): string {
+    const kinds = new Set(points.map(point => point.kind))
+    if (kinds.size === 1 && kinds.has('sector')) return 'Jump to Sector'
+    if (kinds.size === 1 && kinds.has('zone')) return 'Jump to Zone'
+    return 'Jump To'
+}
+
+function JumpMenu({ controller, cues, cueSync }: { controller: PlaybackController | null; cues: CueModel; cueSync: CueSync }) {
+    const idle = !controller || cues.points.length === 0
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <button type="button" disabled={idle} className="run-compare-pill-button">
+                    {jumpLabel(cues.points)}
+                    <ChevronDown className="size-3.5" />
+                </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="run-compare-menu run-compare-jump-menu">
+                <DropdownMenuRadioGroup value={cueSync.active ?? ''}>
+                    {cues.points.map(point => (
+                        <DropdownMenuRadioItem key={point.key} value={point.key} onSelect={() => cueSync.cue(point)}>
+                            {cueLabel(point)}
+                            <span className="run-compare-menu-aside font-mono tabular-nums">{formatRaceTime(point.atMs / 1000)}</span>
+                        </DropdownMenuRadioItem>
+                    ))}
+                </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    )
+}
+
+const SIDE_CLASSES = ['is-red', 'is-blue'] as const
+
+function SideSwitch({ sides, compact }: { sides: TransportSides; compact: boolean }) {
+    const { choice, onSide } = sides
+    return (
+        <div role="group" aria-label="Analyse Side" className="run-compare-segmented">
+            {!compact && <span aria-hidden className="run-compare-segmented-label">Analyse</span>}
+            {choice.options.map(option => (
+                <button
+                    key={option.side}
+                    type="button"
+                    aria-pressed={choice.focus === option.side}
+                    className={cn('run-compare-segment', SIDE_CLASSES[option.side])}
+                    onClick={() => onSide(option.side)}
+                >
+                    {SIDE_TAGS[option.side]}
+                    <span className="run-compare-segment-count">{option.runs}</span>
+                </button>
+            ))}
+        </div>
+    )
+}
+
+function SyncSwitch({ mode, onSync, compact }: { mode: CompareSync; onSync: (mode: CompareSync) => void; compact: boolean }) {
+    return (
+        <div role="group" aria-label="Sync" className="run-compare-segmented">
+            {!compact && <span aria-hidden className="run-compare-segmented-label">Sync</span>}
+            {SYNC_MODES.map(option => (
+                <button key={option.mode} type="button" aria-pressed={mode === option.mode} className="run-compare-segment" onClick={() => onSync(option.mode)}>
+                    {option.label}
+                </button>
+            ))}
+        </div>
+    )
+}
+
+function VolumeControl({ audio }: { audio: TransportAudio }) {
+    return (
+        <label className="run-compare-volume">
+            <Volume2 aria-hidden className="size-4 text-muted-foreground" />
+            <input
+                type="range"
+                aria-label="Volume"
+                aria-valuetext={`${Math.round(audio.volume * 100)}%`}
+                min={0}
+                max={1}
+                step={0.05}
+                value={audio.volume}
+                onChange={event => audio.onVolume(Number(event.currentTarget.value))}
+            />
+        </label>
+    )
+}
+
+export function TransportBar({ controller, race, graph, cues, cueSync, syncMode, onSync, sides = null, audio, tags, fullscreen, onShortcuts, compact, sectionRef }: TransportBarProps) {
     const { playing, rate, end, buffering } = usePlaybackSelector(controller, controlsOf, sameControls)
     const touch = useDeviceEnvironment(environment => environment.touch)
     const stalled = new Set(buffering.split(','))
     const buffered = race.runs.filter(lane => stalled.has(lane.run.capId))
 
     return (
-        <section aria-label="Playback" className={cn('run-compare-transport', compact && 'is-compact')}>
+        <section ref={sectionRef} aria-label="Playback" className={cn('run-compare-transport', compact && 'is-compact')}>
+            <GapGraph graph={graph} controller={controller} end={end} sectors={cues.points} />
+            <div className="run-compare-track">
+                <Clock controller={controller} end={end} />
+                <div className="run-compare-scrub">
+                    <Timeline controller={controller} end={end} />
+                    <CueTicks label="Sectors" kind="sector" points={cues.sectors} end={end} active={cueSync.active} interactive={!touch} labelled={!compact} onCue={cueSync.cue} />
+                    <CueTicks label="Zones" kind="zone" points={cues.zones} end={end} active={cueSync.active} interactive={!touch} labelled={false} onCue={cueSync.cue} />
+                </div>
+            </div>
             <div className="run-compare-controls">
                 <button
                     type="button"
                     aria-label={playing ? 'Pause' : 'Play'}
                     disabled={!controller}
+                    className="run-compare-play"
                     onClick={() => (playing ? controller?.pause() : controller?.play())}
                 >
                     {playing ? <Pause className="size-4" /> : <Play className="size-4" />}
                 </button>
-                <button type="button" aria-label="Previous frame" disabled={!controller} onClick={() => controller?.stepFrame(-1)}>
+                <button type="button" aria-label="Previous frame" disabled={!controller} className="run-compare-icon-button" onClick={() => controller?.stepFrame(-1)}>
                     <StepBack className="size-4" />
                 </button>
-                <button type="button" aria-label="Next frame" disabled={!controller} onClick={() => controller?.stepFrame(1)}>
+                <button type="button" aria-label="Next frame" disabled={!controller} className="run-compare-icon-button" onClick={() => controller?.stepFrame(1)}>
                     <StepForward className="size-4" />
                 </button>
                 {!touch && (
                     <>
-                        <button type="button" aria-label={`Back ${SKIP_SECONDS} seconds`} disabled={!controller} onClick={() => controller?.skip(-1)}>
-                            <Rewind className="size-4" />
+                        <button type="button" aria-label={`Back ${SKIP_SECONDS} seconds`} disabled={!controller} className="run-compare-skip font-mono" onClick={() => controller?.skip(-1)}>
+                            −{SKIP_SECONDS}s
                         </button>
-                        <button type="button" aria-label={`Forward ${SKIP_SECONDS} seconds`} disabled={!controller} onClick={() => controller?.skip(1)}>
-                            <FastForward className="size-4" />
+                        <button type="button" aria-label={`Forward ${SKIP_SECONDS} seconds`} disabled={!controller} className="run-compare-skip font-mono" onClick={() => controller?.skip(1)}>
+                            +{SKIP_SECONDS}s
                         </button>
                     </>
                 )}
-                {compact ? <RateMenu controller={controller} rate={rate} /> : <RateSelect controller={controller} rate={rate} />}
-                <Clock controller={controller} />
-                <CueControls controller={controller} cues={cues} cueSync={cueSync} />
-                <button
-                    type="button"
-                    aria-pressed={syncMode === 'position'}
-                    className="run-compare-sync-button"
-                    onClick={onToggleSync}
-                >
-                    <Crosshair className="size-4" />
-                    <span className={cn(compact && 'sr-only')}>Sync by position</span>
-                </button>
+                <span aria-hidden className="run-compare-divider" />
+                <JumpMenu controller={controller} cues={cues} cueSync={cueSync} />
+                <SyncSwitch mode={syncMode} onSync={onSync} compact={compact} />
+                {sides && <SideSwitch sides={sides} compact={compact} />}
                 <div aria-live="polite" className="run-compare-buffering text-muted-foreground">
                     {buffered.length > 0 && (
                         <>
                             <span>Buffering:</span>
-                            {buffered.map(({ run }) => (
-                                <PlayerInfo key={run.capId} userId={run.user} alias={run.alias} title={run.title} size="sm" interactive={false} />
-                            ))}
+                            {buffered.map(({ run }) => <RunIdentity key={run.capId} run={run} withTitle={false} />)}
                         </>
                     )}
                 </div>
-                <button
-                    type="button"
-                    aria-expanded={runsOpen}
-                    aria-controls="run-compare-drawer"
-                    className="run-compare-runs-button"
-                    onClick={onToggleRuns}
-                >
-                    <ListVideo className="size-4" />
-                    <span>Runs</span>
-                </button>
+                {!touch && <VolumeControl audio={audio} />}
+                {tags && <VideoTagsMenu tags={tags} />}
+                <RateMenu controller={controller} rate={rate} />
+                {!touch && (
+                    <button type="button" aria-label="Shortcuts" aria-haspopup="dialog" className="run-compare-icon-button" onClick={onShortcuts}>
+                        <Keyboard className="size-4" />
+                    </button>
+                )}
                 {fullscreen && (
                     <button
                         type="button"
                         aria-label={fullscreen.active ? 'Exit fullscreen' : 'Fullscreen'}
+                        className="run-compare-icon-button"
                         onClick={fullscreen.toggle}
                     >
                         {fullscreen.active ? <Minimize className="size-4" /> : <Maximize className="size-4" />}
                     </button>
                 )}
-                {!touch && (
-                    <button type="button" aria-label="Shortcuts" aria-haspopup="dialog" onClick={onShortcuts}>
-                        <Keyboard className="size-4" />
-                    </button>
-                )}
             </div>
-            <div className="run-compare-track">
-                <div className="run-compare-scrub">
-                    <CueTicks label="Sectors" kind="sector" points={cues.sectors} end={end} active={cueSync.active} interactive={!touch} onCue={cueSync.cue} />
-                    <Timeline controller={controller} end={end} />
-                    <CueTicks label="Zones" kind="zone" points={cues.zones} end={end} active={cueSync.active} interactive={!touch} onCue={cueSync.cue} />
-                </div>
-            </div>
-            {teams.some(row => row.lane)
-                ? <TeamDeltaLanes rows={teams} controller={controller} end={end} />
-                : <DeltaLanes lanes={lanes.lanes} controller={controller} end={end} />}
         </section>
     )
 }

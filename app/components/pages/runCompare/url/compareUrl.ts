@@ -13,6 +13,7 @@ export interface ComparePair {
 }
 
 export interface CompareUrlState {
+    map: string | null
     runs: string[]
     refs: string[]
     data: string[]
@@ -23,7 +24,7 @@ export interface CompareUrlState {
     t: number | null
 }
 
-export type CompareParam = 'runs' | 'ref' | 'data' | 'off' | 'pair' | 'drive' | 'sync' | 't'
+export type CompareParam = 'map' | 'runs' | 'ref' | 'data' | 'off' | 'pair' | 'drive' | 'sync' | 't'
 
 export type CompareNoticeReason = 'malformed' | 'duplicate' | 'over-cap' | 'outside-set'
 
@@ -39,6 +40,7 @@ export interface ParsedCompareUrl {
 }
 
 export const EMPTY_COMPARE_STATE: CompareUrlState = {
+    map: null,
     runs: [],
     refs: [],
     data: [],
@@ -52,6 +54,7 @@ export const EMPTY_COMPARE_STATE: CompareUrlState = {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const INTEGER = /^-?\d+$/
 const SECONDS = /^\d+(\.\d+)?$/
+const MAP_NAME_MAX = 128
 
 function idOf(raw: string): string | null {
     const value = raw.trim()
@@ -144,6 +147,16 @@ function parseDrive(query: URLSearchParams, members: ReadonlySet<string>, notice
     return id
 }
 
+function parseMap(query: URLSearchParams, runs: readonly string[], notices: CompareNotice[]): string | null {
+    const raw = singleOf(query, 'map')
+    if (raw === null || runs.length > 0) return null
+    if (raw.length > MAP_NAME_MAX || /[\p{Cc}/\\]/u.test(raw)) {
+        notices.push({ param: 'map', reason: 'malformed', value: raw })
+        return null
+    }
+    return raw
+}
+
 function parseSync(query: URLSearchParams, notices: CompareNotice[]): CompareSync {
     const raw = singleOf(query, 'sync')
     if (raw === null) return 'race'
@@ -168,6 +181,7 @@ export function parseCompareQuery(query: string, members: ReadonlySet<string> = 
     const runs = parseRuns(params, notices)
     const inSet = new Set([...runs, ...members])
     const state: CompareUrlState = {
+        map: parseMap(params, runs, notices),
         runs,
         refs: parseIds(params, 'ref', new Set(runs), notices),
         data: parseIds(params, 'data', inSet, notices),
@@ -182,6 +196,7 @@ export function parseCompareQuery(query: string, members: ReadonlySet<string> = 
 
 export function serializeCompareQuery(state: CompareUrlState): string {
     const parts: [CompareParam, string][] = [
+        ['map', state.map !== null && state.runs.length === 0 ? encodeURIComponent(state.map) : ''],
         ['runs', state.runs.join(',')],
         ['ref', state.refs.join(',')],
         ['data', state.data.join(',')],

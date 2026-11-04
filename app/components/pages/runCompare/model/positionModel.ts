@@ -4,7 +4,7 @@ import type { CompareSync } from '../url/compareUrl'
 import type { LanesModel } from './laneModel'
 import type { RaceModel } from './raceModel'
 
-export const RACE_CLOCK = 'Race clock'
+export const RACE_CLOCK = 'Plays in race time'
 
 export interface SyncModel {
     mode: CompareSync

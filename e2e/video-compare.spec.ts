@@ -117,7 +117,7 @@ function mainScrollTop(page: Page): Promise<number> {
 }
 
 function lanes(page: Page): Locator {
-    return page.getByRole('list', { name: 'Lanes' })
+    return page.getByRole('list', { name: 'Gap to the baseline' })
 }
 
 function lane(page: Page, alias: string): Locator {
@@ -137,7 +137,7 @@ function drawer(page: Page): Locator {
 }
 
 function runsButton(page: Page): Locator {
-    return page.getByRole('region', { name: 'Playback' }).getByRole('button', { name: 'Runs', exact: true })
+    return page.getByRole('button', { name: /^Runs · \d+$/ })
 }
 
 function rosterRow(page: Page, alias: string): Locator {
@@ -195,10 +195,11 @@ test.describe('Cap Detail', () => {
         await expect(lanes(page).getByRole('listitem')).toHaveCount(2, FIRST_LOAD)
         const lengthOnPage = await historyLength(page)
         await runsButton(page).click()
-        await leaderboardRow(page, SLOWEST.alias!).getByRole('button', { name: 'Add', exact: true }).click()
+        await leaderboardRow(page, SLOWEST.alias!).getByRole('button', { name: `Add ${SLOWEST.alias!}` }).click()
         await expect.poll(() => search(page)).toBe(`?runs=${RUNNER_ID},${SLOWER_GHOST.id},${SLOWEST.id}`)
         await expect(lanes(page).getByRole('listitem')).toHaveCount(3)
-        await rosterRow(page, SLOWER_GHOST.alias!).getByRole('button', { name: 'Remove' }).click()
+        await rosterRow(page, SLOWER_GHOST.alias!).getByRole('button', { name: `More for ${SLOWER_GHOST.alias!}` }).click()
+        await page.getByRole('menu').getByRole('menuitem', { name: 'Remove', exact: true }).click()
         await expect.poll(() => search(page)).toBe(`?runs=${RUNNER_ID},${SLOWEST.id}`)
         await expect(lanes(page).getByRole('listitem')).toHaveCount(2)
         await drawer(page).getByRole('button', { name: 'Close Runs' }).click()
@@ -288,7 +289,7 @@ test.describe('Team Cap Detail', () => {
         await expect(page).toHaveURL(`/compare?runs=${ALIGNED_RUNNER.teamCapId},${ALIGNED_REFERENCE.teamCapId}`)
         await expect(teamHeaders(page)).toHaveCount(2, FIRST_LOAD)
         for (const alias of ['fierd_6', 'Nightwolf`', 'gxls', '[UTW]Nettlez']) await expect(tile(page, alias).locator('video')).toHaveCount(1)
-        await expect(page.getByRole('region', { name: 'Team Splits' }).getByRole('button', { name: /^(Cue .+|Seek to the cap)$/ })).toHaveText(['Bridge', 'Ramp', 'Lift', 'Pit', 'Flag', 'Cap'])
+        await expect(page.getByRole('region', { name: 'Team Splits' }).getByRole('button', { name: /^(Cue .+|Seek to the cap)$/ })).toHaveText(['Zone Bridge', 'Zone Ramp', 'Zone Lift', 'Zone Pit', 'Zone Flag', 'Finish'])
         if (isMobile) return
         const [nightwolf, fierd, gxls, nettlez] = await Promise.all(['Nightwolf`', 'fierd_6', 'gxls', '[UTW]Nettlez'].map(async alias => (await tile(page, alias).boundingBox())!))
         expect(nightwolf.x).toBeCloseTo(gxls.x, 0)

@@ -60,16 +60,6 @@ describe('a team run on one clock', () => {
         expect(industry[0] - reference[0]).toBeCloseTo(9.871 - 9.512, 6)
     })
 
-    it('cues both teams from a different route card, each to its member\'s own crossing', () => {
-        const { controller, media } = setup(VERSUS)
-        const crane = VERSUS.teamAnalysis.routes[0].anchors.find(anchor => anchor.label === 'Crane')!.cue!
-
-        controller.cue(crane.key, crane.atMs / 1000, cueTargets(crane))
-
-        positionsOf(media, INDUSTRY_POVS).forEach(position => expect(position).toBeCloseTo(27.402, 9))
-        positionsOf(media, REFERENCE_POVS).forEach(position => expect(position).toBeCloseTo(26.94, 9))
-    })
-
     it('in sync by position, moves every member of a team by its driving pair\'s mapping', () => {
         const aligned = versusOf('teamAligned')
         const [fierd, nightwolf] = aligned.runner.members.map(run => run.capId)

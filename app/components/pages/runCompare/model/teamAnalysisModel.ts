@@ -8,7 +8,7 @@ import { composeCues, type CueModel, type CuePoint } from './cueModel'
 import { composeLanes } from './laneModel'
 import { composeRace, formatRaceTime } from './raceModel'
 import type { TeamModel, TeamRow } from './teamModel'
-import { referenceRow, sharedAnchors, SPAWN_ANCHOR, type TeamPair, type TeamRead } from './teamVersus'
+import { referenceRow, type TeamPair, type TeamRead } from './teamVersus'
 
 export const CAP_ROW = 'Cap'
 
@@ -40,21 +40,10 @@ export interface PairSection {
     analysis: AnalysisModel
 }
 
-export interface RouteAnchorRow {
-    key: string
-    label: string
-    atMs: number
-    runner: string
-    reference: string
-    gap: SignedGap
-    cue: CuePoint | null
-}
-
 export interface DifferentRouteCard {
     key: string
     runner: PairSide
     reference: PairSide
-    anchors: RouteAnchorRow[]
 }
 
 export interface TeamAnalysisModel {
@@ -161,26 +150,10 @@ function pairAnalysis(pair: TeamPair, teamOf: (capId: string) => string, compari
 }
 
 function routeCard(pair: TeamPair, read: TeamRead, reference: TeamRow): DifferentRouteCard {
-    const key = `route:${pair.key}`
     return {
-        key,
+        key: `route:${pair.key}`,
         runner: { run: pair.runner, colour: read.row.colour },
         reference: { run: pair.reference, colour: reference.colour },
-        anchors: sharedAnchors(pair.runner, pair.reference).map((anchor): RouteAnchorRow => ({
-            key: `${key}:${anchor.label}`,
-            label: anchor.label,
-            atMs: anchor.referenceMs,
-            runner: formatRaceTime(anchor.runnerMs / 1000),
-            reference: formatRaceTime(anchor.referenceMs / 1000),
-            gap: signedGap(anchor.runnerMs - anchor.referenceMs),
-            cue: anchor.label === SPAWN_ANCHOR ? null : {
-                key: `${key}:${anchor.label}`,
-                kind: 'zone',
-                label: anchor.label,
-                atMs: anchor.referenceMs,
-                runTimesMs: new Map([[reference.teamCapId, anchor.referenceMs], [read.row.teamCapId, anchor.runnerMs]]),
-            },
-        })),
     }
 }
 
@@ -205,4 +178,39 @@ export function composeTeamAnalysis(input: TeamAnalysisInput): TeamAnalysisModel
         routes,
         highlighted: pairs.map(pair => pair.analysis.speed.highlighted).find(capId => capId !== null) ?? null,
     }
+}
+
+export const SAME_LINE_SHARE = 0.05
+
+export type PairRoute = 'same' | 'apart' | 'different'
+
+export interface PairSummary {
+    key: string
+    runner: PairSide
+    reference: PairSide
+    route: PairRoute
+    apartShare: number
+}
+
+function apartShareOf(pair: PairSection): number {
+    const line = pair.analysis.cumulative.lines[0]
+    if (!line || line.cap[0] <= 0) return 0
+    const apartMs = line.bands.reduce((sum, band) => sum + Math.max(0, band.endMs - band.startMs), 0)
+    return Math.min(1, apartMs / line.cap[0])
+}
+
+export function pairSummaries(analysis: Pick<TeamAnalysisModel, 'pairs' | 'routes'>): PairSummary[] {
+    return [
+        ...analysis.pairs.map((pair): PairSummary => {
+            const apartShare = apartShareOf(pair)
+            return { key: pair.key, runner: pair.runner, reference: pair.reference, route: apartShare < SAME_LINE_SHARE ? 'same' : 'apart', apartShare }
+        }),
+        ...analysis.routes.map((card): PairSummary => ({ key: card.key, runner: card.runner, reference: card.reference, route: 'different', apartShare: 1 })),
+    ]
+}
+
+export function pairRouteNote(summary: PairSummary): string {
+    if (summary.route === 'same') return 'Same line'
+    if (summary.route === 'different') return 'Different routes'
+    return `Took another line for ${Math.round(summary.apartShare * 100)}% of the run`
 }

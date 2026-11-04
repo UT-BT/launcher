@@ -54,7 +54,7 @@ describe('the race stage', () => {
         expect(race.runs.map(r => r.run.capId)).toEqual([A, B])
         expect(race.tiles).toEqual([
             expect.objectContaining({ kind: 'video', id: A, src: `https://media.test/${A}.mp4`, badges: [] }),
-            expect.objectContaining({ kind: 'video', id: B, src: `https://media.test/${B}.mp4`, badges: ['Replay'] }),
+            expect.objectContaining({ kind: 'video', id: B, src: `https://media.test/${B}.mp4`, badges: [] }),
         ])
         expect(race.dataOnly).toEqual([])
     })
@@ -80,12 +80,12 @@ describe('the race stage', () => {
         expect(race.tiles[1].src).toBeNull()
     })
 
-    it('plays at most eight videos and lists the runs past them as data-only without a video', () => {
+    it('plays at most eight videos and lists the runs past them as graph only', () => {
         const runs = IDS.map((id, i) => run(id, 70 + i))
         const race = compose(`runs=${IDS.join(',')}`, runs)
 
         expect(tileIds(race)).toEqual(IDS.slice(0, 8))
-        expect(badgesOf(race)).toEqual({ [IDS[8]]: ['No video'], [IDS[9]]: ['No video'] })
+        expect(badgesOf(race)).toEqual({ [IDS[8]]: ['Graph only'], [IDS[9]]: ['Graph only'] })
     })
 
     it('makes a run without a video data-only, which frees its tile for the ninth run', () => {
@@ -95,22 +95,22 @@ describe('the race stage', () => {
         const race = compose(`runs=${IDS.slice(0, 9).join(',')}`, runs, { videos })
 
         expect(tileIds(race)).toEqual(IDS.slice(0, 9).filter(id => id !== C))
-        expect(badgesOf(race)).toEqual({ [C]: ['No video'] })
+        expect(badgesOf(race)).toEqual({ [C]: ['Graph only'] })
     })
 
     it('makes a run listed in data a data-only lane', () => {
         const race = compose(`runs=${A},${B}&data=${B}`, [run(A, 81.234), run(B, 79.5)])
 
         expect(tileIds(race)).toEqual([A])
-        expect(badgesOf(race)).toEqual({ [B]: ['Replay', 'No video'] })
+        expect(badgesOf(race)).toEqual({ [B]: ['Graph only'] })
         expect(race.runs.map(r => r.tile)).toEqual([true, false])
     })
 
-    it('drops a video that failed to load to a data-only lane marked unavailable', () => {
+    it('drops a video that failed to load to a data-only lane that says so', () => {
         const race = compose(`runs=${A},${B}`, [run(A, 81.234), run(B, 79.5)], { failedVideos: new Set([A]) })
 
         expect(tileIds(race)).toEqual([B])
-        expect(badgesOf(race)).toEqual({ [A]: ['Video unavailable'] })
+        expect(badgesOf(race)).toEqual({ [A]: ['Video didn’t load'] })
     })
 })
 
@@ -136,10 +136,10 @@ describe('the default reference and the result at the cap', () => {
         ])
 
         expect(race.runs.map(r => r.result)).toEqual([
-            'CAP 1:23.456 · +0.512 · 2nd',
-            'CAP 1:22.944 · +3.444 · 1st',
-            'CAP 1:19.500 · ±0.000 · 1st',
-            'CAP 1:21.000 · +1.500 · 2nd',
+            'CAP 01:23.456 · +0.512 · 2nd',
+            'CAP 01:22.944 · +3.444 · 1st',
+            'CAP 01:19.500 · ±0.000 · 1st',
+            'CAP 01:21.000 · +1.500 · 2nd',
         ])
     })
 

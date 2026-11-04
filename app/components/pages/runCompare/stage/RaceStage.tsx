@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { TONE_TEXT } from '@/app/components/pages/capDetail/runDelta/deltaStyles'
 import { Spinner } from '@/app/components/ui/spinner'
-import { useDeviceEnvironment } from '@/app/device/useDeviceEnvironment'
 import { usePrefersReducedMotion } from '@/app/hooks/usePrefersReducedMotion'
 import { cn } from '@/lib/utils'
 import type { TileOverlay as TileOverlayModel } from '../model/overlayModel'
@@ -14,15 +13,17 @@ import { sameTeamDelta, teamDeltaAt } from '../model/teamVersus'
 import type { PlaybackController, PlaybackState } from '../playback/playbackController'
 import { createVideoMedia } from '../playback/videoMedia'
 import { DeltaChips } from './DeltaChips'
+import { RunMenu } from './RunMenu'
+import { TileFlash, TileTags } from './TileCaption'
+import { BaselineTag, NoteTags } from './Tags'
 import { TeamLabel } from './TeamLabel'
-import { TileOverlay } from './TileOverlay'
 import type { AttachMedia } from './useRacePlayback'
-import { useOverlayIdle } from './useOverlayIdle'
 import { useSwipe } from './useSwipe'
 import { usePlaybackSelector } from './usePlaybackSelector'
+import type { VideoTags } from './videoTags'
 
 export interface StageAudio {
-    audible: string | null
+    audible: readonly string[]
     volume: number
     onAudio: (capId: string) => void
     onVolume: (volume: number) => void
@@ -44,25 +45,23 @@ interface TileProps<S extends TileSlot> {
     slot: S
     rect: SlotRect | null
     frozen: boolean
+    tags: VideoTags | null
     attachMedia: AttachMedia
     onVideoFailed: (capId: string) => void
     controller: PlaybackController | null
     overlay: TileOverlayModel | undefined
-    overlaysShown: boolean
     tileOverlays: StageOverlays
     focus: StageFocus
-    touch: boolean
     focusable: boolean
     others: readonly TileOverlayModel[]
 }
 
-function VideoTile({ slot, rect, frozen, attachMedia, onVideoFailed, controller, overlay, overlaysShown, tileOverlays, focus, touch, focusable, others }: TileProps<VideoSlot>) {
+function VideoTile({ slot, rect, frozen, tags, attachMedia, onVideoFailed, controller, overlay, tileOverlays, focus, focusable, others }: TileProps<VideoSlot>) {
     const videoRef = useRef<HTMLVideoElement>(null)
-    const wakingTap = useRef(false)
     const focused = focus.focused === slot.id
     const { run } = slot
     const { audio, onEdit } = tileOverlays
-    const audible = audio.audible === slot.id
+    const audible = audio.audible.includes(slot.id)
     const streaming = rect !== null
 
     useEffect(() => {
@@ -87,45 +86,41 @@ function VideoTile({ slot, rect, frozen, attachMedia, onVideoFailed, controller,
         <div
             role="group"
             aria-label={run.alias?.trim() || run.user}
-            className={cn('run-compare-tile bg-black', frozen && 'is-frozen', focused && 'is-focused', slot.highlighted && 'is-highlighted')}
+            className={cn('run-compare-tile', frozen && 'is-frozen', focused && 'is-focused', slot.highlighted && 'is-highlighted')}
             hidden={!rect}
             style={rect ? { left: rect.x, top: rect.y, width: rect.width, height: rect.height } : undefined}
         >
-            {slot.src ? (
-                <video
-                    key={slot.src}
-                    ref={videoRef}
-                    src={streaming ? slot.src : undefined}
-                    muted
-                    playsInline
-                    preload="auto"
-                    onError={() => onVideoFailed(slot.id)}
-                />
-            ) : (
-                <div className="run-compare-tile-wait text-muted-foreground"><Spinner className="size-6" /></div>
-            )}
-            {focusable && <button
-                type="button"
-                aria-label="Focus"
-                aria-pressed={focused}
-                className="run-compare-tile-focus"
-                onPointerDown={() => { wakingTap.current = touch && !overlaysShown }}
-                onClick={() => {
-                    if (wakingTap.current) wakingTap.current = false
-                    else focus.onFocus(slot.id)
-                }}
-            />}
-            {overlay && (
-                <TileOverlay
-                    overlay={overlay}
-                    controller={controller}
-                    shown={overlaysShown}
-                    audio={{ ...audio, audible }}
-                    onEdit={onEdit}
-                />
-            )}
-            <DeltaChips overlays={others} controller={controller} />
-            {frozen && <p className="run-compare-result font-mono tabular-nums">{slot.result}</p>}
+            <div className="run-compare-tile-video">
+                {slot.src ? (
+                    <video
+                        key={slot.src}
+                        ref={videoRef}
+                        src={streaming ? slot.src : undefined}
+                        muted
+                        playsInline
+                        disablePictureInPicture
+                        preload="auto"
+                        onError={() => onVideoFailed(slot.id)}
+                    />
+                ) : (
+                    <div className="run-compare-tile-wait text-muted-foreground"><Spinner className="size-6" /></div>
+                )}
+                {focusable && (
+                    <button
+                        type="button"
+                        aria-label="Focus"
+                        aria-pressed={focused}
+                        className="run-compare-tile-focus"
+                        onClick={() => focus.onFocus(slot.id)}
+                    />
+                )}
+                {overlay && <TileFlash overlay={overlay} controller={controller} />}
+                <DeltaChips overlays={others} controller={controller} />
+                {frozen && <p className="run-compare-result font-mono tabular-nums">{slot.result}</p>}
+                {tags && overlay && (
+                    <TileTags overlay={overlay} controller={controller} audio={{ audible, onAudio: audio.onAudio }} onEdit={onEdit} shown={tags} />
+                )}
+            </div>
         </div>
     )
 }
@@ -134,37 +129,57 @@ function TeamDelta({ row, controller }: { row: TeamRow; controller: PlaybackCont
     const select = useCallback((state: PlaybackState) => teamDeltaAt(row, state), [row])
     const gap = usePlaybackSelector(controller, select, sameTeamDelta)
     if (!gap) return null
-    return <span className={cn('run-compare-team-delta font-mono tabular-nums', TONE_TEXT[gap.tone])}>{gap.label}</span>
+    return (
+        <span className="run-compare-gap">
+            <span className={cn('run-compare-gap-value font-mono tabular-nums', TONE_TEXT[gap.tone])}>{gap.label}</span>
+            <span className="run-compare-gap-vs">team gap</span>
+        </span>
+    )
 }
 
 interface TeamRowHeaderProps {
     row: TeamRow
     rect: SlotRect
+    band: boolean
+    removable: boolean
     controller: PlaybackController | null
     onFocusRow: ((teamCapId: string) => void) | null
+    onEdit: (edit: SetEdit) => void
 }
 
-function TeamRowHeader({ row, rect, controller, onFocusRow }: TeamRowHeaderProps) {
+function TeamRowHeader({ row, rect, band, removable, controller, onFocusRow, onEdit }: TeamRowHeaderProps) {
+    const label = <TeamLabel row={row} withTitle={false} className="run-compare-team-names" />
     return (
-        <div className="run-compare-team-header run-compare-row" style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }}>
-            {onFocusRow
-                ? (
-                    <button type="button" className="run-compare-team-focus run-compare-row" onClick={() => onFocusRow(row.teamCapId)}>
-                        <span className="sr-only">Focus </span>
-                        <span className="run-compare-team-bar" style={{ background: row.colour }} />
-                        <TeamLabel row={row} className="min-w-0" />
-                    </button>
-                )
-                : (
-                    <>
-                        <span className="run-compare-team-bar" style={{ background: row.colour }} />
-                        <TeamLabel row={row} className="min-w-0" />
-                    </>
-                )}
-            <span className="font-mono tabular-nums text-foreground">{row.time}</span>
-            {row.reference && <span className="run-compare-badge is-reference">REF</span>}
-            <TeamDelta row={row} controller={controller} />
-            {row.badges.map(badge => <span key={badge} className="run-compare-badge">{badge}</span>)}
+        <div className={cn('run-compare-team-header', band && 'is-band')} style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }}>
+            <div className="run-compare-team-top">
+                <span className="run-compare-team-swatch" style={{ background: row.colour }} />
+                {onFocusRow
+                    ? (
+                        <button type="button" className="run-compare-team-focus" onClick={() => onFocusRow(row.teamCapId)}>
+                            <span className="sr-only">Focus </span>
+                            {label}
+                        </button>
+                    )
+                    : label}
+                <RunMenu
+                    capId={row.teamCapId}
+                    run={row.team.members[0]}
+                    name={row.label}
+                    baseline={{ pinned: row.pinned, reference: row.reference }}
+                    video={null}
+                    offset={null}
+                    pairMenu={null}
+                    driving={null}
+                    removable={removable}
+                    onEdit={onEdit}
+                    className="run-compare-team-menu"
+                />
+            </div>
+            <span className="run-compare-team-time font-mono tabular-nums">{row.time}</span>
+            <div className="run-compare-team-gap">
+                {row.reference ? <BaselineTag /> : <TeamDelta row={row} controller={controller} />}
+                <NoteTags notes={row.badges} />
+            </div>
         </div>
     )
 }
@@ -177,6 +192,7 @@ interface RaceStageProps {
     layout: StageLayout<TileSlot>
     tiles: readonly TileSlot[]
     view: StageView
+    tags: VideoTags | null
     onSwipe: (step: 1 | -1) => void
     controller: PlaybackController | null
     stageRef: (element: HTMLElement | null) => void
@@ -185,18 +201,22 @@ interface RaceStageProps {
     tileOverlays: StageOverlays
     focus: StageFocus
     teamRows?: readonly TeamRow[]
+    transposed?: boolean
+    shift?: number
 }
 
-export function RaceStage({ layout, tiles, view, onSwipe, controller, stageRef, attachMedia, onVideoFailed, tileOverlays, focus, teamRows = [] }: RaceStageProps) {
+function shifted(rect: SlotRect, shift: number): SlotRect {
+    return shift === 0 ? rect : { ...rect, y: rect.y - shift }
+}
+
+export function RaceStage({ layout, tiles, view, tags, onSwipe, controller, stageRef, attachMedia, onVideoFailed, tileOverlays, focus, teamRows = [], transposed = false, shift = 0 }: RaceStageProps) {
     const frozen = new Set(usePlaybackSelector(controller, state => frozenKey(state.frozen)).split(','))
-    const shown = useOverlayIdle(controller)
     const still = usePrefersReducedMotion()
-    const touch = useDeviceEnvironment(environment => environment.touch)
     const swipe = useSwipe(direction => {
         if (direction === 'left') onSwipe(1)
         if (direction === 'right') onSwipe(-1)
     })
-    const rects = new Map(layout.placed.map(({ slot, rect }) => [slot.id, rect]))
+    const rects = new Map(layout.placed.map(({ slot, rect }) => [slot.id, shifted(rect, shift)]))
     const others = view.switcher ? tiles.flatMap(slot => (rects.has(slot.id) ? [] : tileOverlays.overlays.get(slot.id) ?? [])) : []
 
     return (
@@ -212,14 +232,13 @@ export function RaceStage({ layout, tiles, view, onSwipe, controller, stageRef, 
                     slot={slot}
                     rect={rects.get(slot.id) ?? null}
                     frozen={frozen.has(slot.id)}
+                    tags={tags}
                     attachMedia={attachMedia}
                     onVideoFailed={onVideoFailed}
                     controller={controller}
                     overlay={tileOverlays.overlays.get(slot.id)}
-                    overlaysShown={shown}
                     tileOverlays={tileOverlays}
                     focus={focus}
-                    touch={touch}
                     focusable={view.mode === 'grid'}
                     others={slot.id === view.pov ? others : []}
                 />
@@ -228,9 +247,12 @@ export function RaceStage({ layout, tiles, view, onSwipe, controller, stageRef, 
                 <TeamRowHeader
                     key={row.teamCapId}
                     row={row}
-                    rect={row.header}
+                    rect={shifted(row.header, shift)}
+                    band={transposed}
+                    removable={teamRows.length > 1}
                     controller={controller}
-                    onFocusRow={!touch && view.mode === 'grid' && focus.onFocusRow ? focus.onFocusRow : null}
+                    onFocusRow={view.mode === 'grid' && focus.onFocusRow ? focus.onFocusRow : null}
+                    onEdit={tileOverlays.onEdit}
                 />
             ))}
         </section>

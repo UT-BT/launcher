@@ -200,7 +200,7 @@ each team run in its set: each member's side, ghost flag and zone string.
   `bad_request`, `cap_not_found`, `different_map`, `different_side`, `no_ghost`,
   `unreadable_ghost`); the client does not branch on it.
 - **The fallback rule.** Every caller treats `null` as the lower data rung: the checkpoint card
-  shows its zone checkpoint view, and the compare page drops that run to `Zones` or `Time only`
+  shows its zone checkpoint view, and the compare page drops that run to `Checkpoints only` or `Final time only`
   ([run-compare.md](features/run-compare.md#runs-references-and-data-rungs)). Nothing that
   works without a replay may go blank because the comparison failed.
 - **Same map and same side only.** No surface asks for, or draws, a delta across sides.

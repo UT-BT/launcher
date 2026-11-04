@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { runCompareFixture } from '@/app/utils/fixtures/runCompareFixtures'
 import { buildRunDeltaCard } from './runDeltaCard'
-import { runSpeed, speedAxis } from './runSpeed'
+import { runSpeed, speedAt, speedAxis } from './runSpeed'
 
 describe('the speed axis', () => {
     it.each([
@@ -132,5 +132,22 @@ describe('the replay card', () => {
         expect(card.kind).toBe('replay')
         if (card.kind !== 'replay') return
         expect(card.speed).toEqual(runSpeed(comparison))
+    })
+})
+
+describe('the speed under the pointer', () => {
+    const segments: [number, number][][] = [[[0, 100], [1000, 300], [2000, 200]], [[3000, 500], [4000, 700]]]
+
+    it('reads a sample exactly and interpolates between samples', () => {
+        expect(speedAt(segments, 1000)).toBe(300)
+        expect(speedAt(segments, 500)).toBe(200)
+        expect(speedAt(segments, 3500)).toBe(600)
+    })
+
+    it('has no speed in a gap between segments or outside the run', () => {
+        expect(speedAt(segments, 2500)).toBeNull()
+        expect(speedAt(segments, -1)).toBeNull()
+        expect(speedAt(segments, 4001)).toBeNull()
+        expect(speedAt([], 10)).toBeNull()
     })
 })

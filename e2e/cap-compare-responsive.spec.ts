@@ -179,7 +179,7 @@ async function expectNoPageScroll(page: Page) {
 }
 
 function lanes(page: Page): Locator {
-    return page.getByRole('list', { name: 'Lanes' })
+    return page.getByRole('list', { name: 'Gap to the baseline' })
 }
 
 test.beforeEach(async ({ page }) => {

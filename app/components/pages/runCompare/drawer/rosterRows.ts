@@ -1,12 +1,13 @@
+import type { SignedGap } from '@/app/components/pages/capDetail/runDelta/deltaCurve'
 import type { SoloRun } from '../loading/soloRuns'
 import { stateOf, type CompareModel } from '../model/compareModel'
-import { formatRaceTime, NO_VIDEO, type LoadedVideos } from '../model/raceModel'
-import { isSideReference } from '../model/referenceModel'
+import { formatRaceTime, GRAPH_ONLY, type LoadedVideos } from '../model/raceModel'
+import { focusRuns, isSideReference, onFocusSide } from '../model/referenceModel'
 import type { TeamRow } from '../model/teamModel'
 import type { PairMenu } from '../model/teamPairing'
 import { FALLBACK_FPS } from '../playback/playbackConstants'
 
-export const NOT_FRAME_SYNCED = 'Not frame-synced'
+export const OLDER_VIDEO = 'Older video'
 
 export type RosterVideo = 'on' | 'off' | 'none'
 
@@ -15,6 +16,7 @@ export interface RosterRow {
     run: SoloRun
     time: string
     reference: boolean
+    gap: SignedGap | null
     pinned: boolean
     badges: string[]
     sideLabel: string | null
@@ -55,9 +57,10 @@ export function rosterRows({ model, videos, failedVideos }: RosterInput): Roster
             capId,
             run: raceRun.run,
             time: formatRaceTime(raceRun.run.timeSeconds),
-            reference: lane.reference,
+            reference: lane.reference && onFocusSide(model.race.sides, raceRun.run) && focusRuns(model.race.sides, model.runs.length) >= 2,
+            gap: lane.reference || !onFocusSide(model.race.sides, raceRun.run) ? null : lane.finalGap,
             pinned: pins.has(capId),
-            badges: lane.badges.filter(badge => badge !== lane.sideLabel && !(video === 'off' && badge === NO_VIDEO)),
+            badges: lane.badges.filter(badge => !(video === 'off' && badge === GRAPH_ONLY)),
             sideLabel: lane.sideLabel,
             video,
             frameSynced: raceRun.source === null || raceRun.source === 'utrecorder',

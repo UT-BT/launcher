@@ -1,12 +1,11 @@
 import { useCallback } from 'react'
 import { sectorLabel } from '@/app/components/pages/capDetail/runDelta/deltaCurve'
-import type { AnalysisModel, AnalysisRun, MatrixRow } from '../model/analysisModel'
-import { TIME_ONLY } from '../model/laneModel'
+import type { AnalysisModel, MatrixRow } from '../model/analysisModel'
+import { SIDE_TAGS } from '../model/laneModel'
 import type { PlaybackController } from '../playback/playbackController'
+import { SideTag } from '../stage/Tags'
 import type { CueSync } from '../transport/useCueSync'
-import { CumulativeChart } from './CumulativeChart'
-import { RunIdentity } from './RunIdentity'
-import { SectorMatrix } from './SectorMatrix'
+import { SectorTimes } from './SectorTimes'
 import { SpeedView } from './SpeedView'
 import './analysis.css'
 
@@ -21,14 +20,8 @@ interface AnalysisPanelsProps extends RunAnalysisProps {
     heading?: 'h2' | 'h3'
 }
 
-function legendNote(run: AnalysisRun, timeOnly: readonly string[]): string | null {
-    if (run.reference) return 'REF'
-    if (timeOnly.includes(run.capId)) return TIME_ONLY
-    return null
-}
-
 export function AnalysisPanels({ analysis, controller, cueSync, onSpeedRun, heading: Heading = 'h2' }: AnalysisPanelsProps) {
-    const { runs, cumulative, matrix, speed } = analysis
+    const { runs, matrix, speed } = analysis
     const { cue } = cueSync
     const onRow = useCallback((row: MatrixRow) => {
         if (row.cue) cue(row.cue)
@@ -41,42 +34,28 @@ export function AnalysisPanels({ analysis, controller, cueSync, onSpeedRun, head
 
     return (
         <>
-            <div className="run-compare-panel">
-                <Heading>Cumulative Δ</Heading>
-                <CumulativeChart cumulative={cumulative} controller={controller} />
-                <ul aria-label="Legend" className="run-compare-legend">
-                    {runs.map(run => {
-                        const note = legendNote(run, cumulative.timeOnly)
-                        return (
-                            <li key={run.capId}>
-                                <span className="run-compare-legend-line" style={{ background: run.colour }} />
-                                <RunIdentity run={run.run} />
-                                {note && <span className="run-compare-badge">{note}</span>}
-                            </li>
-                        )
-                    })}
-                    <li><span className="run-compare-legend-band" />Different line</li>
-                    <li>Above the dashed line is behind the reference, below is ahead</li>
-                </ul>
-            </div>
-            <div className="run-compare-panel">
-                <Heading>Sector Matrix</Heading>
-                <SectorMatrix runs={runs} rows={matrix} activeCue={cueSync.active} onRow={onRow} />
-                <p className="run-compare-legend"><span className="run-compare-legend-best" />Best split in the sector on its side</p>
-            </div>
+            <SectorTimes runs={runs} rows={matrix} activeCue={cueSync.active} onRow={onRow} heading={Heading} />
             {speed.options.length > 0 && (
-                <div className="run-compare-panel">
-                    <Heading>Speed and Zoom</Heading>
-                    <SpeedView speed={speed} controller={controller} onChoose={onSpeedRun} onSector={onSector} />
-                </div>
+                <SpeedView speed={speed} controller={controller} onChoose={onSpeedRun} onSector={onSector} heading={Heading} />
             )}
         </>
     )
 }
 
-export default function RunAnalysis(props: RunAnalysisProps) {
+function SideNote({ side }: { side: number }) {
+    const other = SIDE_TAGS[1 - side]
+    return (
+        <p className="run-compare-analysis-side">
+            <SideTag side={side} label={SIDE_TAGS[side]} />
+            <span>Only the {SIDE_TAGS[side].toLowerCase()} runs are analysed here. {other} runs take another route, so they compare by final time.</span>
+        </p>
+    )
+}
+
+export default function RunAnalysis({ side = null, ...props }: RunAnalysisProps & { side?: number | null }) {
     return (
         <section aria-label="Analysis" className="run-compare-analysis">
+            {(side === 0 || side === 1) && <SideNote side={side} />}
             <AnalysisPanels {...props} />
         </section>
     )
