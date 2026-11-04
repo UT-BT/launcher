@@ -61,6 +61,15 @@ jobs:
         if: steps.meta.outputs.release == 'true'
         run: npm run build:win
 
+      - name: Copy installer to the stable download name
+        if: steps.meta.outputs.release == 'true'
+        shell: pwsh
+        run: |
+          $installers = @(Get-ChildItem -Path dist -Filter '*-setup.exe' -File)
+          if ($installers.Count -ne 1) { throw "Expected exactly one installer in dist, found $($installers.Count)" }
+          New-Item -ItemType Directory -Force -Path stable-download | Out-Null
+          Copy-Item -Path $installers[0].FullName -Destination 'stable-download/utbt-launcher-setup.exe'
+
       - name: Upload build artifacts (for reference)
         if: steps.meta.outputs.release == 'true'
         uses: actions/upload-artifact@v4
@@ -86,6 +95,7 @@ jobs:
             dist/*.exe
             dist/*.blockmap
             dist/latest.yml
+            stable-download/utbt-launcher-setup.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

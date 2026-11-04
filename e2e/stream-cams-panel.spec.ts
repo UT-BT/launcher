@@ -550,6 +550,7 @@ test('on the website the swap sits above the desktop-only cam notice', async ({ 
 
     const cams = page.getByRole('region', { name: 'Cams' })
     await expect(cams.getByText('The cam tool needs the desktop launcher.')).toBeVisible()
+    await expect(cams.getByText('Use the desktop launcher (Windows) for this.')).toBeVisible()
     await expect(page.getByTestId('cam-sides-tbc')).toBeVisible()
     const swapBox = await swapButton(page).boundingBox()
     const camsBox = await cams.boundingBox()

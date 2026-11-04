@@ -82,6 +82,16 @@ pass `''` (`accessToken ?? ''`): `bearerHeaders` sends no `Authorization` header
 empty token, and the API's public GET endpoints accept that. Mutations and "my X"
 fetchers need a real token; gate the UI on `accessToken` before calling them.
 
+### The signed-in profile (`/users/me`)
+
+`fetchUserProfile(accessToken)` reads `GET /users/me` into `UserProfile`. One field there
+feeds the website's desktop promotion ([web-target.md](web-target.md#desktop-promotion)):
+
+- `last_desktop_seen_at`: when this account last used the desktop app, as an ISO-8601
+  string, or `null` if never. It appears only on the signed-in user's own `/users/me`.
+  Typed optional (`last_desktop_seen_at?: string | null`): a response without the field
+  counts as unknown, and the website then shows no promotion.
+
 ## Errors
 
 A failed request answers `{ success: false, error: "<reason>" }`. The rate limiter sends

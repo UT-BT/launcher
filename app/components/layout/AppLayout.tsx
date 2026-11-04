@@ -21,6 +21,7 @@ const loadSettingsModal = () => IS_WEB
     : import('@/app/components/modals/SettingsModalDesktop').then(m => ({ default: m.SettingsModalDesktop }))
 const SettingsModal = lazy(loadSettingsModal)
 const ChangeTitleModal = lazy(() => import('@/app/components/modals/ChangeTitleModal').then(m => ({ default: m.ChangeTitleModal })))
+const DesktopPromoNavRow = lazy(() => import('@/app/components/desktopPromo/DesktopPromoNavRow').then(m => ({ default: m.DesktopPromoNavRow })))
 const SignOutConfirm = lazy(() => import('@/app/components/layout/SignOutConfirm').then(m => ({ default: m.SignOutConfirm })))
 const HideOnScrollBars = lazy(() => import('@/app/components/layout/HideOnScrollBars').then(m => ({ default: m.HideOnScrollBars })))
 import { PageRefreshProvider } from '@/app/components/navigation/PageRefreshContext'
@@ -40,6 +41,7 @@ import { SidebarReloadApp } from '@/app/components/layout/sidebar/SidebarReloadA
 import { SidebarUserCard } from '@/app/components/layout/sidebar/SidebarUserCard'
 import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { readSidebarCollapsed, THEATER_VIEWS, writeSidebarCollapsed } from '@/app/components/layout/sidebarPreference'
+import { useDesktopPromo } from '@/app/components/desktopPromo/useDesktopPromo'
 import { DiagnosticOverlayTrigger } from '@/app/device/diagnostics/DiagnosticOverlayTrigger'
 
 const SIDEBAR_WIDTH_EXPANDED = '16rem'
@@ -68,6 +70,7 @@ interface AppLayoutProps {
 
 export function AppLayout({ children, currentView, onViewChange, getNavBadge, userProfile, installationStatus }: AppLayoutProps) {
     const { capabilities, auth } = usePlatform()
+    const desktopPromo = useDesktopPromo()
     const season = useSeason()
     const logo = logoFor(season)
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
@@ -320,6 +323,11 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                     collapsed={collapsed}
                     patreonTier={patreonTier}
                     loginError={loginError}
+                    promo={capabilities.desktopPromo && desktopPromo.ambientVisible && (
+                        <Suspense fallback={null}>
+                            <DesktopPromoNavRow collapsed={collapsed} onActivate={closeDrawer} />
+                        </Suspense>
+                    )}
                     onLogin={() => { setLoginError(null); void auth.login() }}
                     onChangeTitle={() => { closeDrawer(); setIsChangeTitleOpen(true) }}
                     onSettingsIntent={() => void loadSettingsModal()}

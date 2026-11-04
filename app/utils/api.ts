@@ -74,6 +74,7 @@ export interface UserProfile extends AuthConfig {
     utbt_role?: number
     latest_activity?: LauncherActivity | null
     team?: UserTeamSummary | null
+    last_desktop_seen_at?: string | null
 }
 
 export interface Map {

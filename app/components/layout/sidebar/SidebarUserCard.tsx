@@ -1,4 +1,4 @@
-import { useId, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from 'react'
+import { useId, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { FaDiscord } from 'react-icons/fa'
 import { Trophy, Settings, LogOut, User } from 'lucide-react'
@@ -21,6 +21,7 @@ interface SidebarUserCardProps {
     collapsed: boolean
     patreonTier: 0 | PatreonTier
     loginError: string | null
+    promo?: ReactNode
     onLogin: () => void
     onChangeTitle: () => void
     onSettingsIntent: () => void
@@ -191,7 +192,7 @@ function LoginErrorPopover({ id, anchorRef, edgeRef, message }: {
     )
 }
 
-function SignedOutCard({ collapsed, loginError, onLogin }: Pick<SidebarUserCardProps, 'collapsed' | 'loginError' | 'onLogin'>) {
+function SignedOutCard({ collapsed, loginError, promo, onLogin }: Pick<SidebarUserCardProps, 'collapsed' | 'loginError' | 'promo' | 'onLogin'>) {
     const cardRef = useRef<HTMLDivElement>(null)
     const buttonRef = useRef<HTMLButtonElement>(null)
     const errorId = useId()
@@ -200,6 +201,7 @@ function SignedOutCard({ collapsed, loginError, onLogin }: Pick<SidebarUserCardP
     return (
         <>
             <div ref={cardRef} className={cn("border-t border-hairline/10 relative z-10 space-y-2", collapsed ? "px-2 py-4" : "p-4")}>
+                {promo}
                 {loginError && !collapsed && (
                     <p className="px-1 text-red-400 text-xs text-center">{loginError}</p>
                 )}
@@ -227,6 +229,7 @@ export function SidebarUserCard({
     collapsed,
     patreonTier,
     loginError,
+    promo,
     onLogin,
     onChangeTitle,
     onSettingsIntent,
@@ -237,13 +240,14 @@ export function SidebarUserCard({
     const { containerStyle, titleStyle, ringStyle, containerClass, titleClass } = getRarityStyles(userProfile?.active_title)
 
     if (!userProfile) {
-        return <SignedOutCard collapsed={collapsed} loginError={loginError} onLogin={onLogin} />
+        return <SignedOutCard collapsed={collapsed} loginError={loginError} promo={promo} onLogin={onLogin} />
     }
 
     const name = displayName(userProfile)
 
     return (
-        <div className={cn("border-t border-hairline/10 relative z-10", collapsed ? "px-2 py-4" : "p-4")}>
+        <div className={cn("border-t border-hairline/10 relative z-10 space-y-2", collapsed ? "px-2 py-4" : "p-4")}>
+            {promo}
             <DropdownMenu>
                 {collapsed ? (
                     <div className="relative flex items-center justify-center py-2">

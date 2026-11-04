@@ -7,6 +7,7 @@ export interface PlatformCapabilities {
     settingsModal: boolean
     anonymousBrowse: boolean
     camTool: boolean
+    desktopPromo: boolean
     overlayHistory: boolean
 }
 
@@ -19,6 +20,7 @@ export const DESKTOP_CAPABILITIES: PlatformCapabilities = {
     settingsModal: true,
     anonymousBrowse: false,
     camTool: true,
+    desktopPromo: false,
     overlayHistory: false,
 }
 
@@ -31,5 +33,6 @@ export const WEB_CAPABILITIES: PlatformCapabilities = {
     settingsModal: true,
     anonymousBrowse: true,
     camTool: false,
+    desktopPromo: true,
     overlayHistory: true,
 }

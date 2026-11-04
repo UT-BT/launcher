@@ -1,4 +1,4 @@
-import { IS_WEB } from '@/app/platform'
+import { IS_WEB, userAgentOs } from '@/app/platform'
 
 type Counter = Record<string, number>
 type Consent = 'granted' | 'denied' | null
@@ -108,16 +108,7 @@ const browser = () => {
   if (/Safari\//.test(ua)) return 'safari'
   return 'other'
 }
-const os = () => {
-  const ua = navigator.userAgent
-  if (/Windows/.test(ua)) return 'windows'
-  if (/Android/.test(ua)) return 'android'
-  if (/iPhone|iPad|iPod/.test(ua)) return 'ios'
-  if (/Mac OS/.test(ua)) return 'macos'
-  if (/CrOS/.test(ua)) return 'chromeos'
-  if (/Linux/.test(ua)) return 'linux'
-  return 'unknown'
-}
+const os = () => userAgentOs(navigator.userAgent)
 const viewport = () => innerWidth < 640 ? 'phone' : innerWidth < 1024 ? 'tablet' : 'desktop'
 const sameUtcDay = (a: number, b: number) => new Date(a).toISOString().slice(0, 10) === new Date(b).toISOString().slice(0, 10)
 

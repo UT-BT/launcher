@@ -449,10 +449,30 @@ Title, the collapsed choice) and passes it down:
 | `SidebarNavItem` | one nav row or rail tile: icon, badge marks, label or caption, Live chip or dot, tooltip |
 | `SidebarCollapseToggle` | the icon-only collapse toggle |
 | `SidebarReloadApp` | the drawer-only "Reload app" button (`location.reload()`); `AppLayout` mounts it only below `lg` |
-| `SidebarUserCard` | the signed-in profile menu, or the Discord login and its error |
+| `SidebarUserCard` | the signed-in profile menu, or the Discord login and its error; a `promo` slot above either |
 
 `SidebarActions` and `SidebarUserCard` read capabilities through `usePlatform()` themselves
 so the web entry chunk can drop desktop-only markup.
+
+**Desktop promotion row** (website only; the rules are in
+[web-target.md](web-target.md#desktop-promotion)). `DesktopPromoNavRow`
+(`app/components/desktopPromo/`) is not a destination and not a `sidebar/` part: it is a
+self-contained promo part that owns its modal state.
+
+- `AppLayout` mounts it lazily through `SidebarUserCard`'s `promo` slot, only when
+  `capabilities.desktopPromo && useDesktopPromo().ambientVisible`. The card renders it first
+  in its bordered footer, above Login with Discord or the profile card. It sits outside the
+  `navigation` landmark and the scrolling nav, so the rail enumerations in
+  `e2e/sidebarRail.ts` don't see it.
+- It is a `button` ("Get the desktop app"), not a `NavLink`: it never calls `navigate()`.
+  A click calls `onActivate` (closes the mobile drawer, like every row) and then opens the
+  lazy `DesktopPromoModal`, portalled to `document.body` and prefetched on the row's
+  `pointerenter` / `focus`.
+- Collapsed it is an icon-only `size-11` square with the label `sr-only` and the right-side
+  rail `Tooltip`.
+- The × ("Dismiss the desktop app suggestion") calls `dismiss('nav')`, which also hides
+  the server-browser strip. It shows on hover, on keyboard focus within the row and always
+  on a touch device (`touch:`), and stays in the tab order.
 
 **Modes.** At `lg` and up the rail is expanded (16rem) or collapsed (5rem). The effective
 mode is `collapsePreference && !isMobileViewport`, except on a theater view (`THEATER_VIEWS` in

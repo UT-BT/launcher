@@ -12,9 +12,9 @@ loads on first paint. Build commands are in [build.md](build.md).
   deterministic and the dead branch is tree-shaken. Detect the target only through this,
   never by checking whether `window.conveyor` exists.
 - `capabilities.ts`: `game, ping, ini, install, updater, settingsModal, anonymousBrowse,
-  camTool`. Every flag is `true` on desktop and `false` on web, except `settingsModal`
-  (`true` on both) and `anonymousBrowse` (web only). Gate UI on a capability rather than
-  `IS_WEB`, so a future split stays a one-line change.
+  camTool, desktopPromo`. Every flag is `true` on desktop and `false` on web, except
+  `settingsModal` (`true` on both) and `anonymousBrowse` and `desktopPromo` (web only).
+  Gate UI on a capability rather than `IS_WEB`, so a future split stays a one-line change.
 - `index.ts`: `usePlatform()` returns `{ isWeb, capabilities, auth, gateway, external,
   downloads }`. Non-component modules import the named exports (`capabilities`, `IS_WEB`,
   `platformAuth`, `openExternal`, `fetchGatewayServers`, `saveDemoFile`, `saveMapZip`, …).
@@ -30,6 +30,13 @@ loads on first paint. Build commands are in [build.md](build.md).
   `openExternalSafe`); web calls `window.open` with `noopener,noreferrer`.
 - `downloads.ts`: `saveDemoFile` / `saveMapZip`. Desktop writes into the game install; web
   triggers a browser download of the same bytes.
+- `userAgent.ts`: the user-agent classifier, exported from `index.ts`.
+  - `userAgentOs(ua)` returns the telemetry OS bucket (`windows`, `android`, `ios`, `macos`,
+    `chromeos`, `linux`, `unknown`; the first match in that order wins). `os()` in
+    `app/utils/telemetry.ts` delegates to it, so there is one parser.
+  - `canRunDesktopInstaller(ua)` is true for `Windows NT` 10.0 or later that is not
+    Windows Phone or Windows Mobile. Windows on ARM and Windows tablets count;
+    `Windows NT 6.x`, macOS, Linux, ChromeOS, Android and iOS do not.
 
 ## Capability gates
 
@@ -37,7 +44,7 @@ loads on first paint. Build commands are in [build.md](build.md).
 |---|---|---|
 | Launch / join / spectate, sidebar Play + Join Server | hidden | `capabilities.game` in `SidebarActions`, `ServerBrowserPage`, `FavoriteServersCard`, and in `useServerJoin` / `launchStandaloneGame` before any IPC call |
 | Ping column and server pings | hidden, skipped | `capabilities.ping` in `ServerBrowserPage` (`displayColumnOrder`) and `FavoriteServersCard` |
-| Settings modal | web modal with Appearance + Privacy only; game panels never fetched | `capabilities.settingsModal` + target-specific lazy modal in `AppLayout` |
+| Settings modal | web modal with Appearance + Privacy, plus an "Unreal Tournament settings" placeholder for promo-eligible visitors; game panels never fetched | `capabilities.settingsModal` + target-specific lazy modal in `AppLayout`; the placeholder entry on `capabilities.desktopPromo` + `eligible` in `SettingsLayout` |
 | Install banner and patches | off (`validateInstallation` returns early) | `capabilities.install` in `Main.tsx` |
 | Map favorites ini side-sync | skipped; account favorites unchanged | `capabilities.ini` in `useFavorites` |
 | Server favorites | identical; only the card's join/spectate buttons hide | `capabilities.game` in `FavoriteServersCard` |
@@ -49,7 +56,9 @@ loads on first paint. Build commands are in [build.md](build.md).
 | Overlay history (Back closes the top-most modal or the drawer) | on: each open overlay owns a history entry ([navigation.md](navigation.md#overlay-history-web-build)) | `capabilities.overlayHistory` in `useOverlayHistory` (`useUrlSync.ts`) |
 | Back/Forward/Refresh bar (`NavHistoryBar`) | not rendered; browser chrome owns history and reload, pages revalidate on mount ([navigation.md](navigation.md)) | `IS_WEB` in `NavHistoryBar.tsx` |
 | Navigation triggers | real `<a href>` (new tab, copy link work); buttons on desktop | `NavLink` ([navigation.md](navigation.md)) |
-| Stream tab: Cams panel, Kit card, Guide | Cams shows the Red/Blue card then a "needs the desktop launcher" notice; Kit takes a typed folder and downloads the ZIP instead of picking a folder and extracting | `capabilities.camTool` (`camsPanelView` in `events/stream/panels/camsGate.ts`, `KitSection`, `GuidePanel`) |
+| Stream tab: Cams panel, Kit card, Guide | Cams shows the Red/Blue card then a "needs the desktop launcher" notice, and the Guide's launcher steps show the same notice: the installer Download for promo-eligible visitors, "Use the desktop launcher (Windows) for this." for everyone else. Kit takes a typed folder and downloads the ZIP instead of picking a folder and extracting | `capabilities.camTool` (`camsPanelView` in `events/stream/panels/camsGate.ts`, `KitSection`, `GuidePanel`); Download vs. fallback line on `eligible` inside `DesktopAppNotice` |
+| Desktop promotion: sidebar button and modal, server-browser strip | shown to promo-eligible visitors with no recent dismissal | `capabilities.desktopPromo` + `ambientVisible` at the mount in `AppLayout` / `ServerBrowserPage` ([Desktop promotion](#desktop-promotion)) |
+| Desktop promotion: map and demo download result lines | shown to promo-eligible visitors on a successful download | `capabilities.desktopPromo` + `eligible` in `DownloadResultPromo` |
 | Splash screen | `WebBootScreen`; `SplashScreen` is lazy and never fetched | `IS_WEB` in `app/app.tsx` |
 | Login page | never shown; logged-out visitors browse anonymously | `IS_WEB` in `app/app.tsx` |
 
@@ -70,6 +79,67 @@ The `window.*` event bridges ([lib/conveyor/README.md](../lib/conveyor/README.md
 exist on web. Code that can mount on web optional-chains them (`window.utPatch?.on…`,
 `window.uiScale?.set`) or sits behind a capability check; only desktop-only modules (the
 game settings panels, `KitSection`'s desktop branch) call them directly.
+
+## Desktop promotion
+
+The website suggests the Windows desktop app to visitors who could run it and have not
+used it lately. It is website only: every surface gates on `capabilities.desktopPromo`
+(`false` on desktop) through `app/platform/`, never `window.conveyor` or `__WEB_TARGET__`,
+and nothing in the desktop app's UI changes. The code lives in
+`app/components/desktopPromo/`.
+
+**Eligibility** (`desktopPromoView` in `desktopPromoView.ts`, pure and unit-tested):
+
+- `eligible` needs the capability, `canRunDesktopInstaller(navigator.userAgent)`, and no
+  desktop app use in the last 90 days (`DESKTOP_PROMO_WINDOW_MS`, the one window
+  constant).
+- Signed in, recency comes only from `/users/me`'s `last_desktop_seen_at`
+  ([api.md](api.md)): `null` is not recent; a time within 90 days (or in the future) is
+  recent; an older one is not. A missing field, a value that doesn't parse, or a profile
+  still loading or failed is **unknown**, and unknown is not eligible: nothing renders, so
+  a Download never shows and then vanishes.
+- Signed out, recency comes from the device-local mirror `utbt:desktopSeen:v1`: a stored
+  time within 90 days is recent; nothing stored, a stored `null`, an older time or an
+  unreadable value is not.
+- `ambientVisible` is `eligible` with no dismissal stored in
+  `utbt:desktopPromoDismissed:v1` within the last 90 days.
+
+**State.** `DesktopPromoProvider` wraps `Main`'s whole tree, takes `userProfile` and
+renders no DOM. It reads both keys once at mount and takes `now` once, so a tab left open
+across the 90-day boundary changes only on reload. Each profile that carries the field
+rewrites `utbt:desktopSeen:v1` (web only), so a later signed-out visit on this device
+stays quiet. Both keys are device-local and never account-synced; every read and write is
+guarded, and a failure reads as no value (`desktopPromoStorage.ts`,
+[state-patterns.md](state-patterns.md)). `useDesktopPromo()` returns `{ eligible,
+ambientVisible, download(source), dismiss(source) }` anywhere under `Main`; outside the
+provider it returns not eligible with no-op actions.
+
+**Surfaces.** The sidebar row and the server strip are ambient: they show unasked, so
+they carry a × and share one dismissal. The others appear where the desktop app would do
+the job, and have no ×.
+
+| Surface | Where | Shows when | Source |
+|---|---|---|---|
+| Gold sidebar button "Get the desktop app", opening `DesktopPromoModal` | `DesktopPromoNavRow`, in the `SidebarUserCard` footer above Login with Discord or the profile card ([navigation.md](navigation.md)) | `ambientVisible` | `nav` |
+| Strip "Join servers in one click with the desktop app" | `ServerBrowserPage`, above `DataTableShell` | `ambientVisible` | `servers` |
+| Map result line | `MapDownloadStatusModal` success, through `DownloadResultPromo` | `eligible` | `map-modal` |
+| Demo result line | `DemoDownloadStatusModal` success, through `DownloadResultPromo` | `eligible` | `demo-modal` |
+| "Unreal Tournament settings" placeholder | web Settings rail entry and `GameSettingsPlaceholder` ([settings README](../app/components/pages/settings/README.md)) | `eligible` | `settings` |
+| Cams and Guide notices | `DesktopLauncherNotice` on the Stream tab ([stream-kit.md](features/stream-kit.md)) | always on web; the Download only when `eligible` | `stream` |
+
+Every inline line is `DesktopAppNotice` ([shared-components.md](shared-components.md)).
+The × on the row or the strip calls `dismiss('nav')` / `dismiss('servers')`, which stores
+the time and hides both ambient surfaces at once.
+
+**Download and outcomes.** Every Download is a plain `<a href>` (no `target`) to
+`DESKTOP_APP_DOWNLOAD_URL` in `app/constants/desktopApp.ts`, the stable
+`releases/latest/download/utbt-launcher-setup.exe` release asset. It is the only copy of
+the URL in code and specs (they import it). A click calls `download(source)`, which records
+`desktop_promo_click:<source>`; `dismiss(source)` records `desktop_promo_dismiss:<source>`
+(`nav` and `servers` only). Both go through `trackOutcome`, so they leave the browser only
+with analytics consent. The source unions are `DesktopPromoClickSource` and
+`DesktopPromoDismissSource` in `useDesktopPromo.ts`; a new source needs the API to accept
+its key too.
 
 ## Web auth (Discord login in the browser)
 
@@ -442,6 +512,14 @@ Phones parse the web entry chunk on first visit, so it stays lean.
   `BackersModal`, the admin section modals). Also eager: modals that open themselves from
   an event or at boot (`PatreonModal`, `AuthRequiredModal`, the
   connection `ErrorModal` in `app.tsx`) and other desktop-only modals.
+- **Desktop promotion stays off the first-paint path.** Only the provider, the hook, the
+  decision module and `desktopPromoStorage.ts` are eager. `DesktopPromoNavRow` is itself
+  lazy and mounted only when `ambientVisible`, so phones, macOS and recent desktop users
+  never fetch it; `DesktopPromoModal` is a second lazy chunk behind `LazyModalGate`,
+  prefetched on the button's `pointerenter` / `focus`. `DownloadResultPromo` lazy-loads
+  `DesktopAppNotice` only for eligible visitors, and the web Settings placeholder (`GameSettingsPlaceholder`) is a lazy
+  per-section panel. The initial total has little headroom, so a new promo surface
+  reachable from the entry follows the same pattern.
 - **`vendor-react` chunk.** `manualChunks` in `vite.config.web.ts` pins `react`,
   `react-dom`, `scheduler` and `@radix-ui/*` into one chunk so it survives deploys in the
   browser cache. Do not widen it to all of `node_modules` (it would pull recharts,
@@ -465,10 +543,10 @@ platform gates.
 | Budget | Limit |
 |---|---|
 | Initial JS | 190 KiB |
-| Initial CSS | 36 KiB |
-| Initial total | 224 KiB |
+| Initial CSS | 37 KiB |
+| Initial total | 225 KiB |
 | Largest lazy chunk (and each stream scene chunk) | 120 KiB |
-| App JS (every JS file except those only the stream scene pages load) | 970 KiB |
+| App JS (every JS file except those only the stream scene pages load) | 975 KiB |
 | Stream scene JS (files reachable only from the scene root) | 120 KiB |
 
 It also asserts `dist-web/index.html`: exactly one module script, at least one

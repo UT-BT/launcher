@@ -1,8 +1,10 @@
 import { lazy, Suspense, useState } from 'react'
 import { SettingsLayout, type SettingsSectionId } from './settings/SettingsLayout'
 import { LauncherAppearanceSettings } from './settings/LauncherAppearanceSettings'
+import { useDesktopPromo } from '@/app/components/desktopPromo/useDesktopPromo'
 
 const PrivacySettings = lazy(() => import('./settings/PrivacySettings').then(m => ({ default: m.PrivacySettings })))
+const GameSettingsPlaceholder = lazy(() => import('./settings/GameSettingsPlaceholder').then(m => ({ default: m.GameSettingsPlaceholder })))
 
 export interface WebSettingsProps {
     initialSection?: string
@@ -21,23 +23,28 @@ function PanelLoading() {
 
 export function WebSettings({ initialSection, unlockExclusive }: WebSettingsProps) {
     const requested = initialSection as SettingsSectionId | undefined
-    const [currentSection, setCurrentSection] = useState<SettingsSectionId>(
+    const [selectedSection, setSelectedSection] = useState<SettingsSectionId>(
         requested === 'launcher-privacy' ? requested : 'launcher-appearance',
     )
+    const { eligible } = useDesktopPromo()
+    const currentSection = selectedSection === 'game-web-placeholder' && !eligible ? 'launcher-appearance' : selectedSection
+    const panel = (() => {
+        switch (currentSection) {
+            case 'launcher-privacy': return <PrivacySettings />
+            case 'game-web-placeholder': return <GameSettingsPlaceholder />
+            default: return <LauncherAppearanceSettings unlockExclusive={unlockExclusive} />
+        }
+    })()
 
     return (
         <SettingsLayout
             currentSection={currentSection}
-            onSectionChange={setCurrentSection}
+            onSectionChange={setSelectedSection}
             isGameValid={false}
             launcherVersion={__APP_VERSION__}
             initialDetail={requested === 'launcher-privacy'}
         >
-            <Suspense fallback={<PanelLoading />}>
-                {currentSection === 'launcher-privacy'
-                    ? <PrivacySettings />
-                    : <LauncherAppearanceSettings unlockExclusive={unlockExclusive} />}
-            </Suspense>
+            <Suspense key={currentSection} fallback={<PanelLoading />}>{panel}</Suspense>
         </SettingsLayout>
     )
 }
