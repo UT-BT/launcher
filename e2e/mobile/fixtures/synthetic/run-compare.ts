@@ -4,6 +4,7 @@ import { replyFor } from '../data'
 import { recordedFixtureSet } from '../recording'
 import type { FixtureRoute, FixtureSet } from '../types'
 import { person, syntheticId } from './people'
+import type { TeamComparison, TeamComparisonTeam } from '../../../../app/utils/api'
 import { teamDetail, teamEntry, TEAM_MAP, type TeamFixture } from '../../../teamRuns'
 
 const RECORDED = recordedFixtureSet('cap-detail')
@@ -31,6 +32,65 @@ const TEAMS: readonly TeamFixture[] = [1, 2].map(t => ({
 
 export const TEAM_RUN_IDS: readonly string[] = TEAMS.map(team => team.teamCapId)
 const TEAM_POV_IDS = TEAMS.flatMap(team => team.members.map(member => member.capId))
+
+function comparisonTeam(team: TeamFixture): TeamComparisonTeam {
+    return {
+        team_cap_id: team.teamCapId,
+        team_run_id: team.teamCapId.replace(/^c0ffee/, 'deadbe'),
+        team_time_ms: Math.max(...team.members.map(member => member.seconds)) * 1000,
+        members: team.members.map(member => ({
+            cap_id: member.capId,
+            user: member.user,
+            alias: member.alias,
+            team: 0,
+            cap_time_ms: member.seconds * 1000,
+            has_ghost: member.ghost === true,
+            has_zones: member.zones !== null,
+        })),
+    }
+}
+
+function teamComparison(runner: TeamFixture, reference: TeamFixture): TeamComparison {
+    const [ahead, behind] = [comparisonTeam(reference), comparisonTeam(runner)]
+    const pairs = ahead.members.map((member, i) => ({
+        runner_cap_id: behind.members[i].cap_id,
+        reference_cap_id: member.cap_id,
+        basis: member.has_ghost ? 'ghost' as const : 'zones' as const,
+        score: member.has_ghost ? 0.9 : 1,
+        state: member.has_ghost ? 'aligned' as const : 'zones' as const,
+    }))
+    const split = (zone: string, referenceMs: number, runnerMs: number, member: number) => ({
+        zone,
+        reference_ms: referenceMs,
+        runner_ms: runnerMs,
+        delta_ms: runnerMs - referenceMs,
+        reference_member_cap_id: ahead.members[member].cap_id,
+        runner_member_cap_id: behind.members[member].cap_id,
+    })
+    return {
+        runner: behind,
+        reference: ahead,
+        final_delta_ms: behind.team_time_ms - ahead.team_time_ms,
+        pairs,
+        unpaired: [],
+        candidates: [...pairs].sort((a, b) => b.score - a.score).map(({ state: _state, ...candidate }) => candidate),
+        team_splits: [
+            split('Gate', 10_000, 11_000, 0),
+            split('Crane', 22_000, 23_000, 0),
+            split('CAP', ahead.team_time_ms, behind.team_time_ms, 1),
+        ],
+    }
+}
+
+const TEAM_COMPARISON = teamComparison(TEAMS[1], TEAMS[0])
+
+const teamComparisonRoute: FixtureRoute = {
+    host: 'api',
+    path: '/ghosts/compare/team',
+    reply: url => (url.searchParams.get('runner') === TEAMS[1].teamCapId && url.searchParams.get('reference') === TEAMS[0].teamCapId
+        ? { json: { success: true, data: TEAM_COMPARISON } }
+        : { status: 404, json: { success: false, error: 'Team cap not found', code: 'team_cap_not_found' } }),
+}
 
 function teamDetailRoute(team: TeamFixture): FixtureRoute {
     return { host: 'api', path: `/caps/team_caps/${team.teamCapId}/detail`, reply: { json: { success: true, data: teamDetail(team) } } }
@@ -82,6 +142,7 @@ export const RUN_COMPARE_SET: FixtureSet = {
         ...TEAM_POV_IDS.map(playableReplay),
         ...TEAMS.map(teamDetailRoute),
         { host: 'api', path: `/caps/leaderboard/team/map/${TEAM_MAP}`, reply: { json: { success: true, data: TEAMS.map(teamEntry) } } },
+        teamComparisonRoute,
         ...RECORDED.routes,
     ],
 }

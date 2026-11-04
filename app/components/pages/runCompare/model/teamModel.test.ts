@@ -204,13 +204,11 @@ describe('one team run alone', () => {
         expect(model.cues.sectors).toEqual([])
     })
 
-    it('cues every other team run to its own crossing of the reference team\'s zone', () => {
+    it('leaves the cues of two team runs to their team splits', () => {
         const other = team(1, 70)
         const model = compose(`runs=${A},${other.teamCapId}`, [INDUSTRY, other])
-        const gate = model.cues.points.find(point => point.label === 'Gate')!
 
-        expect([...gate.runTimesMs]).toEqual([[A, 9871], [other.teamCapId, Math.round((69 / 6) * 1000)]])
-        expect(model.cues.points.find(point => point.label === 'Crane')!.runTimesMs.has(other.teamCapId)).toBe(false)
+        expect(model.cues.points).toEqual([])
     })
 })
 

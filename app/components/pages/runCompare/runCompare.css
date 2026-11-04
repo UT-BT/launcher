@@ -915,6 +915,10 @@
   align-self: center;
 }
 
+.run-compare-team-header > :not(.run-compare-team-label) {
+  flex: none;
+}
+
 .run-compare-pov-team {
   display: flex;
   flex: none;

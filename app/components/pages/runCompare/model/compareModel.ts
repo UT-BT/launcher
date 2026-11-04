@@ -1,6 +1,7 @@
 import { displayMapName } from '@/app/utils/format'
 import type { LoadedComparisons } from '../loading/comparisons'
 import type { LoadedSoloRuns, SoloRun } from '../loading/soloRuns'
+import type { LoadedTeamComparisons } from '../loading/teamComparisons'
 import type { LoadedTeamRuns, TeamRun } from '../loading/teamRuns'
 import { MAX_COMPARE_RUNS, parseCompareQuery, serializeCompareQuery, type CompareNotice, type CompareParam, type CompareUrlState } from '../url/compareUrl'
 import { composeAnalysis, EMPTY_ANALYSIS, withTileHighlight, type AnalysisModel } from './analysisModel'
@@ -11,7 +12,9 @@ import { composeRace, EMPTY_RACE, type LoadedVideos, type RaceInput, type RaceMo
 import { onePinPerSide } from './referenceModel'
 import type { StageEnvironment } from './phoneStage'
 import type { StageBox } from './stageLayout'
+import { composeTeamAnalysis, NO_TEAM_ANALYSIS, type TeamAnalysisModel } from './teamAnalysisModel'
 import { composeTeamCues, composeTeamLanes, composeTeamRace, composeTeams, MAX_TEAM_RUNS, NO_TEAMS, teamCompareTitle, type TeamModel } from './teamModel'
+import { composeSplitCues, composeVersusLanes, pairGrid, teamReads, withPairSeats, withTeamLanes } from './teamVersus'
 
 export type LoadDropReason = 'not-found' | 'different-map' | 'disallowed' | 'team-in-solo' | 'solo-in-team' | 'over-team-cap'
 
@@ -32,6 +35,7 @@ export interface CompareModelInput {
     environment?: StageEnvironment | null
     pov?: string | null
     teams?: LoadedTeamRuns
+    teamComparisons?: LoadedTeamComparisons
 }
 
 export interface CompareModel {
@@ -49,6 +53,7 @@ export interface CompareModel {
     sync: SyncModel
     analysis: AnalysisModel
     teams: TeamModel
+    teamAnalysis: TeamAnalysisModel
 }
 
 const NOUNS: Record<CompareParam, [string, string]> = {
@@ -159,6 +164,7 @@ const LOADING_PARTS = {
     sync: EMPTY_SYNC,
     analysis: EMPTY_ANALYSIS,
     teams: NO_TEAMS,
+    teamAnalysis: NO_TEAM_ANALYSIS,
 }
 
 function teamPart(input: CompareModelInput, teams: LoadedTeamRuns, seekSeconds: number | null): CompareModel {
@@ -185,6 +191,9 @@ function teamPart(input: CompareModelInput, teams: LoadedTeamRuns, seekSeconds: 
     const refDrops = extra.map((value): CompareDrop => ({ param: 'ref', reason: 'extra-team', value }))
     const drops = [...decoded.notices, ...loadDrops, ...restated.notices, ...refDrops]
     const povs = kept.flatMap(team => team.members)
+    const composed = composeTeams(kept, state.refs)
+    const reads = teamReads(composed, input.teamComparisons ?? new Map())
+    const grid = pairGrid(composed, reads)
     const placed = composeTeamRace({
         runs: povs,
         state,
@@ -194,10 +203,14 @@ function teamPart(input: CompareModelInput, teams: LoadedTeamRuns, seekSeconds: 
         focus: input.focus,
         environment: input.environment,
         pov: input.pov,
-    }, composeTeams(kept, state.refs))
-    const lanes = composeTeamLanes(placed.race, placed.teams)
+    }, withPairSeats(composed, grid), grid?.cells ?? null)
+    const versus = reads.length > 0
+    const lanes = versus ? composeVersusLanes(placed.race, placed.teams, reads, comparisons ?? new Map()) : composeTeamLanes(placed.race, placed.teams)
     const sync = composeSync(placed.race, lanes, comparisons ?? new Map(), state.sync)
     const marked = withRaceClock(lanes, sync)
+    const teamModel = withTeamLanes(placed.teams, reads)
+    const cues = versus ? composeSplitCues(teamModel, reads) : composeTeamCues(placed.teams)
+    const teamAnalysis = composeTeamAnalysis({ teams: teamModel, reads, cues, comparisons: comparisons ?? new Map(), speedRun: input.speedRun ?? null })
 
     return {
         loading: false,
@@ -208,12 +221,13 @@ function teamPart(input: CompareModelInput, teams: LoadedTeamRuns, seekSeconds: 
         title: teamCompareTitle(kept, map),
         query: serializeCompareQuery(state),
         seekSeconds,
-        race: withLaneBadges(placed.race, marked),
+        race: withTileHighlight(withLaneBadges(placed.race, marked), teamAnalysis.highlighted),
         lanes: marked,
-        cues: composeTeamCues(placed.teams),
+        cues,
         sync,
         analysis: EMPTY_ANALYSIS,
-        teams: placed.teams,
+        teams: teamModel,
+        teamAnalysis,
     }
 }
 
@@ -287,5 +301,6 @@ export function composeCompareModel(input: CompareModelInput): CompareModel {
             pov,
         }, comparisons ?? new Map()), comparisons ?? new Map(), speedRun ?? null),
         teams: NO_TEAMS,
+        teamAnalysis: NO_TEAM_ANALYSIS,
     }
 }

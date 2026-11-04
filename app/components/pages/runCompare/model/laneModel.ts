@@ -24,7 +24,7 @@ export const SET_ON = ['Set on Red', 'Set on Blue'] as const
 
 export type Rung = 'replay' | 'zones' | 'time'
 
-const RUNG_BADGES: Record<Rung, string> = { replay: REPLAY, zones: ZONES, time: TIME_ONLY }
+export const RUNG_BADGES: Record<Rung, string> = { replay: REPLAY, zones: ZONES, time: TIME_ONLY }
 
 export interface LaneSplit {
     index: number
@@ -161,7 +161,7 @@ function zoneSteps(run: SoloRun, reference: SoloRun): ZoneSteps | null {
     }
 }
 
-function stepPoints(steps: CapComparisonPoint[]): CapComparisonPoint[] {
+export function stepPoints(steps: CapComparisonPoint[]): CapComparisonPoint[] {
     const points: CapComparisonPoint[] = [steps[0]]
     for (let i = 1; i < steps.length; i++) {
         points.push([steps[i][0], steps[i - 1][1]], steps[i])
@@ -221,14 +221,14 @@ function compareData(run: SoloRun, reference: SoloRun, comparisons: LoadedCompar
     return zoneData(run, reference) ?? TIME_ONLY_DATA
 }
 
-interface LaneContext {
+export interface LaneContext {
     partner: SoloRun
     isReference: boolean
     lead: number | null
     comparisons: LoadedComparisons
 }
 
-function laneFor(raceRun: RaceRun, { partner, isReference, lead, comparisons }: LaneContext): Lane {
+export function laneFor(raceRun: RaceRun, { partner, isReference, lead, comparisons }: LaneContext): Lane {
     const { run } = raceRun
     const data = run.capId === partner.capId ? referenceData(run) : isReference ? TIME_ONLY_DATA : compareData(run, partner, comparisons)
     const sideLabel = run.side !== null && lead !== null && run.side !== lead ? SET_ON[run.side] : null

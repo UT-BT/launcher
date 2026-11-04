@@ -3,7 +3,7 @@ import { RUN_COMPARE_FIXTURES, runCompareErrors, runCompareFixture } from '../ap
 import { displayMapName } from '../app/utils/format'
 import type { CapDetail, LeaderboardEntry } from '../app/utils/api'
 import { replayVideoUrl, serveReplayVideos } from './replayVideos'
-import { ALPHA, BRAVO, mockTeamRuns, TEAM_POVS } from './teamRuns'
+import { ALPHA, BRAVO, mockTeamComparisons, mockTeamRuns, teamFixtureOf, TEAM_POVS } from './teamRuns'
 
 const AVATAR = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64')
 const BASE = runCompareFixture('capDetailCandidates')
@@ -1129,9 +1129,10 @@ test.describe('team runs', () => {
         await expect(tile(page, 'Bravo Two').locator('video')).toHaveCount(1)
         await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${ALPHA.teamCapId},${BRAVO.teamCapId}`)
         expect(await historyLength(page)).toBe(lengthBefore)
-        const [alpha, bravoTile] = [await tile(page, 'Alpha One').boundingBox(), await tile(page, 'Bravo One').boundingBox()]
-        expect(bravoTile!.y).toBeGreaterThan(alpha!.y + alpha!.height - 1)
-        expect(bravoTile!.x).toBeCloseTo(alpha!.x, 0)
+        await expect.poll(async () => {
+            const [alpha, bravoTile] = await Promise.all(['Alpha One', 'Bravo One'].map(async alias => (await tile(page, alias).boundingBox())!))
+            return { below: bravoTile.y > alpha.y + alpha.height - 1, offset: Math.round(Math.abs(bravoTile.x - alpha.x)) }
+        }).toEqual({ below: true, offset: 0 })
         await expect(page).toHaveTitle(/^Alpha One & Alpha Two vs Bravo One & Bravo Two on /)
 
         const roster = drawer(page).getByRole('list', { name: 'Roster' })
@@ -1139,7 +1140,85 @@ test.describe('team runs', () => {
         await roster.getByRole('list', { name: 'Members' }).getByRole('listitem').filter({ hasText: 'Bravo Two' }).getByRole('button', { name: 'POV' }).click()
 
         await expect(tile(page, 'Bravo Two')).toHaveCount(0)
-        await expect(lane(page, 'Bravo Two')).toContainText('No video')
+        await expect(roster.getByRole('list', { name: 'Members' }).getByRole('listitem').filter({ hasText: 'Bravo Two' }).getByRole('button', { name: 'POV' })).toHaveAttribute('aria-pressed', 'false')
         await expect.poll(() => new URL(page.url()).search).toBe(`?runs=${ALPHA.teamCapId},${BRAVO.teamCapId}&data=${BRAVO.members[1].capId}`)
+    })
+})
+
+const TEAM_ALIGNED = runCompareFixture('teamAligned')
+const ALIGNED_RUNNER = teamFixtureOf(TEAM_ALIGNED.runner)
+const ALIGNED_REFERENCE = teamFixtureOf(TEAM_ALIGNED.reference)
+const ALIGNED_POVS = [ALIGNED_RUNNER, ALIGNED_REFERENCE].flatMap(team => team.members.map(member => member.capId))
+const ALIGNED_URL = `/compare?runs=${ALIGNED_RUNNER.teamCapId},${ALIGNED_REFERENCE.teamCapId}&ref=${ALIGNED_REFERENCE.teamCapId}`
+
+function teamSplits(page: Page): Locator {
+    return page.getByRole('region', { name: 'Team Splits' })
+}
+
+function splitRows(page: Page): Locator {
+    return teamSplits(page).getByRole('button', { name: /^(Cue .+|Seek to the cap)$/ })
+}
+
+async function openAligned(page: Page, teamReads: string[] = []) {
+    await mockApi(page, { videos: ALIGNED_POVS, comparisons: Object.fromEntries(ALIGNED_RUNNER.members.map(member => [member.capId, 'short' as const])) })
+    await mockTeamRuns(page, [ALIGNED_RUNNER, ALIGNED_REFERENCE], { videos: ALIGNED_POVS })
+    await mockTeamComparisons(page, [TEAM_ALIGNED], teamReads)
+    await page.goto(ALIGNED_URL)
+    for (const alias of ['fierd_6', 'Nightwolf`', 'gxls', '[UTW]Nettlez']) await expect(tile(page, alias).locator('video')).toHaveCount(1)
+}
+
+test.describe('team vs team', () => {
+    test('a 2v2 opened by its link lines its members up by route in a 2×2 grid, whatever their finish order', async ({ page, isMobile }) => {
+        test.skip(isMobile, 'the grid of rows is the wide layout')
+        const teamReads: string[] = []
+        await openAligned(page, teamReads)
+
+        await expect(teamHeaders(page)).toHaveCount(2)
+        await expect(tile(page, 'Nightwolf`').locator('.run-compare-team-index')).toHaveText('Role 1')
+        await expect(tile(page, 'fierd_6').locator('.run-compare-team-index')).toHaveText('Role 2')
+        const [nightwolf, fierd, gxls, nettlez] = await Promise.all(['Nightwolf`', 'fierd_6', 'gxls', '[UTW]Nettlez'].map(async alias => (await tile(page, alias).boundingBox())!))
+        expect(nightwolf.x).toBeCloseTo(gxls.x, 0)
+        expect(fierd.x).toBeCloseTo(nettlez.x, 0)
+        expect(nettlez.x).toBeGreaterThan(gxls.x + gxls.width - 1)
+        expect(nightwolf.y).toBeCloseTo(fierd.y, 0)
+        expect(gxls.y).toBeCloseTo(nettlez.y, 0)
+        expect(gxls.y).toBeGreaterThan(nightwolf.y + nightwolf.height - 1)
+        expect(teamReads).toEqual([`${ALIGNED_RUNNER.teamCapId}:${ALIGNED_REFERENCE.teamCapId}`])
+
+        await expect(lanes(page).locator(':scope > li')).toHaveCount(2)
+        await expect(tile(page, 'Nightwolf`').locator('.run-compare-tile-delta')).toHaveCount(1)
+        await expect(tile(page, 'gxls').locator('.run-compare-tile-delta')).toHaveCount(0)
+        expect(new URL(page.url()).search).toBe(new URL(ALIGNED_URL, page.url()).search)
+    })
+
+    test('the analysis lists the team splits, then one section per matched pair, and a split row cues each team to its own crossing', async ({ page }) => {
+        await openAligned(page)
+
+        await expect(splitRows(page)).toHaveText(['Bridge', 'Ramp', 'Lift', 'Pit', 'Flag', 'Cap'])
+        const flag = teamSplits(page).getByRole('row').filter({ has: page.getByRole('button', { name: 'Cue Flag' }) })
+        await expect(flag).toContainText('1:18.433')
+        await expect(flag).toContainText('−0.517')
+        await expect(flag).toContainText('fierd_6')
+        await expect(page.getByRole('region', { name: 'Nightwolf` vs gxls' })).toBeVisible()
+        await expect(page.getByRole('region', { name: 'fierd_6 vs [UTW]Nettlez' })).toBeVisible()
+
+        await teamSplits(page).getByRole('button', { name: 'Cue Bridge' }).click()
+
+        await expect.poll(async () => (await Promise.all(['fierd_6', 'Nightwolf`'].map(async alias => (await clockOf(tile(page, alias))).time))).map(time => time.toFixed(1))).toEqual(['12.2', '12.2'])
+        const reference = await Promise.all(['gxls', '[UTW]Nettlez'].map(async alias => (await clockOf(tile(page, alias))).time))
+        reference.forEach(time => expect(time).toBeCloseTo(12.517, 1))
+        await expect(page.getByRole('region', { name: 'Playback' }).getByRole('combobox', { name: 'Cue' })).toHaveValue('zone:Bridge')
+    })
+
+    test('a team read that fails leaves that team run on final time only', async ({ page }) => {
+        await mockApi(page, { videos: ALIGNED_POVS })
+        await mockTeamRuns(page, [ALIGNED_RUNNER, ALIGNED_REFERENCE], { videos: ALIGNED_POVS })
+        await mockTeamComparisons(page, [])
+        await page.goto(ALIGNED_URL)
+
+        await expect(tile(page, 'fierd_6').locator('video')).toHaveCount(1)
+        await expect(lanes(page).locator(':scope > li').filter({ hasText: 'fierd_6' })).toContainText('Time only')
+        await expect(tile(page, 'fierd_6')).toContainText('Time only')
+        await expect(splitRows(page)).toHaveText(['Cap'])
     })
 })

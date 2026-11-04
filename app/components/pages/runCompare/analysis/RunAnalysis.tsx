@@ -17,13 +17,17 @@ interface RunAnalysisProps {
     onSpeedRun: (capId: string) => void
 }
 
+interface AnalysisPanelsProps extends RunAnalysisProps {
+    heading?: 'h2' | 'h3'
+}
+
 function legendNote(run: AnalysisRun, timeOnly: readonly string[]): string | null {
     if (run.reference) return 'REF'
     if (timeOnly.includes(run.capId)) return TIME_ONLY
     return null
 }
 
-export default function RunAnalysis({ analysis, controller, cueSync, onSpeedRun }: RunAnalysisProps) {
+export function AnalysisPanels({ analysis, controller, cueSync, onSpeedRun, heading: Heading = 'h2' }: AnalysisPanelsProps) {
     const { runs, cumulative, matrix, speed } = analysis
     const { cue } = cueSync
     const onRow = useCallback((row: MatrixRow) => {
@@ -36,9 +40,9 @@ export default function RunAnalysis({ analysis, controller, cueSync, onSpeedRun 
     }, [matrix, onRow])
 
     return (
-        <section aria-label="Analysis" className="run-compare-analysis">
+        <>
             <div className="run-compare-panel">
-                <h2>Cumulative Δ</h2>
+                <Heading>Cumulative Δ</Heading>
                 <CumulativeChart cumulative={cumulative} controller={controller} />
                 <ul aria-label="Legend" className="run-compare-legend">
                     {runs.map(run => {
@@ -56,16 +60,24 @@ export default function RunAnalysis({ analysis, controller, cueSync, onSpeedRun 
                 </ul>
             </div>
             <div className="run-compare-panel">
-                <h2>Sector Matrix</h2>
+                <Heading>Sector Matrix</Heading>
                 <SectorMatrix runs={runs} rows={matrix} activeCue={cueSync.active} onRow={onRow} />
                 <p className="run-compare-legend"><span className="run-compare-legend-best" />Best split in the sector on its side</p>
             </div>
             {speed.options.length > 0 && (
                 <div className="run-compare-panel">
-                    <h2>Speed and Zoom</h2>
+                    <Heading>Speed and Zoom</Heading>
                     <SpeedView speed={speed} controller={controller} onChoose={onSpeedRun} onSector={onSector} />
                 </div>
             )}
+        </>
+    )
+}
+
+export default function RunAnalysis(props: RunAnalysisProps) {
+    return (
+        <section aria-label="Analysis" className="run-compare-analysis">
+            <AnalysisPanels {...props} />
         </section>
     )
 }

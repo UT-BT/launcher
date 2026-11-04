@@ -13,12 +13,13 @@ import { useDeviceEnvironment } from '@/app/device/useDeviceEnvironment'
 import type { CueModel } from '../model/cueModel'
 import type { LanesModel } from '../model/laneModel'
 import { formatRaceTime, type RaceModel } from '../model/raceModel'
+import type { TeamRow } from '../model/teamModel'
 import { PLAYBACK_RATES, SKIP_SECONDS } from '../playback/playbackConstants'
 import type { PlaybackController, PlaybackState } from '../playback/playbackController'
 import { usePlaybackSelector } from '../stage/usePlaybackSelector'
 import type { CompareSync } from '../url/compareUrl'
 import { CueTicks } from './CueTicks'
-import { DeltaLanes } from './DeltaLanes'
+import { DeltaLanes, TeamDeltaLanes } from './DeltaLanes'
 import type { CueSync } from './useCueSync'
 
 interface Controls {
@@ -86,6 +87,7 @@ interface TransportBarProps {
     fullscreen: FullscreenControl | null
     onShortcuts: () => void
     compact: boolean
+    teams?: readonly TeamRow[]
 }
 
 export interface FullscreenControl {
@@ -165,7 +167,7 @@ function CueControls({ controller, cues, cueSync }: CueControlsProps) {
     )
 }
 
-export function TransportBar({ controller, race, lanes, runsOpen, onToggleRuns, cues, cueSync, syncMode, onToggleSync, fullscreen, onShortcuts, compact }: TransportBarProps) {
+export function TransportBar({ controller, race, lanes, runsOpen, onToggleRuns, cues, cueSync, syncMode, onToggleSync, fullscreen, onShortcuts, compact, teams = [] }: TransportBarProps) {
     const { playing, rate, end, buffering } = usePlaybackSelector(controller, controlsOf, sameControls)
     const touch = useDeviceEnvironment(environment => environment.touch)
     const stalled = new Set(buffering.split(','))
@@ -252,7 +254,9 @@ export function TransportBar({ controller, race, lanes, runsOpen, onToggleRuns, 
                     <CueTicks label="Zones" kind="zone" points={cues.zones} end={end} active={cueSync.active} interactive={!touch} onCue={cueSync.cue} />
                 </div>
             </div>
-            <DeltaLanes lanes={lanes.lanes} controller={controller} end={end} />
+            {teams.some(row => row.lane)
+                ? <TeamDeltaLanes rows={teams} controller={controller} end={end} />
+                : <DeltaLanes lanes={lanes.lanes} controller={controller} end={end} />}
         </section>
     )
 }

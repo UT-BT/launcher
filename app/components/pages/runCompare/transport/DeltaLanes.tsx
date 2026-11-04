@@ -5,7 +5,9 @@ import type { CapComparisonPoint } from '@/app/utils/api'
 import { cn } from '@/lib/utils'
 import type { Lane } from '../model/laneModel'
 import { formatRaceTime } from '../model/raceModel'
+import type { TeamRow } from '../model/teamModel'
 import type { PlaybackController } from '../playback/playbackController'
+import { TeamLabel } from '../stage/TeamLabel'
 
 const VIEW_WIDTH = 1000
 const VIEW_HEIGHT = 100
@@ -193,6 +195,37 @@ export function DeltaLanes({ lanes, controller, end }: DeltaLanesProps) {
                 <li key={lane.capId} className="run-compare-track run-compare-lane">
                     <LaneLabel lane={lane} />
                     <LanePlot lane={lane} controller={controller} end={end} />
+                </li>
+            ))}
+        </ol>
+    )
+}
+
+function TeamLaneLabel({ row }: { row: TeamRow }) {
+    return (
+        <div className="run-compare-lane-label run-compare-row">
+            <span className="run-compare-team-bar" style={{ background: row.colour }} />
+            <TeamLabel row={row} className="min-w-0" />
+            <span className="font-mono tabular-nums text-foreground">{row.time}</span>
+            {row.reference && <span className="run-compare-badge is-reference">REF</span>}
+            {row.badges.map(badge => <span key={badge} className="run-compare-badge">{badge}</span>)}
+        </div>
+    )
+}
+
+interface TeamDeltaLanesProps {
+    rows: readonly TeamRow[]
+    controller: PlaybackController | null
+    end: number
+}
+
+export function TeamDeltaLanes({ rows, controller, end }: TeamDeltaLanesProps) {
+    return (
+        <ol aria-label="Lanes" className="run-compare-lanes">
+            {rows.map(row => row.lane && (
+                <li key={row.teamCapId} className="run-compare-track run-compare-lane">
+                    <TeamLaneLabel row={row} />
+                    <LanePlot lane={row.lane} controller={controller} end={end} />
                 </li>
             ))}
         </ol>

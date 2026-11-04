@@ -20,6 +20,7 @@ import { useCompareShortcuts } from './keyboard/useCompareShortcuts'
 import { useComparisons } from './loading/comparisons'
 import { useReplayVideos } from './loading/replayVideos'
 import { useSoloRuns } from './loading/soloRuns'
+import { useTeamComparisons } from './loading/teamComparisons'
 import { useTeamRuns } from './loading/teamRuns'
 import { holdWhileAdding, type SetChange } from './model/addRuns'
 import { audibleRun, chooseAudio } from './model/audioModel'
@@ -42,6 +43,7 @@ import './runCompare.css'
 
 const ShortcutSheetModal = lazy(() => import('./keyboard/ShortcutSheetModal').then(m => ({ default: m.ShortcutSheetModal })))
 const RunAnalysis = lazy(() => import('./analysis/RunAnalysis'))
+const TeamAnalysis = lazy(() => import('./analysis/TeamAnalysis'))
 
 interface RunComparePageProps {
     compare: string
@@ -64,13 +66,14 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
     const theaterHeight = useTheaterHeight(theater)
     const stageBox = useStageBox(stage)
     const [speedRun, setSpeedRun] = useNavState<string | null>('compare.speedRun', null)
-    const comparisons = useComparisons(useMemo(() => composeCompareModel({ query: compare, runs: loaded, teams: loadedTeams }).lanes.requests, [compare, loaded, loadedTeams]))
+    const teamComparisons = useTeamComparisons(useMemo(() => composeCompareModel({ query: compare, runs: loaded, teams: loadedTeams }).teams.requests, [compare, loaded, loadedTeams]))
+    const comparisons = useComparisons(useMemo(() => composeCompareModel({ query: compare, runs: loaded, teams: loadedTeams, teamComparisons }).lanes.requests, [compare, loaded, loadedTeams, teamComparisons]))
     const [storedFocus, setFocus] = useNavState<string | null>('compare.focus', null)
     const stageEnvironment = useStageEnvironment()
     const [storedPov, setPov] = useNavState<string | null>('compare.pov', null)
     const composed = useMemo(
-        () => composeCompareModel({ query: compare, runs: loaded, teams: loadedTeams, videos, failedVideos, stageBox, comparisons, focus: storedFocus, speedRun, environment: stageEnvironment, pov: storedPov }),
-        [compare, loaded, loadedTeams, videos, failedVideos, stageBox, comparisons, storedFocus, speedRun, stageEnvironment, storedPov],
+        () => composeCompareModel({ query: compare, runs: loaded, teams: loadedTeams, teamComparisons, videos, failedVideos, stageBox, comparisons, focus: storedFocus, speedRun, environment: stageEnvironment, pov: storedPov }),
+        [compare, loaded, loadedTeams, teamComparisons, videos, failedVideos, stageBox, comparisons, storedFocus, speedRun, stageEnvironment, storedPov],
     )
     const settled = useRef<CompareModel | null>(null)
     const model = useMemo(() => holdWhileAdding(composed, settled.current), [composed])
@@ -194,11 +197,12 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
     }, [model.loading, model.runs.length, teamSet, storedDrawerOpen, setDrawerOpen])
 
     useDocumentTitle(model.title, SITE_NAME)
-    useNavScrollRestore(!model.loading)
+    const analysisReady = useAfterPaint(!model.loading && model.runs.length > 0)
+    const hasAnalysis = model.analysis.runs.length > 0 || model.teamAnalysis.teams.length > 0
+    useNavScrollRestore(!model.loading && (analysisReady || !hasAnalysis))
 
     const notice = model.noticeLine ?? storedNotice
     const hasTiles = model.race.tiles.length > 0
-    const analysisReady = useAfterPaint(!model.loading && model.runs.length > 0)
     const fillsViewport = hasTiles || drawerOpen
 
     return (
@@ -267,6 +271,7 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
                         onToggleSync={() => edit({ kind: 'sync', mode: model.sync.mode === 'position' ? 'race' : 'position' })}
                         fullscreen={canFullscreen ? { active: fullscreen.active, toggle: fullscreen.toggle } : null}
                         onShortcuts={() => setSheetOpen(true)}
+                        teams={model.teams.rows}
                     />
                     <LazyModalGate open={sheetOpen}>
                         <ShortcutSheetModal isOpen={sheetOpen} onClose={closeSheet} portal={!fullscreen.active} />
@@ -277,6 +282,12 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
             {analysisReady && !model.loading && model.analysis.runs.length > 0 && (
                 <Suspense fallback={null}>
                     <RunAnalysis analysis={model.analysis} controller={controller} cueSync={cueSync} onSpeedRun={setSpeedRun} />
+                </Suspense>
+            )}
+
+            {analysisReady && !model.loading && model.teamAnalysis.teams.length > 0 && (
+                <Suspense fallback={null}>
+                    <TeamAnalysis analysis={model.teamAnalysis} controller={controller} cueSync={cueSync} onSpeedRun={setSpeedRun} />
                 </Suspense>
             )}
         </div>

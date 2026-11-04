@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 import { runCompareFixture } from '../app/utils/fixtures/runCompareFixtures'
-import type { TeamCapDetail, TeamLeaderboardEntry } from '../app/utils/api'
+import type { TeamCapDetail, TeamComparison, TeamComparisonTeam, TeamLeaderboardEntry } from '../app/utils/api'
 import { replayVideoUrl } from './replayVideos'
 
 const BASE = runCompareFixture('teamCapDetailMembers')
@@ -117,3 +117,29 @@ export const BRAVO: TeamFixture = {
 }
 
 export const TEAM_POVS = [ALPHA, BRAVO].flatMap(team => team.members.map(member => member.capId))
+
+export function teamFixtureOf(team: TeamComparisonTeam): TeamFixture {
+    return {
+        teamCapId: team.team_cap_id,
+        members: team.members.map(member => ({
+            capId: member.cap_id,
+            user: member.user,
+            alias: member.alias ?? member.user,
+            seconds: member.cap_time_ms / 1000,
+            zones: null,
+            ghost: member.has_ghost,
+            side: member.team ?? undefined,
+        })),
+    }
+}
+
+export async function mockTeamComparisons(page: Page, bodies: readonly TeamComparison[], read: string[] = []) {
+    await page.route(/https:\/\/api\.utbt\.net\/ghosts\/compare\/team\?.*/, route => {
+        const url = new URL(route.request().url())
+        const [runner, reference] = [url.searchParams.get('runner'), url.searchParams.get('reference')]
+        read.push(`${runner}:${reference}`)
+        const body = bodies.find(entry => entry.runner.team_cap_id === runner && entry.reference.team_cap_id === reference)
+        if (!body) return route.fulfill({ status: 404, json: { success: false, error: 'Team cap not found', code: 'team_cap_not_found' } })
+        return route.fulfill({ json: { success: true, data: body } })
+    })
+}

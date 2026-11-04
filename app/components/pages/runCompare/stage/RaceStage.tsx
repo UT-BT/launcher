@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
+import { TONE_TEXT } from '@/app/components/pages/capDetail/runDelta/deltaStyles'
 import { Spinner } from '@/app/components/ui/spinner'
 import { useDeviceEnvironment } from '@/app/device/useDeviceEnvironment'
 import { usePrefersReducedMotion } from '@/app/hooks/usePrefersReducedMotion'
@@ -9,7 +10,8 @@ import type { TileSlot, VideoSlot } from '../model/raceModel'
 import type { SetEdit } from '../model/setEdits'
 import type { SlotRect, StageLayout } from '../model/stageLayout'
 import type { TeamRow } from '../model/teamModel'
-import type { PlaybackController } from '../playback/playbackController'
+import { sameTeamDelta, teamDeltaAt } from '../model/teamVersus'
+import type { PlaybackController, PlaybackState } from '../playback/playbackController'
 import { createVideoMedia } from '../playback/videoMedia'
 import { DeltaChips } from './DeltaChips'
 import { TeamLabel } from './TeamLabel'
@@ -127,13 +129,22 @@ function VideoTile({ slot, rect, frozen, attachMedia, onVideoFailed, controller,
     )
 }
 
-function TeamRowHeader({ row, rect }: { row: TeamRow; rect: SlotRect }) {
+function TeamDelta({ row, controller }: { row: TeamRow; controller: PlaybackController | null }) {
+    const select = useCallback((state: PlaybackState) => teamDeltaAt(row, state), [row])
+    const gap = usePlaybackSelector(controller, select, sameTeamDelta)
+    if (!gap) return null
+    return <span className={cn('run-compare-team-delta font-mono tabular-nums', TONE_TEXT[gap.tone])}>{gap.label}</span>
+}
+
+function TeamRowHeader({ row, rect, controller }: { row: TeamRow; rect: SlotRect; controller: PlaybackController | null }) {
     return (
         <div className="run-compare-team-header run-compare-row" style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }}>
             <span className="run-compare-team-bar" style={{ background: row.colour }} />
             <TeamLabel row={row} className="min-w-0" />
             <span className="font-mono tabular-nums text-foreground">{row.time}</span>
             {row.reference && <span className="run-compare-badge is-reference">REF</span>}
+            <TeamDelta row={row} controller={controller} />
+            {row.badges.map(badge => <span key={badge} className="run-compare-badge">{badge}</span>)}
         </div>
     )
 }
@@ -193,7 +204,7 @@ export function RaceStage({ layout, tiles, view, onSwipe, controller, stageRef, 
                     others={slot.id === view.pov ? others : []}
                 />
             ))}
-            {teamRows.map(row => row.header && <TeamRowHeader key={row.teamCapId} row={row} rect={row.header} />)}
+            {teamRows.map(row => row.header && <TeamRowHeader key={row.teamCapId} row={row} rect={row.header} controller={controller} />)}
         </section>
     )
 }

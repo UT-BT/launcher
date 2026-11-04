@@ -8,21 +8,21 @@ export interface ComparisonRequest {
 
 export type LoadedComparisons = ReadonlyMap<string, CapComparison | null>
 
-export type ReadComparison = (runner: string, reference: string, signal: AbortSignal) => Promise<CapComparison | null>
+export type ReadComparison<T = CapComparison> = (runner: string, reference: string, signal: AbortSignal) => Promise<T | null>
 
 export function comparisonKey({ runner, reference }: ComparisonRequest): string {
     return `${runner}:${reference}`
 }
 
-function requestOf(key: string): ComparisonRequest {
+export function requestOf(key: string): ComparisonRequest {
     const [runner, reference] = key.split(':')
     return { runner, reference }
 }
 
-export function readComparisons(
+export function readComparisons<T = CapComparison>(
     requests: readonly ComparisonRequest[],
-    read: ReadComparison,
-    onRead: (key: string, comparison: CapComparison | null) => void,
+    read: ReadComparison<T>,
+    onRead: (key: string, comparison: T | null) => void,
 ): () => void {
     const controller = new AbortController()
     for (const request of requests) {
