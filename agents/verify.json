@@ -31,6 +31,7 @@
     ".prettierignore",
     "eslint.config.mjs",
     "package.json",
+    "scripts/render-app-icons.mjs",
     "tsconfig.e2e.json",
     "tsconfig.web.json"
   ],

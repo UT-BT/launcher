@@ -17,7 +17,7 @@ export const Titlebar = () => {
     <div className={`window-titlebar modern-titlebar ${wcontext?.platform ? `platform-${wcontext.platform}` : ''}`}>
       <div className="window-titlebar-center-icon">
         <img src={icon} alt="UTBT" />
-        <span className="window-titlebar-brand-text">UTBT.net</span>
+        <span className="window-titlebar-brand-text">UTBT</span>
       </div>
 
       <div className="window-titlebar-actions">
@@ -54,10 +54,7 @@ const TitlebarControls = () => {
     <div className="window-titlebar-controls">
       {wcontext?.minimizable && <TitlebarControlButton label="minimize" icon={FaMinus} />}
       {wcontext?.maximizable && (
-        <TitlebarControlButton
-          label="maximize"
-          icon={isMaximized ? FaWindowRestore : FaSquare}
-        />
+        <TitlebarControlButton label="maximize" icon={isMaximized ? FaWindowRestore : FaSquare} />
       )}
       <TitlebarControlButton label="close" icon={FaTimes} />
     </div>
