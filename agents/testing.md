@@ -851,9 +851,9 @@ further steps. A second drop fails the test.
 | Workflow | Trigger | Runs |
 |---|---|---|
 | `.github/workflows/ci.yml`, job `Fast gate` | pull request into `staging` or `main`, push to `staging`, manual (Run workflow) | Windows, Node 20: `npm ci`, `typecheck:web`, `typecheck:e2e`, `lint`, `test` (Windows-only suites included), `docs:check`, `build:web`, `check:bundle`, one step each |
-| `.github/workflows/ci.yml`, jobs `Playwright (1/6)` to `Playwright (6/6)` | the same | Ubuntu, Node 20: `npm ci`, `npx playwright install --with-deps chromium`, then `desktop-chromium` and `mobile-chromium` split across six parallel jobs (`--shard=<n>/6`); on failure each shard uploads its `playwright-report/` and `test-results/` as artifacts |
+| `.github/workflows/ci.yml`, jobs `Playwright (1/6)` to `Playwright (6/6)` | the same | Ubuntu, Node 20: `npm ci`, `npx playwright install chromium`, `bash scripts/ci-linux-fonts.sh` ([Linux fonts](#ci)), then `desktop-chromium` and `mobile-chromium` split across six parallel jobs (`--shard=<n>/6`); on failure each shard uploads its `playwright-report/` and `test-results/` as artifacts |
 | `.github/workflows/ci.yml`, job `Broadcast scenes` | the same | Windows, Node 20: the `broadcast` project alone, because its screenshots compare against the `-win32` baselines; on failure it uploads `playwright-report-broadcast` and `playwright-test-results-broadcast` |
-| `.github/workflows/ci.yml`, jobs `Mobile suite (chromium 1/3)` to `(chromium 3/3)` | the same | Ubuntu, Node 20: `npm ci`, `npx playwright install --with-deps chromium`, then `npx cross-env E2E_SERVER=build playwright test --project=mobile-suite-chromium --workers=3 --shard=<n>/3`: `npm run test:mobile` (the PR subset on the built bundle, mocked data only, [Mobile suite](#mobile-suite)) narrowed to Chromium. Whatever the result, each shard uploads its gallery as `mobile-gallery-chromium-<n>` and its HTML report as `mobile-playwright-report-chromium-<n>` |
+| `.github/workflows/ci.yml`, jobs `Mobile suite (chromium 1/3)` to `(chromium 3/3)` | the same | Ubuntu, Node 20: `npm ci`, `npx playwright install chromium`, `bash scripts/ci-linux-fonts.sh`, then `npx cross-env E2E_SERVER=build playwright test --project=mobile-suite-chromium --workers=3 --shard=<n>/3`: `npm run test:mobile` (the PR subset on the built bundle, mocked data only, [Mobile suite](#mobile-suite)) narrowed to Chromium. Whatever the result, each shard uploads its gallery as `mobile-gallery-chromium-<n>` and its HTML report as `mobile-playwright-report-chromium-<n>` |
 | `.github/workflows/ci.yml`, jobs `Mobile suite (webkit 1/8)` to `(webkit 8/8)` | push to `staging`, manual (Run workflow); skipped on pull requests | Windows, Node 20: the same with `npx playwright install webkit` and `--project=mobile-suite-webkit --shard=<n>/8`, uploading `mobile-gallery-webkit-<n>` and `mobile-playwright-report-webkit-<n>` |
 | `.github/workflows/ci.yml`, job `Mobile suite` | after the mobile shards | Ubuntu: passes when every Chromium shard passed and the WebKit shards passed or were skipped (on a pull request), so `Mobile suite` is the one check name to require |
 | `.github/workflows/mobile-nightly.yml`, jobs `Mobile full matrix (1/12)` to `(12/12)` | daily at 03:00 UTC on the default branch, manual (Run workflow, any branch) | Windows, Node 20: the same install, then `npm run test:mobile:full -- --workers=3 --shard=<n>/12`; each shard uploads its gallery as `mobile-gallery-full-<n>` and its report as `mobile-playwright-report-full-<n>` |
@@ -878,9 +878,19 @@ The mobile jobs pass `--reporter=list,github,html,./e2e/mobile/gallery-reporter.
 ([Gallery](#gallery)).
 - **Chromium runs on Ubuntu, WebKit on Windows.** Ubuntu runners start and run faster. WebKit stays
   on Windows: on Ubuntu runners it took about 55 s per crawl test, and with 4 workers on 4 cores its
-  tests timed out, and one unsharded job ran past 30 minutes. The ledger is seeded on Windows; a
-  rule whose verdict moves with Linux font metrics on Chromium needs its ledger entry rechecked on
-  Ubuntu (one scroll-restore verdict did).
+  tests timed out, and one unsharded job ran past 30 minutes.
+- **Linux fonts match Windows.** The app sets `font-family: system-ui`, which is Segoe UI on
+  Windows and a wider font on Ubuntu, so overflow, fit and scroll-restore checks failed there by
+  6 to 15 px. `scripts/ci-linux-fonts.sh` installs Selawik (Microsoft's open font with Segoe UI
+  metrics, checked against a pinned SHA-256) and points fontconfig's `system-ui`, `sans-serif` and
+  `sans` at it. Regular and bold measure within a pixel of Segoe UI; semibold runs about 1.5 %
+  wider, and `font-medium` falls back to regular on Linux where Windows draws it semibold. A
+  layout check that passes on Windows and fails only on Ubuntu by a pixel or two is this gap.
+- **No `--with-deps` on Ubuntu.** The runner image ships Google Chrome, so Chromium's libraries
+  are already there; `--with-deps` only added CJK, Thai and bitmap fallback fonts through apt, and
+  the runner's apt mirror sometimes served them at 43 kB/s, holding a job for 8 minutes. If a
+  new image drops a library, Chromium fails to launch and names it: add that package in the
+  Ubuntu jobs rather than going back to `--with-deps`.
 - **WebKit skips pull requests.** It is the slow half: eight Windows shards that took 5 to 27
   minutes on a pull request. It runs on every push to `staging` and on a manual run (Actions →
   CI → Run workflow, pick the branch), and `npm run test:mobile` runs both engines locally, so run
@@ -888,7 +898,8 @@ The mobile jobs pass `--reporter=list,github,html,./e2e/mobile/gallery-reporter.
 - **A stuck step fails fast.** The crawl caps every Playwright wait at 45 s (`STEP_TIMEOUT_MS` in
   `crawl.spec.ts`, set with `page.setDefaultTimeout`) inside the 180 s budget of a slow-marked crawl
   test, so a page that never settles fails in under a minute instead of burning the whole budget on
-  every attempt.
+  every attempt. The error-screen watcher that races the whole surface opts out with `timeout: 0`;
+  the cap is per step, and a surface with many steps can run past 45 s in total.
 - **Three workers per shard** leave headroom on the runner's four cores.
 - **The shard counts** keep each shard near the Playwright shards' time.
 - **The run splits by engine first.** Playwright splits shards by test count, not duration, and a

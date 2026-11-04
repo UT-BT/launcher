@@ -81,7 +81,7 @@ jobs:
         run: npm ci
 
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
 
       - name: Install Segoe UI metric fonts
         run: bash scripts/ci-linux-fonts.sh
@@ -173,7 +173,7 @@ jobs:
         run: npm ci
 
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
 
       - name: Install Segoe UI metric fonts
         run: bash scripts/ci-linux-fonts.sh

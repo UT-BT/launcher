@@ -32,7 +32,7 @@ async function openSurface(page: Page, surface: CrawlSurface) {
     const { path, steps } = surfaceSteps(surface)
     await reopenOnDroppedModule(page, async abandoned => {
         await page.goto(path)
-        const crashed = errorScreen(page).waitFor({ state: 'attached' }).then(() => CRASHED)
+        const crashed = errorScreen(page).waitFor({ state: 'attached', timeout: 0 }).then(() => CRASHED)
         crashed.catch(() => undefined)
         for (const step of steps) {
             if (abandoned.aborted) return
