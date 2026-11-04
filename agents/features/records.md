@@ -3,7 +3,8 @@
 The player profile, map detail, cap and team-run detail, World Records and Cap It All pages,
 the record rules the Maps and Players lists add, and the replay and record modals they share.
 Read it before touching any of those pages, `app/components/pages/capDetail/` or the replay
-modals.
+modals. The compare page itself, and every Compare link's target, is in
+[run-compare.md](run-compare.md).
 
 Elsewhere: the cap detail, world records, team runs and replay-source endpoints are in
 [api.md](../api.md); detail-page navigation, `NavLink` and the refresh registry in
@@ -18,16 +19,16 @@ Hunt, latest records) in [home.md](home.md).
 |---|---|
 | `app/components/pages/PlayerDetailPage.tsx` | profile entry: the summary read, the active tab's card, the lazy activity chart |
 | `app/components/pages/playerDetail/` | one card per profile tab plus the hero and sidebar cards, each fetching for itself; `activityChart.ts` is the pure chart default and hour labels (`activityChart.test.ts`); `playerDetailTabs.ts` is the tab list, which tabs hide and the stored tab's fallback (`playerDetailTabs.test.ts`) |
-| `app/components/pages/MapDetailPage.tsx` + `mapDetail/` | map detail: one load of every read, then cards that derive stats, ranks and team medal thresholds from the fetched rows |
-| `app/components/pages/CapDetailPage.tsx` | one cap: hero, the checkpoint card, both compare flows |
+| `app/components/pages/MapDetailPage.tsx` + `mapDetail/` | map detail: one load of every read, then cards that derive stats, ranks and team medal thresholds from the fetched rows; `mapDetail/compareSelection.ts` is the leaderboard's compare selection (`compareSelection.test.ts`) |
+| `app/components/pages/CapDetailPage.tsx` | one cap: hero, the checkpoint card, the Compare and Watch Side by Side links |
 | `app/components/pages/capDetail/runDelta/` | the checkpoint card's replay comparison: candidate tags and default, the card view, the delta curve, bands and sectors, chart rules, the speed view and its zoom, the video delta strip (pure view models, each with a `.test.ts`) |
-| `app/components/pages/TeamCapDetailPage.tsx` | one team run: roster, per-member analytics, the team replay |
+| `app/components/pages/TeamCapDetailPage.tsx` | one team run: roster, per-member analytics, Watch Team Run and Compare; `capDetail/teamCompareOpponent.ts` picks Compare's opponent (`teamCompareOpponent.test.ts`) |
 | `app/components/pages/capDetail/` | cap-detail cards; `capStats.ts` holds the pure medal-int helpers, signed deltas and checkpoint alignment (no tests) |
-| `app/components/pages/capDetail/videoCompare/` | the synced multi-video comparison player |
 | `app/components/pages/WorldRecordsPage.tsx`, `CapItAllPage.tsx` (+ `.types.ts`) | the two server-paginated record lists |
 | `app/components/pages/MapsPage.tsx`, `maps/medals.ts`, `PlayersPage.tsx` | the list pages; `computeMedalTier` |
 | `app/components/modals/` | replay picker (its row cache in `replayPickerCache.ts`, `replayPickerCache.test.ts`), WR progression, cap-time distribution, playtime breakdown, history, review and favourites lists |
-| `app/components/shared/ReplayVideoModal.tsx`, `app/hooks/useReplayWatch.ts`, `useVideoCompareAvailability.ts`, `useDemoDownload.ts` | replay and demo plumbing every record surface reuses |
+| `app/components/shared/ReplayVideoModal.tsx`, `app/hooks/useReplayWatch.ts`, `useDemoDownload.ts`, `app/utils/replayVideoCache.ts` | replay and demo plumbing every record surface reuses; `replayVideoCache.ts` is `resolveCompareVideo`, the 5-minute replay video cache the compare page shares (`replayVideoCache.test.ts`) |
+| `app/components/shared/CompareLink.tsx` | the link to the compare page every entry point renders ([run-compare.md](run-compare.md#entry-points)) |
 | `app/utils/format.ts`, `medals.ts`, `difficulty.ts` | cap-time formatting (`format.test.ts`), medal icons, difficulty tiers |
 | `app/utils/capTypes.ts`, `medalThresholds.ts`, `mapAuthor.ts`, `teamRunState.ts` | the one definition of the cap types, the medal multipliers, the map author name and the team-run label (each with a `.test.ts`); `recordsDefinitions.test.ts` fails when a records file copies one of them or the difficulty tiers |
 
@@ -47,9 +48,10 @@ the Disallowed step). The cap-detail hero shows a Disallowed / Verified / Unveri
 separate cap-type chip. Compare cap types only through `app/utils/capTypes.ts`, in the renderer
 and the demo watcher alike; never write the numbers.
 
-Enable Watch and Compare only for `verified` caps (All Caps also excludes `disallowed` ones), with
+Enable Watch only for `verified` caps (All Caps also excludes `disallowed` ones), with
 the tooltip "No replay — cap not verified" on the disabled button, rather than letting the replay
-read fail. The profile tabs gate the demo download the same way; the map leaderboard, World
+read fail. Compare links stay enabled on unverified caps (the compare page shows them on their
+data rung) and are disabled only on disallowed caps, and on team runs without a team time. The profile tabs gate the demo download the same way; the map leaderboard, World
 Records and Cap Detail always offer the demo.
 
 ### World-record demos: the 24 h window
@@ -207,6 +209,16 @@ those rows; none fetches for itself except the version bar.
   columns stay `required`, so desktop still switches the whole team table to cards (at 1280 px the
   map page's column is too narrow for it). `e2e/mobile/leaderboard-cards.spec.ts` checks the
   cards, Watch and Download from the panel, the card sort and the body tap.
+- **Compare selection** (`mapDetail/compareSelection.ts`, `LeaderboardCard.tsx`): the solo and
+  team tables start with a `select` column (`essential`, required, a screen-reader-only header):
+  a native checkbox in a 44 px label, named `Compare <alias>, <time>` (team runs join member
+  aliases with `" & "`), also on the card faces, where ticking never opens the run. Disallowed rows
+  can't be ticked; at 10 runs (4 on a team map) the other boxes disable and a note explains.
+  The ticked ids are nav state `leaderboard.compare`, so they outlive tabs, sorts and pages and
+  come back on Back. From one tick a floating **Compare (n)** button (44 px, portalled to
+  `document.body`, above the tab bar and the safe area) navigates to the compare page with the
+  runs in leaderboard order (fastest first, whatever the sort); a spacer at the page end keeps the
+  pagination clear of it. `e2e/map-compare-selection.spec.ts` covers it.
 - **Stat tiles**: the median is over certified caps (all team runs on a team map); "engaged
   players" count players with more than 300 s of non-spectator playtime.
 - **Your Stats**: on solo maps the PB and rank are the viewer's position among verified rows; on
@@ -290,16 +302,13 @@ target or a `null` read) or loading.
   recorded cap and its `most-columns` variant, both engines) and the tap zoom;
   `e2e/cap-numeric-tables-desktop.spec.ts` pins the desktop layout at 1280 and 1920 px.
 
-**Compare Run** (side-by-side video):
-
-1. `ReplayPickerModal` in `compareMode` lists the map's verified solo runs except this one.
-2. Picking a run resolves both videos through `useVideoCompareAvailability` (a 5-minute
-   module cache shared with Team Cap Detail) and loads the opponent's checkpoints.
-3. If either video is missing, a small modal says which one is not available yet; otherwise
-   `VideoCompareModal` opens.
-4. Checkpoints go to the player only when both caps ran for the same side (`cap.team`, `0` Red /
-   `1` Blue): the sides run different routes, so cross-side splits are meaningless and the
-   scrubber shows only spawn and cap.
+**Compare** (hero, `HeroSection.tsx`) links to the compare page with this cap plus
+`defaultCompareCandidate` over `compare_candidates`, or this cap alone when there is none. It
+waits for no video read. **Watch Side by Side** sits next to the checkpoint card's picker and links
+to this cap plus the selected target. The card's target is nav state `checkpointDeltas.target`
+(the default comes from the detail when nothing is stored), so Back to the cap shows the target the
+user picked. Both are `CompareLink`s ([run-compare.md](run-compare.md#entry-points)); on touch they
+are 44 px high.
 
 ## Team cap detail
 
@@ -311,48 +320,15 @@ around this one (found by `team_cap_id`, else by `member_key`, the same member c
 - **Roster.** One card per member; selecting a member swaps the client-settings grid and
   movement analytics to that member's `cap`. The default is the member whose time equals the
   team time (the slowest).
-- **Watch Team Replay** takes the members with `has_demo`, resolves their videos three at a time,
-  and opens `VideoCompareModal` with every run that has one. Fewer than two shows "Not enough
-  replay videos are available yet". Members' sides come from `members[].cap.team`.
+- **Watch Team Run** links to the compare page with this team run alone; **Compare** adds
+  `teamCompareOpponent(rankContextRows, team_cap_id, team_time_seconds)`: the run just above in the
+  rank window, or just below on the world record; for a run outside the window, the nearest faster
+  run by time, else the nearest slower; none when no other verified run exists. Both are disabled
+  on a disallowed team run or one without a team time, and Compare until the team leaderboard has
+  answered ([run-compare.md](run-compare.md#team-mode)).
+- The selected roster member is nav state `teamCap.member`, so Back keeps it.
 - **Download all demos** runs the members with `has_demo` one after another.
 - **Medal strip**: the API's `deltas.world_record` feeds the strip's `wr` key.
-
-## Comparison player
-
-`capDetail/videoCompare/VideoCompareModal.tsx` plays N runs in sync (two from Cap Detail, the
-roster from Team Cap Detail; lane colours cycle after eight).
-
-- The master clock is the furthest mounted video time plus that run's nudge. Nudges move in 0.1 s
-  steps, clamped to ± the larger of 60 s and the longest video.
-- Arrow keys step one frame at the lowest `fps` among the runs (30 when unknown); J and L skip
-  5 s; keys typed into an input are ignored. Videos start muted; rates run 0.25×–2×.
-- The slowest run is the reference. For every other run **on the reference's side**
-  (`useRunComparisons`, `compareView.ts`) it reads the [run comparison](../api.md#run-comparison)
-  with that run as runner: the scrubber gets the run's sector crossings in its own time and the
-  reference's equal tenths, and the delta strip (`videoStrip.ts`) follows the runner's video
-  (x = `t + delta`). A run on the other side or with an unknown side gets no ticks and no delta;
-  a `null` read keeps that run's checkpoint ticks, aligned against the slowest run, and the
-  checkpoint delta bar (exactly two runs with a matched checkpoint).
-- Play starts only once every mounted video has reported a finite duration and none has errored.
-- **Touch devices** (`useDeviceEnvironment(env => env.touch)`) mount at most two videos
-  (`TOUCH_PLAYING_LIMIT`). They start with the reference and the first other run on its side
-  (else the first other run); the rest show a **Watch** poster (`initialPlayingRuns`,
-  `compareView.ts`). Tapping a poster swaps that run in for the one that has played longest
-  (`swapIntoPlaying`): the replaced video pauses and releases its source (`src` removed,
-  `load()`), and a run swapped in during playback seeks to the clock and plays once its
-  metadata loads. A run swapped back in keeps the duration it reported before, so Play doesn't
-  wait for it to reload; it joins the same way. While a run is joining, the clock never moves
-  back. Posters keep their readouts. Desktop mounts and plays every run.
-- **The clock lives outside React state** (`compareClock.ts`). The playback loop writes the
-  master time to `createCompareClock()`. The scrubber, both delta strips and the time label
-  paint their cursor, text and `aria-valuenow` from it every frame (`useClockFrame`), with no
-  render. The pane readouts go through `useClockValue`: they re-render only when a readout
-  changes, and at most every 100 ms (`READOUT_INTERVAL_MS`, `subscribeThrottled`), so playback
-  commits at most 10 times a second whatever the frame rate.
-- Every `<video>` here, in `ReplayVideoPlayer` and in Admin's map video preview gets
-  `playsInline`, so an iPhone never forces native fullscreen; fullscreen happens only
-  through the replay player's own controls.
-- Credit the sources with `ReplaySourceCredit`; source rules are in [api.md](../api.md).
 
 ## World Records
 
@@ -469,8 +445,8 @@ touch rule decides instead.
 
 | Modal | Opened from | Rules |
 |---|---|---|
-| `shared/ReplayVideoModal.tsx` + `useReplayWatch` | every Watch button | `openReplay` turns a `null` video into "Replay video not available yet" and a thrown read into "Could not load this replay"; render `replay.error` in a `Modal` titled "Replay not available" beside it. Volume persists in `utbt:replayVideoVolume:v1`; Share copies `view_url ?? mp4_url`. The player plays inline (`playsInline`); fullscreen is its controls' button. |
-| `modals/ReplayPickerModal.tsx` | Maps row replay, Home Medal Hunt, Cap Detail Compare Run | Lists the map's verified solo runs, or its team runs on a team map outside `compareMode`. Resolves each row's video three at a time, visible page first. Caches every run per map for 5 minutes (`replayPickerCache.ts`), and drops `excludeCapId` (the cap being compared) after the read, so compare mode never offers the cap itself and a later normal open still lists it. |
+| `shared/ReplayVideoModal.tsx` + `useReplayWatch` | every Watch button | `openReplay` turns a `null` video into "Replay video not available yet" and a thrown read into "Could not load this replay"; render `replay.error` in a `Modal` titled "Replay not available" beside it. Volume persists in `utbt:replayVideoVolume:v1`; Share copies `view_url ?? mp4_url`. The player plays inline (`playsInline`); fullscreen is its controls' button. `ReplayVideoState` keeps the watched `capId` and, for a team member's cap, its `teamCapId` (pass it to `openReplay` wherever a team member is watched); `ReplayVideoFooter` then shows **Compare** next to Share, linking to the team run when there is one, else to the cap. The link navigates from inside the modal, which replaces the modal's history entry. |
+| `modals/ReplayPickerModal.tsx` | Maps row replay, Home Medal Hunt | Lists the map's verified solo runs, or its team runs on a team map. Resolves each row's video three at a time, visible page first. Caches every run per map for 5 minutes (`replayPickerCache.ts`, `cachedReplayRows(mapName)`). |
 | `modals/WorldRecordProgressionModal.tsx` | the WR history trigger on Map Detail, World Records and the profile WR tab | `lazy()`-loaded behind `LazyModalGate`; the caller fetches `fetchWorldRecordProgression` and passes `entries`. |
 | `modals/CapTimeDistributionModal.tsx` | Map Detail median tile | Certified caps only on solo maps, every team run on team maps; the x-axis ends at the tightest medal boundary that holds about 95 % of caps. |
 | `modals/PlaytimeBreakdownModal.tsx` | Map Detail playtime tiles | Per-player playtime; spectator rows excluded. |

@@ -183,7 +183,9 @@ Team caps have their own read: `GET /caps/team_caps/<id>/detail` → `TeamCapDet
 (`fetchTeamCapDetail`, used by `TeamCapDetailPage`). Each `members[]` entry carries
 `cap?: CapRecord` with `id`, `team` (the member's side), `has_ghost` and `zone_checkpoints`
 (the raw `;`-separated string or `null`); it is optional in the type, so a payload without it
-still renders.
+still renders. `TeamRunMember` also carries the optional `team`, `has_ghost` and `has_zones` the
+team leaderboard sends ([below](#team-maps-and-team-runs)). The compare page reads this detail for
+each team run in its set: each member's side, ghost flag and zone string.
 
 ### Run comparison
 
@@ -197,8 +199,10 @@ still renders.
   arrays). It never throws. A refusal carries a `code` (`CAP_COMPARISON_ERROR_CODES`:
   `bad_request`, `cap_not_found`, `different_map`, `different_side`, `no_ghost`,
   `unreadable_ghost`); the client does not branch on it.
-- **The fallback rule.** Every caller treats `null` as "use the zone checkpoint view"; nothing
-  that works without a replay may go blank because the comparison failed.
+- **The fallback rule.** Every caller treats `null` as the lower data rung: the checkpoint card
+  shows its zone checkpoint view, and the compare page drops that run to `Zones` or `Time only`
+  ([run-compare.md](features/run-compare.md#runs-references-and-data-rungs)). Nothing that
+  works without a replay may go blank because the comparison failed.
 - **Same map and same side only.** No surface asks for, or draws, a delta across sides.
 - **The body** (`CapComparison`):
   - `algo_version`, `state` (`aligned` | `routes_differ`), `runner` and `reference`
@@ -234,11 +238,58 @@ separations and repeats a time where it stalled. `events` are `{t_ms, kind, dire
 (direction `L`, `R`, `F`, `B` or `null`), `jump` or `kick` (kickers and bouncers). Only the Speed
 view's zoom reads it.
 
-Both reads send `v=COMPARISON_READ_VERSION`. They are cached for a day, so bump the constant in
-`app/utils/api.ts` whenever either body changes and a browser never replays an old shape.
+The pairwise, motion and [team](#team-comparison) reads all send `v=COMPARISON_READ_VERSION`
+(`comparisonQuery`). They are cached for a day, so bump the constant in `app/utils/api.ts`
+whenever any of their bodies changes and a browser never replays an old shape.
 `app/utils/fixtures/runCompare/` holds example bodies and error bodies, with
 `runCompareFixtures.ts` as their typed entry point; unit tests and the e2e specs mock the API with
-them.
+them. The fixture bytes are pinned by SHA-256 in `runCompareFixtures.test.ts`; change a body only
+together with the API contract it copies.
+
+### Team comparison
+
+`fetchTeamComparison(runnerTeamCapId, referenceTeamCapId, signal?)` reads
+`GET /ghosts/compare/team?runner=<team cap id>&reference=<team cap id>` (public) and returns
+`TeamComparison | null`. Only the compare page reads it, once per non-reference team run against
+the reference team run ([run-compare.md](features/run-compare.md#team-mode)).
+
+- **`null` on anything but a clean 200**, like the pairwise read: a non-200, a network error, an
+  abort, `success !== true`, or a body failing the shape check (every field's type, the enum
+  values, and a last split on `CAP`). It never throws. A refusal carries a `code`
+  (`TEAM_COMPARISON_ERROR_CODES`: `bad_request` 400 for a missing or malformed id or the same id
+  twice, `team_cap_not_found` 404, `different_map` 409); the client does not branch on it.
+  **Fallback:** a `null` read means that team run compares on final time only. The compare page
+  also treats a body whose `runner` / `reference` team cap ids don't match the request as `null`,
+  and keeps a good body for 5 minutes.
+- **Same map only.** There is no side check at team level: members of one run may be on
+  different sides, and pairs and candidates only ever join two members on the same side.
+- **The body** (`TeamComparison`, integer milliseconds throughout):
+  - `runner` and `reference` (`TeamComparisonTeam`): `team_cap_id`, `team_run_id`,
+    `team_time_ms` (the official team time) and `members[]` (`TeamComparisonMember`: `cap_id`,
+    `user`, `alias` (`null` without a user row), `team` (`0`, `1` or `null`), `cap_time_ms`,
+    `has_ghost`, `has_zones`), ordered by `cap_time_ms`, then `cap_id`.
+  - `final_delta_ms`: runner team time minus reference team time (positive = runner behind).
+  - `pairs[]`: the server's suggested member pairs, `runner_cap_id` (a runner-team member),
+    `reference_cap_id` (a reference-team member), `basis` (`ghost` | `zones`), `score` (0–1) and
+    `state` (`TEAM_COMPARISON_PAIR_STATES`): `aligned` (the pairwise read draws a full delta),
+    `routes_differ` (ghosts on different lines: compare at shared anchors only) or `zones` (no
+    ghost on one side: compare by zones). Each member sits in at most one pair; pairs are ordered
+    by the reference member's position in `reference.members`.
+  - `unpaired[]`: every member in no pair, runner-team members first, each team in member order.
+  - `candidates[]`: every same-side member pair with a score above 0 (`basis`, `score`), so a
+    pairing override can show its match without another read. On `basis: "ghost"` the score is
+    the pairwise read's `coverage` for that pair; on `basis: "zones"` it is the share of zone
+    names both members crossed. The page shows it as `route match NN %` or `zone match NN %`.
+  - `team_splits[]` (`TeamSplit`): `zone`, `reference_ms`, `runner_ms`, `delta_ms` (runner minus
+    reference) and the member who crossed first for each team (`reference_member_cap_id`,
+    `runner_member_cap_id`). A team reaches a zone when its first member does. Only zones both
+    teams reached, ordered by `reference_ms`. The last entry is always `zone: "CAP"`
+    (`TEAM_SPLIT_CAP_ZONE`) with the official team times and each team's slowest member; teams
+    set on opposite sides get only that entry.
+- **Fixtures**: `team_compare_aligned.json`, `team_compare_mixed.json`,
+  `team_compare_opposite_sides.json` and `team_compare_errors.json` (one body per refusal, in
+  check order), registered in `runCompareFixtures.ts` as `teamAligned`, `teamMixed`,
+  `teamOppositeSides` and `runCompareTeamErrors()` / `runCompareTeamErrorResponse(code)`.
 
 ### A player's summary
 
@@ -268,7 +319,9 @@ hides when it is zero.
   read fails). The gateway picks the source: UTRecorder first, democonverter.com for
   older caps. Play `mp4_url`; share `view_url ?? mp4_url` (`view_url` is a UTRecorder
   page that previews in Discord). `view_url` and `fps` are `null` for democonverter.com.
-  The comparison view steps frames at the lowest `fps` of its runs, 30 when unknown.
+  The compare page steps frames at the lowest `fps` of its visible runs, 30 when unknown,
+  and resolves videos through `resolveCompareVideo` (`app/utils/replayVideoCache.ts`, a
+  5-minute cache per cap).
   Credit the source with `ReplaySourceCredit`.
 
 ## World records
@@ -316,7 +369,14 @@ faster than the verified one (or the combination has no verified run).
   (`fetchTeamMapLeaderboard`), one row per member combination. `cap_time_seconds` is the
   team time, `user` is the `;`-joined member ids, and `members[]` holds each member's own
   cap. Options: `verified_limit`, `unverified_limit`, `member` (one member id), `before`
-  (pagination cursor), `columns`.
+  (pagination cursor), `columns`. Each member (`TeamRunMember`) also carries `team` (its side,
+  `0`/`1`/`null`), `has_ghost` and `has_zones` (its zone string holds at least one zone); the
+  compare page's drawer reads them for its badges and filters. There is no member `cap` here.
+- `GET /caps/leaderboard/map/<map>` → `LeaderboardEntry[]` (`fetchMapLeaderboard`), the solo
+  leaderboard. Rows carry the optional `has_ghost`, `zone_checkpoints` (`null` when empty) and
+  `disallowed`, and `team` for the side. A row with no known side sends `team: ""`, so treat any
+  `team` other than `0`/`1` as unknown. The compare page's drawer tags a row **Replay** when it has
+  a ghost and **Zones** when it has zones and no ghost, and never lists a disallowed row.
 - `GET /caps/team_runs/<team_run_id>` → `TeamRunStatus` (`fetchTeamRunStatus`): state,
   team time, members and the `is_combination_best_*` / `is_world_record` flags, for a
   run's per-member breakdown on Cap Detail.

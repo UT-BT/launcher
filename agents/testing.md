@@ -18,6 +18,8 @@ gate goes red. Commands and the pre-commit gate are in [build.md](build.md).
 | `e2e/__screenshots__/` | committed screenshot baselines, one folder per spec file |
 | `e2e/streamHarness.ts` | fake API plus open, settle and screenshot helpers for scene specs |
 | `e2e/sidebarRail.ts`, `e2e/layout.ts`, `e2e/streamPanels.ts` | shared spec helpers: the catch-all `mockApi`, `horizontalOverflow`, `openStreamPanel` |
+| `e2e/replayVideos.ts`, `e2e/teamRuns.ts` | shared compare-page helpers: served replay videos, and team runs with their team reads ([Compare page specs](#compare-page-specs)) |
+| `runCompare/playback/playbackFakes.ts`, `runCompare/model/teamTestRuns.ts` | Vitest-only builders for the compare page: a fake clock and fake media, and team run inputs ([Compare page specs](#compare-page-specs)) |
 | `e2e/<name>Harness.html` + `.ts` | standalone pages that mount one component tree outside the app |
 | `playwright.config.ts`, `vitest.config.ts`, `.github/workflows/` | runner config and CI |
 | `tsconfig.e2e.json` | the TypeScript project for `e2e/` and the two runner configs: `typecheck:e2e` and ESLint read it |
@@ -83,7 +85,9 @@ add `-t "<test name>"`. `npm test -- pickBan` runs every file whose path contain
 ### Golden contract fixtures
 
 Each area under `app/utils/fixtures/` (`eventStats/`, `mapUploads/`, `pickBanVeto/`,
-`streamSides/`) holds API responses as JSON, frozen byte for byte:
+`runCompare/`, `streamSides/`) holds API responses as JSON, frozen byte for byte. `runCompare/`
+holds the pairwise comparison bodies and the team comparison bodies (`team_compare_*.json`), each
+a copy of the API's own contract example ([api.md](api.md#team-comparison)):
 
 - `<area>Fixtures.ts` imports every file into a registry (`file`, `route`, `status`, `body` per
   name) typed against `app/utils/api.ts`, and exports `<area>Fixture(name)` (the success data),
@@ -188,6 +192,34 @@ Seed browser state with `page.addInitScript` before `goto`:
 - A signed-in web user: `utbt:webAuth:v1` with `accessToken`, `refreshToken` and an `expiresAt`
   computed inside the script, more than 5 minutes ahead of the page clock; a closer expiry makes the
   app refresh the session first.
+
+### Compare page specs
+
+The compare page ([run-compare.md](features/run-compare.md#tests)) has these shared helpers:
+
+- **`e2e/replayVideos.ts`**: `serveReplayVideos(page, missing)` serves the repo's test WebM for
+  every replay video read, with range requests, and a 404 for each cap id in `missing`. The file is
+  2 s long, so the helper multiplies its WebM `TimecodeScale` by 16 in memory: the same frames last
+  32 s (`REPLAY_VIDEO_SECONDS`) and seek and play in real time. It also exports `MEDIA_HOST`,
+  `replayVideoUrl`, `REPLAY_VIDEO` and `REPLAY_VIDEO_STRETCH`.
+- **`e2e/run-compare.spec.ts`'s `mockApi(options)`** answers cap details, the pairwise read from
+  the `runCompare` fixtures (recording which pairs were asked for), and replay videos. It gives every
+  mocked cap zone checkpoints scaled to its time, and `converted` names caps whose video is not from
+  UTRecorder. `mockLeaderboard`, registered after it, serves the drawer's leaderboard. A file-level
+  `beforeEach` runs the phone project on a 1280×800 touch screen (`TOUCH_GRID`), because these cases
+  test the grid; the phone layout is `e2e/run-compare-responsive.spec.ts`'s.
+- **`e2e/teamRuns.ts`**: `mockTeamRuns` (team cap details, the team leaderboard, member replays),
+  `teamDetail`, `teamEntry`, two two-member team runs `ALPHA` and `BRAVO`, `teamFixtureOf` and
+  `mockTeamComparisons` (team reads from the `team_compare_*` fixtures).
+- **Vitest.** `runCompare/playback/playbackFakes.ts`: `createFakeTime()` steps a fake clock by
+  frames or seconds, and `time.media(options)` is a fake video that records every command and plays
+  along (options for readiness, start delay and seek duration; hooks to stall, recover, fail, drift
+  and finish a seek). The controller, target and team clock tests use it.
+  `runCompare/model/teamTestRuns.ts` builds team runs and composed team models (`versusOf`,
+  `composeVersus`) from the fixtures.
+- Entry points: `e2e/video-compare.spec.ts` (Cap Detail, the checkpoint card, Team Cap Detail and
+  the Watch modal into the page), `e2e/cap-compare-responsive.spec.ts` (Watch Side by Side at 390
+  and 1366 px) and `e2e/map-compare-selection.spec.ts` (the map leaderboard selection).
 
 ### Live tests
 
@@ -318,8 +350,12 @@ on both engines at the project's default size (390×844 and 360×780).
 `route-contract.json`. Manifest modules import only types from Playwright (no `test`, no `expect`),
 so Vitest can import them too; waits use locator `waitFor()`. The step helpers they share (`listed`,
 `recordShown`, `rowsOf`, `heading`, `shows`, `text`, `tap`, `steps`, `opens`, `opensWhenShown`,
-`watchesReplay`, `withCardsOpen`, `modalHeading`, `seen`) and the shared `watchRun` and `wrHistory`
-modals are in `manifest/steps.ts`. The overlays that aren't a page's own modal are in `manifest/overlays.ts`:
+`watchesReplay`, `withCardsOpen`, `modalHeading`, `seen`, `settledStage`) and the shared `watchRun`
+and `wrHistory` modals are in `manifest/steps.ts`. `settledStage` is the compare page's `ready`:
+the stage has no pending tile and every streamed video has metadata or an error, checked twice
+750 ms apart; the run-compare entry and the cap and team-cap sub-views that open the page
+(`cap-detail/compare-run`, `cap-detail/compare-runs`, `team-cap-detail/watch-team-replay`) wait on
+it. The overlays that aren't a page's own modal are in `manifest/overlays.ts`:
 `pageTutorial(page)` (the Servers, Maps and Players tutorial card, opened from the page's help
 button, with the card's dialog as `root`) and `consentPolicy(ready)` (the consent banner's privacy
 policy on Home: it drops the seeded consent and reloads once, so the banner shows).
@@ -364,7 +400,12 @@ the map page crawl both modals on phones, and the profile's All Caps and Persona
 replay. The Maps page's Demos and reviews (`maps/demos`, `maps/reviews`) open the same way, from
 the first panel's Demos button and Community Review. The reviews modal lists the recorded public
 reviews; the replay picker shows "No runs found", because the `maps` recording has no leaderboard
-for it. Event tabs that show only while signups are open (`players`, `signup`) are not crawled on
+for it. The compare page crawls the open Runs drawer (`run-compare/runs`), eight runs
+(`run-compare/pov`, which skips `table-shows-every-column`: its sector matrix shows the run
+columns that fit and a run picker for the rest) and two team runs (`run-compare/teams`).
+Playwright's Windows WebKit can't decode the synthetic `data:` WebM (`MediaError` 4), so there
+every compare tile drops to a data-only lane and the surfaces crawl lanes instead of tiles. The
+map page's `maps-detail/compare-selection` ticks the first leaderboard box. Event tabs that show only while signups are open (`players`, `signup`) are not crawled on
 the public event; the staff-only `manage` and `stream` tabs are crawled by `event-detail:manager`.
 
 **Contract.** `routes.contract.test.ts` (Vitest) fails when a route-contract view has no entry,
@@ -436,13 +477,15 @@ The script records only public data the site already shows:
 
 ### Synthetic sets
 
-Role-gated entries never serve recorded data. Their sets are built in code in
+Role-gated entries never serve recorded data, and the compare page needs videos and team reads no
+recording holds. Their sets are built in code in
 `e2e/mobile/fixtures/synthetic/` and listed in `SYNTHETIC_SETS` (`synthetic/index.ts`), which
 `fixtures/index.ts` registers beside the recorded sets:
 
 | Set | Module | Serves |
 |---|---|---|
 | `admin` | `admin.ts` | every admin section's reads, paged by `limit`/`offset` with realistic totals |
+| `run-compare` | `run-compare.ts` | the public compare page: the recorded `cap-detail` responses plus five synthetic cap details (eight solo runs), two synthetic team runs with their team leaderboard and a team read, and a playable video for every run as a `data:` URL in `mp4_url`, because the crawl keeps every non-local host offline |
 | `event-manager` | `event-manager.ts` | a managed event with three stages from the standings scene builders, teams, staff, queue, windows and audit |
 | `match-pickban-captain`, `match-pickban-manager` | `pickban.ts` | the lobby state from the pick/ban veto golden fixtures, seen by a captain and by a manager |
 | `home-signed-in` | `signed-in.ts` | the viewer's summary, caps history, medal hunt and reviews to write, over the recorded `home` set |
@@ -586,9 +629,9 @@ the helpers in `e2e/mobile/interactions.ts` (`checkModal`, `closeModal`, `rotate
 `scrollPositionProblems`, `topOfPageProblems`, `tapCentre`, `zoomVisualViewport`). An interaction
 spec that is red today is marked `test.fail()`, with a note naming the ticket that flips it.
 
-- `owner-repro.spec.ts`, the owner's reported bug: the Compare runs video (`cap-detail`'s
-  `compare-runs` modal) on the cap page, landscape, zoom in and out, portrait, then the close
-  control closes the modal, the hamburger opens the drawer and a swipe scrolls the page back to the
+- `owner-repro.spec.ts`, the owner's reported bug, replayed on the replay video modal
+  (`cap-detail`'s `watch-replay` modal; the Compare runs modal it was first seen on is gone): the
+  cap page, landscape, zoom in and out, portrait, then the close control closes the modal, the hamburger opens the drawer and a swipe scrolls the page back to the
   real top. It passes in emulation since the shared modal opens as a sheet portalled above the top
   bar; what a real pinch and rotation leave behind on iOS stays on the manual iPhone checklist.
 - `event-table-cards.spec.ts`: the tiered event tables. Group standings and the predictions
@@ -618,7 +661,7 @@ spec that is red today is marked `test.fail()`, with a note naming the ticket th
 - `overlay-history.spec.ts`: Back closes the open drawer and keeps the page, and the next Back
   goes to the previous page; a drawer link takes the drawer's history entry, so the page it
   opens adds one entry; closing the drawer from its backdrop leaves no entry behind; Back
-  closes an open sheet (the Compare run picker) before it leaves the page. History entries are
+  closes an open sheet (the replay video modal) before it leaves the page. History entries are
   counted with `history.length`, and a closed overlay's entry with `history.state`.
   `e2e/overlay-history.spec.ts` runs the modal cases on `desktop-chromium` and
   `mobile-chromium`: one modal, stacked modals, a close button then Back and Forward, and a
@@ -774,7 +817,7 @@ matrix, narrowed with `-- -g` if you like. The gallery reporter writes the ledge
 override must keep `./e2e/mobile/gallery-reporter.ts`. The run rewrites only the surface, rule,
 viewport and engine combinations it ran: failures go in, passes come out, and everything it did not
 run stays. The PR subset is seeded for every surface, role-gated ones included. The full matrix is
-seeded only for `home`, `maps`, `maps/new`, `cap-detail`, `cap-detail/compare-run` and the `news`
+seeded only for `home`, `maps`, `maps/new`, `cap-detail` and the `news`
 stress variants at the viewports outside the PR subset, and those entries predate the modal,
 rotation, scroll, table and card rules and, for all but the `news` variants, the recorded data.
 Role-gated surfaces have no full-matrix entries yet. The other stress variants the PR subset does

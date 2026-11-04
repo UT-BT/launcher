@@ -108,7 +108,15 @@ const [sortDir, setSortDir] = useNavState<'asc' | 'desc'>('wrs.sortDir', 'desc')
 ```
 
 - **Keys** are `<area>.<field>`: a card prefix on detail pages (`wrs.query`), `event.*` on
-  the event page, `admin.<section>.<field>` in admin sections.
+  the event page, `admin.<section>.<field>` in admin sections, `compare.*` on the compare page
+  (`notice`, `seekSeconds`, `drawerOpen`, `audioFrom`, `focus`, `pov`, `speedRun`, `matrixRun`,
+  `speedZoom`, `splitsTeam`; [run-compare.md](features/run-compare.md#the-page)). Other keys
+  the compare entry points added: `leaderboard.compare` (the map leaderboard's ticked runs),
+  `checkpointDeltas.target` (the cap page's card target, `null` until the user picks one) and
+  `teamCap.member` (the team cap page's selected member).
+- **A page that rewrites its own address** (`replaceParams`) keeps the entry, so its bag
+  survives every edit: the compare page stores the arriving `t` in `compare.seekSeconds` and the
+  arriving link's notice in `compare.notice` before the first replace drops them from the query.
 - **The setter takes a value only.** `setX(prev => …)` stores the function. Compute from
   the in-scope value: `setSortDir(sortDir === 'asc' ? 'desc' : 'asc')`.
 - **Small values only**, never fetched data: detail data refetches on remount.
