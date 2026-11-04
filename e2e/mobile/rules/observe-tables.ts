@@ -204,6 +204,7 @@ async function expandCards(page: Page, faces: Content[][]): Promise<{ expanded: 
         const control = page.locator(`[${EXPAND_MARK}="${index}"]`)
         const state = await control.getAttribute('aria-expanded', { timeout: WAIT_MS }).catch(() => null)
         if (state !== 'false') continue
+        await control.evaluate(element => element.scrollIntoView({ block: 'center', inline: 'nearest' })).catch(() => undefined)
         const opened = await control.tap({ timeout: WAIT_MS })
             .then(() => page.locator(`[${EXPAND_MARK}="${index}"][aria-expanded="true"]`).waitFor({ state: 'attached', timeout: WAIT_MS }))
             .then(() => true, () => false)

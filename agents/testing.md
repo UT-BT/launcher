@@ -476,7 +476,10 @@ routes `{ host: 'api' | 'gateway', path, reply }`. `path` is an exact path witho
 or a `RegExp`; `reply` is a response or a function of the request URL, and `ok(data)` wraps the
 `{ success, data }` envelope. An API request no route answers falls back to `mockApi` from
 `e2e/sidebarRail.ts`. Any other request off the dev server gets a blank PNG (images) or a 404, so no
-request leaves the machine. `fixtureSetNamed(name)` in `fixtures/index.ts` resolves a set name, and
+request leaves the machine. WebKit's `<video>` loads skip that route, so every replay read's remote
+`mp4_url` is swapped for the repo's test WebM as a `data:` URL (`withLocalReplayVideo`,
+`fixtures/playableVideo.ts`): a recorded live video URL would make a surface wait on the network.
+`fixtureSetNamed(name)` in `fixtures/index.ts` resolves a set name, and
 `<set>~<variant>` resolves to that set with a stress variant applied to every reply.
 
 ### Test data

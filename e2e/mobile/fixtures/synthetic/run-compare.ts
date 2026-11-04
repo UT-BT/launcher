@@ -1,6 +1,5 @@
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import { replyFor } from '../data'
+import { PLAYABLE_VIDEO } from '../playableVideo'
 import { recordedFixtureSet } from '../recording'
 import type { FixtureRoute, FixtureSet } from '../types'
 import { person, syntheticId } from './people'
@@ -10,7 +9,6 @@ import { teamDetail, teamEntry, TEAM_MAP, type TeamFixture } from '../../../team
 const RECORDED = recordedFixtureSet('cap-detail')
 const DONOR_ID = '258021df-51b1-4ed3-99cc-62d4e75892a7'
 const RECORDED_RUNS = [DONOR_ID, '418b0aec-34c5-40e7-acf4-f2bc33373063', '8d742df9-2f14-4998-835c-3c16c1d1ee92']
-const PLAYABLE_VIDEO = `data:video/webm;base64,${readFileSync(resolve(__dirname, '../../../next-map-flythrough.webm')).toString('base64')}`
 
 export const EXTRA_RUN_IDS: readonly string[] = Array.from({ length: 5 }, (_, i) => `c0ffee0${i}-0000-4000-8000-00000000000${i}`)
 export const EIGHT_RUN_IDS: readonly string[] = [...RECORDED_RUNS, ...EXTRA_RUN_IDS]
