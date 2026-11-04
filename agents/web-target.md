@@ -68,6 +68,13 @@ and the web entry does not grow. `npm run check:bundle` fails if desktop-only ma
 (`electron-updater`, `utbt-launcher-updater`, `checking-installation`, `electron.vite`)
 appear in any web asset.
 
+Browser APIs both targets have are feature-detected, not gated: the compare page's stage
+fullscreen calls the Fullscreen API on its theater element when `document.fullscreenEnabled`
+and `requestFullscreen` exist, in the desktop window and on the web alike, with no IPC channel
+([run-compare.md](features/run-compare.md#stage-layouts)). While an element is fullscreen, only
+its own subtree shows, so popovers portalled to `document.body` stay hidden; render an overlay
+that must show there inside the fullscreen element.
+
 The `window.*` event bridges ([lib/conveyor/README.md](../lib/conveyor/README.md)) do not
 exist on web. Code that can mount on web optional-chains them (`window.utPatch?.on…`,
 `window.uiScale?.set`) or sits behind a capability check; only desktop-only modules (the
@@ -504,9 +511,7 @@ Phones parse the web entry chunk on first visit, so it stays lean.
   `PlayerReviewsModal`, `PlayerFavoritesModal`, `SlotPickerModal`, `BetModal`,
   `BackersModal`, the admin section modals). Also eager: modals that open themselves from
   an event or at boot (`PatreonModal`, `AuthRequiredModal`, the
-  connection `ErrorModal` in `app.tsx`), other desktop-only modals, and `VideoCompareModal`,
-  which clears its video durations in an `open` effect: mounted from a Suspense retry that
-  effect can run after the videos' `loadedmetadata`, which leaves Play disabled.
+  connection `ErrorModal` in `app.tsx`) and other desktop-only modals.
 - **Desktop promotion stays off the first-paint path.** Only the provider, the hook, the
   decision module and `desktopPromoStorage.ts` are eager. `DesktopPromoNavRow` is itself
   lazy and mounted only when `ambientVisible`, so phones, macOS and recent desktop users
@@ -539,9 +544,9 @@ platform gates.
 |---|---|
 | Initial JS | 190 KiB |
 | Initial CSS | 37 KiB |
-| Initial total | 224 KiB |
+| Initial total | 225 KiB |
 | Largest lazy chunk (and each stream scene chunk) | 120 KiB |
-| App JS (every JS file except those only the stream scene pages load) | 920 KiB |
+| App JS (every JS file except those only the stream scene pages load) | 975 KiB |
 | Stream scene JS (files reachable only from the scene root) | 120 KiB |
 
 It also asserts `dist-web/index.html`: exactly one module script, at least one
@@ -584,7 +589,10 @@ HTML document with per-URL metadata already injected; the build ships the static
   `og-default.png` (the 1200×630 fallback card) and `route-contract.json`.
 - **`route-contract.json`** is the path → entity table, generated from the same route list
   as `routes.ts` and shipped in the build so a frontend deploy keeps per-URL metadata in
-  sync. `routes.contract.test.ts` fails if the two drift.
+  sync. `routes.contract.test.ts` fails if the two drift. The `compare` kind (`/compare`) is
+  the one route whose preview depends on the query: it is built from the `runs` list alone,
+  with the page title's label form but runs ordered fastest first, the map's preview image,
+  and `noindex`.
 - **`vite.config.web.ts`** has a `transformIndexHtml` plugin that grafts the icon links and
   a default tag block onto the head between `<!--utbt-head-start-->` and
   `<!--utbt-head-end-->`, lifting the shell's `<title>`, `description` and `theme-color`
@@ -593,7 +601,8 @@ HTML document with per-URL metadata already injected; the build ships the static
   `dist-web/index.html` when it cannot, so never remove the markers.
 
 Client-side, `useDocumentMeta` (called from `Main.tsx`) keeps the tab title and
-`<link rel="canonical">` in step with navigation, and detail pages call
+`<link rel="canonical">` in step with navigation (`canonicalPath`: the compare page's canonical
+keeps only its `runs`, sorted, like the preview's), and detail pages call
 `useDocumentTitle` to refine the title once their payload lands. `og:*` is deliberately not
 updated client-side: crawlers never see it.
 

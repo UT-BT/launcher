@@ -4,6 +4,7 @@ import type { ReplayVideoState } from '@/app/components/shared/ReplayVideoModal'
 
 interface OpenArgs {
     capId: string
+    teamCapId?: string
     mapName: string
     time?: number
     alias?: string
@@ -14,13 +15,13 @@ export function useReplayWatch() {
     const [error, setError] = useState<string | null>(null)
     const [loadingCapId, setLoadingCapId] = useState<string | null>(null)
 
-    const openReplay = async ({ capId, mapName, time, alias }: OpenArgs) => {
+    const openReplay = async ({ capId, teamCapId, mapName, time, alias }: OpenArgs) => {
         if (!capId) return
         setLoadingCapId(capId)
         try {
             const replayVideo = await fetchReplayVideo(capId)
             if (replayVideo) {
-                setVideo({ video: replayVideo, mapName, time, alias })
+                setVideo({ video: replayVideo, capId, teamCapId, mapName, time, alias })
             } else {
                 setError('Replay video not available yet. Please try again later.')
             }

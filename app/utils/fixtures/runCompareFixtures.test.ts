@@ -14,27 +14,40 @@ import compareRoutesDifferFile from './runCompare/compare_routes_differ.json'
 import compareSeparatedFile from './runCompare/compare_separated.json'
 import compareShortFile from './runCompare/compare_short.json'
 import teamCapDetailMembersFile from './runCompare/team_cap_detail_members.json'
+import teamCompareAlignedFile from './runCompare/team_compare_aligned.json'
+import teamCompareErrorsFile from './runCompare/team_compare_errors.json'
+import teamCompareMixedFile from './runCompare/team_compare_mixed.json'
+import teamCompareOppositeSidesFile from './runCompare/team_compare_opposite_sides.json'
 import {
     CHART_RULES_FILE,
     RUN_COMPARE_ERRORS_FILE,
     RUN_COMPARE_FIXTURES,
+    TEAM_COMPARE_ERRORS_FILE,
     chartRuleVectors,
     runCompareErrorResponse,
     runCompareErrors,
     runCompareFixture,
     runCompareFixtureResponse,
+    runCompareTeamErrorResponse,
+    runCompareTeamErrors,
     type ChartRuleVectors,
     type RunCompareComparisonName,
     type RunCompareErrorEntry,
     type RunCompareFixtureName,
+    type TeamCompareErrorEntry,
 } from './runCompareFixtures'
 import {
     CAP_COMPARISON_ERROR_CODES,
     CAP_COMPARISON_STATES,
+    COMPARISON_READ_VERSION,
+    TEAM_COMPARISON_BASES,
+    TEAM_COMPARISON_ERROR_CODES,
+    TEAM_COMPARISON_PAIR_STATES,
     fetchCapComparison,
     fetchCapComparisonMotion,
     fetchCapDetail,
     fetchTeamCapDetail,
+    fetchTeamComparison,
     type CapCompareCandidate,
     type CapComparison,
     type CapComparisonMotion,
@@ -44,6 +57,12 @@ import {
     type CapDetail,
     type CapRecord,
     type TeamCapDetail,
+    type TeamComparison,
+    type TeamComparisonCandidate,
+    type TeamComparisonMember,
+    type TeamComparisonPair,
+    type TeamComparisonTeam,
+    type TeamSplit,
 } from '@/app/utils/api'
 
 type Loose<T> = T extends string
@@ -74,9 +93,13 @@ const TYPED_FILES: Record<RunCompareFixtureName, unknown> = {
     capDetailCandidates: capDetailCandidatesFile satisfies Envelope<CapDetail>,
     capDetailGhostOnly: capDetailGhostOnlyFile satisfies Envelope<CapDetail>,
     teamCapDetailMembers: teamCapDetailMembersFile satisfies Envelope<TeamCapDetail>,
+    teamAligned: teamCompareAlignedFile satisfies Envelope<TeamComparison>,
+    teamMixed: teamCompareMixedFile satisfies Envelope<TeamComparison>,
+    teamOppositeSides: teamCompareOppositeSidesFile satisfies Envelope<TeamComparison>,
 }
 
 const TYPED_ERRORS = compareErrorsFile satisfies Loose<RunCompareErrorEntry>[]
+const TYPED_TEAM_ERRORS = teamCompareErrorsFile satisfies Loose<TeamCompareErrorEntry>[]
 const TYPED_CHART_RULES = chartRulesFile satisfies Loose<ChartRuleVectors>
 
 const FIXTURE_DIR = resolve(__dirname, 'runCompare')
@@ -94,6 +117,10 @@ const PINNED_SHA256: Record<string, string> = {
     'compare_separated.json': '2347d7c7b667d87fb1d8a989b34c8b101d36fe0c950522018498cbe27ba1a321',
     'compare_short.json': '56d3aaeefb13934ae84081fb03d55ac8a5eb1875ac67b94345680bb4606cbc1a',
     'team_cap_detail_members.json': '6356a08956273adfb0b32244692646f6a64bd6a05f2395c8a28641f53c9cec19',
+    'team_compare_aligned.json': '05496d23ef14c7cc55d7d1cae90684314d177ae328bb9a66ef3a5bd956da1ff9',
+    'team_compare_errors.json': 'ed9bd25e34a91e4a98ab44cbdc3e5bc14a948835154d0f6bbcff7c3e9f304fe1',
+    'team_compare_mixed.json': '7cc2eadabdc9743947a7c8ed159aa08f6b8602fa905cd3917b597c388ada6408',
+    'team_compare_opposite_sides.json': '7a8b5234195d4b9455166e98636b6bbee5e06bd3ff4262e5d2338d663d1a1e27',
 }
 
 const COMPARISON_KEYS = {
@@ -141,6 +168,49 @@ const CANDIDATE_KEYS = { id: true, user: true, alias: true, cap_time_seconds: tr
 >
 
 const MEMBER_CAP_KEYS = ['has_ghost', 'id', 'team', 'zone_checkpoints'] satisfies (keyof CapRecord)[]
+
+const TEAM_COMPARISON_KEYS = {
+    runner: true,
+    reference: true,
+    final_delta_ms: true,
+    pairs: true,
+    unpaired: true,
+    candidates: true,
+    team_splits: true,
+} satisfies Record<keyof TeamComparison, true>
+
+const TEAM_KEYS = { team_cap_id: true, team_run_id: true, team_time_ms: true, members: true } satisfies Record<
+    keyof TeamComparisonTeam,
+    true
+>
+
+const TEAM_MEMBER_KEYS = {
+    cap_id: true,
+    user: true,
+    alias: true,
+    team: true,
+    cap_time_ms: true,
+    has_ghost: true,
+    has_zones: true,
+} satisfies Record<keyof TeamComparisonMember, true>
+
+const TEAM_CANDIDATE_KEYS = { runner_cap_id: true, reference_cap_id: true, basis: true, score: true } satisfies Record<
+    keyof TeamComparisonCandidate,
+    true
+>
+
+const TEAM_PAIR_KEYS = { ...TEAM_CANDIDATE_KEYS, state: true } satisfies Record<keyof TeamComparisonPair, true>
+
+const TEAM_SPLIT_KEYS = {
+    zone: true,
+    reference_ms: true,
+    runner_ms: true,
+    delta_ms: true,
+    reference_member_cap_id: true,
+    runner_member_cap_id: true,
+} satisfies Record<keyof TeamSplit, true>
+
+const TEAM_NAMES = ['teamAligned', 'teamMixed', 'teamOppositeSides'] as const
 
 const COMPARISON_NAMES: RunCompareComparisonName[] = ['aligned', 'separated', 'neverRejoins', 'long', 'short', 'routesDiffer']
 const ALIGNED_NAMES = COMPARISON_NAMES.filter((name) => name !== 'routesDiffer')
@@ -196,7 +266,12 @@ afterEach(() => {
 describe('run compare fixtures', () => {
     it('lists every fixture file once, and every file is pinned', () => {
         const onDisk = readdirSync(FIXTURE_DIR).filter((file) => file.endsWith('.json')).sort()
-        const listed = [...ALL_NAMES.map((name) => RUN_COMPARE_FIXTURES[name].file), RUN_COMPARE_ERRORS_FILE, CHART_RULES_FILE]
+        const listed = [
+            ...ALL_NAMES.map((name) => RUN_COMPARE_FIXTURES[name].file),
+            RUN_COMPARE_ERRORS_FILE,
+            TEAM_COMPARE_ERRORS_FILE,
+            CHART_RULES_FILE,
+        ]
 
         expect(listed.sort()).toEqual(onDisk)
         expect(Object.keys(PINNED_SHA256).sort()).toEqual(onDisk)
@@ -510,5 +585,212 @@ describe('cap detail payload fixtures through their fetchers', () => {
         const detail = await fetchTeamCapDetail('', 'team-cap')
 
         expect(detail?.members).toEqual(runCompareFixture('teamCapDetailMembers').members)
+    })
+})
+
+function teamMembers(comparison: TeamComparison): TeamComparisonMember[] {
+    return [...comparison.runner.members, ...comparison.reference.members]
+}
+
+function teamTimes(comparison: TeamComparison): number[] {
+    return [
+        comparison.final_delta_ms,
+        comparison.runner.team_time_ms,
+        comparison.reference.team_time_ms,
+        ...teamMembers(comparison).map((member) => member.cap_time_ms),
+        ...comparison.team_splits.flatMap((split) => [split.reference_ms, split.runner_ms, split.delta_ms]),
+    ]
+}
+
+describe('team comparison fixtures', () => {
+    it.each(TEAM_NAMES)('%s has the team comparison shape with every time in integer milliseconds', (name) => {
+        const comparison = runCompareFixture(name)
+
+        expect(keysOf(comparison)).toEqual(keysOf(TEAM_COMPARISON_KEYS))
+        for (const team of [comparison.runner, comparison.reference]) {
+            expect(keysOf(team)).toEqual(keysOf(TEAM_KEYS))
+            for (const member of team.members) expect(keysOf(member)).toEqual(keysOf(TEAM_MEMBER_KEYS))
+            const order = team.members.map((member) => member.cap_time_ms)
+            expect(order).toEqual([...order].sort((a, b) => a - b))
+        }
+        for (const candidate of comparison.candidates) {
+            expect(keysOf(candidate)).toEqual(keysOf(TEAM_CANDIDATE_KEYS))
+            expect(TEAM_COMPARISON_BASES).toContain(candidate.basis)
+        }
+        for (const pair of comparison.pairs) {
+            expect(keysOf(pair)).toEqual(keysOf(TEAM_PAIR_KEYS))
+            expect(TEAM_COMPARISON_PAIR_STATES).toContain(pair.state)
+        }
+        for (const split of comparison.team_splits) expect(keysOf(split)).toEqual(keysOf(TEAM_SPLIT_KEYS))
+        expect(teamTimes(comparison).every(Number.isInteger)).toBe(true)
+        expect(comparison.final_delta_ms).toBe(comparison.runner.team_time_ms - comparison.reference.team_time_ms)
+    })
+
+    it.each(TEAM_NAMES)('%s ends its team splits on the cap at the official team times', (name) => {
+        const comparison = runCompareFixture(name)
+        const cap = comparison.team_splits.at(-1)
+        const official = [comparison.reference.team_time_ms, comparison.runner.team_time_ms]
+
+        expect(cap?.zone).toBe('CAP')
+        expect([cap?.reference_ms, cap?.runner_ms]).toEqual(official)
+        for (const split of comparison.team_splits) expect(split.delta_ms).toBe(split.runner_ms - split.reference_ms)
+    })
+
+    it.each(TEAM_NAMES)('%s pairs only members on the same side and lists every other member as unpaired', (name) => {
+        const comparison = runCompareFixture(name)
+        const side = new Map(teamMembers(comparison).map((member) => [member.cap_id, member.team]))
+        const paired = comparison.pairs.flatMap((pair) => [pair.runner_cap_id, pair.reference_cap_id])
+
+        for (const entry of [...comparison.candidates, ...comparison.pairs]) {
+            expect(side.get(entry.runner_cap_id)).not.toBeNull()
+            expect(side.get(entry.runner_cap_id)).toBe(side.get(entry.reference_cap_id))
+        }
+        expect([...paired, ...comparison.unpaired].sort()).toEqual([...side.keys()].sort())
+    })
+
+    it('pairs the aligned teams by route, against their member order', () => {
+        const comparison = runCompareFixture('teamAligned')
+        const runnerIds = comparison.runner.members.map((member) => member.cap_id)
+        const referenceIds = comparison.reference.members.map((member) => member.cap_id)
+        const positions = comparison.pairs.map((pair) => [
+            runnerIds.indexOf(pair.runner_cap_id),
+            referenceIds.indexOf(pair.reference_cap_id),
+        ])
+
+        expect(comparison.pairs.map((pair) => pair.state)).toEqual(['aligned', 'aligned'])
+        expect(positions).toEqual([
+            [1, 0],
+            [0, 1],
+        ])
+        expect(comparison.unpaired).toEqual([])
+    })
+
+    it('mixes a routes-differ pair, a zones pair, unpaired members and a member without an alias', () => {
+        const comparison = runCompareFixture('teamMixed')
+
+        expect(comparison.pairs.map((pair) => [pair.state, pair.basis])).toEqual([
+            ['routes_differ', 'ghost'],
+            ['zones', 'zones'],
+        ])
+        expect(comparison.unpaired.length).toBeGreaterThan(0)
+        expect(teamMembers(comparison).some((member) => member.alias === null)).toBe(true)
+        expect(comparison.team_splits.length).toBeGreaterThan(1)
+    })
+
+    it('compares teams on opposite sides on the final time only', () => {
+        const comparison = runCompareFixture('teamOppositeSides')
+
+        expect(new Set(comparison.runner.members.map((member) => member.team))).toEqual(new Set([0]))
+        expect(new Set(comparison.reference.members.map((member) => member.team))).toEqual(new Set([1]))
+        expect([comparison.candidates, comparison.pairs]).toEqual([[], []])
+        expect(comparison.team_splits.map((split) => split.zone)).toEqual(['CAP'])
+    })
+
+    it('covers every pair state across the team fixtures', () => {
+        const states = new Set(TEAM_NAMES.flatMap((name) => runCompareFixture(name).pairs.map((pair) => pair.state)))
+
+        expect(states).toEqual(new Set(TEAM_COMPARISON_PAIR_STATES))
+    })
+
+    it('shares its team members with the team cap detail fixture', () => {
+        const detail = runCompareFixture('teamCapDetailMembers')
+        const caps = new Map(detail.members.map((member) => [member.cap_id, member.cap]))
+        const joined = TEAM_NAMES.flatMap((name) => {
+            const comparison = runCompareFixture(name)
+            return [comparison.runner, comparison.reference].filter((team) => team.team_cap_id === detail.team_cap_id)
+        })
+
+        expect(joined.length).toBeGreaterThan(0)
+        for (const team of joined) {
+            expect(team.team_run_id).toBe(detail.team_run_id)
+            expect(new Set(team.members.map((member) => member.cap_id))).toEqual(new Set(caps.keys()))
+            for (const member of team.members) {
+                const cap = caps.get(member.cap_id)
+                expect([member.user, member.alias, member.team, member.has_ghost]).toEqual([
+                    cap?.user,
+                    cap?.alias,
+                    cap?.team,
+                    cap?.has_ghost,
+                ])
+                expect(member.has_zones).toBe(!!cap?.zone_checkpoints)
+            }
+        }
+    })
+
+    it('lists one error body per team comparison error code, in check order', () => {
+        const entries = runCompareTeamErrors()
+
+        expect(TYPED_TEAM_ERRORS).toEqual(entries)
+        expect(entries.map((entry) => entry.body.code)).toEqual([...TEAM_COMPARISON_ERROR_CODES])
+        expect(entries.map((entry) => entry.status)).toEqual([400, 404, 409])
+        for (const entry of entries) {
+            expect(keysOf(entry.body)).toEqual(['code', 'error', 'success'])
+            expect(entry.body.success).toBe(false)
+        }
+    })
+})
+
+describe('team comparison fetcher', () => {
+    it.each(TEAM_NAMES)('reads %s for a runner and a reference team cap', async (name) => {
+        const fetchMock = stubFetch(() => Promise.resolve(runCompareFixtureResponse(name)))
+
+        expect(await fetchTeamComparison('runner/1', 'reference 2')).toEqual(runCompareFixture(name))
+        const [url] = fetchMock.mock.calls[0] as [string]
+        expect(url).toMatch(/\/ghosts\/compare\/team\?runner=runner%2F1&reference=reference\+2&v=\d+$/)
+        expect(new URL(url, 'http://client.test').searchParams.get('v')).toBe(COMPARISON_READ_VERSION)
+    })
+
+    it('returns null when the read is aborted', async () => {
+        const controller = new AbortController()
+        stubFetch(() => Promise.reject(new DOMException('The operation was aborted.', 'AbortError')))
+        controller.abort()
+
+        expect(await fetchTeamComparison('a', 'b', controller.signal)).toBeNull()
+    })
+
+    it.each([...TEAM_COMPARISON_ERROR_CODES])('returns null on the %s error', async (code) => {
+        stubFetch(() => Promise.resolve(runCompareTeamErrorResponse(code)))
+
+        expect(await fetchTeamComparison('a', 'b')).toBeNull()
+    })
+
+    it('returns null on any other non-200 status', async () => {
+        stubFetch(() => Promise.resolve(new Response('upstream down', { status: 502 })))
+        expect(await fetchTeamComparison('a', 'b')).toBeNull()
+
+        stubFetch(() => Promise.resolve(new Response(JSON.stringify(teamCompareMixedFile), { status: 203 })))
+        expect(await fetchTeamComparison('a', 'b')).toBeNull()
+    })
+
+    it('returns null on a network error', async () => {
+        stubFetch(() => Promise.reject(new TypeError('Failed to fetch')))
+
+        expect(await fetchTeamComparison('a', 'b')).toBeNull()
+    })
+
+    it.each([
+        ['a body that is not json', () => new Response('not json', { status: 200 })],
+        ['a failed envelope', () => new Response(JSON.stringify({ ...teamCompareMixedFile, success: false }))],
+        ['a run comparison', () => runCompareFixtureResponse('aligned')],
+        ['a member without its zone flag', () => {
+            const comparison = runCompareFixture('teamMixed')
+            const { has_zones: _zones, ...member } = comparison.runner.members[0]
+            const data = { ...comparison, runner: { ...comparison.runner, members: [member] } }
+            return new Response(JSON.stringify({ success: true, data }), { status: 200 })
+        }],
+        ['a pair in an unknown state', () => {
+            const comparison = runCompareFixture('teamMixed')
+            const data = { ...comparison, pairs: [{ ...comparison.pairs[0], state: 'separated' }] }
+            return new Response(JSON.stringify({ success: true, data }), { status: 200 })
+        }],
+        ['team splits without the cap entry', () => {
+            const comparison = runCompareFixture('teamMixed')
+            const data = { ...comparison, team_splits: comparison.team_splits.slice(0, -1) }
+            return new Response(JSON.stringify({ success: true, data }), { status: 200 })
+        }],
+    ])('returns null on %s', async (_label, response) => {
+        stubFetch(() => Promise.resolve(response()))
+
+        expect(await fetchTeamComparison('a', 'b')).toBeNull()
     })
 })

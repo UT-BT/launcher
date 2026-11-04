@@ -34,7 +34,7 @@ The add-data-page and add-table-column skills (`.claude/skills/`) walk through 1
 
 | Tier | Gets | Read it from |
 |---|---|---|
-| Any touch device (`hover: none`), any width | the touch table/card rule, tap tooltips, 16 px form controls, pull-to-refresh, the map screenshot viewer, solid tints instead of full-screen blur, no nebula, at most two compare videos playing | `useDeviceEnvironment(env => env.touch)`; CSS `touch:` |
+| Any touch device (`hover: none`), any width | the touch table/card rule, tap tooltips, 16 px form controls, pull-to-refresh, the map screenshot viewer, solid tints instead of full-screen blur, no nebula; on a phone or a tablet in portrait, the compare page's one- or two-tile views | `useDeviceEnvironment(env => env.touch)`; CSS `touch:` |
 | Touch and below `lg` (1024 px) | hide-on-scroll bars; in portrait, the bottom tab bar | `env.touch && env.belowLg` (`hidesBarsOnScroll` in `AppLayout.tsx`, `showsBottomTabs` in `bottomTabs.ts`) |
 | Below `lg`, any pointer | the drawer and top bar instead of the rail | CSS `max-lg:`; `env.belowLg` |
 | Below `sm` (640 px), or a touch screen under 640 px tall | modals open as full-screen sheets | `app/styles/modal.css` |
@@ -51,7 +51,7 @@ standalone mode and the current `visualViewport` (scale, offsets, size). Compone
 `useDeviceEnvironment(select)`, other code `getDeviceEnvironment()` and
 `subscribeDeviceEnvironment()`; the pure parts and the query strings are in
 `app/device/deviceEnvironment.ts` (Vitest beside it). DataTable, the tooltip, the shell, the
-sheet modal, the compare player and the diagnostic overlay all read it. API and selector rules:
+sheet modal, the compare page's stage and the diagnostic overlay all read it. API and selector rules:
 [web-target.md](web-target.md#responsive-layout), Device environment.
 
 ## One scroller
@@ -161,11 +161,27 @@ matters. Details: [state-patterns.md](state-patterns.md#refresh-handlers-and-pul
   that matters goes inline on touch, read from the device environment at the call site
   ([shared-components.md](shared-components.md#ui-primitives-appcomponentsui);
   `e2e/mobile/tap-tooltips.spec.ts`).
-- **Video and effects.** Every `<video>` plays inline; on touch, the compare player plays at most
-  two runs and shows posters for the rest, its clock runs outside React state, full-screen blur
-  becomes a solid tint and the nebula is off
-  ([records.md](features/records.md#comparison-player), [styling.md](styling.md#css-runtime-cost);
-  `e2e/video-compare.spec.ts`, `e2e/nebula.spec.ts`).
+- **Video and effects.** Every `<video>` plays inline. Compare page videos start muted and at
+  most one plays sound; on a phone, and on a tablet in portrait, only the visible tiles stream: a
+  hidden tile drops its `src` and reloads empty, and a revealed one seeks to the master clock. A
+  touch screen in landscape from 1024 px keeps the full grid. The page's playback clock runs
+  outside React state.
+  On touch, full-screen blur becomes a solid tint and the nebula is off
+  ([run-compare.md](features/run-compare.md#mobile), [styling.md](styling.md#css-runtime-cost);
+  `e2e/run-compare-responsive.spec.ts`, `e2e/nebula.spec.ts`).
+- **Swipe between views** (the compare page's POV switcher): a `role="group"` of 44 px chips, one
+  per view with `aria-pressed`, that scrolls sideways inside itself, plus a horizontal swipe on the
+  content (`stage/useSwipe.ts`: the primary pointer only, at least 48 px and twice as long along
+  its axis as across it, cancelled by a second finger). The swipe area keeps
+  `touch-action: pan-y pinch-zoom`, so a vertical swipe still scrolls the page and pinch-zoom
+  still works. Every swipe has a tappable control beside it.
+- **A non-modal panel as a bottom sheet** (the compare page's Runs drawer): a panel the page stays
+  usable behind is not a `ui/modal.tsx` sheet. It keeps `useModalBehaviour` without the scroll lock
+  (so it still takes an overlay history entry, focus and Escape) and adopts the sheet's rules: fixed
+  to the bottom edge above the tab bar, safe-area padding, a sticky header with a handle and the
+  close button, a swipe down on the header to close (`touch-action: none` on the header only), the
+  sheet's `sheetBounds` to stay above the keyboard, and contained overscroll. Use it only on phone
+  portrait; in landscape a full-height side panel fits better.
 - **Wide content** keeps a sideways scroller of its own: the elimination bracket snaps round by
   round below `lg` with sticky round names ([events.md](features/events.md#elimination-stage-on-phones);
   `e2e/mobile/bracket-snap.spec.ts`), and on touch the map hero's screenshot opens the pinch-zoom viewer
@@ -250,15 +266,15 @@ says otherwise. When a check fails, capture a report in the broken state and att
 - [ ] **Pinch zoom in and out.** Pinch-zoom a page in, pan around, then zoom back out to normal:
       `Viewport scale` returns to 1, `Window scroll` returns to `0, 0`, and the top bar, menu and
       page scrolling all work.
-- [ ] **The owner's sequence.** On a cap page, open Compare runs, rotate to landscape, pinch-zoom
+- [ ] **The owner's sequence.** On a cap page, open Watch Replay, rotate to landscape, pinch-zoom
       in and out, rotate back: the modal still fits, its close button works, the menu opens and
       the page scrolls from top to bottom afterwards.
 - [ ] **Rotation during video.** Watch a replay: it plays inside the page. Rotate to landscape and
       back, then close it: the layout recovers.
 - [ ] **Keyboard.** Focus a text field inside a sheet (for example Create a Team): the page does
       not zoom, the field stays visible above the keyboard, and closing the keyboard leaves the
-      layout as it was. Focusing the map search, a multi-filter search or the compare nudge input
-      doesn't zoom either, and after the keyboard closes on a page search field the page isn't
+      layout as it was. Focusing the map search, a multi-filter search or the compare page's
+      Search Players box doesn't zoom either, and after the keyboard closes on a page search field the page isn't
       left shifted.
 - [ ] **Reload app.** The drawer's Reload app reloads the same page.
 
@@ -268,8 +284,8 @@ says otherwise. When a check fails, capture a report in the broken state and att
       dropdown while it is still moving: the page stops. Swiping past either end of a sheet's body
       doesn't bounce or move the page. Landscape sheets use the full height.
 - [ ] **Edge swipe back.** On a detail page, swipe in from the left screen edge: the app goes back
-      one page and the drawer doesn't open. With a sheet (Compare runs) or the drawer open, the
-      swipe closes it first and the next swipe goes back. A swipe back from a page opened by a
+      one page and the drawer doesn't open. With a sheet (Watch Replay, the compare page's Runs
+      sheet) or the drawer open, the swipe closes it first and the next swipe goes back. A swipe back from a page opened by a
       drawer link returns to the page the drawer was opened on. On Android Chrome the system back
       gesture does the same, and with the maps tutorial card open on a first visit, Back closes
       the card and keeps the page.
@@ -284,7 +300,7 @@ says otherwise. When a check fails, capture a report in the broken state and att
 - [ ] **Pull-to-refresh.** A pull at the top shows the badge coming out from under the top bar,
       turns accent past about 70 px and spins on release; the page doesn't rubber-band, and a
       flick up still scrolls. A deliberate pull arms every time. Nothing happens with a sheet or
-      the tutorial open, or on the Compare runs scrubber.
+      the tutorial open, or on the compare page's timeline.
 - [ ] **VoiceOver.** Closing a sheet, the sign-out confirm or the tutorial returns focus to the
       control that opened it.
 
@@ -298,10 +314,11 @@ says otherwise. When a check fails, capture a report in the broken state and att
       the card doesn't navigate.
 - [ ] **Cap tables.** The cap page's split, sector and speed tables show every column at 360–390 px
       with Safari's digits.
-- [ ] **Team compare.** A team cap with four or more runs compares smoothly with two videos
-      playing; tapping a poster swaps it in, and the app doesn't reload. A second swap late in
-      playback doesn't throw the cursor back; after pausing, swapping a run back in and tapping
-      Play, every pane plays; an unmuted run swapped out and back in during playback plays.
+- [ ] **Compare page.** Open a comparison from a cap page's Compare, and Watch Team Run on a team
+      cap with four or more members: one tile plays; swiping between POVs or tapping a chip lands
+      in sync, during playback too, and the app doesn't reload. The compact transport and its rate
+      menu are comfortable to tap, the Runs sheet swipes closed from its header, and a vertical
+      swipe on the stage scrolls the page. In landscape two runs play side by side.
 - [ ] **Bracket.** On an event with an elimination stage, a momentum swipe across the bracket lands
       on a round edge, and the round names stay under the top bar while scrolling down.
 - [ ] **Screenshot viewer.** Tap a map's hero screenshot: pinch-zoom and pan feel natural, a double

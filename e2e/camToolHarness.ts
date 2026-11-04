@@ -125,6 +125,7 @@ function HarnessNavigation({ children }: { children: ReactNode }) {
         entry: { id: 1, view: 'event-detail', params: {}, state },
         currentView: 'event-detail',
         navigate: () => undefined,
+        replaceParams: () => undefined,
         back: () => undefined,
         forward: () => undefined,
         canBack: false,

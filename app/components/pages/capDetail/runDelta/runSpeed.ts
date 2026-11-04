@@ -135,3 +135,20 @@ export function runSpeed(comparison: CapComparison): RunSpeed {
         },
     }
 }
+
+export function speedAt(segments: readonly CapComparisonSpeedPoint[][], ms: number): number | null {
+    for (const points of segments) {
+        if (points.length === 0 || ms < points[0][0] || ms > points[points.length - 1][0]) continue
+        let lo = 0
+        let hi = points.length - 1
+        while (hi - lo > 1) {
+            const mid = (lo + hi) >> 1
+            if (points[mid][0] <= ms) lo = mid
+            else hi = mid
+        }
+        const [t0, v0] = points[lo]
+        const [t1, v1] = points[hi]
+        return t1 === t0 ? v0 : v0 + ((ms - t0) / (t1 - t0)) * (v1 - v0)
+    }
+    return null
+}

@@ -44,6 +44,19 @@ async function expectLayout(page: Page, width: number, expected: string[] | 'car
     await expect(main.getByRole('columnheader'), `headers at ${width}px`).toHaveText(expected)
 }
 
+test.describe('World Records header', () => {
+    test('Compare Runs opens the compare start view', async ({ page }) => {
+        await open(page)
+        const link = page.getByRole('main').getByRole('link', { name: 'Compare Runs' })
+        await expect(link).toBeVisible()
+        await expect(link).toHaveAttribute('href', '/compare')
+
+        await link.click()
+        await expect.poll(() => new URL(page.url()).pathname).toBe('/compare')
+        await expect(page.getByRole('heading', { name: 'Pick a Map' })).toBeVisible()
+    })
+})
+
 test.describe('World Records table on desktop', () => {
     test('records keep every column at 1920 and 1280 and drop optional ones by priority below', async ({ page, isMobile }) => {
         test.skip(isMobile, 'desktop layout only')

@@ -627,6 +627,7 @@ export function MapsPage({
     const [expandedTagMaps, setExpandedTagMaps] = useState<Set<string>>(() => new Set())
     const [videoModal, setVideoModal] = useState<{
         video: ReplayVideo
+        capId: string
         mapName: string
         time?: number
         alias?: string
@@ -2401,6 +2402,7 @@ export function MapsPage({
                         setReplayPickerMap(null)
                         setVideoModal({
                             video,
+                            capId: entry.id,
                             mapName,
                             time: entry.cap_time_seconds,
                             alias: entry.alias,
@@ -2439,7 +2441,7 @@ export function MapsPage({
                         </button>
                     </Tooltip>
                 ) : undefined}
-                footer={<ReplayVideoFooter video={videoModal?.video ?? null} />}
+                footer={<ReplayVideoFooter video={videoModal?.video ?? null} capId={videoModal?.capId} />}
             >
                 {videoModal && <ReplayVideoPlayer url={videoModal.video.mp4_url} />}
             </Modal>

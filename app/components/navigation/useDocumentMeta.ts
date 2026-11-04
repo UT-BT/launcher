@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { IS_WEB } from '@/app/platform'
-import { viewToPath } from './routes'
+import { canonicalPath } from './routes'
 import { titleForRoute } from './titles'
 import type { NavParams } from './NavigationContext'
 
@@ -21,13 +21,17 @@ function setCanonical(href: string): void {
  * navigation after it. Deliberately does not touch `og:*` — crawlers never run
  * JS, so updating those client-side costs bytes and buys nothing.
  */
-export function useDocumentMeta(view: string, params: NavParams): void {
-    const path = viewToPath(view, params)
+export function useDocumentMeta(view: string, params: NavParams, entryId: number): void {
+    const title = titleForRoute(view, params)
+    const path = canonicalPath(view, params)
     useEffect(() => {
         if (!IS_WEB) return
-        document.title = titleForRoute(view, params)
+        document.title = title
+    }, [view, title, entryId])
+    useEffect(() => {
+        if (!IS_WEB) return
         setCanonical(window.location.origin + path)
-    }, [view, params, path])
+    }, [path, entryId])
 }
 
 /**

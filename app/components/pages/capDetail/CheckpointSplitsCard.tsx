@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useMemo, useState } from 'react'
+import { Columns2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCapTime } from '@/app/utils/format'
 import {
@@ -24,6 +25,7 @@ import { differentLineNote } from './runDelta/runDeltaCopy'
 import { sectorZoom, zoomPair, type SpeedZoom } from './runDelta/speedZoom'
 import { useRunMotion } from './runDelta/useRunMotion'
 import { useNavState } from '@/app/components/navigation/useNavState'
+import { CompareLink } from '@/app/components/shared/CompareLink'
 
 const CheckpointDeltaChart = lazy(() => import('./CheckpointDeltaChart'))
 const RunDeltaChart = lazy(() => import('./runDelta/RunDeltaChart'))
@@ -40,6 +42,7 @@ interface CheckpointSplitsCardProps {
     candidates: CapCompareCandidate[]
     selectedCompareId: string | null
     onSelectCompare: (id: string | null) => void
+    canCompare: boolean
     comparing: boolean
     comparison: ComparisonResult | null
 }
@@ -150,6 +153,24 @@ function ReplayView({ card, runnerLabel, referenceLabel, runnerCapId, referenceC
     )
 }
 
+function WatchSideBySide({ capId, targetId }: { capId: string; targetId: string | null }) {
+    return (
+        <CompareLink
+            runs={targetId ? [capId, targetId] : []}
+            className={cn(
+                'inline-flex items-center gap-1.5 h-7 touch:h-11 px-2.5 shrink-0 whitespace-nowrap rounded-md border text-xs font-semibold transition-colors',
+                'bg-rose-500/15 border-rose-500/40 text-rose-200',
+                targetId
+                    ? 'cursor-pointer hover:bg-rose-500/25 hover:text-foreground hover:border-rose-500/60'
+                    : 'opacity-50 cursor-not-allowed',
+            )}
+        >
+            <Columns2 className="size-3.5" />
+            Watch Side by Side
+        </CompareLink>
+    )
+}
+
 function LoadingView() {
     return (
         <div className="flex flex-col xl:flex-row xl:h-[460px] gap-3 p-3" aria-busy="true">
@@ -161,7 +182,7 @@ function LoadingView() {
 
 export function CheckpointSplitsCard({
     capId, capHasReplay, hasCheckpoints, checkpoints = [], capTime, baseline, baselineTime, baselineLabel,
-    candidates, selectedCompareId, onSelectCompare, comparing, comparison,
+    candidates, selectedCompareId, onSelectCompare, canCompare, comparing, comparison,
 }: CheckpointSplitsCardProps) {
     const target = useMemo(
         () => candidates.find(c => c.id === selectedCompareId) ?? null,
@@ -186,14 +207,17 @@ export function CheckpointSplitsCard({
                     {view.kind !== 'none' && <RunDeltaChip chip={view.chip} />}
                 </div>
                 {hasCandidates && (
-                    <div className="w-full lg:w-auto xl:absolute xl:right-4">
-                        <ComparePicker
-                            candidates={candidates}
-                            capHasReplay={capHasReplay}
-                            selectedId={selectedCompareId}
-                            onSelect={onSelectCompare}
-                            busy={comparing || view.kind === 'loading'}
-                        />
+                    <div className="w-full lg:w-auto flex flex-wrap items-center justify-end gap-2">
+                        <div className="w-full sm:w-auto sm:flex-1 min-w-0">
+                            <ComparePicker
+                                candidates={candidates}
+                                capHasReplay={capHasReplay}
+                                selectedId={selectedCompareId}
+                                onSelect={onSelectCompare}
+                                busy={comparing || view.kind === 'loading'}
+                            />
+                        </div>
+                        <WatchSideBySide capId={capId} targetId={canCompare ? selectedCompareId : null} />
                     </div>
                 )}
             </div>

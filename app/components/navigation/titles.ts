@@ -53,6 +53,8 @@ export function titleForRoute(view: string, params: NavParams): string {
             return `News — ${SITE_NAME}`
         case 'admin':
             return `Admin — ${SITE_NAME}`
+        case 'run-compare':
+            return `Compare Runs — ${SITE_NAME}`
         default:
             return SITE_NAME
     }

@@ -3,7 +3,7 @@ import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { Play, Download, MessageSquareOff, ShieldCheck, ShieldAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavState } from '@/app/components/navigation/useNavState'
-import { formatAddedDate } from '@/app/utils/format'
+import { formatAddedDate, formatCapTime } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
 import { getTeamDisplay } from '@/app/utils/team'
 import { medalIconForInt, medalLabelForInt } from '@/app/components/pages/capDetail/capStats'
@@ -31,6 +31,7 @@ import { PaginationBar } from '@/app/components/ui/pagination'
 import type { LeaderboardEntry, TeamLeaderboardEntry, MapMetadata } from '@/app/utils/api'
 import { isCertifiedCap } from '@/app/utils/capTypes'
 import { teamRunStateLabel } from '@/app/utils/teamRunState'
+import { canTick, soloCandidate, teamCandidate, toggled, type CompareCandidate, type CompareSelection } from './compareSelection'
 
 const ReplayVideoModal = lazy(() => import('@/app/components/shared/ReplayVideoModal').then(m => ({ default: m.ReplayVideoModal })))
 const DemoDownloadStatusModal = lazy(() => import('@/app/components/shared/DemoDownloadStatusModal').then(m => ({ default: m.DemoDownloadStatusModal })))
@@ -48,6 +49,12 @@ interface LeaderboardCardProps {
     currentUserId?: string | number
     wrCapId?: string | null
     onShowWrHistory?: () => void
+    compare: LeaderboardCompare
+}
+
+export interface LeaderboardCompare {
+    selection: CompareSelection
+    onChange: (ids: string[]) => void
 }
 
 export function LeaderboardCard(props: LeaderboardCardProps) {
@@ -58,6 +65,7 @@ export function LeaderboardCard(props: LeaderboardCardProps) {
                 teamLeaderboard={props.teamLeaderboard ?? []}
                 loading={props.loading}
                 currentUserId={props.currentUserId}
+                compare={props.compare}
             />
         )
     }
@@ -70,11 +78,12 @@ const TABS: { value: Tab; label: string }[] = [
     { value: 'all', label: 'All' },
 ]
 
-type LeaderboardColumnId = 'rank' | 'player' | 'team' | 'medal' | 'time' | 'date' | 'watch' | 'download'
+type LeaderboardColumnId = 'select' | 'rank' | 'player' | 'team' | 'medal' | 'time' | 'date' | 'watch' | 'download'
 
-const LEADERBOARD_COLUMNS: LeaderboardColumnId[] = ['rank', 'player', 'medal', 'time', 'team', 'date', 'watch', 'download']
+const LEADERBOARD_COLUMNS: LeaderboardColumnId[] = ['select', 'rank', 'player', 'medal', 'time', 'team', 'date', 'watch', 'download']
 
 const COLUMN_WIDTH: Record<LeaderboardColumnId, string | undefined> = {
+    select: '3rem',
     rank: '4rem',
     player: undefined,
     team: '5rem',
@@ -93,9 +102,10 @@ const COLUMN_PRIORITY: Partial<Record<LeaderboardColumnId, number>> = {
     download: 10,
 }
 
-const REQUIRED_COLUMNS = new Set<LeaderboardColumnId>(['player', 'rank', 'time'])
+const REQUIRED_COLUMNS = new Set<LeaderboardColumnId>(['select', 'player', 'rank', 'time'])
 
 const COLUMN_TIER: Record<LeaderboardColumnId, ColumnTier> = {
+    select: 'essential',
     rank: 'essential',
     player: 'essential',
     medal: 'essential',
@@ -107,6 +117,7 @@ const COLUMN_TIER: Record<LeaderboardColumnId, ColumnTier> = {
 }
 
 const COLUMN_LABEL: Record<LeaderboardColumnId, string> = {
+    select: 'Select',
     rank: 'Rank',
     player: 'Player',
     medal: 'Medal',
@@ -127,6 +138,7 @@ const SORT_FIELD: Partial<Record<LeaderboardColumnId, SortField>> = {
 type CellLayout = { align?: 'left' | 'center' | 'right'; className?: string }
 
 const CELL_LAYOUT: Partial<Record<LeaderboardColumnId, CellLayout>> = {
+    select: { align: 'center' },
     rank: { align: 'right' },
     medal: { align: 'center' },
     time: { align: 'right' },
@@ -174,6 +186,23 @@ function AddedDateCell({ added }: { added: string }) {
     )
 }
 
+function CompareTick({ candidate, label, compare }: { candidate: CompareCandidate; label: string; compare: LeaderboardCompare }) {
+    const { selection, onChange } = compare
+    return (
+        <label className="-m-2 flex size-11 shrink-0 items-center justify-center cursor-pointer">
+            <input
+                type="checkbox"
+                checked={selection.ids.includes(candidate.id)}
+                disabled={!canTick(selection, candidate)}
+                onChange={() => onChange(toggled(selection, candidate))}
+                aria-label={label}
+                style={{ colorScheme: 'dark' }}
+                className="size-4 accent-accent-500 cursor-pointer"
+            />
+        </label>
+    )
+}
+
 function CardSkeleton({ height }: { height: string }) {
     return Array.from({ length: 5 }).map((_, i) => (
         <div key={i} className={cn('mx-3 my-2 rounded-lg bg-hairline/5 animate-pulse', height)} />
@@ -181,7 +210,7 @@ function CardSkeleton({ height }: { height: string }) {
 }
 
 function SoloLeaderboardTable({
-    leaderboard, map, loading, currentUserId, wrCapId, onShowWrHistory,
+    leaderboard, map, loading, currentUserId, wrCapId, onShowWrHistory, compare,
 }: LeaderboardCardProps) {
     const [tab, setTab] = useNavState<Tab>('leaderboard.tab', 'verified')
     const [sortBy, setSortBy] = useNavState<SortField>('leaderboard.sortBy', 'rank')
@@ -252,6 +281,14 @@ function SoloLeaderboardTable({
 
     const soloCell = (id: LeaderboardColumnId, { entry, rank }: SoloRow): React.ReactNode => {
         switch (id) {
+            case 'select':
+                return (
+                    <CompareTick
+                        candidate={soloCandidate(entry)}
+                        label={`Compare ${entry.alias ?? entry.user}, ${formatCapTime(entry.cap_time_seconds)}`}
+                        compare={compare}
+                    />
+                )
             case 'rank':
                 return <RankCell rank={rank} />
             case 'player':
@@ -345,12 +382,15 @@ function SoloLeaderboardTable({
     }))
 
     const soloFace = (row: SoloRow) => (
-        <div className="grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-3">
-            <span className="text-right">{soloCell('rank', row)}</span>
-            {soloCell('player', row)}
-            <div className="flex items-center gap-1.5">
-                {soloCell('medal', row)}
-                {soloCell('time', row)}
+        <div className="flex items-center gap-3">
+            {soloCell('select', row)}
+            <div className="grid min-w-0 flex-1 grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-3">
+                <span className="text-right">{soloCell('rank', row)}</span>
+                {soloCell('player', row)}
+                <div className="flex items-center gap-1.5">
+                    {soloCell('medal', row)}
+                    {soloCell('time', row)}
+                </div>
             </div>
         </div>
     )
@@ -409,6 +449,9 @@ function SoloLeaderboardTable({
                     }}
                 >
                     <DataTableHeaderRow>
+                        {isVisible('select') && (
+                            <DataTableHeaderCell align="center" width="3rem"><span className="sr-only">Select</span></DataTableHeaderCell>
+                        )}
                         {isVisible('rank') && (
                             <DataTableHeaderCell
                                 sortable
@@ -533,9 +576,10 @@ const TEAM_TABS: { value: TeamTab; label: string }[] = [
     { value: 'all', label: 'All' },
 ]
 
-type TeamColumnId = 'rank' | 'team' | 'medal' | 'time' | 'status' | 'date'
+type TeamColumnId = 'select' | 'rank' | 'team' | 'medal' | 'time' | 'status' | 'date'
 
 const TEAM_LEADERBOARD_COLUMNS: (Omit<ResponsiveColumn, 'id'> & { id: TeamColumnId; align?: CellLayout['align'] })[] = [
+    { id: 'select', width: '3rem', required: true, tier: 'essential', label: 'Select', align: 'center' },
     { id: 'rank', width: '4rem', required: true, tier: 'essential', label: 'Rank', sortKey: 'rank', align: 'right' },
     { id: 'team', width: '10rem', required: true, tier: 'essential', label: 'Team' },
     { id: 'medal', width: '3rem', required: true, tier: 'essential', label: 'Medal', align: 'center' },
@@ -555,10 +599,11 @@ interface TeamLeaderboardTableProps {
     currentUserId?: string | number
     highlightTeamCapId?: string | null
     highlightMemberKey?: string | number | null
+    compare: LeaderboardCompare
 }
 
 export function TeamLeaderboardTable({
-    teamLeaderboard, loading, currentUserId, highlightTeamCapId, highlightMemberKey,
+    teamLeaderboard, loading, currentUserId, highlightTeamCapId, highlightMemberKey, compare,
 }: TeamLeaderboardTableProps) {
     const [tab, setTab] = useNavState<TeamTab>('teamLeaderboard.tab', 'verified')
     const [sortBy, setSortBy] = useNavState<TeamSortField>('teamLeaderboard.sortBy', 'rank')
@@ -623,6 +668,14 @@ export function TeamLeaderboardTable({
 
     const teamCell = (id: TeamColumnId, { entry, rank }: TeamRow): React.ReactNode => {
         switch (id) {
+            case 'select':
+                return (
+                    <CompareTick
+                        candidate={teamCandidate(entry)}
+                        label={`Compare ${(entry.members ?? []).map(member => member.alias ?? member.user).join(' & ')}, ${formatCapTime(entry.cap_time_seconds)}`}
+                        compare={compare}
+                    />
+                )
             case 'rank':
                 return <RankCell rank={rank} />
             case 'team':
@@ -690,12 +743,15 @@ export function TeamLeaderboardTable({
     }))
 
     const teamFace = (row: TeamRow) => (
-        <div className="grid grid-cols-[2rem_minmax(0,1fr)_auto] items-start gap-3">
-            <span className="pt-1 text-right">{teamCell('rank', row)}</span>
-            {teamCell('team', row)}
-            <div className="flex items-center gap-1.5 pt-0.5">
-                {teamCell('medal', row)}
-                {teamCell('time', row)}
+        <div className="flex items-start gap-3">
+            {teamCell('select', row)}
+            <div className="grid min-w-0 flex-1 grid-cols-[2rem_minmax(0,1fr)_auto] items-start gap-3">
+                <span className="pt-1 text-right">{teamCell('rank', row)}</span>
+                {teamCell('team', row)}
+                <div className="flex items-center gap-1.5 pt-0.5">
+                    {teamCell('medal', row)}
+                    {teamCell('time', row)}
+                </div>
             </div>
         </div>
     )
@@ -753,6 +809,7 @@ export function TeamLeaderboardTable({
                     }}
                 >
                     <DataTableHeaderRow>
+                        <DataTableHeaderCell align="center" width="3rem"><span className="sr-only">Select</span></DataTableHeaderCell>
                         <DataTableHeaderCell
                             sortable
                             sortDirection={dir('rank')}
@@ -787,10 +844,10 @@ export function TeamLeaderboardTable({
                     <tbody>
                         {loading ? (
                             Array.from({ length: 5 }).map((_, i) => (
-                                <DataTableSkeletonRow key={i} columnCount={6} />
+                                <DataTableSkeletonRow key={i} columnCount={TEAM_LEADERBOARD_COLUMNS.length} />
                             ))
                         ) : pageRows.length === 0 ? (
-                            <DataTableEmpty colSpan={6} message="No team runs yet." />
+                            <DataTableEmpty colSpan={TEAM_LEADERBOARD_COLUMNS.length} message="No team runs yet." />
                         ) : (
                             pageRows.map(row => (
                                 <DataTableRow key={row.entry.id} className={cn(isHighlighted(row.entry) && 'bg-emerald-500/[0.05]')}>

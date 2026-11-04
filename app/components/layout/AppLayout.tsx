@@ -28,6 +28,7 @@ import { PageRefreshProvider } from '@/app/components/navigation/PageRefreshCont
 
 import { UserProfile } from '@/app/utils/api'
 import { usePatreonTier } from '@/app/utils/patreon'
+import { isTypingTarget } from '@/app/utils/typingTarget'
 import { IS_WEB, usePlatform } from '@/app/platform'
 import { SeasonalAmbient } from '@/app/seasonal/lazyDecor'
 import { useSeason } from '@/app/seasonal/SeasonProvider'
@@ -39,7 +40,7 @@ import { SidebarNavItem } from '@/app/components/layout/sidebar/SidebarNavItem'
 import { SidebarReloadApp } from '@/app/components/layout/sidebar/SidebarReloadApp'
 import { SidebarUserCard } from '@/app/components/layout/sidebar/SidebarUserCard'
 import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
-import { readSidebarCollapsed, writeSidebarCollapsed } from '@/app/components/layout/sidebarPreference'
+import { readSidebarCollapsed, THEATER_VIEWS, writeSidebarCollapsed } from '@/app/components/layout/sidebarPreference'
 import { useDesktopPromo } from '@/app/components/desktopPromo/useDesktopPromo'
 import { DiagnosticOverlayTrigger } from '@/app/device/diagnostics/DiagnosticOverlayTrigger'
 
@@ -52,10 +53,6 @@ function isBelowLg(environment: DeviceEnvironment): boolean {
 
 function hidesBarsOnScroll(environment: DeviceEnvironment): boolean {
     return environment.touch && environment.belowLg
-}
-
-function isTypingTarget(target: EventTarget | null): boolean {
-    return target instanceof HTMLElement && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
 }
 
 function isToggleShortcut(event: KeyboardEvent): boolean {
@@ -81,7 +78,9 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
     const [mobileNavOpen, setMobileNavOpen] = useState(false)
     const isMobileViewport = useDeviceEnvironment(isBelowLg)
     const [collapsePreference, setCollapsePreference] = useState(readSidebarCollapsed)
-    const collapsed = collapsePreference && !isMobileViewport
+    const [theaterExpanded, setTheaterExpanded] = useState(false)
+    const theater = THEATER_VIEWS.has(currentView)
+    const collapsed = !isMobileViewport && (theater ? !theaterExpanded : collapsePreference)
     const mobileMenuButtonRef = useRef<HTMLButtonElement>(null)
     const drawerOpenerRef = useRef<HTMLElement | null>(null)
     const sidebarRef = useRef<HTMLElement>(null)
@@ -147,10 +146,14 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
     }, [isMobileViewport, collapsed])
 
     const toggleCollapsed = useCallback(() => {
+        if (theater) {
+            setTheaterExpanded(expanded => !expanded)
+            return
+        }
         const next = !collapsePreference
         writeSidebarCollapsed(next)
         setCollapsePreference(next)
-    }, [collapsePreference])
+    }, [collapsePreference, theater])
 
     useEffect(() => {
         if (isMobileViewport) return

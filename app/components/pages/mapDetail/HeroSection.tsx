@@ -1,8 +1,9 @@
 import { lazy, useState } from 'react'
-import { Download, Calendar, Star, Sparkles, User, Users, ImagePlus } from 'lucide-react'
+import { Download, Calendar, Star, Sparkles, User, Users, ImagePlus, Columns2 } from 'lucide-react'
 import { Spinner } from '@/app/components/ui/spinner'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { CompareStartLink } from '@/app/components/shared/CompareLink'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { MetaPill } from '@/app/components/shared/MetaPill'
 import { cn } from '@/lib/utils'
@@ -125,6 +126,13 @@ export function HeroSection({
                                 )}
                                 {isDownloading ? 'Downloading…' : 'Download Map'}
                             </button>
+                            <CompareStartLink
+                                map={mapName}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 touch:h-11 rounded-md bg-card/60 border border-hairline/15 text-foreground hover:bg-hairline/10 hover:border-hairline/25 transition-colors text-xs font-semibold cursor-pointer"
+                            >
+                                <Columns2 className="size-3.5" />
+                                Compare Runs
+                            </CompareStartLink>
                         </div>
                     </div>
 

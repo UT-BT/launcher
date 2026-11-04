@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, Download, Play, Columns2, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Download, Play, X } from 'lucide-react'
 import { Spinner } from '@/app/components/ui/spinner'
-import { cn } from '@/lib/utils'
 import { Modal } from '@/app/components/ui/modal'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
@@ -16,7 +15,7 @@ import {
 import { computeMedalTier, TIER_ICONS, TIER_LABELS, type MedalTier } from '@/app/components/pages/maps/medals'
 import { formatCapTime, displayMapName } from '@/app/utils/format'
 import {
-    cacheReplayRows, cacheReplayVideo, cachedReplayRows, replayRowsFromLeaderboard, withoutCap, withReplayVideo,
+    cacheReplayRows, cacheReplayVideo, cachedReplayRows, replayRowsFromLeaderboard, withReplayVideo,
     type RunRow,
 } from './replayPickerCache'
 
@@ -28,22 +27,17 @@ interface ReplayPickerModalProps {
     mapName: string | null
     mapMetadata?: MapMetadata
     onSelect: (video: ReplayVideo, mapName: string, entry: LeaderboardEntry) => void
-    compareMode?: boolean
-    excludeCapId?: string
 }
 
 const PAGE_SIZE = 10
 
-function NoReplayIndicator({ padded = false }: { padded?: boolean }) {
+function NoReplayIndicator() {
     return (
         <Tooltip content="No replay available" side="top">
             <span
                 role="img"
                 aria-label="No replay available"
-                className={cn(
-                    'inline-flex items-center justify-center text-rose-400/50 shrink-0',
-                    padded ? 'size-7 rounded-md' : 'size-4',
-                )}
+                className="inline-flex items-center justify-center text-rose-400/50 shrink-0 size-7 rounded-md"
             >
                 <X className="size-5" aria-hidden="true" />
             </span>
@@ -53,7 +47,6 @@ function NoReplayIndicator({ padded = false }: { padded?: boolean }) {
 
 export function ReplayPickerModal({
     open, onClose, accessToken, userId, mapName, mapMetadata, onSelect,
-    compareMode = false, excludeCapId,
 }: ReplayPickerModalProps) {
     const [loading, setLoading] = useState(false)
     const [rows, setRows] = useState<RunRow[]>([])
@@ -64,7 +57,7 @@ export function ReplayPickerModal({
     const pageRef = useRef(1)
     pageRef.current = page
 
-    const isTeam = !compareMode && (mapMetadata?.required_players ?? 1) > 1
+    const isTeam = (mapMetadata?.required_players ?? 1) > 1
 
     const demoDownload = useDemoDownload()
 
@@ -101,7 +94,7 @@ export function ReplayPickerModal({
         }
 
         setTeamRuns([])
-        const cached = cachedReplayRows(mapName, excludeCapId)
+        const cached = cachedReplayRows(mapName)
         if (cached) {
             setRows(cached)
             setLoading(false)
@@ -117,7 +110,7 @@ export function ReplayPickerModal({
                 if (cancelled || requestRef.current !== myRequest) return
                 const all = replayRowsFromLeaderboard(leaderboard)
                 cacheReplayRows(mapName, all)
-                setRows(withoutCap(all, excludeCapId))
+                setRows(all)
                 setLoading(false)
             } catch {
                 if (cancelled || requestRef.current !== myRequest) return
@@ -129,7 +122,7 @@ export function ReplayPickerModal({
         return () => {
             cancelled = true
         }
-    }, [open, mapName, accessToken, excludeCapId, isTeam])
+    }, [open, mapName, accessToken, isTeam])
 
     // Fetch replay videos with a small worker pool, prioritizing the visible
     // page so users don't wait for off-page rows before seeing playability.
@@ -191,9 +184,7 @@ export function ReplayPickerModal({
         <Modal
             isOpen={open}
             onClose={onClose}
-            title={compareMode
-                ? (mapName ? `Compare run — ${displayMapName(mapName)}` : 'Compare run')
-                : (mapName ? `Replays — ${displayMapName(mapName)}` : 'Replays')}
+            title={mapName ? `Replays — ${displayMapName(mapName)}` : 'Replays'}
             offsetSidebar
             maxWidth="640px"
             className="bg-card/98 border-hairline/5"
@@ -252,36 +243,6 @@ export function ReplayPickerModal({
                                 const unavailable = row.video === null
                                 const video = row.video
                                 const playable = video != null
-                                if (compareMode) {
-                                    const onPick = () => { if (video && mapName) onSelect(video, mapName, row.entry) }
-                                    return (
-                                        <div
-                                            key={row.entry.id}
-                                            role="button"
-                                            tabIndex={playable ? 0 : -1}
-                                            aria-disabled={!playable}
-                                            onClick={onPick}
-                                            onKeyDown={(e) => { if (playable && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onPick() } }}
-                                            className={cn(
-                                                'w-full flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3 py-2 rounded-lg border border-hairline/5 bg-hairline/[0.02] transition-colors',
-                                                playable ? 'cursor-pointer hover:bg-hairline/[0.06] hover:border-hairline/15' : 'opacity-60 cursor-default',
-                                            )}
-                                        >
-                                            <span className="text-xs font-bold font-mono w-6 text-muted-foreground shrink-0">#{rank}</span>
-                                            <span className="flex-1 min-w-0">
-                                                <PlayerInfo userId={row.entry.user} alias={row.entry.alias} title={row.entry.active_title} size="sm" highlight={isOwn} showYouBadge={isOwn} interactive={false} />
-                                            </span>
-                                            <span className="text-sm font-mono text-amber-300 shrink-0">{formatCapTime(row.entry.cap_time_seconds)}</span>
-                                            {checking ? (
-                                                <Spinner className="size-4 text-muted-foreground/60 shrink-0" />
-                                            ) : unavailable ? (
-                                                <NoReplayIndicator />
-                                            ) : (
-                                                <Columns2 className="size-4 text-accent-300/80 shrink-0" />
-                                            )}
-                                        </div>
-                                    )
-                                }
                                 return (
                                     <div
                                         key={row.entry.id}
@@ -329,24 +290,19 @@ export function ReplayPickerModal({
                                                 <Spinner className="size-4 text-muted-foreground/60" />
                                             </span>
                                         ) : unavailable ? (
-                                            <NoReplayIndicator padded />
+                                            <NoReplayIndicator />
                                         ) : (
-                                            <Tooltip content={compareMode ? 'Compare side by side' : 'Watch'} side="top">
+                                            <Tooltip content="Watch" side="top">
                                                 <button
                                                     type="button"
                                                     onClick={() => {
                                                         if (video && mapName) onSelect(video, mapName, row.entry)
                                                     }}
                                                     disabled={!playable}
-                                                    aria-label={compareMode ? 'Compare side by side' : 'Watch Replay'}
-                                                    className={cn(
-                                                        'p-1.5 rounded-md transition-colors cursor-pointer shrink-0 disabled:opacity-40 disabled:cursor-default',
-                                                        compareMode
-                                                            ? 'text-accent-300/80 hover:text-accent-200 hover:bg-accent-500/15'
-                                                            : 'text-rose-300/80 hover:text-rose-200 hover:bg-rose-500/15',
-                                                    )}
+                                                    aria-label="Watch Replay"
+                                                    className="p-1.5 rounded-md transition-colors cursor-pointer shrink-0 disabled:opacity-40 disabled:cursor-default text-rose-300/80 hover:text-rose-200 hover:bg-rose-500/15"
                                                 >
-                                                    {compareMode ? <Columns2 className="size-4" /> : <Play className="size-4" />}
+                                                    <Play className="size-4" />
                                                 </button>
                                             </Tooltip>
                                         )}

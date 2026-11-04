@@ -1,9 +1,10 @@
 import { useId, useState } from 'react'
 import type { CapComparisonSpeedPoint, CapMotionEvent } from '@/app/utils/api'
 import { DeltaAxisMarks, DeltaGrid, TICK_LENGTH, readableTimeLabels, type PlotBox } from './chartFrame'
-import { HAIRLINE } from './deltaStyles'
+import { deltaTone } from './deltaCurve'
+import { HAIRLINE, TONE_STROKE } from './deltaStyles'
 import type { RunDeltaChart } from './runDeltaCard'
-import type { SpeedChart } from './runSpeed'
+import { speedAt, type SpeedChart } from './runSpeed'
 import type { AirSpan, ZoomedSpeed } from './speedZoom'
 
 export const RUNNER_SPEED_STROKE = 'var(--accent-400)'
@@ -11,12 +12,25 @@ export const REFERENCE_SPEED_STROKE = HAIRLINE(0.55)
 export const RUN_CAP_UU_S = 400
 export const STRAFE_DODGE_UU_S = 721
 
-const OVERVIEW_MARGIN = { left: 52, right: 16, top: 18, bottom: 22 }
-const DETAIL_MARGIN = { left: 52, right: 16, top: 40, bottom: 34 }
+export const SPEED_PLOT_INSET = { left: 52, right: 16 }
+const OVERVIEW_MARGIN = { ...SPEED_PLOT_INSET, top: 18, bottom: 22 }
+const DETAIL_MARGIN = { ...SPEED_PLOT_INSET, top: 40, bottom: 34 }
 const MIN_BAND_PX = 3
 const MIN_DRAG_PX = 6
 const MARKER_SIZE = 4.5
 const MIN_MARKER_GAP_PX = 2 * MARKER_SIZE
+const READOUT_WIDTH = 184
+const READOUT_ROW = 17
+const READOUT_TOP = 24
+const READOUT_OFFSET = 12
+const READOUT_NAME = 16
+
+export interface SpeedNames {
+    runner: string
+    reference: string
+}
+
+const DEFAULT_NAMES: SpeedNames = { runner: 'This run', reference: 'Reference' }
 
 interface SpeedPlotProps {
     chart: SpeedChart
@@ -25,6 +39,7 @@ interface SpeedPlotProps {
     width: number
     height: number
     description: string
+    names?: SpeedNames
     onZoomRange: (fromMs: number, toMs: number) => void
     onZoomSector: (index: number) => void
     onZoomOut: () => void
@@ -86,11 +101,75 @@ function AirLane({ spans, x, top, color }: { spans: AirSpan[]; x: (ms: number) =
     )
 }
 
+function shortName(name: string): string {
+    return name.length > READOUT_NAME ? `${name.slice(0, READOUT_NAME - 1)}…` : name
+}
+
+function speedDifference(runner: number, reference: number): string {
+    const diff = Math.round(runner) - Math.round(reference)
+    const sign = diff > 0 ? '+' : diff < 0 ? '−' : '±'
+    return `${sign}${Math.abs(diff)} UU/s`
+}
+
+interface ReadoutRow {
+    key: 'runner' | 'reference'
+    name: string
+    speed: number
+    colour: string
+}
+
+function SpeedReadout({ px, ms, box, y, runner, reference, names }: {
+    px: number
+    ms: number
+    box: PlotBox
+    y: (speed: number) => number
+    runner: number | null
+    reference: number | null
+    names: SpeedNames
+}) {
+    const rows: ReadoutRow[] = [
+        ...(runner !== null ? [{ key: 'runner' as const, name: names.runner, speed: runner, colour: RUNNER_SPEED_STROKE }] : []),
+        ...(reference !== null ? [{ key: 'reference' as const, name: names.reference, speed: reference, colour: REFERENCE_SPEED_STROKE }] : []),
+    ]
+    if (rows.length === 0) return null
+    const both = runner !== null && reference !== null
+    const height = READOUT_TOP + rows.length * READOUT_ROW + (both ? READOUT_ROW : 0) + 4
+    const left = px + READOUT_OFFSET + READOUT_WIDTH > box.right ? px - READOUT_OFFSET - READOUT_WIDTH : px + READOUT_OFFSET
+    return (
+        <g pointerEvents="none" data-readout="">
+            <line x1={px} x2={px} y1={box.top} y2={box.bottom} stroke={HAIRLINE(0.45)} />
+            {rows.map(row => (
+                <circle key={row.key} cx={px} cy={y(row.speed)} r={3.5} fill={row.colour} stroke="var(--color-card)" strokeWidth={1.5} />
+            ))}
+            <g transform={`translate(${left.toFixed(1)} ${box.top + 4})`} fontSize={11}>
+                <rect width={READOUT_WIDTH} height={height} rx={6} fill="var(--color-card)" stroke={HAIRLINE(0.16)} />
+                <text x={10} y={16} fontSize={10} fill={HAIRLINE(0.55)}>{`${(ms / 1000).toFixed(2)}s · UU/s`}</text>
+                {rows.map((row, i) => (
+                    <g key={row.key} transform={`translate(0 ${READOUT_TOP + i * READOUT_ROW})`}>
+                        <circle cx={14} cy={6} r={3} fill={row.colour} />
+                        <text x={24} y={10} fill="var(--color-foreground)" className="font-sans">{shortName(row.name)}</text>
+                        <text x={READOUT_WIDTH - 10} y={10} textAnchor="end" fill="var(--color-foreground)">{Math.round(row.speed)}</text>
+                    </g>
+                ))}
+                {both && (
+                    <g transform={`translate(0 ${READOUT_TOP + rows.length * READOUT_ROW})`}>
+                        <text x={24} y={10} fill={HAIRLINE(0.55)} className="font-sans">Difference</text>
+                        <text x={READOUT_WIDTH - 10} y={10} textAnchor="end" fill={TONE_STROKE[deltaTone(Math.round(reference) - Math.round(runner))]}>
+                            {speedDifference(runner, reference)}
+                        </text>
+                    </g>
+                )}
+            </g>
+        </g>
+    )
+}
+
 export function SpeedPlot({
-    chart, zoomed, frame, width, height, description, onZoomRange, onZoomSector, onZoomOut,
+    chart, zoomed, frame, width, height, description, names = DEFAULT_NAMES, onZoomRange, onZoomSector, onZoomOut,
 }: SpeedPlotProps) {
     const clipId = useId()
     const [drag, setDrag] = useState<{ from: number; to: number } | null>(null)
+    const [hoverPx, setHoverPx] = useState<number | null>(null)
     const detailed = zoomed?.detailed ?? false
     const margin = detailed ? DETAIL_MARGIN : OVERVIEW_MARGIN
     const box: PlotBox = {
@@ -234,7 +313,9 @@ export function SpeedPlot({
                 }}
                 onPointerMove={event => {
                     if (drag) setDrag({ from: drag.from, to: pointerX(event) })
+                    else if (event.pointerType !== 'touch') setHoverPx(pointerX(event))
                 }}
+                onPointerLeave={() => setHoverPx(null)}
                 onPointerUp={event => {
                     if (!drag) return
                     const to = pointerX(event)
@@ -255,6 +336,17 @@ export function SpeedPlot({
                     fill={HAIRLINE(0.08)}
                     stroke={HAIRLINE(0.3)}
                     pointerEvents="none"
+                />
+            )}
+            {hoverPx !== null && !drag && (
+                <SpeedReadout
+                    px={hoverPx}
+                    ms={msAt(hoverPx)}
+                    box={box}
+                    y={y}
+                    runner={speedAt(runner, msAt(hoverPx))}
+                    reference={speedAt(reference, msAt(hoverPx))}
+                    names={names}
                 />
             )}
         </svg>

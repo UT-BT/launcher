@@ -1,12 +1,13 @@
-import { useMemo, useRef, useState, lazy } from 'react'
+import { useMemo, useState, lazy } from 'react'
 import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import {
     ShieldAlert, ShieldCheck, Play, Download, Calendar,
-    Users,
+    Users, Columns2,
 } from 'lucide-react'
 import { Spinner } from '@/app/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
+import { useNavState } from '@/app/components/navigation/useNavState'
 import { useDocumentTitle } from '@/app/components/navigation/useDocumentMeta'
 import { SITE_NAME } from '@/app/components/navigation/titles'
 import { Modal } from '@/app/components/ui/modal'
@@ -14,22 +15,21 @@ import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { TeamHolders } from '@/app/components/shared/TeamHolders'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
+import { CompareLink } from '@/app/components/shared/CompareLink'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { useAsync } from '@/app/hooks/useAsync'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import { useReplayWatch } from '@/app/hooks/useReplayWatch'
 import { useDemoDownload } from '@/app/hooks/useDemoDownload'
-import { resolveCompareVideo } from '@/app/hooks/useVideoCompareAvailability'
 import { formatCapTime, displayMapName, formatAddedDate } from '@/app/utils/format'
 import { medalIconForInt, medalLabelForInt, formatSignedDelta, deltaClass } from './capDetail/capStats'
 import { MedalThresholdsStrip } from './capDetail/MedalThresholdsStrip'
 import { ClientSettingsGrid } from './capDetail/ClientSettingsGrid'
 import { MovementAnalyticsCard } from './capDetail/MovementAnalyticsCard'
-import { VideoCompareModal, type CompareRun } from './capDetail/videoCompare/VideoCompareModal'
+import { teamCompareOpponent } from './capDetail/teamCompareOpponent'
 import {
     fetchTeamCapDetail,
-    fetchCapCheckpoints,
     fetchTeamMapLeaderboard,
     type TeamCapDetail,
     type TeamLeaderboardEntry,
@@ -47,21 +47,6 @@ interface TeamCapDetailPageProps {
     userProfile?: UserProfile
     onMapSelect?: (mapName: string) => void
 }
-
-async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
-    const results = new Array<R>(items.length)
-    let next = 0
-    const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
-        while (next < items.length) {
-            const index = next++
-            results[index] = await fn(items[index])
-        }
-    })
-    await Promise.all(workers)
-    return results
-}
-
-type CompareState = 'idle' | 'resolving' | 'ready' | 'insufficient'
 
 const ROSTER_GRID_COLS: Record<number, string> = {
     1: 'grid-cols-1',
@@ -237,11 +222,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
         }))
     }, [detail, teamLeaderboardData])
 
-    const [compareState, setCompareState] = useState<CompareState>('idle')
-    const [compareRuns, setCompareRuns] = useState<CompareRun[] | null>(null)
-    const compareReqRef = useRef(0)
-
-    const [selectedCapId, setSelectedCapId] = useState<string | null>(null)
+    const [selectedCapId, setSelectedCapId] = useNavState<string | null>('teamCap.member', null)
     const [demoBatch, setDemoBatch] = useState<{ total: number; done: number } | null>(null)
 
     const downloadAllDemos = async () => {
@@ -264,43 +245,9 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
         setDemoBatch(null)
     }
 
-    const startCompare = async () => {
-        if (!detail) return
-        const req = ++compareReqRef.current
-        setCompareState('resolving')
-        const eligible = (detail.members ?? []).filter(member => member.has_demo)
-        const resolved = await mapWithConcurrency(eligible, 3, async member => {
-            if (member.cap_time_seconds == null) return null
-            const video = await resolveCompareVideo(member.cap_id)
-            if (!video) return null
-            const cps = await fetchCapCheckpoints(accessToken, member.cap_id)
-            return {
-                capId: member.cap_id,
-                alias: member.alias,
-                userId: member.user,
-                title: member.active_title,
-                capTime: member.cap_time_seconds,
-                side: member.cap?.team ?? cps?.team ?? null,
-                checkpoints: cps?.checkpoints ?? [],
-                video,
-            } as CompareRun
-        })
-        if (compareReqRef.current !== req) return
-        const runs = resolved.filter((r): r is CompareRun => r != null)
-        if (runs.length < 2) {
-            setCompareRuns(null)
-            setCompareState('insufficient')
-            return
-        }
-        setCompareRuns(runs)
-        setCompareState('ready')
-    }
-
-    const closeCompare = () => {
-        compareReqRef.current++
-        setCompareState('idle')
-        setCompareRuns(null)
-    }
+    const runnable = detail != null && !detail.disallowed && detail.team_time_seconds != null
+    const opponentId = detail ? teamCompareOpponent(rankContextRows, detail.team_cap_id, detail.team_time_seconds) : null
+    const opponentPending = leaderboardLoading && !teamLeaderboardData
 
     useNavScrollRestore(!loading && !!detail)
 
@@ -362,22 +309,34 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                         {displayMapName(detail.map)}
                                     </button>
                                     <div className="flex flex-wrap items-center gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={startCompare}
-                                            disabled={compareState === 'resolving'}
+                                        <CompareLink
+                                            runs={[detail.team_cap_id]}
+                                            disabled={!runnable}
                                             className={cn(
-                                                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border transition-colors text-xs font-semibold cursor-pointer',
-                                                'bg-accent-500/15 border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-foreground hover:border-accent-500/60',
-                                                'disabled:opacity-50 disabled:cursor-not-allowed',
+                                                'inline-flex items-center gap-1.5 px-3 py-1.5 touch:h-11 rounded-md border transition-colors text-xs font-semibold',
+                                                'bg-accent-500/15 border-accent-500/40 text-accent-200',
+                                                runnable
+                                                    ? 'cursor-pointer hover:bg-accent-500/25 hover:text-foreground hover:border-accent-500/60'
+                                                    : 'opacity-50 cursor-not-allowed',
                                             )}
-                                            title="Watch every member's replay together"
                                         >
-                                            {compareState === 'resolving'
-                                                ? <Spinner className="size-3.5" />
-                                                : <Play className="size-3.5" />}
-                                            Watch Team Replay
-                                        </button>
+                                            <Play className="size-3.5" />
+                                            Watch Team Run
+                                        </CompareLink>
+                                        <CompareLink
+                                            runs={opponentId ? [detail.team_cap_id, opponentId] : [detail.team_cap_id]}
+                                            disabled={!runnable || opponentPending}
+                                            className={cn(
+                                                'inline-flex items-center gap-1.5 px-3 py-1.5 touch:h-11 rounded-md border transition-colors text-xs font-semibold',
+                                                'bg-rose-500/15 border-rose-500/40 text-rose-200',
+                                                runnable && !opponentPending
+                                                    ? 'cursor-pointer hover:bg-rose-500/25 hover:text-foreground hover:border-rose-500/60'
+                                                    : 'opacity-50 cursor-not-allowed',
+                                            )}
+                                        >
+                                            <Columns2 className="size-3.5" />
+                                            Compare
+                                        </CompareLink>
                                         <button
                                             type="button"
                                             onClick={downloadAllDemos}
@@ -547,6 +506,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                                                     e.stopPropagation()
                                                                     replay.openReplay({
                                                                         capId: member.cap_id,
+                                                                        teamCapId: detail.team_cap_id,
                                                                         mapName: detail.map,
                                                                         time: member.cap_time_seconds ?? undefined,
                                                                         alias: member.alias ?? undefined,
@@ -642,34 +602,6 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
             <LazyModalGate open={replay.video !== null}>
                 <ReplayVideoModal state={replay.video} onClose={replay.clearVideo} />
             </LazyModalGate>
-
-            <Modal
-                isOpen={compareState === 'resolving' || compareState === 'insufficient'}
-                onClose={closeCompare}
-                title="Watch Team Replay"
-                className="w-[95%] sm:w-[440px] max-w-md"
-                offsetSidebar
-            >
-                {compareState === 'resolving' ? (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-                        <Spinner className="size-4" />
-                        Resolving replays…
-                    </div>
-                ) : (
-                    <p className="text-sm text-muted-foreground py-2">
-                        Not enough replay videos are available yet — try again later.
-                    </p>
-                )}
-            </Modal>
-
-            {compareState === 'ready' && compareRuns && detail && (
-                <VideoCompareModal
-                    open
-                    onClose={closeCompare}
-                    mapName={detail.map}
-                    runs={compareRuns}
-                />
-            )}
 
             <Modal
                 isOpen={replay.error !== null}

@@ -1,7 +1,8 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
-import { Share2, Check } from 'lucide-react'
+import { Share2, Check, Columns2 } from 'lucide-react'
 import { Modal } from '@/app/components/ui/modal'
 import { Tooltip } from '@/app/components/ui/tooltip'
+import { CompareLink } from '@/app/components/shared/CompareLink'
 import { formatCapTime, displayMapName } from '@/app/utils/format'
 import { loadReplayVideoVolume, saveReplayVideoVolume } from '@/app/utils/replayVideoVolume'
 import { cn } from '@/lib/utils'
@@ -9,6 +10,8 @@ import type { ReplaySource, ReplayVideo } from '@/app/utils/api'
 
 export interface ReplayVideoState {
     video: ReplayVideo
+    capId?: string
+    teamCapId?: string
     mapName: string
     time?: number
     alias?: string
@@ -83,7 +86,8 @@ export function ReplaySourceCredit({ sources }: { sources: ReplaySource[] }) {
     )
 }
 
-export function ReplayVideoFooter({ video }: { video: ReplayVideo | null }) {
+export function ReplayVideoFooter({ video, capId, teamCapId }: { video: ReplayVideo | null; capId?: string; teamCapId?: string }) {
+    const compareRun = teamCapId ?? capId
     const [shareCopied, setShareCopied] = useState(false)
     const shareTimerRef = useRef<number | null>(null)
 
@@ -105,22 +109,33 @@ export function ReplayVideoFooter({ video }: { video: ReplayVideo | null }) {
 
     return (
         <div className="p-3 border-t border-border bg-muted/50 flex items-center justify-between gap-3 shrink-0">
-            <Tooltip content={shareCopied ? 'Link copied!' : 'Copy replay link'} side="top">
-                <button
-                    type="button"
-                    onClick={copyLink}
-                    aria-label="Copy replay link"
-                    className={cn(
-                        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors cursor-pointer',
-                        shareCopied
-                            ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
-                            : 'bg-hairline/[0.03] border-hairline/10 text-muted-foreground hover:text-foreground hover:bg-hairline/[0.06] hover:border-hairline/20',
-                    )}
-                >
-                    {shareCopied ? <Check className="size-3.5" /> : <Share2 className="size-3.5" />}
-                    {shareCopied ? 'Copied' : 'Share'}
-                </button>
-            </Tooltip>
+            <div className="flex items-center gap-2">
+                <Tooltip content={shareCopied ? 'Link copied!' : 'Copy replay link'} side="top">
+                    <button
+                        type="button"
+                        onClick={copyLink}
+                        aria-label="Copy replay link"
+                        className={cn(
+                            'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors cursor-pointer',
+                            shareCopied
+                                ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                                : 'bg-hairline/[0.03] border-hairline/10 text-muted-foreground hover:text-foreground hover:bg-hairline/[0.06] hover:border-hairline/20',
+                        )}
+                    >
+                        {shareCopied ? <Check className="size-3.5" /> : <Share2 className="size-3.5" />}
+                        {shareCopied ? 'Copied' : 'Share'}
+                    </button>
+                </Tooltip>
+                {compareRun && (
+                    <CompareLink
+                        runs={[compareRun]}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 touch:h-11 rounded-md text-xs font-medium border transition-colors cursor-pointer bg-hairline/[0.03] border-hairline/10 text-muted-foreground hover:text-foreground hover:bg-hairline/[0.06] hover:border-hairline/20"
+                    >
+                        <Columns2 className="size-3.5" />
+                        Compare
+                    </CompareLink>
+                )}
+            </div>
             <ReplaySourceCredit sources={video ? [video.source] : []} />
         </div>
     )
@@ -136,7 +151,7 @@ export function ReplayVideoModal({ state, onClose, leftAction }: ReplayVideoModa
             className="bg-card/98 border-hairline/5"
             maxWidth="min(90vw, 1280px)"
             leftAction={leftAction}
-            footer={<ReplayVideoFooter video={state?.video ?? null} />}
+            footer={<ReplayVideoFooter video={state?.video ?? null} capId={state?.capId} teamCapId={state?.teamCapId} />}
         >
             {state && <ReplayVideoPlayer url={state.video.mp4_url} />}
         </Modal>

@@ -2,13 +2,12 @@ import { expect, test, type Page } from '@playwright/test'
 import { reopenOnDroppedModule } from './dev-server'
 import { serveFixtureSet } from './fixtures/router'
 import { closeModal, swipeScroll } from './interactions'
-import { capDetail, capDetailRivals } from './manifest/cap-detail'
+import { capDetail } from './manifest/cap-detail'
 import { MODAL_ROOT } from './manifest/types'
 import { installProbe } from './rules/probe'
 import { settleLayout } from './settle'
 
-const RIVAL_USER_ID = capDetailRivals()[0].user
-const PATRON_BADGE = 'Tier 2 Patreon Supporter'
+const REPLAY_HEADING = /^Replay —/
 
 async function openCapDetail(page: Page) {
     await page.addInitScript(() => localStorage.setItem('utbt:analyticsConsent:v1', 'denied'))
@@ -27,13 +26,13 @@ async function scrollPositions(page: Page): Promise<{ main: number; window: numb
 
 test('a sheet holds the page still, and closing it frees the page and returns focus to the tapped opener', async ({ page }) => {
     await openCapDetail(page)
-    const opener = page.getByRole('button', { name: 'Compare Run' })
+    const opener = page.getByRole('button', { name: 'Watch Replay' })
     await opener.scrollIntoViewIfNeeded()
     await settleLayout(page)
     const before = await scrollPositions(page)
 
     await opener.tap()
-    await page.getByRole('heading', { name: /^Compare run/ }).waitFor()
+    await page.getByRole('heading', { name: REPLAY_HEADING }).waitFor()
     await settleLayout(page)
     expect(await scrollPositions(page), 'opening the sheet moved nothing').toEqual(before)
 
@@ -52,28 +51,24 @@ test('a sheet holds the page still, and closing it frees the page and returns fo
 })
 
 test('a sheet opened by a tapped button inside a sheet returns focus to that button, and then to the first opener', async ({ page }) => {
-    await page.addInitScript(rival => {
-        localStorage.setItem('utbt:patreon:v1', JSON.stringify({ tiers: { [rival]: 2 }, fetchedAtIso: new Date().toISOString() }))
-    }, RIVAL_USER_ID)
     await openCapDetail(page)
-    const opener = page.getByRole('button', { name: 'Compare Run' })
+    const opener = page.getByRole('button', { name: 'Watch Replay' })
     await opener.tap()
-    const picker = page.locator(MODAL_ROOT).filter({ has: page.getByRole('heading', { name: /^Compare run/ }) })
-    await picker.getByRole('button', { name: PATRON_BADGE, exact: true }).waitFor()
-    await picker.evaluate((backdrop, badgeName) => {
-        const badge = backdrop.querySelector<HTMLElement>(`[aria-label="${badgeName}"]`)!
+    const replay = page.locator(MODAL_ROOT).filter({ has: page.getByRole('heading', { name: REPLAY_HEADING }) })
+    await replay.locator('video').waitFor()
+    await replay.evaluate(backdrop => {
         const button = document.createElement('button')
         button.type = 'button'
-        button.textContent = 'Support this rival'
+        button.textContent = 'Support UTBT from here'
         button.addEventListener('click', event => {
             event.stopPropagation()
-            badge.click()
+            window.dispatchEvent(new CustomEvent('open-patreon'))
         })
-        badge.closest('[role="button"]:not([aria-label])')!.before(button)
-    }, PATRON_BADGE)
+        backdrop.querySelector('video')!.after(button)
+    })
     await settleLayout(page)
 
-    const nestedOpener = picker.getByRole('button', { name: 'Support this rival' })
+    const nestedOpener = replay.getByRole('button', { name: 'Support UTBT from here' })
     await nestedOpener.tap()
     const support = page.locator(MODAL_ROOT).filter({ has: page.getByRole('heading', { name: 'Support UTBT', exact: true }) })
     await support.waitFor()

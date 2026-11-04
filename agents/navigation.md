@@ -19,7 +19,9 @@ active entry. On the web build the browser URL mirrors that stack; desktop has n
 - `NavParams` is every identifier a view can carry. A view may read several (`match-pickban`
   reads `eventSlug` + `matchId`, `event-team` reads `eventSlug` + `eventTeamId`). When you
   add a field, add it to `paramsEqual` too: a field it doesn't compare makes a param-only
-  change a silent "already here" no-op.
+  change a silent "already here" no-op. Params are scalars compared with `===`; a view whose
+  address carries a query keeps it in one string field: `compare` holds the compare page's
+  serialised query without the leading `?` (missing compares as `''`).
 - Seed another page's initial state through a param, never by writing into its entry
   state before `navigate()`. Example: `mapsNewOnly` (Home's "new maps" tile) reaches
   `MapsPage` as its `initialNewOnly` prop.
@@ -27,8 +29,8 @@ active entry. On the web build the browser URL mirrors that stack; desktop has n
   on desktop, the URL's target on web. History is never persisted; preferences are.
 
 Components read the active entry and the nav functions through `useNavigation()`
-(`entry`, `currentView`, `navigate`, `back`, `forward`, `canBack`, `canForward`,
-`getEntryState`, `setEntryState`, `registerLeaveGuard`).
+(`entry`, `currentView`, `navigate`, `replaceParams`, `back`, `forward`, `canBack`,
+`canForward`, `getEntryState`, `setEntryState`, `registerLeaveGuard`).
 
 ## `navigate()` is the only entry point
 
@@ -49,6 +51,32 @@ desktop only; on web the browser owns history and reload.
 Sidebar clicks, `openMap`, the `open-*` window events and every `NavLink` all end in
 `navigate()`. Add no second mechanism: no raw `setCurrentView`, no parallel back stack
 (hard rule 6). URL sync mirrors the stack and drives it only on external entry.
+
+## Replace params
+
+`replaceParams(params)` edits the active entry in place: the page's own address changes, and
+no history entry is added, so one Back still leaves the page. The compare page is its only
+user: it normalises the arriving query and applies every edit of its set this way
+([run-compare.md](features/run-compare.md#url-grammar-and-normalisation)). Never use it to
+change view; that is `navigate()`.
+
+- It is a no-op on `paramsEqual` params. Otherwise `withReplacedParams(entries, id, params)`
+  (`NavigationContext.tsx`, pure) swaps the entry's params and keeps its `id`, `view`, `state`
+  bag and position, and `replaceUrlForEntry` (`useUrlSync.ts`) rewrites the URL. No leave guard
+  runs.
+- On web that is `createHistorySync().replacePage(url)`: `replaceState` of the current history
+  entry with its own state, so positions are untouched. On desktop the URL part no-ops.
+- **With overlays open** (the compare page's Runs drawer takes an
+  [overlay entry](#overlay-history-web-build)), the current history entry is the overlay's.
+  `replacePage` remembers `{ navId, url }`, and each `popstate` that lands on an entry of that
+  page (an overlay entry or the page entry) rewrites that entry's URL; landing on the page entry
+  clears the memory. So the address shows the edit while the overlay is open, after it closes
+  (Back or its own UI), and after Back from a page pushed out of the overlay.
+- A replace that arrives while the history is traversing only records the edit; the landing
+  applies it.
+- Tests: `NavigationContext.test.ts` (`withReplacedParams`, `paramsEqual`),
+  `historySync.test.ts` (replace with and without overlays), and `e2e/run-compare.spec.ts`
+  (`history.length` unchanged after an edit, one Back leaves).
 
 ## Per-entry state bag
 
@@ -110,7 +138,7 @@ render `Home`.
 | Kind | Views | Keyed | Why |
 |---|---|---|---|
 | Page-views | `home`, `servers`, `maps`, `players`, `teams`, `events`, `cap-it-all`, `world-records`, `achievements`, `news`, `admin` | no | One instance per view, reused across entries of that view. A view change still unmounts it. Its state and data survive because they are hoisted to `Main` (per-entry state via `usePageState`, data via a `caches` singleton); anything in the page's own `useState` refetches on every visit. |
-| Detail pages | `maps-detail`, `player-detail`, `cap-detail`, `team-cap-detail`, `news-detail`, `team-detail`, `event-detail`, `match-pickban`, `event-team` | `key={entry.id}` | Each visit remounts, so it fetches for its new param and `useNavState` reads the right bag. Without the key the page keeps the previous visit's data and UI state. |
+| Detail pages | `maps-detail`, `player-detail`, `cap-detail`, `team-cap-detail`, `news-detail`, `team-detail`, `event-detail`, `match-pickban`, `event-team`, `run-compare` | `key={entry.id}` | Each visit remounts, so it fetches for its new param and `useNavState` reads the right bag. Without the key the page keeps the previous visit's data and UI state. |
 
 Detail cases read their identifier from `entry.params` (`mapName!`, `playerId!`, …).
 
@@ -169,6 +197,13 @@ segments as a route needs and checks exact segment counts, so
 `/events/:slug/matches/:id` and `/events/:slug/teams/:id` resolve only with exactly four
 segments and anything else under `/events/:slug` stays on `event-detail`.
 
+`/compare` is the one query-carrying route: `pathToNav` reads it only with exactly one segment
+and puts the search string minus its `?` into `params.compare` (left out when empty), and
+`viewToPath('run-compare', params)` writes `/compare?<compare>`. The compare page parses and
+normalises the query itself; the route layer passes it through untouched, `utm_*` and all.
+A bare `/compare` (or `/compare?map=<map>`) is the page's start view, where a map and its runs
+are picked ([run-compare.md](features/run-compare.md#start-view)).
+
 On web (`useUrlSync.ts`; on desktop `useUrlSync` returns `null` and `pushUrlForEntry`
 no-ops) the in-memory stack is master and browser history mirrors it. The bookkeeping lives in
 `createHistorySync` (`historySync.ts`), which `useUrlSync` creates once over
@@ -208,8 +243,9 @@ entry in `app/public/route-contract.json` (path, view, unique `kind`, and a `par
 in path order when the path has params; it drives per-URL link previews, see
 [web-target.md](web-target.md)), and a title in `titles.ts`.
 `routes.contract.test.ts` fails on drift: the contract's views must equal the `case`
-labels in `viewToPath`, every route must round-trip, every view needs a non-default
-title, and every non-admin route must stay crawlable under `app/public/robots.txt`.
+labels in `viewToPath`, every route must round-trip (the compare route with a sample query),
+every view needs a non-default title, and every non-admin route must stay crawlable under
+`app/public/robots.txt`.
 
 **Pre-shell routes are not app routes.** `/auth/callback`, the match stream view
 `/events/:slug/matches/:id/stream` and the stream scene pages `/stream/:eventSlug/:streamerId/:scene`
@@ -219,10 +255,14 @@ fallback, and `routes.contract.test.ts` pins that. Mechanism:
 [web-target.md](web-target.md); scenes: [stream-kit.md](features/stream-kit.md).
 
 **Document metadata (web only).** `Main.tsx` calls `useDocumentMeta(currentView,
-entry.params)`, which sets `document.title` from `titleForRoute` and the canonical link on
-every navigation. A detail page refines the title with `useDocumentTitle(name)` once its
-data is in; React runs child effects before the parent's, so the generic title lands first
-and the specific one replaces it. Don't move this into `useUrlSync`'s attach effect: its
+entry.params, entry.id)`, which sets `document.title` from `titleForRoute` and the canonical
+link from `canonicalPath(view, params)` on every navigation. `canonicalPath` is `viewToPath`
+for every view but `run-compare`, whose canonical keeps only `runs`, deduplicated and sorted,
+so it matches the link preview's canonical whatever the add order. The two are separate
+effects: the title effect runs on a view, title or entry change but not on a params-only
+change, so a `replaceParams` doesn't reset a title the page has refined. A detail page refines
+the title with `useDocumentTitle(name)` once its data is in; React runs child effects before
+the parent's, so the generic title lands first and the specific one replaces it. Don't move this into `useUrlSync`'s attach effect: its
 deps are refs and setters, so it doesn't re-run on navigation.
 
 ## Overlay history (web build)
@@ -235,7 +275,8 @@ page-navigation mechanism, the nav stack; overlay entries never move it.
 
 - **Which overlays.** Every shared `Modal` while `isOpen`; overlays on `useModalBehaviour`
   that take an Escape handler (the sign-out confirm, the tutorial card, a closable
-  `ErrorModal`; the boot connection error has no close and takes no entry); and the drawer
+  `ErrorModal`; the boot connection error has no close and takes no entry); the compare
+  page's Runs drawer (`useModalBehaviour` without a scroll lock); and the drawer
   while it is open below `lg`. Each calls `useOverlayHistory(open, close)` from
   `useUrlSync.ts`. The legacy `shared/Modal` (`ConfirmModal`, including the "Leave without
   saving?" confirm), popovers and card expand panels (inline) take none.
@@ -434,7 +475,10 @@ self-contained promo part that owns its modal state.
   on a touch device (`touch:`), and stays in the tab order.
 
 **Modes.** At `lg` and up the rail is expanded (16rem) or collapsed (5rem). The effective
-mode is `collapsePreference && !isMobileViewport`. Below `lg` the sidebar is always the
+mode is `collapsePreference && !isMobileViewport`, except on a theater view (`THEATER_VIEWS` in
+`sidebarPreference.ts`: the compare page), which opens collapsed whatever the preference; there
+the toggle expands it for the session (`theaterExpanded`) and never writes the preference. Below
+`lg` the sidebar is always the
 full drawer, the toggle isn't rendered and the shortcut isn't attached; the stored choice
 returns when the window is wide again. `AppLayout` publishes the width as
 `--sidebar-width` on `document.documentElement` (`16rem`, `5rem`, `0px` below `lg`) in a
@@ -444,7 +488,7 @@ instant.
 **Preference.** `utbt:sidebarCollapsed:v1` in `app/components/layout/sidebarPreference.ts`,
 device-local. `readSidebarCollapsed()` is the `useState` initialiser, so a collapsed rail
 paints collapsed on the first frame; only a stored `true` counts. Only `toggleCollapsed`
-writes it.
+writes it, and only outside a theater view.
 
 **Toggle.** A `button` named "Collapse sidebar" / "Expand sidebar" with
 `aria-expanded={!collapsed}` and `aria-controls="app-navigation"` (the `aside`'s id), and

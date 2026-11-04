@@ -203,6 +203,7 @@ export function HistoryModal({
                         loading={replay.loadingCapId === cap.id}
                         onClick={() => replay.openReplay({
                             capId: cap.id,
+                            teamCapId: cap.isTeam ? cap.teamCapId ?? undefined : undefined,
                             mapName: cap.mapName,
                             time: cap.time,
                             alias: userAlias ?? undefined,

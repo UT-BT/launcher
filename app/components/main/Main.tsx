@@ -6,6 +6,7 @@ import { trackPage } from '@/app/utils/telemetry'
 import {
   NavigationContext,
   paramsEqual,
+  withReplacedParams,
   type NavEntry,
   type NavParams,
   type NavigationContextValue,
@@ -81,6 +82,7 @@ const PlayerDetailPage = lazy(() => import('@/app/components/pages/PlayerDetailP
 const CapDetailPage = lazy(() => import('@/app/components/pages/CapDetailPage').then(m => ({ default: m.CapDetailPage })))
 const TeamCapDetailPage = lazy(() => import('@/app/components/pages/TeamCapDetailPage').then(m => ({ default: m.TeamCapDetailPage })))
 const NewsDetailPage = lazy(() => import('@/app/components/pages/NewsDetailPage').then(m => ({ default: m.NewsDetailPage })))
+const RunComparePage = lazy(() => import('@/app/components/pages/runCompare/RunComparePage').then(m => ({ default: m.RunComparePage })))
 const AdminPage = lazy(() => import('@/app/components/pages/admin/AdminPage').then(m => ({ default: m.AdminPage })))
 const ConfirmModal = lazy(() => import('@/app/components/shared/ConfirmModal').then(m => ({ default: m.ConfirmModal })))
 const FavoritesSyncModal = lazy(() => import('@/app/components/shared/FavoritesSyncModal').then(m => ({ default: m.FavoritesSyncModal })))
@@ -103,7 +105,7 @@ import { getSynced, setSynced, subscribeSynced } from '@/app/utils/userState'
 import { writePendingHighlight, type HighlightView } from '@/app/hooks/useNewItemHighlight'
 import { isStaff } from '@/app/utils/roles'
 import { capabilities, IS_WEB } from '@/app/platform'
-import { pushUrlForEntry, seedEntriesFromUrl, useUrlSync } from '@/app/components/navigation/useUrlSync'
+import { pushUrlForEntry, replaceUrlForEntry, seedEntriesFromUrl, useUrlSync } from '@/app/components/navigation/useUrlSync'
 import { useDocumentMeta } from '@/app/components/navigation/useDocumentMeta'
 import { REMOUNT_VIEW_EVENT } from '@/app/components/navigation/PageRefreshContext'
 import { createPoller } from '@/app/utils/poller'
@@ -525,6 +527,14 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     commitNavigate(view, params)
   }, [commitNavigate, leaveWarning])
 
+  const replaceParams = useCallback((params: NavParams) => {
+    const { entries: cur, cursor: curIdx } = stackRef.current
+    const active = cur[curIdx]
+    if (!active || paramsEqual(active.params, params)) return
+    setEntries(prev => withReplacedParams(prev, active.id, params))
+    replaceUrlForEntry({ ...active, params })
+  }, [])
+
   const guarded = useCallback((move: () => void) => () => {
     const message = leaveWarning()
 
@@ -584,14 +594,14 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   const canBack = cursor > 0
   const canForward = cursor < entries.length - 1
 
-  useDocumentMeta(currentView, entry.params)
+  useDocumentMeta(currentView, entry.params, entry.id)
 
   useEffect(() => { trackPage(currentView) }, [entry.id, currentView])
 
   const navValue = useMemo<NavigationContextValue>(() => ({
-    entry, currentView, navigate, back, forward, canBack, canForward, getEntryState, setEntryState,
+    entry, currentView, navigate, replaceParams, back, forward, canBack, canForward, getEntryState, setEntryState,
     registerLeaveGuard,
-  }), [entry, currentView, navigate, back, forward, canBack, canForward, getEntryState, setEntryState, registerLeaveGuard])
+  }), [entry, currentView, navigate, replaceParams, back, forward, canBack, canForward, getEntryState, setEntryState, registerLeaveGuard])
 
   const [mapsState, setMapsState] = usePageState(MAPS_STATE_STORAGE_KEY, DEFAULT_MAPS_STATE, MAPS_PREF_KEYS, getEntryState, updateEntryState)
   const [serversState, setServersState] = usePageState(SERVERS_STATE_STORAGE_KEY, DEFAULT_SERVERS_STATE, SERVERS_PREF_KEYS, getEntryState, updateEntryState)
@@ -910,6 +920,12 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
         return <NewsDetailPage
           key={entry.id}
           newsId={entry.params.newsId!}
+          userProfile={userProfile as any}
+        />
+      case 'run-compare':
+        return <RunComparePage
+          key={entry.id}
+          compare={entry.params.compare ?? ''}
           userProfile={userProfile as any}
         />
       default:

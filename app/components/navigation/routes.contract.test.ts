@@ -1,7 +1,7 @@
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
 import { describe, expect, it } from 'vitest'
-import { pathToNav, viewToPath } from './routes'
+import { canonicalPath, pathToNav, viewToPath } from './routes'
 import { titleForRoute } from './titles'
 import type { NavParams } from './NavigationContext'
 import { STREAM_SCENES, parseStreamScenePath } from '../stream/streamScenes'
@@ -34,13 +34,22 @@ const SAMPLES: Record<string, string> = {
     eventTeamId: '0afeb020-f471-4988-9201-2676902cc2b3',
 }
 
+const QUERIES: Record<string, string> = {
+    'run-compare': 'runs=762aae22-12a2-4be2-9045-db197d676953,258021df-51b1-4ed3-99cc-62d4e75892a7&t=12.500',
+}
+
 function paramsFor(route: ContractRoute): NavParams {
     const result: NavParams = {}
     for (const key of route.params ?? []) {
         const raw = SAMPLES[key]
         ;(result as Record<string, unknown>)[key] = key === 'newsId' ? Number(raw) : raw
     }
+    if (QUERIES[route.view]) result.compare = QUERIES[route.view]
     return result
+}
+
+function searchFor(route: ContractRoute): string {
+    return QUERIES[route.view] ? `?${QUERIES[route.view]}` : ''
 }
 
 function concretePath(route: ContractRoute): string {
@@ -67,13 +76,11 @@ describe('route contract', () => {
 
     it.each(contract.routes)('$kind round-trips through viewToPath and pathToNav', route => {
         const params = paramsFor(route)
-        expect(viewToPath(route.view, params)).toBe(concretePath(route))
+        expect(viewToPath(route.view, params)).toBe(concretePath(route) + searchFor(route))
 
-        const parsed = pathToNav(concretePath(route), '')
+        const parsed = pathToNav(concretePath(route), searchFor(route))
         expect(parsed.view).toBe(route.view)
-        for (const key of route.params ?? []) {
-            expect(parsed.params[key]).toBe(params[key])
-        }
+        expect(parsed.params).toEqual(params)
     })
 
     it.each(contract.routes)('$kind has a non-default tab title', route => {
@@ -145,6 +152,40 @@ describe('malformed urls', () => {
 
     it('decodes ordinary escaped map names as before', () => {
         expect(pathToNav('/maps/CTF-BT-CM24%20Winter', '').params.mapName).toBe('CTF-BT-CM24 Winter')
+    })
+})
+
+describe('the compare route', () => {
+    const A = '0a0a0a0a-0000-4000-8000-00000000000a'
+    const B = '0b0b0b0b-0000-4000-8000-00000000000b'
+
+    it('carries the query string as it arrived, without the question mark', () => {
+        expect(pathToNav('/compare', `?runs=${B},${A}&t=3.5&utm_source=x`)).toEqual({
+            view: 'run-compare',
+            params: { compare: `runs=${B},${A}&t=3.5&utm_source=x` },
+        })
+    })
+
+    it('opens an empty comparison without a query string', () => {
+        expect(pathToNav('/compare', '')).toEqual({ view: 'run-compare', params: {} })
+        expect(viewToPath('run-compare', {})).toBe('/compare')
+    })
+
+    it('leaves a longer path off the compare page', () => {
+        expect(pathToNav('/compare/extra', `?runs=${A}`).view).not.toBe('run-compare')
+    })
+
+    it('keeps only the sorted run list in the canonical link', () => {
+        expect(canonicalPath('run-compare', { compare: `runs=${B},${A}&ref=${A}&sync=position&t=3.000` })).toBe(`/compare?runs=${A},${B}`)
+    })
+
+    it('has a bare canonical link when no run is listed', () => {
+        expect(canonicalPath('run-compare', { compare: 't=3.000' })).toBe('/compare')
+    })
+
+    it('leaves every other route canonical at its own path', () => {
+        expect(canonicalPath('event-detail', { eventSlug: 'cup', eventTab: 'schedule' })).toBe('/events/cup?tab=schedule')
+        expect(canonicalPath('maps', { mapsNewOnly: true })).toBe('/maps?new=1')
     })
 })
 

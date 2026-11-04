@@ -18,18 +18,14 @@ export function cacheReplayRows(mapName: string, rows: RunRow[]): void {
     replayCache.set(mapName, { rows, fetchedAt: Date.now() })
 }
 
-export function cachedReplayRows(mapName: string, excludeCapId?: string): RunRow[] | null {
+export function cachedReplayRows(mapName: string): RunRow[] | null {
     const cached = replayCache.get(mapName)
     if (!cached) return null
     if (Date.now() - cached.fetchedAt > REPLAY_CACHE_TTL_MS) {
         replayCache.delete(mapName)
         return null
     }
-    return withoutCap(cached.rows, excludeCapId)
-}
-
-export function withoutCap(rows: RunRow[], excludeCapId?: string): RunRow[] {
-    return excludeCapId ? rows.filter(r => r.entry.id !== excludeCapId) : rows
+    return cached.rows
 }
 
 export function withReplayVideo(rows: RunRow[], capId: string, video: ReplayVideo | null): RunRow[] {
