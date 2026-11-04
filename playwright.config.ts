@@ -31,7 +31,7 @@ export default defineConfig({
   fullyParallel: false,
   workers: SERVE_BUILD ? 6 : 2,
   forbidOnly: Boolean(process.env.CI),
-  retries: process.env.CI ? 2 : 0,
+  retries: process.env.CI ? 1 : 0,
   reporter: [[process.env.CI ? 'github' : 'list'], ['./e2e/mobile/gallery-reporter.ts']],
   expect: {
     toHaveScreenshot: {

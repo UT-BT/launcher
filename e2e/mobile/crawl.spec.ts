@@ -17,6 +17,7 @@ const WRITING_LEDGER = process.env.MOBILE_LEDGER === 'write'
 const LEDGER = readLedger(LEDGER_DIR, RULE_IDS)
 const CRASHED = Symbol('error screen')
 const CRAWL_TIMEOUT_MS = 60_000
+const STEP_TIMEOUT_MS = 45_000
 
 function engineTags(engines: Engine[]): string[] {
     return engines.length === 1 ? [`@${engines[0]}-only`] : []
@@ -31,7 +32,7 @@ async function openSurface(page: Page, surface: CrawlSurface) {
     const { path, steps } = surfaceSteps(surface)
     await reopenOnDroppedModule(page, async abandoned => {
         await page.goto(path)
-        const crashed = errorScreen(page).waitFor({ state: 'attached' }).then(() => CRASHED)
+        const crashed = errorScreen(page).waitFor({ state: 'attached', timeout: 0 }).then(() => CRASHED)
         crashed.catch(() => undefined)
         for (const step of steps) {
             if (abandoned.aborted) return
@@ -69,6 +70,7 @@ async function runRule(context: RuleContext, rule: RuleId): Promise<RuleOutcome>
 test.describe.configure({ timeout: CRAWL_TIMEOUT_MS })
 
 test.beforeEach(async ({ page }) => {
+    page.setDefaultTimeout(STEP_TIMEOUT_MS)
     page.on('pageerror', error => console.error('BROWSER PAGE ERROR:', error.message))
 })
 
