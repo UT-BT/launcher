@@ -434,7 +434,10 @@ routes `{ host: 'api' | 'gateway', path, reply }`. `path` is an exact path witho
 or a `RegExp`; `reply` is a response or a function of the request URL, and `ok(data)` wraps the
 `{ success, data }` envelope. An API request no route answers falls back to `mockApi` from
 `e2e/sidebarRail.ts`. Any other request off the dev server gets a blank PNG (images) or a 404, so no
-request leaves the machine. `fixtureSetNamed(name)` in `fixtures/index.ts` resolves a set name, and
+request leaves the machine. WebKit's `<video>` loads skip that route, so every replay read's remote
+`mp4_url` is swapped for the repo's test WebM as a `data:` URL (`withLocalReplayVideo`,
+`fixtures/playableVideo.ts`): a recorded live video URL would make a surface wait on the network.
+`fixtureSetNamed(name)` in `fixtures/index.ts` resolves a set name, and
 `<set>~<variant>` resolves to that set with a stress variant applied to every reply.
 
 ### Test data
@@ -847,9 +850,12 @@ further steps. A second drop fails the test.
 
 | Workflow | Trigger | Runs |
 |---|---|---|
-| `.github/workflows/ci.yml`, job `Fast gate` | pull request into `staging` or `main`, push to `staging` | Windows, Node 20: `npm ci`, `typecheck:web`, `typecheck:e2e`, `lint`, `test` (Windows-only suites included), `docs:check`, `build:web`, `check:bundle`, one step each |
-| `.github/workflows/ci.yml`, jobs `Playwright (1/4)` to `Playwright (4/4)` | the same | Windows, Node 20: `npm ci`, `npx playwright install chromium`, `npm run test:e2e -- --shard=<n>/4` (all three projects, against the `-win32` baselines, split across four parallel jobs); on failure each shard uploads its `playwright-report/` and `test-results/` as artifacts |
-| `.github/workflows/ci.yml`, jobs `Mobile suite (webkit 1/8)` to `(webkit 8/8)` and `Mobile suite (chromium 1/2)` to `(chromium 2/2)`, then `Mobile suite` | the same | Windows, Node 20. Each shard runs `npm ci`, installs its one engine, then `npx cross-env E2E_SERVER=build playwright test --project=mobile-suite-<engine> --workers=3 --shard=<n>/<of>`. That is `npm run test:mobile` (the PR subset on the built bundle, mocked data only, [Mobile suite](#mobile-suite)) narrowed to one engine. Whatever the result, each shard uploads its gallery as `mobile-gallery-<engine>-<n>` and its HTML report as `mobile-playwright-report-<engine>-<n>`. The `Mobile suite` job needs every shard and passes only when all ten did, so branch protection requires that one check name |
+| `.github/workflows/ci.yml`, job `Fast gate` | pull request into `staging` or `main`, push to `staging`, manual (Run workflow) | Windows, Node 20: `npm ci`, `typecheck:web`, `typecheck:e2e`, `lint`, `test` (Windows-only suites included), `docs:check`, `build:web`, `check:bundle`, one step each |
+| `.github/workflows/ci.yml`, jobs `Playwright (1/6)` to `Playwright (6/6)` | the same | Ubuntu, Node 20: `npm ci`, `npx playwright install --with-deps chromium`, then `desktop-chromium` and `mobile-chromium` split across six parallel jobs (`--shard=<n>/6`); on failure each shard uploads its `playwright-report/` and `test-results/` as artifacts |
+| `.github/workflows/ci.yml`, job `Broadcast scenes` | the same | Windows, Node 20: the `broadcast` project alone, because its screenshots compare against the `-win32` baselines; on failure it uploads `playwright-report-broadcast` and `playwright-test-results-broadcast` |
+| `.github/workflows/ci.yml`, jobs `Mobile suite (chromium 1/3)` to `(chromium 3/3)` | the same | Ubuntu, Node 20: `npm ci`, `npx playwright install --with-deps chromium`, then `npx cross-env E2E_SERVER=build playwright test --project=mobile-suite-chromium --workers=3 --shard=<n>/3`: `npm run test:mobile` (the PR subset on the built bundle, mocked data only, [Mobile suite](#mobile-suite)) narrowed to Chromium. Whatever the result, each shard uploads its gallery as `mobile-gallery-chromium-<n>` and its HTML report as `mobile-playwright-report-chromium-<n>` |
+| `.github/workflows/ci.yml`, jobs `Mobile suite (webkit 1/8)` to `(webkit 8/8)` | push to `staging`, manual (Run workflow); skipped on pull requests | Windows, Node 20: the same with `npx playwright install webkit` and `--project=mobile-suite-webkit --shard=<n>/8`, uploading `mobile-gallery-webkit-<n>` and `mobile-playwright-report-webkit-<n>` |
+| `.github/workflows/ci.yml`, job `Mobile suite` | after the mobile shards | Ubuntu: passes when every Chromium shard passed and the WebKit shards passed or were skipped (on a pull request), so `Mobile suite` is the one check name to require |
 | `.github/workflows/mobile-nightly.yml`, jobs `Mobile full matrix (1/12)` to `(12/12)` | daily at 03:00 UTC on the default branch, manual (Run workflow, any branch) | Windows, Node 20: the same install, then `npm run test:mobile:full -- --workers=3 --shard=<n>/12`; each shard uploads its gallery as `mobile-gallery-full-<n>` and its report as `mobile-playwright-report-full-<n>` |
 | `.github/workflows/web.yml` | push to `main`, manual | Ubuntu, Node 20: `npm ci`, `npm run quality:web` (`typecheck:web`, `typecheck:e2e`, `lint`, `test`, `build:web`, `check:bundle`), then a deploy that waits for approval |
 | `.github/workflows/release.yml` | push to `main` | Windows: builds and publishes the installer when the `package.json` version has no tag yet, plus a copy under the stable name `utbt-launcher-setup.exe` that `DESKTOP_APP_DOWNLOAD_URL` points at; no tests |
@@ -857,10 +863,11 @@ further steps. A second drop fails the test.
 `ci.yml`'s Windows jobs turn off `core.autocrlf` before checkout (Linux checks out LF already), so the runner gets each file's committed line
 endings, as a local checkout does. A newer push to the same pull request cancels its run in
 progress; runs on `staging` finish, so every merged commit gets a result.
-GitHub sets `CI`, so Playwright runs with 2 retries, `forbidOnly` and the `github` reporter
+GitHub sets `CI`, so Playwright runs with 1 retry, `forbidOnly` and the `github` reporter
 ([Projects](#projects)); the `Playwright` jobs add `--reporter=list,github,html`, so the log shows each test as
-it finishes and a failure leaves an HTML report. The full suite takes too long for one runner, so
-it runs as four shards. Download the failing shard's `playwright-report-<n>` artifact and open its
+it finishes and a failure leaves an HTML report. One retry still absorbs a one-off flake, and a test
+that fails for real stops after two attempts instead of three. The full suite takes too long for one
+runner, so it runs as six shards. Download the failing shard's `playwright-report-<n>` artifact and open its
 `index.html`, or read the images and `trace.zip` in `playwright-test-results-<n>` as in
 [Reading a mismatch](#reading-a-mismatch).
 `docs:check` runs on a shallow checkout with no history before the tested commit, so in CI it
@@ -869,21 +876,28 @@ checks paths, links and the manifest but lists no docs to review; run it locally
 The mobile jobs pass `--reporter=list,github,html,./e2e/mobile/gallery-reporter.ts`: a
 `--reporter` option replaces the config's reporters, so the gallery reporter is listed again
 ([Gallery](#gallery)).
-- **They run on Windows,** like the Playwright shards. The ledger is seeded on Windows, and the
-  suite measures layout against Windows fonts.
-- **On Ubuntu runners:**
-  - WebKit took about 55 s per crawl test, and with 4 workers on 4 cores its tests timed out;
-  - Linux font metrics moved a scroll-restore verdict;
-  - one unsharded job ran past 30 minutes.
+- **Chromium runs on Ubuntu, WebKit on Windows.** Ubuntu runners start and run faster. WebKit stays
+  on Windows: on Ubuntu runners it took about 55 s per crawl test, and with 4 workers on 4 cores its
+  tests timed out, and one unsharded job ran past 30 minutes. The ledger is seeded on Windows; a
+  rule whose verdict moves with Linux font metrics on Chromium needs its ledger entry rechecked on
+  Ubuntu (one scroll-restore verdict did).
+- **WebKit skips pull requests.** It is the slow half: eight Windows shards that took 5 to 27
+  minutes on a pull request. It runs on every push to `staging` and on a manual run (Actions →
+  CI → Run workflow, pick the branch), and `npm run test:mobile` runs both engines locally, so run
+  it before merging a UI change.
+- **A stuck step fails fast.** The crawl caps every Playwright wait at 45 s (`STEP_TIMEOUT_MS` in
+  `crawl.spec.ts`, set with `page.setDefaultTimeout`) inside the 180 s budget of a slow-marked crawl
+  test, so a page that never settles fails in under a minute instead of burning the whole budget on
+  every attempt.
 - **Three workers per shard** leave headroom on the runner's four cores.
 - **The shard counts** keep each shard near the Playwright shards' time.
-- **The pull request run splits by engine first.** Playwright splits shards by test count, not
-  duration, and a WebKit test takes several times as long as a Chromium one. So mixed shards that
-  drew the WebKit crawl took 25 minutes while others took 4.
-  - WebKit gets eight shards and Chromium two, from the same 384 tests each.
+- **The run splits by engine first.** Playwright splits shards by test count, not duration, and a
+  WebKit test takes several times as long as a Chromium one. So mixed shards that drew the WebKit
+  crawl took 25 minutes while others took 4.
+  - WebKit gets eight shards and Chromium three, from the same 384 tests each.
   - The nightly full matrix runs as 12 mixed shards. Open a gallery artifact's `index.html` to see every
 surface the run crawled, and the report's `index.html` for a failing test's error and trace. A
-pull request run splits both across its six shards, and a nightly run across its four. The nightly run gates
+run splits both across its shards, one gallery and one report per shard. The nightly run gates
 nothing: read its failures as ledger entries the full matrix is missing or new regressions at sizes
 the PR subset skips.
 
@@ -902,8 +916,8 @@ A gate run after a merge went red. Work in this order:
 3. **Rule out a known flake** (Playwright on Windows):
    - One random test's page stays blank and times out after 30 s with `net::ERR_NO_BUFFER_SPACE`
      loading `/renderer-web.tsx` or a harness page. That is a local socket error under two
-     workers, not the code. Rerun with `npm run test:e2e -- --retries=2` (the config's retry count under `CI`); a
-     real failure fails all three tries.
+     workers, not the code. Rerun with `npm run test:e2e -- --retries=1` (the config's retry count under `CI`); a
+     real failure fails both tries.
    - `layout never overflows the viewport` (`responsive-accessibility.spec.ts`) can fail on a cold
      dev-server start: rerun it.
    - `http://127.0.0.1:5175 is already used`: a dev server from an earlier run is alive. Stop it or
