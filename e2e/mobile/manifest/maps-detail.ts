@@ -9,6 +9,8 @@ const leaderboardShown: PageStep = shows(page => page
     .or(page.getByText(/^No (caps|team runs) yet\.$/))
     .first())
 
+const compareShown: PageStep = shows(page => page.getByRole('button', { name: /^Compare \(\d+\)$/ }))
+
 export const mapsDetail: MobileRouteEntry = {
     view: 'maps-detail',
     tier: 'public',
@@ -47,6 +49,16 @@ export const mapsDetail: MobileRouteEntry = {
     subViews: [
         { id: 'certified', label: 'Certified leaderboard', open: tap(page => page.getByRole('button', { name: 'Certified', exact: true })), ready: leaderboardShown },
         { id: 'all', label: 'All caps leaderboard', open: tap(page => page.getByRole('button', { name: 'All', exact: true })), ready: leaderboardShown },
+        {
+            id: 'compare-selection',
+            label: 'Compare selection',
+            open: tap(page => page.getByRole('main').getByRole('checkbox').and(page.locator(':enabled')).first()),
+            ready: compareShown,
+            skip: [
+                { rule: 'tap-targets-44px', reason: 'the page around the selection keeps the small targets every maps-detail surface is ledgered for; the checkbox labels and the Compare button are 44 px, pinned by e2e/map-compare-selection.spec.ts' },
+                { rule: 'axe-critical-serious', reason: 'on a landscape phone the table keeps the unnamed Watch and Download buttons every maps-detail surface is ledgered for at 915x412; the selection adds only named checkboxes and the Compare button' },
+            ],
+        },
         {
             id: 'team-map',
             label: 'Team map',

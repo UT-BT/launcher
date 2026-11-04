@@ -15,7 +15,7 @@ doesn't run on the surfaces it names.
 | `home` | `home` | public | `/` | `home` | 0 | 2 |
 | `servers` | `servers` | public | `/servers` | `servers` | 0 | 1 |
 | `maps` | `maps` | public | `/maps` | `maps` | 1 | 3 |
-| `maps-detail` | `maps-detail` | public | `/maps/CTF-BT-HumanResources` | `maps-detail` | 3 | 7 |
+| `maps-detail` | `maps-detail` | public | `/maps/CTF-BT-HumanResources` | `maps-detail` | 4 | 7 |
 | `players` | `players` | public | `/players` | `players` | 0 | 1 |
 | `player-detail` | `player-detail` | public | `/players/778035658224697377` | `player-detail` | 7 | 5 |
 | `teams` | `teams` | public | `/teams` | `teams` | 0 | 0 |
@@ -128,6 +128,7 @@ No skipped rules.
 |---|---|---|---|
 | `maps-detail/certified` | Certified leaderboard | a step on `/maps/CTF-BT-HumanResources` | none |
 | `maps-detail/all` | All caps leaderboard | a step on `/maps/CTF-BT-HumanResources` | none |
+| `maps-detail/compare-selection` | Compare selection | a step on `/maps/CTF-BT-HumanResources` | none |
 | `maps-detail/team-map` | Team map | URL `/maps/CTF-BT-II-SkaarjInvasion-vF2` | `most-columns` |
 
 ### Modals
@@ -144,7 +145,8 @@ No skipped rules.
 
 ### Skipped rules
 
-No skipped rules.
+- `tap-targets-44px` on `maps-detail/compare-selection`, its modals and its stress variants: the page around the selection keeps the small targets every maps-detail surface is ledgered for; the checkbox labels and the Compare button are 44 px, pinned by e2e/map-compare-selection.spec.ts
+- `axe-critical-serious` on `maps-detail/compare-selection`, its modals and its stress variants: on a landscape phone the table keeps the unnamed Watch and Download buttons every maps-detail surface is ledgered for at 915x412; the selection adds only named checkboxes and the Compare button
 
 ## players
 
