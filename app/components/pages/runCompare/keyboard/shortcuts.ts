@@ -1,4 +1,5 @@
 import { MAX_VIDEO_TILES } from '../model/raceModel'
+import { MAX_TEAM_RUNS } from '../model/teamModel'
 import { SKIP_SECONDS } from '../playback/playbackConstants'
 
 export type Shortcut =
@@ -6,6 +7,7 @@ export type Shortcut =
     | { kind: 'frame'; direction: 1 | -1 }
     | { kind: 'skip'; direction: 1 | -1 }
     | { kind: 'focus'; tile: number }
+    | { kind: 'focus-row'; row: number }
     | { kind: 'grid' }
     | { kind: 'cue'; direction: 1 | -1 }
     | { kind: 'fullscreen' }
@@ -35,6 +37,7 @@ export const SHORTCUT_SHEET: readonly ShortcutEntry[] = [
     { keys: ['←', '→'], action: 'One frame back or forward', control: 'Previous frame, Next frame' },
     { keys: ['J', 'L'], action: `${SKIP_SECONDS} seconds back or forward`, control: `Back ${SKIP_SECONDS} seconds, Forward ${SKIP_SECONDS} seconds` },
     { keys: [`1–${MAX_VIDEO_TILES}`], action: 'Focus that tile', control: 'Click a tile' },
+    { keys: [`Shift+1–${MAX_TEAM_RUNS}`], action: 'Focus that team row', control: 'Click the team’s row header' },
     { keys: ['0'], action: 'Back to the grid', control: 'Click the focused tile' },
     { keys: ['[', ']'], action: 'Previous or next cue', control: 'Previous cue, Next cue' },
     { keys: ['F'], action: 'Stage fullscreen', control: 'Fullscreen' },
@@ -73,6 +76,12 @@ function digitRowShortcut(code: string | undefined): Shortcut | null {
     return digit === undefined ? null : digitShortcut(digit)
 }
 
+function rowShortcut(event: ShortcutKey): Shortcut | null {
+    const digit = event.code?.match(/^Digit(\d)$/)?.[1] ?? (/^\d$/.test(event.key) ? event.key : undefined)
+    const row = Number(digit)
+    return digit !== undefined && row >= 1 && row <= MAX_TEAM_RUNS ? { kind: 'focus-row', row } : null
+}
+
 function leftToTheApp(event: ShortcutKey): boolean {
     const altGraph = event.key.length === 1 && event.getModifierState?.('AltGraph') === true
     return event.metaKey || (!altGraph && (event.altKey || event.ctrlKey))
@@ -80,7 +89,7 @@ function leftToTheApp(event: ShortcutKey): boolean {
 
 function keyShortcut(event: ShortcutKey): Shortcut | null {
     if (event.key === '?') return { kind: 'sheet' }
-    if (event.shiftKey) return null
+    if (event.shiftKey) return rowShortcut(event)
     return plainShortcut(event.key.length === 1 ? event.key.toLowerCase() : event.key) ?? digitRowShortcut(event.code)
 }
 

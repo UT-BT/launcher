@@ -5,6 +5,7 @@ import { parseCompareQuery } from '../url/compareUrl'
 import type { CompareModel } from './compareModel'
 import { liveDelta, type Lane } from './laneModel'
 import { formatRaceTime } from './raceModel'
+import type { PairMenu } from './teamPairing'
 
 export const OVERLAY_IDLE_MS = 2000
 export const SECTOR_FLASH_MS = 1000
@@ -20,6 +21,7 @@ export interface TileOverlay {
     teamIndex: number | null
     removable: boolean
     lane: Lane | null
+    pairMenu: PairMenu | null
 }
 
 export interface SectorFlash {
@@ -59,6 +61,7 @@ export function tileOverlays(model: CompareModel): ReadonlyMap<string, TileOverl
             teamIndex: seat?.index ?? null,
             removable,
             lane,
+            pairMenu: model.teams.pairing.menus.get(tile.id) ?? null,
         }]
     }))
 }

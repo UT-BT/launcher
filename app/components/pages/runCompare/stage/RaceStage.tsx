@@ -31,6 +31,7 @@ export interface StageAudio {
 export interface StageFocus {
     focused: string | null
     onFocus: (capId: string) => void
+    onFocusRow?: (teamCapId: string) => void
 }
 
 export interface StageOverlays {
@@ -136,11 +137,30 @@ function TeamDelta({ row, controller }: { row: TeamRow; controller: PlaybackCont
     return <span className={cn('run-compare-team-delta font-mono tabular-nums', TONE_TEXT[gap.tone])}>{gap.label}</span>
 }
 
-function TeamRowHeader({ row, rect, controller }: { row: TeamRow; rect: SlotRect; controller: PlaybackController | null }) {
+interface TeamRowHeaderProps {
+    row: TeamRow
+    rect: SlotRect
+    controller: PlaybackController | null
+    onFocusRow: ((teamCapId: string) => void) | null
+}
+
+function TeamRowHeader({ row, rect, controller, onFocusRow }: TeamRowHeaderProps) {
     return (
         <div className="run-compare-team-header run-compare-row" style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }}>
-            <span className="run-compare-team-bar" style={{ background: row.colour }} />
-            <TeamLabel row={row} className="min-w-0" />
+            {onFocusRow
+                ? (
+                    <button type="button" className="run-compare-team-focus run-compare-row" onClick={() => onFocusRow(row.teamCapId)}>
+                        <span className="sr-only">Focus </span>
+                        <span className="run-compare-team-bar" style={{ background: row.colour }} />
+                        <TeamLabel row={row} className="min-w-0" />
+                    </button>
+                )
+                : (
+                    <>
+                        <span className="run-compare-team-bar" style={{ background: row.colour }} />
+                        <TeamLabel row={row} className="min-w-0" />
+                    </>
+                )}
             <span className="font-mono tabular-nums text-foreground">{row.time}</span>
             {row.reference && <span className="run-compare-badge is-reference">REF</span>}
             <TeamDelta row={row} controller={controller} />
@@ -204,7 +224,15 @@ export function RaceStage({ layout, tiles, view, onSwipe, controller, stageRef, 
                     others={slot.id === view.pov ? others : []}
                 />
             ))}
-            {teamRows.map(row => row.header && <TeamRowHeader key={row.teamCapId} row={row} rect={row.header} controller={controller} />)}
+            {teamRows.map(row => row.header && (
+                <TeamRowHeader
+                    key={row.teamCapId}
+                    row={row}
+                    rect={row.header}
+                    controller={controller}
+                    onFocusRow={!touch && view.mode === 'grid' && focus.onFocusRow ? focus.onFocusRow : null}
+                />
+            ))}
         </section>
     )
 }

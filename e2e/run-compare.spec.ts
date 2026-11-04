@@ -1222,3 +1222,77 @@ test.describe('team vs team', () => {
         await expect(splitRows(page)).toHaveText(['Cap'])
     })
 })
+
+test.describe('pairing override and driving pair', () => {
+    const [FIERD_6, NIGHTWOLF] = ALIGNED_RUNNER.members.map(member => member.capId)
+    const [GXLS, NETTLEZ] = ALIGNED_REFERENCE.members.map(member => member.capId)
+
+    async function xOf(page: Page, alias: string): Promise<number> {
+        return (await tile(page, alias).boundingBox())!.x
+    }
+
+    function memberRow(page: Page, alias: string): Locator {
+        return drawer(page).getByRole('list', { name: 'Members' }).getByRole('listitem').filter({ hasText: alias })
+    }
+
+    test('overriding a pair moves the tiles into the new columns, writes pair in place, and survives a reload', async ({ page, isMobile }) => {
+        test.skip(isMobile, 'the grid of rows is the wide layout')
+        await openAligned(page)
+        const lengthBefore = await historyLength(page)
+
+        await tile(page, 'fierd_6').getByRole('button', { name: 'Paired With' }).click()
+        const menu = page.getByRole('menu')
+        await expect(menu.getByRole('menuitemradio')).toHaveCount(2)
+        await expect(menu.getByRole('menuitemradio', { name: /Nettlez/ })).toHaveAttribute('aria-checked', 'true')
+        await expect(menu.getByRole('menuitemradio', { name: /Nettlez/ })).toContainText('route match 95 %')
+        await expect(menu.getByRole('menuitemradio', { name: /gxls/ })).toContainText('route match 39 %')
+        await menu.getByRole('menuitemradio', { name: /gxls/ }).click()
+
+        const paired = `${ALIGNED_URL.slice('/compare'.length)}&pair=${FIERD_6}:${GXLS},${NIGHTWOLF}:${NETTLEZ}`
+        await expect.poll(() => new URL(page.url()).search).toBe(paired)
+        expect(await historyLength(page)).toBe(lengthBefore)
+        await expect.poll(async () => Math.round(await xOf(page, 'fierd_6')) - Math.round(await xOf(page, 'gxls'))).toBe(0)
+        await expect.poll(async () => Math.round(await xOf(page, 'Nightwolf`')) - Math.round(await xOf(page, '[UTW]Nettlez'))).toBe(0)
+        await expect(tile(page, 'fierd_6')).toContainText('Different route')
+
+        await page.reload()
+        for (const alias of ['fierd_6', 'Nightwolf`', 'gxls', '[UTW]Nettlez']) await expect(tile(page, alias).locator('video')).toHaveCount(1)
+        expect(new URL(page.url()).search).toBe(paired)
+        await expect.poll(async () => Math.round(await xOf(page, 'fierd_6')) - Math.round(await xOf(page, 'gxls'))).toBe(0)
+        await tile(page, 'gxls').getByRole('button', { name: 'Paired With' }).click()
+        await expect(page.getByRole('menu').getByRole('menuitemradio', { name: /fierd_6/ })).toHaveAttribute('aria-checked', 'true')
+    })
+
+    test('Shift+1 focuses the first team row', async ({ page, isMobile }) => {
+        test.skip(isMobile, 'focus is a layout of the wide grid')
+        await openAligned(page)
+
+        await page.keyboard.press('Shift+Digit1')
+
+        await expect.poll(async () => (await tile(page, 'fierd_6').boundingBox())!.width).toBeGreaterThan((await tile(page, 'gxls').boundingBox())!.width * 2)
+        const [fierd, nightwolf, gxls] = await Promise.all(['fierd_6', 'Nightwolf`', 'gxls'].map(async alias => (await tile(page, alias).boundingBox())!))
+        expect(nightwolf.width).toBeCloseTo(fierd.width, 0)
+        expect(gxls.x).toBeGreaterThan(fierd.x + fierd.width - 1)
+
+        await page.keyboard.press('Shift+Digit2')
+        await expect.poll(async () => (await tile(page, 'gxls').boundingBox())!.width).toBeGreaterThan((await tile(page, 'fierd_6').boundingBox())!.width * 2)
+        await expect(tile(page, 'gxls').getByRole('button', { name: 'Audio' })).toHaveAttribute('aria-pressed', 'true')
+
+        await page.keyboard.press('0')
+        await expect.poll(async () => Math.round((await tile(page, 'fierd_6').boundingBox())!.width)).toBe(Math.round((await tile(page, 'gxls').boundingBox())!.width))
+    })
+
+    test('with Sync by position on, the roster offers the driving pair and writes drive in place', async ({ page }) => {
+        await openAligned(page)
+        await syncToggle(page).click()
+        await runsButton(page).click()
+
+        await expect(memberRow(page, 'fierd_6').getByRole('button', { name: 'Drives Sync' })).toHaveAttribute('aria-pressed', 'true')
+        await expect(memberRow(page, 'gxls').getByRole('button', { name: 'Drives Sync' })).toHaveCount(0)
+        await memberRow(page, 'Nightwolf`').getByRole('button', { name: 'Drives Sync' }).click()
+
+        await expect.poll(() => new URL(page.url()).search).toBe(`${ALIGNED_URL.slice('/compare'.length)}&drive=${NIGHTWOLF}&sync=position`)
+        await expect(memberRow(page, 'Nightwolf`').getByRole('button', { name: 'Drives Sync' })).toHaveAttribute('aria-pressed', 'true')
+        await expect(memberRow(page, 'fierd_6').getByRole('button', { name: 'Paired With' })).toBeVisible()
+    })
+})

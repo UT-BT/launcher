@@ -118,7 +118,7 @@ function parsePairs(query: URLSearchParams, members: ReadonlySet<string>, notice
         const value = `${runner ?? rawRunner}:${reference ?? rawReference}`
         if (!runner || !reference || rest.length > 0 || runner === reference) {
             notices.push({ param: 'pair', reason: 'malformed', value: raw })
-        } else if (pairs.some(pair => pair.runner === runner || pair.reference === reference)) {
+        } else if (pairs.some(pair => pair.runner === runner || (pair.runner === reference && pair.reference === runner))) {
             notices.push({ param: 'pair', reason: 'duplicate', value })
         } else if (!members.has(runner) || !members.has(reference)) {
             notices.push({ param: 'pair', reason: 'outside-set', value })

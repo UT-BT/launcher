@@ -25,7 +25,7 @@ import { useTeamRuns } from './loading/teamRuns'
 import { holdWhileAdding, type SetChange } from './model/addRuns'
 import { audibleRun, chooseAudio } from './model/audioModel'
 import { composeCompareModel, type CompareModel } from './model/compareModel'
-import { focusAt, nextAudio, toggleFocus } from './model/focusModel'
+import { focusAt, nextAudio, rowAudio, rowFocusAt, toggleFocus } from './model/focusModel'
 import { tileOverlays } from './model/overlayModel'
 import { isPhone, povForAudio, stageAspect, stageView, stepPov } from './model/phoneStage'
 import { editableSet, editSet, type SetEdit } from './model/setEdits'
@@ -118,9 +118,13 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
         setFocus(capId)
         if (capId !== null && capId !== model.race.focused) setAudioFrom(capId)
     }, [model.race.focused, setFocus, setAudioFrom])
+    const focusRow = useCallback((teamCapId: string) => {
+        setFocus(teamCapId)
+        setAudioFrom(rowAudio(model.race, model.teams, teamCapId, audible))
+    }, [model.race, model.teams, audible, setFocus, setAudioFrom])
     const stageFocus = useMemo<StageFocus>(
-        () => ({ focused: model.race.focused, onFocus: capId => focusTile(toggleFocus(model.race, model.race.focused, capId)) }),
-        [model.race, focusTile],
+        () => ({ focused: model.race.focused, onFocus: capId => focusTile(toggleFocus(model.race, model.race.focused, capId)), onFocusRow: focusRow }),
+        [model.race, focusTile, focusRow],
     )
     const view = model.race.view
     const phone = isPhone(view.form)
@@ -157,6 +161,11 @@ export function RunComparePage({ compare, userProfile }: RunComparePageProps) {
                 const capId = focusAt(model.race, shortcut.tile)
                 if (capId !== null) focusTile(capId)
                 return capId !== null
+            }
+            case 'focus-row': {
+                const teamCapId = rowFocusAt(model.race, model.teams, shortcut.row)
+                if (teamCapId !== null) focusRow(teamCapId)
+                return teamCapId !== null
             }
             case 'grid':
                 focusTile(null)

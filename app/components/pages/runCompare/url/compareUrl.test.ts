@@ -117,13 +117,21 @@ describe('entries pointing outside the set', () => {
         ])
     })
 
-    it('drops a pairing whose members are not in the set, and a member paired twice', () => {
-        const { state, notices } = parseCompareQuery(`runs=${A}&pair=${M1}:${M2},${M1}:${C},${C}:${M2}`, new Set([M1, M2]))
+    it('drops a pairing whose members are not in the set, a runner paired twice and a repeated pair', () => {
+        const { state, notices } = parseCompareQuery(`runs=${A}&pair=${M1}:${M2},${M1}:${C},${C}:${M2},${M2}:${M1}`, new Set([M1, M2]))
         expect(state.pairs).toEqual([{ runner: M1, reference: M2 }])
         expect(notices).toEqual([
             { param: 'pair', reason: 'duplicate', value: `${M1}:${C}` },
-            { param: 'pair', reason: 'duplicate', value: `${C}:${M2}` },
+            { param: 'pair', reason: 'outside-set', value: `${C}:${M2}` },
+            { param: 'pair', reason: 'duplicate', value: `${M2}:${M1}` },
         ])
+    })
+
+    it('keeps a reference member paired once per other team run', () => {
+        const M3 = '3d3d3d3d-0000-4000-8000-0000000000d3'
+        const { state, notices } = parseCompareQuery(`runs=${A}&pair=${M1}:${M2},${M3}:${M2}`, new Set([M1, M2, M3]))
+        expect(state.pairs).toEqual([{ runner: M1, reference: M2 }, { runner: M3, reference: M2 }])
+        expect(notices).toEqual([])
     })
 
     it('drops every pairing and the driving pair on a set with no members', () => {

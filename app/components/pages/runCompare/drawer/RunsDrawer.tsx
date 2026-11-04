@@ -1,5 +1,5 @@
 import { useEffect, useRef, type KeyboardEvent, type ReactNode, type RefObject } from 'react'
-import { Pin, SlidersHorizontal, Trash2, Video, VideoOff, Volume2, VolumeX, X } from 'lucide-react'
+import { Gauge, Pin, SlidersHorizontal, Trash2, Video, VideoOff, Volume2, VolumeX, X } from 'lucide-react'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import {
     DropdownMenu,
@@ -13,6 +13,8 @@ import { useModalBehaviour } from '@/app/components/ui/useModalBehaviour'
 import { getDeviceEnvironment, subscribeDeviceEnvironment } from '@/app/device/useDeviceEnvironment'
 import { cn } from '@/lib/utils'
 import type { SetEdit } from '../model/setEdits'
+import type { PairMenu } from '../model/teamPairing'
+import { PairMenu as PairMenuControl } from '../stage/PairMenu'
 import { useSwipe } from '../stage/useSwipe'
 import { formatOffset, offsetNudges } from './offsetNudge'
 import { TeamIndex, TeamLabel } from '../stage/TeamLabel'
@@ -58,6 +60,8 @@ interface RosterItemProps {
     audible: boolean
     onAudio: (capId: string) => void
     seat?: { index: number; colour: string }
+    pairMenu?: PairMenu | null
+    driving?: boolean | null
 }
 
 function AudioToggle({ row, audible, onAudio }: Pick<RosterItemProps, 'row' | 'audible' | 'onAudio'>) {
@@ -75,7 +79,7 @@ function AudioToggle({ row, audible, onAudio }: Pick<RosterItemProps, 'row' | 'a
     )
 }
 
-function RosterItem({ row, only, onEdit, audible, onAudio, seat }: RosterItemProps) {
+function RosterItem({ row, only, onEdit, audible, onAudio, seat, pairMenu = null, driving = null }: RosterItemProps) {
     const { run, capId } = row
     const videoOn = row.video === 'on'
     return (
@@ -112,6 +116,18 @@ function RosterItem({ row, only, onEdit, audible, onAudio, seat }: RosterItemPro
                     <span>{seat ? 'POV' : 'Video'}</span>
                 </button>
                 <AudioToggle row={row} audible={audible} onAudio={onAudio} />
+                {pairMenu && <PairMenuControl menu={pairMenu} onEdit={onEdit} variant="roster" />}
+                {driving !== null && (
+                    <button
+                        type="button"
+                        aria-pressed={driving}
+                        className="run-compare-roster-action"
+                        onClick={() => onEdit({ kind: 'drive', capId })}
+                    >
+                        <Gauge className="size-4" />
+                        <span>Drives Sync</span>
+                    </button>
+                )}
                 {!row.frameSynced && <OffsetMenu row={row} onEdit={onEdit} />}
                 {!seat && <RemoveButton disabled={only} onRemove={() => onEdit({ kind: 'remove', capId })} />}
             </div>
@@ -146,7 +162,12 @@ function TeamRosterItem({ group, only, onEdit, audible, onAudio }: TeamRosterIte
                     <TeamLabel row={row} className="min-w-0" />
                     <span className="font-mono tabular-nums text-foreground">{row.time}</span>
                 </div>
-                {row.reference && <div className="run-compare-roster-badges"><span className="run-compare-badge is-reference">REF</span></div>}
+                {(row.reference || row.badges.length > 0) && (
+                    <div className="run-compare-roster-badges">
+                        {row.reference && <span className="run-compare-badge is-reference">REF</span>}
+                        {row.badges.map(badge => <span key={badge} className="run-compare-badge">{badge}</span>)}
+                    </div>
+                )}
                 <div className="run-compare-roster-actions">
                     <button
                         type="button"
@@ -161,7 +182,7 @@ function TeamRosterItem({ group, only, onEdit, audible, onAudio }: TeamRosterIte
                 </div>
             </div>
             <ol aria-label="Members" className="run-compare-roster-members">
-                {members.map(({ roster, index }) => (
+                {members.map(({ roster, index, menu, driving }) => (
                     <RosterItem
                         key={roster.capId}
                         row={roster}
@@ -170,6 +191,8 @@ function TeamRosterItem({ group, only, onEdit, audible, onAudio }: TeamRosterIte
                         audible={audible === roster.capId}
                         onAudio={onAudio}
                         seat={{ index, colour: row.colour }}
+                        pairMenu={menu}
+                        driving={driving}
                     />
                 ))}
             </ol>

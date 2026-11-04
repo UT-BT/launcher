@@ -53,12 +53,17 @@ describe('the page shortcuts', () => {
         expect(press('à', { code: 'Digit0' })).toEqual({ kind: 'grid' })
         expect(press('ç', { code: 'Digit9' })).toBeNull()
         expect(press('[', { code: 'Digit2' })).toEqual({ kind: 'cue', direction: -1 })
-        expect(press('1', { code: 'Digit1', shiftKey: true })).toBeNull()
+        expect(press('1', { code: 'Digit1', shiftKey: true })).toEqual({ kind: 'focus-row', row: 1 })
     })
 
-    it('reserves Shift with a number and leaves other Shift keys alone', () => {
+    it('focuses a team row with Shift and a number from 1 to 4, read by position, and leaves other Shift keys alone', () => {
+        expect(press('!', { code: 'Digit1', shiftKey: true })).toEqual({ kind: 'focus-row', row: 1 })
+        expect(press('$', { code: 'Digit4', shiftKey: true })).toEqual({ kind: 'focus-row', row: 4 })
+        expect(press('3', { shiftKey: true })).toEqual({ kind: 'focus-row', row: 3 })
+        expect(press('%', { code: 'Digit5', shiftKey: true })).toBeNull()
+        expect(press(')', { code: 'Digit0', shiftKey: true })).toBeNull()
         expect(press('!', { shiftKey: true })).toBeNull()
-        expect(press('1', { shiftKey: true })).toBeNull()
+        expect(press('!', { code: 'Digit1', shiftKey: true, repeat: true })).toBeNull()
         expect(press('F', { shiftKey: true })).toBeNull()
         expect(press('ArrowRight', { shiftKey: true })).toBeNull()
     })
@@ -77,7 +82,7 @@ describe('the page shortcuts', () => {
     })
 
     it('lists every shortcut with the visible control that does the same', () => {
-        expect(SHORTCUT_SHEET.map(entry => entry.keys.join(' '))).toEqual(['Space', '← →', 'J L', '1–8', '0', '[ ]', 'F', 'R', 'M', '?'])
+        expect(SHORTCUT_SHEET.map(entry => entry.keys.join(' '))).toEqual(['Space', '← →', 'J L', '1–8', 'Shift+1–4', '0', '[ ]', 'F', 'R', 'M', '?'])
         for (const entry of SHORTCUT_SHEET) expect(entry.control).not.toBe('')
     })
 })

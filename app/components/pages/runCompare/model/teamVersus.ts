@@ -4,11 +4,13 @@ import { TEAM_SPLIT_CAP_ZONE, type CapComparisonPoint, type TeamComparison, type
 import { comparisonKey, type ComparisonRequest, type LoadedComparisons } from '../loading/comparisons'
 import type { SoloRun } from '../loading/soloRuns'
 import type { LoadedTeamComparisons } from '../loading/teamComparisons'
+import type { ComparePair } from '../url/compareUrl'
 import { EMPTY_CUES, type CueModel, type CuePoint } from './cueModel'
 import { laneFor, liveDelta, RUNG_BADGES, stepPoints, TIME_ONLY, type Lane, type LaneMark, type LanesModel, type Rung } from './laneModel'
 import type { RaceModel, RaceRun } from './raceModel'
 import { leadSide } from './referenceModel'
 import { firstCrossings, memberLane, type TeamGridRow, type TeamModel, type TeamRow } from './teamModel'
+import { overridePair } from './teamPairing'
 
 export const DIFFERENT_ROUTE = 'Different route'
 export const SPAWN_ANCHOR = 'Spawn'
@@ -26,6 +28,7 @@ export interface TeamRead {
     row: TeamRow
     comparison: TeamComparison | null | undefined
     pairs: TeamPair[]
+    server: TeamPair[]
 }
 
 export interface RouteAnchor {
@@ -42,20 +45,27 @@ export function referenceRow(teams: Pick<TeamModel, 'rows'>): TeamRow | undefine
     return teams.rows.find(row => row.reference)
 }
 
-export function teamReads(teams: TeamModel, loaded: LoadedTeamComparisons): TeamRead[] {
+export function teamReads(teams: TeamModel, loaded: LoadedTeamComparisons, overrides: readonly ComparePair[] = []): TeamRead[] {
     const reference = referenceRow(teams)
     if (!reference || teams.rows.length < 2) return []
     const referenceMembers = new Map(reference.team.members.map(member => [member.capId, member]))
+    const order = new Map(reference.team.members.map((member, i) => [member.capId, i]))
     return teams.rows.filter(row => !row.reference).map(row => {
         const comparison = loaded.get(comparisonKey({ runner: row.teamCapId, reference: reference.teamCapId }))
         const members = new Map(row.team.members.map(member => [member.capId, member]))
-        const pairs = (comparison?.pairs ?? []).flatMap((pair): TeamPair[] => {
+        const server = (comparison?.pairs ?? []).flatMap((pair): TeamPair[] => {
             const runner = members.get(pair.runner_cap_id)
             const partner = referenceMembers.get(pair.reference_cap_id)
             if (!runner || !partner) return []
             return [{ key: comparisonKey({ runner: runner.capId, reference: partner.capId }), state: pair.state, score: pair.score, runner, reference: partner }]
         })
-        return { row, comparison, pairs }
+        const own = comparison ? overrides.filter(pair => members.has(pair.runner) && referenceMembers.has(pair.reference)) : []
+        const pairs = own.length === 0
+            ? server
+            : own
+                .map(pair => overridePair(members.get(pair.runner)!, referenceMembers.get(pair.reference)!, comparison?.candidates ?? []))
+                .sort((a, b) => order.get(a.reference.capId)! - order.get(b.reference.capId)!)
+        return { row, comparison, pairs, server }
     })
 }
 

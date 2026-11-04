@@ -3,6 +3,7 @@ import { Pin, Trash2, Volume2, VolumeX } from 'lucide-react'
 import { TONE_TEXT } from '@/app/components/pages/capDetail/runDelta/deltaStyles'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { cn } from '@/lib/utils'
+import { PairMenu } from './PairMenu'
 import { TeamIndex } from './TeamLabel'
 import { sameReadout, tileReadout, type TileOverlay as TileOverlayModel, type TileReadout } from '../model/overlayModel'
 import type { SetEdit } from '../model/setEdits'
@@ -82,6 +83,7 @@ export function TileOverlay({ overlay, controller, shown, audio, onEdit }: TileO
                     >
                         {audio.audible ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
                     </button>
+                    {overlay.pairMenu && <PairMenu menu={overlay.pairMenu} onEdit={onEdit} variant="tile" />}
                     <button
                         type="button"
                         aria-label="Pin"

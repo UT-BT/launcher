@@ -4,6 +4,7 @@ import { stateOf, type CompareModel } from './compareModel'
 import { MAX_VIDEO_TILES } from './raceModel'
 import { sideGroupOf } from './referenceModel'
 import { MAX_TEAM_RUNS } from './teamModel'
+import { overrideEdit, type TeamPairing } from './teamPairing'
 
 export type SetEdit =
     | { kind: 'add'; capId: string }
@@ -13,12 +14,16 @@ export type SetEdit =
     | { kind: 'video'; capId: string; on: boolean }
     | { kind: 'offset'; capId: string; ms: number }
     | { kind: 'sync'; mode: CompareSync }
+    | { kind: 'pair'; capId: string; partner: string }
+    | { kind: 'drive'; capId: string }
 
 export interface EditableSet {
     state: CompareUrlState
     runs: readonly SoloRun[]
     videoTiles: readonly string[]
     teams?: ReadonlyMap<string, readonly string[]>
+    reference?: string | null
+    pairings?: ReadonlyMap<string, TeamPairing>
 }
 
 export type EditOutcome = { query: string; blocked: null } | { query: null; blocked: string }
@@ -35,7 +40,7 @@ export function editableSet(model: CompareModel): EditableSet {
         state: stateOf(model),
         runs: model.runs,
         videoTiles: model.race.tiles.map(tile => tile.id),
-        ...(rows.length > 0 ? { teams } : {}),
+        ...(rows.length > 0 ? { teams, reference: model.teams.reference, pairings: model.teams.pairing.teams } : {}),
     }
 }
 
@@ -60,6 +65,11 @@ function withoutTeam(state: CompareUrlState, teamCapId: string, members: readonl
 function nextTeamState(set: EditableSet, teams: ReadonlyMap<string, readonly string[]>, edit: SetEdit): CompareUrlState | string | null {
     const { state } = set
     if (edit.kind === 'add' && !state.runs.includes(edit.capId) && state.runs.length >= MAX_TEAM_RUNS) return TEAM_LIMIT_REACHED
+    if (edit.kind === 'pair') {
+        const pairs = overrideEdit(state.pairs, set.pairings ?? new Map(), set.runs, edit.capId, edit.partner)
+        return pairs ? { ...state, pairs } : state
+    }
+    if (edit.kind === 'drive') return { ...state, drive: edit.capId }
     if (edit.kind !== 'remove' && edit.kind !== 'pin' && edit.kind !== 'unpin') return null
     const unit = teamUnit(teams, edit.capId)
     switch (edit.kind) {
@@ -68,9 +78,9 @@ function nextTeamState(set: EditableSet, teams: ReadonlyMap<string, readonly str
             if (state.runs.length === 1) return LAST_RUN
             return withoutTeam(state, unit, teams.get(unit) ?? [])
         case 'pin':
-            return state.refs.includes(unit) ? state : { ...state, refs: [unit] }
+            return state.refs.includes(unit) ? state : { ...state, refs: [unit], drive: unit === set.reference ? state.drive : null }
         case 'unpin':
-            return { ...state, refs: without(state.refs, unit) }
+            return state.refs.includes(unit) ? { ...state, refs: without(state.refs, unit), drive: null } : state
     }
 }
 
@@ -126,6 +136,9 @@ function nextState(set: EditableSet, edit: SetEdit): CompareUrlState | string {
             return { ...state, data: without(state.data, capId) }
         case 'offset':
             return { ...state, offsets: withOffset(state, capId, edit.ms) }
+        case 'pair':
+        case 'drive':
+            return state
     }
 }
 

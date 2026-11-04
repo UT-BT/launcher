@@ -9,7 +9,8 @@ import type { CueModel, CuePoint } from './cueModel'
 import { RUNG_BADGES, SET_ON, type Lane, type LaneMark, type LanesModel, type Rung } from './laneModel'
 import { composeRace, formatRaceTime, type RaceInput, type RaceModel, type RaceRun, type TileSlot } from './raceModel'
 import { leadSide, type References } from './referenceModel'
-import { STAGE_GAP, TILE_ASPECT, type SlotRect, type StageBox, type StageLayout, type StageSlot } from './stageLayout'
+import { NO_PAIRING, type PairingModel } from './teamPairing'
+import { packGroupFocus, STAGE_GAP, TILE_ASPECT, type SlotRect, type StageBox, type StageLayout, type StageSlot } from './stageLayout'
 
 export const MAX_TEAM_RUNS = 4
 export const TEAM_COLOURS = ['#fbbf24', '#e879f9', '#22d3ee', '#a78bfa'] as const
@@ -41,9 +42,10 @@ export interface TeamModel {
     seats: ReadonlyMap<string, TeamSeat>
     requests: ComparisonRequest[]
     transposed: boolean
+    pairing: PairingModel
 }
 
-export const NO_TEAMS: TeamModel = { rows: [], reference: null, seats: new Map(), requests: [], transposed: false }
+export const NO_TEAMS: TeamModel = { rows: [], reference: null, seats: new Map(), requests: [], transposed: false, pairing: NO_PAIRING }
 
 function msOf(seconds: number): number {
     return Math.round(seconds * 1000)
@@ -92,7 +94,7 @@ export function composeTeams(teams: readonly TeamRun[], refs: readonly string[])
     const requests = reference && rows.length > 1
         ? rows.filter(row => !row.reference).map(row => ({ runner: row.teamCapId, reference }))
         : []
-    return { rows, reference, seats, requests, transposed: false }
+    return { rows, reference, seats, requests, transposed: false, pairing: NO_PAIRING }
 }
 
 export function teamVideoOrder(query: string, solo: LoadedSoloRuns, teams: LoadedTeamRuns): string[] {
@@ -206,11 +208,14 @@ export function composeTeamRace(input: RaceInput, teams: TeamModel, grid: TeamGr
     const tiles = base.tiles.map((tile): TileSlot => ({ ...tile, result: capResult(tile.run) }))
     const byId = new Map(tiles.map(tile => [tile.id, tile]))
     const placedRows = gridRows(tiles, teams, grid)
-    const gridded = base.view.mode === 'grid' && base.focused === null
-    const packed = gridded ? packTeamRows(placedRows.map(entry => entry.cells), input.stageBox ?? { width: 0, height: 0 }) : null
+    const box = input.stageBox ?? { width: 0, height: 0 }
+    const rowFocus = base.view.mode === 'grid' ? placedRows.find(entry => entry.row.teamCapId === input.focus) : undefined
+    const gridded = base.view.mode === 'grid' && base.focused === null && !rowFocus
+    const packed = gridded ? packTeamRows(placedRows.map(entry => entry.cells), box) : null
     const headers = new Map(placedRows.map((entry, i) => [entry.row.teamCapId, packed?.headers[i] ?? null]))
-    const layout = packed?.layout ?? { ...base.layout, placed: base.layout.placed.map(placed => ({ ...placed, slot: byId.get(placed.slot.id) ?? placed.slot })) }
-    const race: RaceModel = { ...base, runs, tiles, dataOnly: runs.filter(raceRun => !raceRun.tile), layout }
+    const focusLayout = rowFocus ? packGroupFocus(tiles, rowFocus.cells.flatMap(cell => (cell ? [cell.id] : [])), box) : null
+    const layout = packed?.layout ?? focusLayout ?? { ...base.layout, placed: base.layout.placed.map(placed => ({ ...placed, slot: byId.get(placed.slot.id) ?? placed.slot })) }
+    const race: RaceModel = { ...base, runs, tiles, dataOnly: runs.filter(raceRun => !raceRun.tile), layout, focused: rowFocus?.row.teamCapId ?? base.focused }
     const references = teamReferences(race, teams)
     return {
         race: { ...race, references, reference: references.lead },

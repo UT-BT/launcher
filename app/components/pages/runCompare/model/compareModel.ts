@@ -14,6 +14,7 @@ import type { StageEnvironment } from './phoneStage'
 import type { StageBox } from './stageLayout'
 import { composeTeamAnalysis, NO_TEAM_ANALYSIS, type TeamAnalysisModel } from './teamAnalysisModel'
 import { composeTeamCues, composeTeamLanes, composeTeamRace, composeTeams, MAX_TEAM_RUNS, NO_TEAMS, teamCompareTitle, type TeamModel } from './teamModel'
+import { composePairing, composeTeamSync, normaliseOverrides, withRowRaceClock } from './teamPairing'
 import { composeSplitCues, composeVersusLanes, pairGrid, teamReads, withPairSeats, withTeamLanes } from './teamVersus'
 
 export type LoadDropReason = 'not-found' | 'different-map' | 'disallowed' | 'team-in-solo' | 'solo-in-team' | 'over-team-cap'
@@ -187,12 +188,13 @@ function teamPart(input: CompareModelInput, teams: LoadedTeamRuns, seekSeconds: 
 
     const restated = parseCompareQuery(serializeCompareQuery({ ...decoded.state, runs: kept.map(team => team.teamCapId), t: null }), membersOf(kept))
     const [pin, ...extra] = restated.state.refs
-    const state = { ...restated.state, refs: pin ? [pin] : [] }
     const refDrops = extra.map((value): CompareDrop => ({ param: 'ref', reason: 'extra-team', value }))
-    const drops = [...decoded.notices, ...loadDrops, ...restated.notices, ...refDrops]
     const povs = kept.flatMap(team => team.members)
-    const composed = composeTeams(kept, state.refs)
-    const reads = teamReads(composed, input.teamComparisons ?? new Map())
+    const composed = composeTeams(kept, pin ? [pin] : [])
+    const overrides = normaliseOverrides({ ...restated.state, refs: pin ? [pin] : [] }, composed)
+    const state = overrides.state
+    const drops = [...decoded.notices, ...loadDrops, ...restated.notices, ...refDrops, ...overrides.drops]
+    const reads = teamReads(composed, input.teamComparisons ?? new Map(), state.pairs)
     const grid = pairGrid(composed, reads)
     const placed = composeTeamRace({
         runs: povs,
@@ -206,9 +208,13 @@ function teamPart(input: CompareModelInput, teams: LoadedTeamRuns, seekSeconds: 
     }, withPairSeats(composed, grid), grid?.cells ?? null)
     const versus = reads.length > 0
     const lanes = versus ? composeVersusLanes(placed.race, placed.teams, reads, comparisons ?? new Map()) : composeTeamLanes(placed.race, placed.teams)
-    const sync = composeSync(placed.race, lanes, comparisons ?? new Map(), state.sync)
+    const teamSync = versus ? composeTeamSync(placed.teams, reads, lanes, comparisons ?? new Map(), state.sync, state.drive) : null
+    const sync = teamSync?.sync ?? composeSync(placed.race, lanes, comparisons ?? new Map(), state.sync)
     const marked = withRaceClock(lanes, sync)
-    const teamModel = withTeamLanes(placed.teams, reads)
+    const teamModel = {
+        ...withRowRaceClock(withTeamLanes(placed.teams, reads), teamSync?.raceClockRows ?? []),
+        pairing: composePairing(placed.teams, reads, teamSync?.drives ?? new Map()),
+    }
     const cues = versus ? composeSplitCues(teamModel, reads) : composeTeamCues(placed.teams)
     const teamAnalysis = composeTeamAnalysis({ teams: teamModel, reads, cues, comparisons: comparisons ?? new Map(), speedRun: input.speedRun ?? null })
 

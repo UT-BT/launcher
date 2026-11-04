@@ -117,3 +117,45 @@ export function packFocus<S extends StageSlot>(slots: readonly S[], focus: strin
         placed: slots.map(slot => ({ slot, rect: rects.get(slot.id)! })),
     }
 }
+
+function boundsOf(rects: readonly SlotRect[]): SlotRect {
+    const x = Math.min(...rects.map(r => r.x))
+    const y = Math.min(...rects.map(r => r.y))
+    return { x, y, width: Math.max(...rects.map(r => r.x + r.width)) - x, height: Math.max(...rects.map(r => r.y + r.height)) - y }
+}
+
+export function packGroupFocus<S extends StageSlot>(slots: readonly S[], focus: readonly string[], box: StageBox, gap = STAGE_GAP): StageLayout<S> {
+    const group = focus.flatMap(id => slots.filter(slot => slot.id === id))
+    const others = slots.filter(slot => !focus.includes(slot.id))
+    if (group.length === 1) return packFocus(slots, group[0].id, box, gap)
+    if (group.length === 0 || others.length === 0 || box.width <= 0 || box.height <= 0) return packStage(slots, box, gap)
+
+    const count = others.length
+    const wide = box.width >= box.height
+    const thumb = wide
+        ? Math.min(((box.height - (count - 1) * gap) / count) * TILE_ASPECT, box.width * FOCUS_STRIP_SHARE)
+        : Math.min((box.width - (count - 1) * gap) / count, box.height * FOCUS_STRIP_SHARE * TILE_ASPECT)
+    const thumbHeight = thumb / TILE_ASPECT
+    const main = packStage(group, wide ? { width: box.width - thumb - gap, height: box.height } : { width: box.width, height: box.height - thumbHeight - gap }, gap)
+    const bounds = boundsOf(main.placed.map(placed => placed.rect))
+    const rects = new Map<string, SlotRect>()
+    if (wide) {
+        const left = (box.width - (bounds.width + gap + thumb)) / 2
+        main.placed.forEach(({ slot, rect: r }) => rects.set(slot.id, { ...r, x: r.x - bounds.x + left }))
+        const top = (box.height - (count * thumbHeight + (count - 1) * gap)) / 2
+        others.forEach((slot, i) => rects.set(slot.id, rect(left + bounds.width + gap, top + i * (thumbHeight + gap), thumb)))
+    } else {
+        const top = (box.height - (bounds.height + gap + thumbHeight)) / 2
+        main.placed.forEach(({ slot, rect: r }) => rects.set(slot.id, { ...r, y: r.y - bounds.y + top }))
+        const left = (box.width - (count * thumb + (count - 1) * gap)) / 2
+        others.forEach((slot, i) => rects.set(slot.id, rect(left + i * (thumb + gap), top + bounds.height + gap, thumb)))
+    }
+
+    return {
+        columns: wide ? main.columns + 1 : main.columns,
+        rows: wide ? main.rows : main.rows + 1,
+        tileWidth: main.tileWidth,
+        tileHeight: main.tileHeight,
+        placed: slots.map(slot => ({ slot, rect: rects.get(slot.id)! })),
+    }
+}

@@ -3,6 +3,7 @@ import { stateOf, type CompareModel } from '../model/compareModel'
 import { formatRaceTime, NO_VIDEO, type LoadedVideos } from '../model/raceModel'
 import { isSideReference } from '../model/referenceModel'
 import type { TeamRow } from '../model/teamModel'
+import type { PairMenu } from '../model/teamPairing'
 import { FALLBACK_FPS } from '../playback/playbackConstants'
 
 export const NOT_FRAME_SYNCED = 'Not frame-synced'
@@ -69,6 +70,8 @@ export function rosterRows({ model, videos, failedVideos }: RosterInput): Roster
 export interface TeamRosterMember {
     roster: RosterRow
     index: number
+    menu: PairMenu | null
+    driving: boolean | null
 }
 
 export interface TeamRosterGroup {
@@ -76,13 +79,20 @@ export interface TeamRosterGroup {
     members: TeamRosterMember[]
 }
 
+function drivingOf(model: CompareModel, teamCapId: string, capId: string): boolean | null {
+    const drive = model.teams.pairing.drives.get(teamCapId)
+    if (model.sync.mode !== 'position' || !drive?.choices.includes(capId)) return null
+    return drive.driver === capId
+}
+
 export function teamRosterGroups(model: CompareModel, rows: readonly RosterRow[]): TeamRosterGroup[] {
-    const { seats } = model.teams
+    const { seats, pairing } = model.teams
     return model.teams.rows.map(row => ({
         row,
         members: rows.flatMap(roster => {
             const seat = seats.get(roster.capId)
-            return seat?.teamCapId === row.teamCapId ? [{ roster, index: seat.index }] : []
+            if (seat?.teamCapId !== row.teamCapId) return []
+            return [{ roster, index: seat.index, menu: pairing.menus.get(roster.capId) ?? null, driving: drivingOf(model, row.teamCapId, roster.capId) }]
         }),
     }))
 }

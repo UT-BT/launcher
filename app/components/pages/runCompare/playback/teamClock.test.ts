@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { CompareModel } from '../model/compareModel'
+import { runCompareFixture } from '@/app/utils/fixtures/runCompareFixtures'
+import { comparisonKey } from '../loading/comparisons'
 import { composeTeams, composeVersus, INDUSTRY, testTeam, versusOf } from '../model/teamTestRuns'
 import { createPlaybackController, type PlaybackRun } from './playbackController'
 import { createFakeTime, type FakeMedia } from './playbackFakes'
-import { cueTargets } from './syncTargets'
+import { comparisonKnots, cueTargets, positionTarget, positionTargets } from './syncTargets'
 
 const OTHER = testTeam(1, 70)
 const MODEL = composeTeams(`runs=${INDUSTRY.teamCapId},${OTHER.teamCapId}`, [INDUSTRY, OTHER])
@@ -66,5 +68,32 @@ describe('a team run on one clock', () => {
 
         positionsOf(media, INDUSTRY_POVS).forEach(position => expect(position).toBeCloseTo(27.402, 9))
         positionsOf(media, REFERENCE_POVS).forEach(position => expect(position).toBeCloseTo(26.94, 9))
+    })
+
+    it('in sync by position, moves every member of a team by its driving pair\'s mapping', () => {
+        const aligned = versusOf('teamAligned')
+        const [fierd, nightwolf] = aligned.runner.members.map(run => run.capId)
+        const [gxls, nettlez] = aligned.reference.members.map(run => run.capId)
+        const short = runCompareFixture('short')
+        const comparisons = new Map([
+            [comparisonKey({ runner: fierd, reference: nettlez }), runCompareFixture('aligned')],
+            [comparisonKey({ runner: nightwolf, reference: gxls }), short],
+        ])
+        const model = composeVersus(aligned, { comparisons }, `${aligned.query}&sync=position&drive=${nightwolf}`)
+        const { time, controller, media } = setup(model)
+        const mapping = positionTarget(comparisonKnots(short))
+        expect(mapping.runTime(4)).not.toBeCloseTo(4, 2)
+
+        controller.setTargets(positionTargets(model.sync.links))
+        controller.seek(4)
+
+        positionsOf(media, [fierd, nightwolf]).forEach(position => expect(position).toBeCloseTo(mapping.runTime(4), 9))
+        positionsOf(media, [gxls, nettlez]).forEach(position => expect(position).toBeCloseTo(4, 9))
+
+        controller.play()
+        time.seconds(1.5)
+        const [first, second] = positionsOf(media, [fierd, nightwolf])
+        expect(first).toBeCloseTo(second, 9)
+        expect(first).toBeCloseTo(mapping.runTime(controller.getState().t), 1)
     })
 })
