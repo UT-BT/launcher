@@ -1,0 +1,5 @@
+{
+  "code": "not_managed",
+  "error": "This server is not on a managed host.",
+  "success": false
+}

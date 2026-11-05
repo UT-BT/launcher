@@ -131,6 +131,8 @@ table's required columns plus its main action; every other column is in the expa
 | Anti-Cheat: High Cap Delta | selection, player, actions | sortable (Delta, Added; descending only, as the header) |
 | Anti-Cheat: Low FPS WRs | selection, player, actions | |
 | Anti-Cheat: cap stats percentiles | percentile, FPS, ping | every column on the face, labelled; no panel |
+| Server Operations | server, health, actions | inactive servers dimmed |
+| Game Hosts | host, actions | disabled hosts dimmed |
 
 **Audit Logs details.** On the table a row click opens the details in a `DataTableExpandRow`
 (the full-width row under it); on cards they open in the card's panel through
@@ -169,6 +171,70 @@ The map-author fetchers back `MapAuthorsModal`, opened from Maps Management.
   behind a `ConfirmDialog`.
 - A video does not affect the mapvote, so a change reloads the row through `onReload`, not
   `onSaved`, and raises no "regenerate mapvote" banner.
+
+## Server operations (Moderators and Admins)
+
+- `fetchAdminServerOperations` returns every registered game server with the host it is
+  linked to and a `probe` block (`answering`, `map_name`, `num_players`, `max_players`,
+  `updated_at`, `seconds_stale`).
+- `answering` is computed by the server. Do not re-derive it from `seconds_stale`.
+- A server with no host link is shown as unlinked, never hidden.
+- Moderators and Admins both read this section; only Admins also see Game Hosts next to it
+  in the Infrastructure group.
+
+- `fetchAdminHostMetrics(token, hostId, window)` returns `{ window, bucket, points[] }`.
+  `bucket` is `sample` for 24h and `hour` for longer windows. Hourly points are averages,
+  so short spikes are smoothed away; the UI says so instead of implying the spike never
+  happened. The chart sits in `HostMetricsModal`, opened from the host's action menu.
+- `fetchAdminHealthEvents` is the append-only feed of state changes (`host.unreachable`,
+  `host.recovered`, `server.process_down`, `server.process_up`).
+- A server carries two independent liveness readings: `probe` (does it answer players) and
+  `runtime` (is the process alive on its host). Render both and never reconcile them.
+  `runtime.process_up` true with `probe.answering` false is a hung server, and that
+  disagreement is the point.
+- `runtime.known` false means the server was never polled and `runtime.stale` true means
+  the poller has not been round recently. Neither means down; do not draw them as down.
+- Game Hosts row actions go through `ActionMenu`
+  (`admin/components/`). An action a row cannot take is shown disabled, with the reason
+  as its title.
+
+- Each server row carries a `control` block: `managed`, `unit_state` (`active`, `activating`,
+  `failed`, `held`, `inactive`, or null), `held`, `restarts`, `started_at`, `actions` (what the
+  server offers right now) and `unavailable` (`not_managed`, `agent_unreachable`, or null).
+  A row without the block is treated as not managed.
+- Server actions sit in the row's `ActionMenu` (table rows and phone cards). Restart is there
+  for every staff role; Start and Stop only for Admins, and are not rendered for Moderators.
+  `restartServer`, `startServer` and `stopServer` (`POST /admin/servers/<id>/<action>`, empty
+  body) answer a `ServerActionOutcome`: the result, or a typed failure (`rate_limited` with
+  `retry_after`, `action_not_offered` with the current `unit_state` and `actions`,
+  `not_managed`, `agent_error`). Anything else throws an `ApiError`. They live in
+  `sections/serverActions.ts`, not `api.ts`, so they load with the admin chunk instead of the
+  web entry, which has no room for them.
+- The launcher never works the state machine out itself. An item is enabled exactly when its
+  action is in `control.actions`; otherwise it is disabled with the reason as its title and
+  hint: "Host not managed", "Host agent unreachable", or "Not available while <state>"
+  (running, starting, held, crash loop, stopped). `serverActionsFor` in
+  `sections/serverControl.ts` holds these rules and is unit-tested.
+- Every action asks first. The confirm names the server and shows the probe's player count
+  ("3 of 16 players", or "player count unknown" when the probe is stale or missing); Stop's
+  confirm says the server stays stopped across restarts until someone starts it. On success the
+  section reloads; failures show "Try again in N s", the state, or a generic host agent error.
+- Health ranks three states ahead of the probe and process readings: Held (`unit_state` is
+  `held`), Crash loop (`failed`), then Hung (watchdog): an unresolved
+  `server.watchdog_gave_up` alert for that server, taken from the alerts `AlertsPanel`
+  loads. "Problems only" includes all three; the Hung filter and card include Hung
+  (watchdog), and the Down card includes Crash loop.
+
+- Alerts: `fetchAdminAlerts`, `acknowledgeAdminAlert`, `unacknowledgeAdminAlert`,
+  `resolveAdminAlert`, shown in `AlertsPanel` at the top of Server Operations. Hosts raise
+  them (map switch failed, anti-cheat did not start, map vote data not serving, hung server
+  restarted, hung and the watchdog gave up, crash loop) and so does
+  the server's own polling (host unreachable, server process down).
+- Alerts are deduplicated by the server: one open alert per target, with `occurrences`
+  counting repeats. Never render each occurrence as its own row.
+- `status` is `open`, `acknowledged` or `resolved`. Resolving claims it was dealt with; it
+  fixes nothing, and a recurrence opens a fresh alert, so resolving early costs nothing.
+  Acknowledge and resolve are audited, and resolve takes a reason.
 
 ## Game hosts (Admin only)
 

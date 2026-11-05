@@ -1,0 +1,235 @@
+{
+  "data": {
+    "generated_at": "2026-11-05T12:00:00+00:00",
+    "hosts": [
+      {
+        "active": true,
+        "agent_port": 80,
+        "control_port": 8080,
+        "created_at": "2026-09-01T10:00:00+00:00",
+        "id": "0b6f4a52-8d1e-4c3a-9f27-6a1d2e3b4c03",
+        "ip": "203.0.113.30",
+        "name": "au1",
+        "region": "AU",
+        "runtime": {
+          "agent_version": "1.1.0",
+          "cpu_percent": null,
+          "disk_percent": null,
+          "disk_total_mb": 40960,
+          "known": true,
+          "last_error": "Request timed out",
+          "last_success_at": "2026-11-05T11:40:10+00:00",
+          "load": [
+            null,
+            null,
+            null
+          ],
+          "memory_percent": null,
+          "memory_total_mb": 3936,
+          "net_rx_bytes_sec": null,
+          "net_tx_bytes_sec": null,
+          "polled_at": "2026-11-05T11:59:40+00:00",
+          "reachable": false,
+          "seconds_since_poll": 20,
+          "server_count": 1,
+          "servers_up": 0,
+          "uptime_seconds": null
+        },
+        "token": null
+      },
+      {
+        "active": true,
+        "agent_port": 80,
+        "control_port": 8080,
+        "created_at": "2026-09-01T10:00:00+00:00",
+        "id": "0b6f4a52-8d1e-4c3a-9f27-6a1d2e3b4c01",
+        "ip": "192.0.2.10",
+        "name": "eu1",
+        "region": "EU",
+        "runtime": {
+          "agent_version": "1.1.0",
+          "cpu_percent": 12.5,
+          "disk_percent": 63.5,
+          "disk_total_mb": 40960,
+          "known": true,
+          "last_error": null,
+          "last_success_at": "2026-11-05T11:59:50+00:00",
+          "load": [
+            0.42,
+            0.38,
+            0.35
+          ],
+          "memory_percent": 41.2,
+          "memory_total_mb": 3936,
+          "net_rx_bytes_sec": 182000,
+          "net_tx_bytes_sec": 240500,
+          "polled_at": "2026-11-05T11:59:50+00:00",
+          "reachable": true,
+          "seconds_since_poll": 10,
+          "server_count": 1,
+          "servers_up": 1,
+          "uptime_seconds": 1209600
+        },
+        "token": {
+          "active": true,
+          "created_at": "2026-09-01T10:05:00+00:00",
+          "id": "a41d7e2c-5b3f-4e8a-9c06-1f2e3d4c5b01",
+          "last_seen_at": "2026-11-05T11:59:50+00:00",
+          "name": "eu1",
+          "scopes": [
+            "mapvote:read",
+            "caps:read",
+            "packages:read",
+            "packages:write",
+            "alerts:write"
+          ]
+        }
+      },
+      {
+        "active": true,
+        "agent_port": 80,
+        "control_port": null,
+        "created_at": "2026-09-01T10:00:00+00:00",
+        "id": "0b6f4a52-8d1e-4c3a-9f27-6a1d2e3b4c02",
+        "ip": "198.51.100.20",
+        "name": "us1",
+        "region": "US",
+        "runtime": {
+          "known": false,
+          "polled_at": null,
+          "reachable": null
+        },
+        "token": null
+      }
+    ],
+    "servers": [
+      {
+        "active": true,
+        "certified_records": true,
+        "control": {
+          "actions": [],
+          "held": false,
+          "managed": true,
+          "restarts": 1,
+          "started_at": "2026-11-03T02:00:00+00:00",
+          "unavailable": "agent_unreachable",
+          "unit_state": "active"
+        },
+        "host_name": "au1",
+        "host_ref": "0b6f4a52-8d1e-4c3a-9f27-6a1d2e3b4c03",
+        "id": "7c3e9d14-2a5b-4f68-8e01-3b9c4d5e6f03",
+        "ip": "203.0.113.30",
+        "name": "BT Test Server | AU",
+        "port": 7777,
+        "probe": {
+          "answering": false,
+          "map_name": "CTF-BT-Example",
+          "max_players": 16,
+          "num_players": 0,
+          "seconds_stale": 1200,
+          "updated_at": "2026-11-05T11:40:00+00:00"
+        },
+        "region": "AU",
+        "runtime": {
+          "changed_at": "2026-11-03T02:00:10+00:00",
+          "cpu_percent": 2.5,
+          "known": true,
+          "matched_by": "process",
+          "memory_mb": 131,
+          "observed_at": "2026-11-05T11:40:10+00:00",
+          "pid": 2210,
+          "process_up": true,
+          "stale": true,
+          "uptime_seconds": 207610
+        },
+        "state": "Online"
+      },
+      {
+        "active": true,
+        "certified_records": true,
+        "control": {
+          "actions": [
+            "restart",
+            "stop"
+          ],
+          "held": false,
+          "managed": true,
+          "restarts": 0,
+          "started_at": "2026-11-04T02:00:00+00:00",
+          "unavailable": null,
+          "unit_state": "active"
+        },
+        "host_name": "eu1",
+        "host_ref": "0b6f4a52-8d1e-4c3a-9f27-6a1d2e3b4c01",
+        "id": "7c3e9d14-2a5b-4f68-8e01-3b9c4d5e6f01",
+        "ip": "192.0.2.10",
+        "name": "BT Test Server | EU",
+        "port": 7777,
+        "probe": {
+          "answering": true,
+          "map_name": "CTF-BT-Example",
+          "max_players": 16,
+          "num_players": 3,
+          "seconds_stale": 12,
+          "updated_at": "2026-11-05T11:59:48+00:00"
+        },
+        "region": "EU",
+        "runtime": {
+          "changed_at": "2026-11-04T02:00:10+00:00",
+          "cpu_percent": 3.5,
+          "known": true,
+          "matched_by": "process",
+          "memory_mb": 140,
+          "observed_at": "2026-11-05T11:59:50+00:00",
+          "pid": 1234,
+          "process_up": true,
+          "stale": false,
+          "uptime_seconds": 122390
+        },
+        "state": "Online"
+      },
+      {
+        "active": true,
+        "certified_records": true,
+        "control": {
+          "actions": [],
+          "held": false,
+          "managed": false,
+          "restarts": null,
+          "started_at": null,
+          "unavailable": "not_managed",
+          "unit_state": null
+        },
+        "host_name": "us1",
+        "host_ref": "0b6f4a52-8d1e-4c3a-9f27-6a1d2e3b4c02",
+        "id": "7c3e9d14-2a5b-4f68-8e01-3b9c4d5e6f02",
+        "ip": "198.51.100.20",
+        "name": "BT Test Server | US",
+        "port": 7777,
+        "probe": {
+          "answering": true,
+          "map_name": "CTF-BT-Example",
+          "max_players": 16,
+          "num_players": 1,
+          "seconds_stale": 15,
+          "updated_at": "2026-11-05T11:59:45+00:00"
+        },
+        "region": "US",
+        "runtime": {
+          "changed_at": null,
+          "cpu_percent": null,
+          "known": false,
+          "matched_by": null,
+          "memory_mb": null,
+          "observed_at": null,
+          "pid": null,
+          "process_up": null,
+          "stale": true,
+          "uptime_seconds": null
+        },
+        "state": "Online"
+      }
+    ]
+  },
+  "success": true
+}

@@ -7,7 +7,10 @@ import type {
     AcSharedGroup,
     AdminActiveTitle,
     AdminCapRow,
+    AdminAlertsResponse,
     AdminHostsResponse,
+    AdminServerOperations,
+    ServerControl,
     AdminMapRow,
     AdminOverview,
     AdminPatch,
@@ -612,6 +615,7 @@ const hosts: AdminHostsResponse = {
         region,
         ip: documentationIp(index + 400),
         agent_port: 7000 + index,
+        control_port: index === 0 ? 8080 : null,
         active: index !== 3,
         created_at: daysAgo(400 - index * 50),
         token: index === 2 ? null : {
@@ -635,6 +639,105 @@ const hosts: AdminHostsResponse = {
         host_ref: index < 6 ? `synthetic-host-${(index % 4) + 1}` : null,
     })),
     available_scopes: ['records:write', 'status:write', 'demos:write'],
+}
+
+const NOT_MANAGED: ServerControl = {
+    managed: false,
+    unit_state: null,
+    held: false,
+    restarts: null,
+    started_at: null,
+    actions: [],
+    unavailable: 'not_managed',
+}
+
+const SERVER_CONTROL: { [serverId: string]: ServerControl } = {
+    'synthetic-server-1': {
+        managed: true,
+        unit_state: 'active',
+        held: false,
+        restarts: 0,
+        started_at: daysAgo(1),
+        actions: ['restart', 'stop'],
+        unavailable: null,
+    },
+    'synthetic-server-5': {
+        managed: true,
+        unit_state: 'held',
+        held: true,
+        restarts: 0,
+        started_at: null,
+        actions: ['start'],
+        unavailable: null,
+    },
+}
+
+const serverOperations: AdminServerOperations = {
+    hosts: hosts.hosts,
+    servers: hosts.servers.map((server, index) => {
+        const control = SERVER_CONTROL[server.id] ?? NOT_MANAGED
+        const stopped = control.unit_state === 'held'
+        const answering = index % 4 !== 2 && !stopped
+        const processUp = index % 4 !== 3 && !stopped
+        return {
+            ...server,
+            host_name: hosts.hosts.find(host => host.id === server.host_ref)?.name ?? null,
+            probe: {
+                answering,
+                map_name: answering ? syntheticMap(index + 1) : null,
+                num_players: answering ? index % 3 : null,
+                max_players: answering ? 16 : null,
+                updated_at: answering ? hoursAgo(0) : null,
+                seconds_stale: answering ? 12 : null,
+            },
+            runtime: {
+                known: server.host_ref !== null,
+                process_up: server.host_ref !== null ? processUp : null,
+                stale: false,
+                matched_by: server.host_ref !== null ? 'process' : null,
+                pid: server.host_ref !== null && processUp ? 4100 + index : null,
+                cpu_percent: processUp ? 1.5 + index : null,
+                memory_mb: processUp ? 110 + index * 4 : null,
+                uptime_seconds: processUp ? 3600 * (index + 1) : null,
+                observed_at: hoursAgo(0),
+                changed_at: daysAgo(index + 1),
+            },
+            control,
+        }
+    }),
+    generated_at: hoursAgo(0),
+}
+
+const serverAlerts: AdminAlertsResponse = {
+    items: [
+        {
+            id: 'synthetic-alert-1',
+            kind: 'map.switch_failed',
+            severity: 'warning',
+            status: 'open',
+            host_ref: 'synthetic-host-1',
+            host_name: 'test-host-eu',
+            server_ref: 'synthetic-server-1',
+            server_name: 'Test BT Server #1 | EU',
+            raw_server: null,
+            port: 7777,
+            map_name: syntheticMap(3),
+            summary: `Map switch to ${syntheticMap(3)} failed`,
+            details: null,
+            occurrences: 3,
+            first_seen_at: hoursAgo(5),
+            last_seen_at: hoursAgo(1),
+            acknowledged_by: null,
+            acknowledged_at: null,
+            resolved_at: null,
+            resolution: null,
+        },
+    ],
+    open_count: 1,
+    unresolved_count: 1,
+    kinds: ['map.switch_failed'],
+    limit: 50,
+    offset: 0,
 }
 
 function withSyntheticIds(value: unknown): unknown {
@@ -690,5 +793,7 @@ export const ADMIN_SET: FixtureSet = {
         ...paged('/admin/audit', auditRow, 18342),
         items('/admin/roles', roles),
         { host: 'api', path: '/admin/hosts', reply: ok(hosts) },
+        { host: 'api', path: '/admin/servers/operations', reply: ok(serverOperations) },
+        { host: 'api', path: '/admin/alerts', reply: ok(serverAlerts) },
     ],
 }

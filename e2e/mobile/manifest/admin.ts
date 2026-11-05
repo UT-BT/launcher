@@ -105,6 +105,7 @@ export const admin: MobileRouteEntry = {
         antiCheatTab('low-fps', 'Low FPS WRs', person(10).alias),
         section('audit-logs', 'Audit Logs', 'Audit Logs', person(12).alias),
         section('role-management', 'Staff Roles', 'Staff Roles', person(31).alias),
+        section('server-operations', 'Server Operations', 'Server Operations', 'Test BT Server #1 | EU'),
         section('hosts-management', 'Game Hosts', 'Game Hosts', 'test-host-eu'),
     ],
 }

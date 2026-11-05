@@ -1,0 +1,9 @@
+{
+  "data": {
+    "action": "restart",
+    "held": false,
+    "server_id": "7c3e9d14-2a5b-4f68-8e01-3b9c4d5e6f01",
+    "unit_state": "activating"
+  },
+  "success": true
+}
