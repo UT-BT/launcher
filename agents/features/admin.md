@@ -230,7 +230,9 @@ The map-author fetchers back `MapAuthorsModal`, opened from Maps Management.
   `resolveAdminAlert`, shown in `AlertsPanel` at the top of Server Operations. Hosts raise
   them (map switch failed, anti-cheat did not start, map vote data not serving, hung server
   restarted, hung and the watchdog gave up, crash loop) and so does
-  the server's own polling (host unreachable, server process down).
+  the server's own polling (host unreachable, server process down). The fetchers live in
+  `sections/alertsApi.ts`, not `api.ts`, so they load with the admin chunk instead of the web
+  entry.
 - Alerts are deduplicated by the server: one open alert per target, with `occurrences`
   counting repeats. Never render each occurrence as its own row.
 - `status` is `open`, `acknowledged` or `resolved`. Resolving claims it was dealt with; it

@@ -1,12 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { BellRing, Check, CircleAlert, Eye, TriangleAlert } from 'lucide-react'
-import {
-  acknowledgeAdminAlert,
-  fetchAdminAlerts,
-  resolveAdminAlert,
-  unacknowledgeAdminAlert,
-  type AdminAlert,
-} from '@/app/utils/api'
+import type { AdminAlert } from '@/app/utils/api'
+import { acknowledgeAdminAlert, fetchAdminAlerts, resolveAdminAlert, unacknowledgeAdminAlert } from './alertsApi'
 import { cn } from '@/lib/utils'
 import { ActionButton, ConfirmDialog, Feedback, errMessage, relTime } from '../components/controls'
 

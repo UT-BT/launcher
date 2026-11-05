@@ -484,6 +484,7 @@
     "app/components/pages/admin/registry.test.ts",
     "app/components/pages/admin/registry.tsx",
     "app/components/pages/admin/sections/AlertsPanel.tsx",
+    "app/components/pages/admin/sections/alertsApi.ts",
     "app/components/pages/admin/sections/AuditLogsSection.tsx",
     "app/components/pages/admin/sections/auditDescriptions.ts",
     "app/components/pages/admin/sections/CapsManagementSection.tsx",
