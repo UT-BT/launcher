@@ -196,27 +196,27 @@ describe('resolveAppearance through the seasons', () => {
 describe('resolveAppearance across hemispheres', () => {
     const CHRISTMAS_EVE = at(2026, 12, 24, 12)
 
-    const PLACES: Array<[string, Where, EntryId | null]> = [
+    const PLACES: Array<[string, Where, EntryId]> = [
         ['a northern zone', { timeZone: 'Europe/Berlin' }, 'christmas'],
         ['a North American zone', { timeZone: 'America/New_York' }, 'christmas'],
         ['an equatorial-north zone', { timeZone: 'Asia/Singapore' }, 'christmas'],
         ['an unknown zone', { timeZone: 'Mars/Olympus_Mons' }, 'christmas'],
         ['a missing timezone', { timeZone: undefined }, 'christmas'],
-        ['an Australian zone', { timeZone: 'Australia/Sydney' }, null],
-        ['a New Zealand zone', { timeZone: 'Pacific/Auckland' }, null],
-        ['a South American zone', { timeZone: 'America/Sao_Paulo' }, null],
-        ['a southern African zone', { timeZone: 'Africa/Johannesburg' }, null],
-        ['a legacy southern alias', { timeZone: 'Australia/ACT' }, null],
+        ['an Australian zone', { timeZone: 'Australia/Sydney' }, 'christmas-summer'],
+        ['a New Zealand zone', { timeZone: 'Pacific/Auckland' }, 'christmas-summer'],
+        ['a South American zone', { timeZone: 'America/Sao_Paulo' }, 'christmas-summer'],
+        ['a southern African zone', { timeZone: 'Africa/Johannesburg' }, 'christmas-summer'],
+        ['a legacy southern alias', { timeZone: 'Australia/ACT' }, 'christmas-summer'],
         ['the setting over a southern zone', { timeZone: 'Australia/Sydney', setting: 'north' }, 'christmas'],
-        ['the setting over a northern zone', { timeZone: 'Europe/Berlin', setting: 'south' }, null],
-        ['auto over a southern zone', { timeZone: 'Australia/Sydney', setting: 'auto' }, null],
-        ['the preview over the setting', { timeZone: 'Europe/Berlin', setting: 'north', preview: 'south' }, null],
+        ['the setting over a northern zone', { timeZone: 'Europe/Berlin', setting: 'south' }, 'christmas-summer'],
+        ['auto over a southern zone', { timeZone: 'Australia/Sydney', setting: 'auto' }, 'christmas-summer'],
+        ['the preview over the setting', { timeZone: 'Europe/Berlin', setting: 'north', preview: 'south' }, 'christmas-summer'],
         ['the preview over a southern setting', { timeZone: 'Australia/Sydney', setting: 'south', preview: 'north' }, 'christmas'],
     ]
 
-    it.each(PLACES)('Christmas Eve with %s', (_, where, expected) => {
-        expect(resolveWhere(CHRISTMAS_EVE, 'seasonal', where)).toMatchObject({ seasonal: expected ?? 'summer', logo: expected ?? 'summer' })
-        expect(resolveWhere(CHRISTMAS_EVE, 'red', where)).toMatchObject({ seasonal: null, logo: expected })
+    it.each(PLACES)('Christmas Eve with %s, with the Christmas logo either way', (_, where, expected) => {
+        expect(resolveWhere(CHRISTMAS_EVE, 'seasonal', where)).toMatchObject({ seasonal: expected, logo: 'christmas' })
+        expect(resolveWhere(CHRISTMAS_EVE, 'red', where)).toMatchObject({ seasonal: null, logo: 'christmas' })
     })
 
     it.each([
@@ -231,8 +231,58 @@ describe('resolveAppearance across hemispheres', () => {
         expect(resolveWhere(at(2026, 7, 1), 'red', { timeZone: 'Australia/Sydney' }, 'christmas')).toMatchObject({ seasonal: 'christmas', logo: 'christmas' })
     })
 
-    it('until skips the northern-only Christmas in the south', () => {
-        expect(resolveWhere(at(2026, 11, 20), 'red', { timeZone: 'Australia/Sydney' }).until).toBe(at(2027, 3, 21).getTime())
+    it('until lands on Christmas in the north and on Summer Christmas in the south', () => {
+        expect(resolveWhere(at(2026, 11, 20), 'red', { timeZone: 'Australia/Sydney' }).until).toBe(at(2026, 12, 18).getTime())
         expect(resolveWhere(at(2026, 11, 20), 'red', { timeZone: 'Europe/Berlin' }).until).toBe(at(2026, 12, 18).getTime())
+    })
+})
+
+describe('resolveAppearance at Summer Christmas', () => {
+    const NORTH: Where = { timeZone: 'Europe/London' }
+    const SOUTH: Where = { timeZone: 'Australia/Sydney' }
+
+    const WINDOW: Array<[string, Date, EntryId]> = [
+        ['the minute before it starts', at(2026, 12, 17, 23, 59), 'summer'],
+        ['the local midnight it starts', at(2026, 12, 18), 'christmas-summer'],
+        ['Dec 20', at(2026, 12, 20, 12), 'christmas-summer'],
+        ['the last minute of Dec 30', at(2026, 12, 30, 23, 59), 'christmas-summer'],
+        ['the local midnight it ends, Dec 31', at(2026, 12, 31), 'summer'],
+    ]
+
+    it.each(WINDOW)('in the south, %s', (_, now, expected) => {
+        expect(resolveWhere(now, 'seasonal', SOUTH).seasonal).toBe(expected)
+    })
+
+    it('beats summer in the south, with the Christmas logo', () => {
+        expect(resolveWhere(at(2026, 12, 5, 12), 'seasonal', SOUTH)).toMatchObject({ seasonal: 'summer', logo: 'summer' })
+        expect(resolveWhere(at(2026, 12, 20, 12), 'seasonal', SOUTH)).toMatchObject({ seasonal: 'christmas-summer', logo: 'christmas' })
+    })
+
+    it('never shows in the north, where Christmas holds the whole window', () => {
+        for (let day = 18; day <= 30; day++) {
+            expect(resolveWhere(at(2026, 12, day, 12), 'seasonal', NORTH)).toMatchObject({ seasonal: 'christmas', logo: 'christmas' })
+        }
+    })
+
+    it.each(['red', 'classic', 'light'])('on %s in the south on Dec 20 gives only the Christmas logo', themeId => {
+        expect(resolveWhere(at(2026, 12, 20, 12), themeId, SOUTH)).toMatchObject({ seasonal: null, logo: 'christmas' })
+    })
+
+    it.each([
+        ['the north', NORTH],
+        ['the south', SOUTH],
+    ] as const)('a preview shows it in %s, with the Christmas logo', (_, where) => {
+        expect(resolveWhere(at(2026, 7, 1), 'red', where, 'christmas-summer')).toMatchObject({ seasonal: 'christmas-summer', logo: 'christmas' })
+        expect(resolveWhere(at(2026, 12, 24), 'seasonal', where, 'christmas-summer')).toMatchObject({ seasonal: 'christmas-summer', logo: 'christmas' })
+    })
+
+    const UNTIL: Array<[string, Date, string, Date]> = [
+        ['it starts inside the southern summer', at(2026, 12, 5), 'seasonal', at(2026, 12, 18)],
+        ['summer takes over from it', at(2026, 12, 24), 'seasonal', at(2026, 12, 31)],
+        ['on Red, its end is the next change', at(2026, 12, 24), 'red', at(2026, 12, 31)],
+    ]
+
+    it.each(UNTIL)('until in the south: %s', (_, now, themeId, next) => {
+        expect(resolveWhere(now, themeId, SOUTH).until).toBe(next.getTime())
     })
 })

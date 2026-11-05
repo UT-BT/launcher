@@ -1,5 +1,5 @@
 import type { EntryId } from '../seasons'
-import { BAT_BODY, BAT_WING, BLOSSOM_COLORS, ICE_CRYSTAL, LEAF, LEAF_COLORS, LEAF_VEIN, MIRROR_BAT, seededRandom } from './shapes'
+import { BAT_BODY, BAT_WING, BLOSSOM_COLORS, GOLD_COLORS, ICE_CRYSTAL, LEAF, LEAF_COLORS, LEAF_VEIN, MIRROR_BAT, STAR, seededRandom } from './shapes'
 
 const COOLDOWN_MS = 10_000
 const LIFETIME_MS = 2300
@@ -16,6 +16,7 @@ function drift(season: EntryId, angle: number, distance: number): [number, numbe
     if (season === 'spring') return [dx, Math.sin(angle) * distance * 0.7 + 25]
     if (season === 'autumn') return [dx * 0.8, Math.abs(Math.sin(angle) * distance) * 0.5 + 40]
     if (season === 'winter') return [dx, Math.sin(angle) * distance * 0.6 + 35]
+    if (season === 'christmas-summer') return [dx, Math.sin(angle) * distance * 0.7 + 20]
     return [dx, Math.sin(angle) * distance]
 }
 
@@ -38,6 +39,12 @@ function particle(season: EntryId, index: number, random: () => number): HTMLSpa
     } else if (season === 'winter') {
         const size = 10 + Math.round(random() * 5)
         element.innerHTML = `<svg viewBox="0 0 24 24" width="${size}" fill="none" stroke="#e0f2fe" stroke-width="1.6" stroke-linecap="round"><path d="${ICE_CRYSTAL}"/></svg>`
+    } else if (season === 'christmas-summer' && index % 2 === 0) {
+        const size = 11 + Math.round(random() * 6)
+        element.innerHTML = `<svg viewBox="0 0 24 24" width="${size}" fill="${GOLD_COLORS[(index / 2) % GOLD_COLORS.length]}" stroke="#b45309" stroke-opacity="0.6" stroke-width="1" stroke-linejoin="round"><path d="${STAR}"/></svg>`
+    } else if (season === 'christmas-summer') {
+        element.className = 'seasonal-burst-bauble'
+        element.style.setProperty('--s', `${5 + Math.round(random() * 3)}px`)
     } else {
         element.className = 'seasonal-burst-petal'
         element.style.setProperty('--c', PETAL_COLORS[index % PETAL_COLORS.length])

@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
 import { horizontalOverflow } from './layout'
-import { ENTRIES, ENTRY_IDS, type EntryId } from '../app/seasonal/seasons'
-import { ICE_CRYSTAL, LEAF } from '../app/seasonal/decor/shapes'
+import { ENTRIES, ENTRY_IDS, type Entry, type EntryId } from '../app/seasonal/seasons'
+import { ICE_CRYSTAL, LEAF, STAR } from '../app/seasonal/decor/shapes'
 import { dataFrom } from './mobile/fixtures/data'
 import { fixtureSetNamed } from './mobile/fixtures'
 import { serveFixtureSet } from './mobile/fixtures/router'
@@ -13,6 +13,7 @@ const SEASONAL_LOGO = new RegExp(`logo-(${ENTRY_IDS.join('|')})`)
 const NO_AMBIENT: readonly EntryId[] = []
 const SEASONS = ENTRIES.filter(entry => entry.kind === 'season').map(entry => entry.id)
 const SEASON_PARTICLES = 8
+const LOGO_FILES = new Map((ENTRIES as readonly Entry[]).map(entry => [entry.id, entry.logo ?? entry.id]))
 const HALLOWEEN_NIGHT = new Date(2026, 9, 31, 20, 0)
 const CHRISTMAS_EVE = new Date(2026, 11, 24, 12, 0)
 const MIDSUMMER = new Date(2026, 6, 15, 12, 0)
@@ -123,7 +124,7 @@ for (const season of ENTRY_IDS) {
         await expect(page.locator('html')).toHaveClass(/(^|\s)dark(\s|$)/)
         const [tint] = await resolvedColors(page, [declared(SEASONS_CSS, `:root[data-theme='seasonal'][data-season='${season}']`, '--accent-500')])
         await expect.poll(() => resolvedColors(page, ['var(--accent-500)'])).toEqual([tint])
-        await expect(logo(page, isMobile)).toHaveAttribute('src', new RegExp(`logo-${season}`))
+        await expect(logo(page, isMobile)).toHaveAttribute('src', new RegExp(`logo-${LOGO_FILES.get(season)}`))
         await expect(logo(page, isMobile)).toBeVisible()
         const layer = page.locator('.seasonal-layer')
         await expect(layer).toHaveAttribute('data-season-layer', season)
@@ -486,5 +487,110 @@ test.describe('with reduced motion', () => {
             await expect(page.locator('.seasonal-burst')).toHaveCount(0)
         }
         await expect(page.locator('.seasonal-layer')).toHaveCount(0)
+    })
+})
+
+test.describe('Summer Christmas', () => {
+    const EARLY_DECEMBER = new Date(2026, 11, 5, 12, 0)
+    const DEC_20 = new Date(2026, 11, 20, 12, 0)
+
+    test('the southern Seasonal theme goes from summer to Summer Christmas, with the Christmas logo, sun rays and no snow', async ({ page, isMobile }) => {
+        await followCalendar(page, EARLY_DECEMBER, 'seasonal')
+        await page.goto('/?hemisphere=south')
+        await expect(page.locator('html')).toHaveAttribute('data-theme', 'seasonal')
+        await expect(page.locator('html')).toHaveAttribute('data-season', 'summer')
+        await expect(logo(page, isMobile)).toHaveAttribute('src', /logo-summer/)
+
+        await page.clock.setFixedTime(DEC_20)
+        await page.reload()
+        await expect(page.locator('html')).toHaveAttribute('data-theme', 'seasonal')
+        await expect(page.locator('html')).toHaveAttribute('data-season', 'christmas-summer')
+        await expect(page.locator('html')).toHaveClass(/(^|\s)dark(\s|$)/)
+        await expect(logo(page, isMobile)).toHaveAttribute('src', /logo-christmas/)
+        const layer = page.locator('.seasonal-layer')
+        await expect(layer).toHaveAttribute('data-season-layer', 'christmas-summer')
+        await expect(layer.locator('.seasonal-rays')).toHaveCount(1)
+        await expect(layer.locator('.seasonal-twinkle').first()).toBeAttached()
+        await expect(page.locator('.seasonal-flake')).toHaveCount(0)
+    })
+
+    test.describe('in a southern zone', () => {
+        test.use({ timezoneId: 'Australia/Sydney' })
+
+        test('the calendar caches Summer Christmas until the midnight it ends', async ({ page, isMobile }) => {
+            await followCalendar(page, DEC_20, 'seasonal')
+            await page.goto('/')
+            await expect(page.locator('html')).toHaveAttribute('data-season', 'christmas-summer')
+            await expect(logo(page, isMobile)).toHaveAttribute('src', /logo-christmas/)
+            const christmasEnds = await localMidnight(page, 2026, 11, 31)
+            await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('utbt:season:v2') ?? 'null')))
+                .toEqual({ id: 'christmas-summer', until: christmasEnds })
+        })
+    })
+
+    test('the north keeps Christmas on the same day', async ({ page, isMobile }) => {
+        await followCalendar(page, DEC_20, 'seasonal')
+        await page.goto('/?hemisphere=north')
+        await expect(page.locator('html')).toHaveAttribute('data-season', 'christmas')
+        await expect(logo(page, isMobile)).toHaveAttribute('src', /logo-christmas/)
+    })
+
+    test('Red in the south shows only the Christmas logo and never loads the decorations', async ({ page, isMobile }) => {
+        const requests = decorRequests(page)
+        await followCalendar(page, DEC_20, 'red')
+        await page.goto('/?hemisphere=south')
+        await expect(logo(page, isMobile)).toHaveAttribute('src', /logo-christmas/)
+        await expect(page.locator('html')).toHaveAttribute('data-theme', 'red')
+        await expect(page.locator('html')).not.toHaveAttribute('data-season', /.+/)
+        await expect(page.locator('.seasonal-layer')).toHaveCount(0)
+        expect(requests.filter(url => url.includes('SeasonalDecor'))).toEqual([])
+    })
+
+    test('keeps the sun rays and at most 8 gold twinkles, with half hidden below 768 px', async ({ page }) => {
+        await page.setViewportSize({ width: 1280, height: 800 })
+        await page.goto('/?season=christmas-summer')
+        const layer = page.locator('.seasonal-layer')
+        await expect(layer).toHaveAttribute('data-season-layer', 'christmas-summer')
+        await expect(layer.locator(':scope > .seasonal-rays')).toHaveCount(1)
+        await expect(layer.locator('.seasonal-flake')).toHaveCount(0)
+        const desktop = await particleCounts(page)
+        expect(desktop.total).toBeGreaterThan(0)
+        expect(desktop.total).toBeLessThanOrEqual(SEASON_PARTICLES)
+        expect(desktop.visible).toBe(desktop.total)
+        expect(await layer.locator(':scope > span.seasonal-twinkle').count()).toBe(desktop.total)
+
+        await page.setViewportSize({ width: 390, height: 844 })
+        const phone = await particleCounts(page)
+        expect(phone.visible).toBeLessThanOrEqual(SEASON_PARTICLES / 2)
+        expect(await nonCompositorProperties(page)).toEqual([])
+    })
+
+    test('the spinner shows a slowly spinning star', async ({ page }) => {
+        await page.route(/https:\/\/api\.utbt\.net\/.*/, () => {})
+        await page.goto('/compare?season=christmas-summer')
+        const spinner = page.locator('.compare-start-empty').filter({ hasText: 'Loading records' }).locator('svg')
+        await expect(spinner).toHaveClass(/(^|\s)lucide-star(\s|$)/)
+        await expect(spinner).not.toHaveCSS('animation-name', 'none')
+        const seconds = await spinner.evaluate(element => parseFloat(getComputedStyle(element).animationDuration))
+        expect(seconds).toBeGreaterThan(1)
+    })
+
+    test('clicking the sidebar logo fires gold stars and red baubles once per cooldown', async ({ page, isMobile }) => {
+        test.skip(isMobile, 'the burst lives on the desktop sidebar logo')
+        await page.goto('/?season=christmas-summer')
+        await expect(sidebarLogo(page)).toHaveAttribute('src', /logo-christmas/)
+        await sidebarLogo(page).click()
+        const burst = page.locator('.seasonal-burst')
+        await expect(burst).toHaveCount(1)
+        const particles = await burst.locator(':scope > span').count()
+        const stars = await burst.locator(`:scope > span > svg > path[d="${STAR}"]`).count()
+        const baubles = await burst.locator(':scope > span.seasonal-burst-bauble').count()
+        expect(stars).toBeGreaterThan(0)
+        expect(baubles).toBeGreaterThan(0)
+        expect(stars + baubles).toBe(particles)
+        expect(await nonCompositorProperties(page)).toEqual([])
+        await sidebarLogo(page).click()
+        await expect(burst).toHaveCount(1)
+        await expect(burst).toHaveCount(0, { timeout: 5000 })
     })
 })

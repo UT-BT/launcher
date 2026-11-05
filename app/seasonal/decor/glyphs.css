@@ -10,3 +10,13 @@
     transform: rotate(14deg);
   }
 }
+
+.seasonal-spin-slow {
+  animation: seasonal-spin-slow 3s linear infinite;
+}
+
+@keyframes seasonal-spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -56,3 +56,11 @@
     opacity: 0;
   }
 }
+
+.seasonal-burst-bauble {
+  width: var(--s);
+  height: var(--s);
+  border-radius: 9999px;
+  background: radial-gradient(circle at 35% 30%, #fecaca, #dc2626 45%, #991b1b);
+  box-shadow: 0 0 5px rgb(220 38 38 / 0.5);
+}

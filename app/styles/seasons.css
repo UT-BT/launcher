@@ -207,3 +207,33 @@
   --border: hsl(292 13% 18%);
   --input: hsl(292 13% 18%);
 }
+
+:root[data-theme='seasonal'][data-season='christmas-summer'] {
+  --accent-50: oklch(0.971 0.013 16);
+  --accent-100: oklch(0.936 0.032 16);
+  --accent-200: oklch(0.885 0.062 16);
+  --accent-300: oklch(0.808 0.114 17);
+  --accent-400: oklch(0.704 0.191 19);
+  --accent-500: oklch(0.637 0.237 21);
+  --accent-600: oklch(0.577 0.245 22);
+  --accent-700: oklch(0.505 0.213 22);
+  --accent-800: oklch(0.444 0.177 22);
+  --accent-900: oklch(0.396 0.141 21);
+  --accent-950: oklch(0.258 0.092 21);
+
+  --accent-glow-rgb: 250 204 21;
+
+  --nebula-1: 245, 158, 11;
+  --nebula-2: 56, 189, 248;
+  --nebula-3: 220, 38, 38;
+  --nebula-4: 250, 204, 21;
+
+  --background: hsl(198 38% 10.5%);
+  --card: hsl(198 38% 12%);
+  --popover: hsl(198 38% 12%);
+  --secondary: hsl(198 26% 19.5%);
+  --muted: hsl(198 26% 19.5%);
+  --accent: hsl(198 26% 19.5%);
+  --border: hsl(198 26% 19.5%);
+  --input: hsl(198 26% 19.5%);
+}

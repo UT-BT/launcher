@@ -557,3 +557,34 @@
     opacity: 0.7;
   }
 }
+
+.seasonal-twinkle {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--s);
+  height: var(--s);
+  opacity: 0;
+  animation: seasonal-twinkle var(--d) ease-in-out var(--delay) infinite;
+  will-change: transform, opacity;
+}
+
+.seasonal-twinkle svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: var(--c);
+  filter: drop-shadow(0 0 3px rgb(250 204 21 / 0.6));
+}
+
+@keyframes seasonal-twinkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.4) rotate(0deg);
+  }
+  50% {
+    opacity: var(--o);
+    transform: scale(1) rotate(45deg);
+  }
+}

@@ -62,6 +62,21 @@ describe('ENTRIES', () => {
         }
     })
 
+    it('closes with Summer Christmas, southern only and on the Christmas logo, while Christmas stays northern', () => {
+        const last = REGISTRY[REGISTRY.length - 1]
+        expect({ id: last.id, label: last.label, kind: last.kind, hemisphere: last.hemisphere, logo: last.logo }).toEqual({
+            id: 'christmas-summer',
+            label: 'Summer Christmas',
+            kind: 'holiday',
+            hemisphere: 'south',
+            logo: 'christmas',
+        })
+        const christmas = REGISTRY.find(entry => entry.id === 'christmas')
+        expect(christmas?.hemisphere).toBe('north')
+        expect(last.window(2026, 'south')).toEqual(christmas?.window(2026, 'north'))
+        expect(last.window(2026, 'south')).toEqual({ start: new Date(2026, 11, 18), endExclusive: new Date(2026, 11, 31) })
+    })
+
     it('is where ENTRY_IDS comes from', () => {
         expect(ENTRY_IDS).toEqual(ENTRIES.map(entry => entry.id))
     })

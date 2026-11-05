@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { usePrefersReducedMotion } from '@/app/hooks/usePrefersReducedMotion'
 import type { EntryId } from '../seasons'
-import { BAT_BODY, BAT_WING, BLOSSOM_COLORS, LEAF, LEAF_COLORS, LEAF_VEIN, MIRROR_BAT, seededRandom } from './shapes'
+import { BAT_BODY, BAT_WING, BLOSSOM_COLORS, GOLD_COLORS, LEAF, LEAF_COLORS, LEAF_VEIN, MIRROR_BAT, SPARKLE, seededRandom } from './shapes'
 
 type Vars = Record<`--${string}`, string>
 
@@ -73,6 +73,19 @@ const WINTER_FLAKES = particles(43, SEASON_PARTICLES, random => {
         '--delay': `${(-random() * duration).toFixed(1)}s`,
         '--sway': `${(6 + random() * 12).toFixed(0)}px`,
         '--swayd': `${(4 + random() * 3).toFixed(1)}s`,
+    }
+})
+
+const TWINKLES = particles(53, SEASON_PARTICLES, (random, index) => {
+    const duration = 7 + random() * 6
+    return {
+        '--x': `${(4 + random() * 92).toFixed(1)}%`,
+        '--y': `${(6 + random() * 58).toFixed(1)}%`,
+        '--s': `${(7 + random() * 5).toFixed(0)}px`,
+        '--o': (0.35 + random() * 0.25).toFixed(2),
+        '--d': `${duration.toFixed(1)}s`,
+        '--delay': `${(-random() * duration).toFixed(1)}s`,
+        '--c': GOLD_COLORS[index % GOLD_COLORS.length],
     }
 })
 
@@ -204,6 +217,18 @@ export function AmbientLayer({ season }: { season: EntryId }) {
                     {WINTER_FLAKES.map((style, index) => (
                         <span key={index} className="seasonal-flake" style={style}>
                             <i />
+                        </span>
+                    ))}
+                </>
+            )}
+            {season === 'christmas-summer' && (
+                <>
+                    <div className="seasonal-rays" />
+                    {TWINKLES.map((style, index) => (
+                        <span key={index} className="seasonal-twinkle" style={style}>
+                            <svg viewBox="0 0 24 24">
+                                <path d={SPARKLE} />
+                            </svg>
                         </span>
                     ))}
                 </>

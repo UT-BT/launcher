@@ -74,6 +74,14 @@ export const ENTRIES = [
         hemisphere: 'north',
         window: year => ({ start: new Date(year, 11, 18), endExclusive: new Date(year, 11, 31) }),
     },
+    {
+        id: 'christmas-summer',
+        label: 'Summer Christmas',
+        kind: 'holiday',
+        hemisphere: 'south',
+        logo: 'christmas',
+        window: year => ({ start: new Date(year, 11, 18), endExclusive: new Date(year, 11, 31) }),
+    },
 ] as const satisfies readonly EntryDefinition[]
 
 export type EntryId = (typeof ENTRIES)[number]['id']
