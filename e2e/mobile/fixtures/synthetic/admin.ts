@@ -10,6 +10,7 @@ import type {
     AdminAlertsResponse,
     AdminHostsResponse,
     AdminServerOperations,
+    AdminOperationsServer,
     ServerControl,
     AdminMapRow,
     AdminOverview,
@@ -690,6 +691,47 @@ const SERVER_CONTROL: { [serverId: string]: ServerControl } = {
     },
 }
 
+type OperationsBlocks = Pick<AdminOperationsServer, 'ruleset' | 'config' | 'build' | 'players'> & { control?: ServerControl }
+
+const OPERATIONS_BLOCKS: { [serverId: string]: OperationsBlocks } = {
+    'synthetic-server-1': {
+        ruleset: { desired: 'certified', in_force: 'certified', pending: false, team_run_active: true },
+        config: { state: 'applied', version: 7, cached_version: 7, applied_version: 7, drift: [] },
+        build: { utbt_build: 'UTBT_v3', server_packages: ['Botpack', 'UTBT_v3', 'UTBT_Fonts', 'CountryFlags3'] },
+        players: [],
+    },
+    'synthetic-server-2': {
+        control: {
+            managed: true,
+            unit_state: 'active',
+            held: false,
+            restarts: 2,
+            started_at: daysAgo(3),
+            actions: ['restart', 'stop'],
+            unavailable: null,
+        },
+        ruleset: { desired: 'certified', in_force: 'casual', pending: true, team_run_active: false },
+        config: { state: 'drift', version: 4, cached_version: 4, applied_version: 4, drift: ['max_players', 'motd_1'] },
+        build: { utbt_build: 'UTBT_v3', server_packages: ['Botpack', 'UTBT_v3', 'UTBT_Fonts', 'CountryFlags3'] },
+        players: [person(60).alias],
+    },
+    'synthetic-server-5': {
+        ruleset: { desired: 'certified', in_force: null, pending: false, team_run_active: null },
+        config: { state: 'pending', version: 3, cached_version: 3, applied_version: 2, drift: [] },
+        build: { utbt_build: null, server_packages: ['Botpack', 'CountryFlags3'] },
+        players: [],
+    },
+}
+
+function operationsBlocks(server: { id: string; certified_records: boolean }): OperationsBlocks {
+    return OPERATIONS_BLOCKS[server.id] ?? {
+        ruleset: { desired: server.certified_records ? 'certified' : 'casual', in_force: null, pending: false, team_run_active: null },
+        config: { state: 'not_managed', version: null, cached_version: null, applied_version: null, drift: [] },
+        build: { utbt_build: null, server_packages: [] },
+        players: null,
+    }
+}
+
 const serverOperations: AdminServerOperations = {
     hosts: hosts.hosts,
     servers: hosts.servers.map((server, index) => {
@@ -721,6 +763,7 @@ const serverOperations: AdminServerOperations = {
                 changed_at: daysAgo(index + 1),
             },
             control,
+            ...operationsBlocks(server),
         }
     }),
     generated_at: hoursAgo(0),

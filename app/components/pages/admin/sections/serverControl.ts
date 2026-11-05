@@ -4,9 +4,11 @@ import type {
   AdminServerProbe,
   ServerAction,
   ServerControl,
+  ServerRuleset,
   ServerUnitState,
 } from '@/app/utils/api'
 import type { ServerActionFailure } from './serverActions'
+import { SETTING_SPECS, isSettingId } from './serverSettings/serverSettings'
 import { ADMIN_DASHBOARD_ROLES, ADMIN_ONLY_ROLES } from '@/app/utils/roles'
 import type { Tone } from '../types'
 
@@ -173,4 +175,99 @@ export function serverActionFailureMessage(action: ServerAction, failure: Server
 
 export function serverActionSuccessMessage(action: ServerAction, server: AdminOperationsServer, unitState: ServerUnitState): string {
   return `${SERVER_ACTION_LABELS[action]} sent. ${server.name} is ${unitStateWords(unitState)}.`
+}
+
+const NO_VALUE = '—'
+
+const RULESET_LABELS: Record<ServerRuleset, string> = { casual: 'Casual', certified: 'Certified' }
+
+export interface RulesetCell {
+  label: string
+  pending: string | null
+  teamRun: boolean
+}
+
+export function rulesetCell(server: AdminOperationsServer): RulesetCell {
+  const ruleset = server.ruleset
+  if (!ruleset) return { label: NO_VALUE, pending: null, teamRun: false }
+  return {
+    label: RULESET_LABELS[ruleset.desired],
+    pending: ruleset.pending
+      ? ruleset.in_force ? `Applies at the next map (in force: ${ruleset.in_force})` : 'Applies at the next map'
+      : null,
+    teamRun: ruleset.desired === 'certified' && ruleset.team_run_active === true,
+  }
+}
+
+function versioned(word: string, version: number | null): string {
+  return version === null ? word : `${word} v${version}`
+}
+
+export function driftLabels(server: AdminOperationsServer): string[] {
+  return (server.config?.drift ?? []).map((key) => (isSettingId(key) ? SETTING_SPECS[key].label : key))
+}
+
+export function configStateText(server: AdminOperationsServer): string {
+  const config = server.config
+  if (!config) return NO_VALUE
+  switch (config.state) {
+    case 'applied':
+      return versioned('Applied', config.version)
+    case 'pending':
+      return versioned('Pending', config.version)
+    case 'drift':
+      return `Drift (${config.drift.length})`
+    case 'not_managed':
+      return 'Not managed'
+  }
+}
+
+export function configStateHint(server: AdminOperationsServer): string | null {
+  switch (server.config?.state) {
+    case 'pending':
+      return 'Applies when the server is empty or restarts'
+    case 'drift':
+      return `Changed on the server: ${driftLabels(server).join(', ')}`
+    default:
+      return null
+  }
+}
+
+export function runningConfigText(server: AdminOperationsServer): string | null {
+  const config = server.config
+  if (config?.state !== 'pending' || config.applied_version === null) return null
+  return `Running v${config.applied_version}`
+}
+
+export function uptimeText(seconds: number | null | undefined): string {
+  if (seconds === null || seconds === undefined) return NO_VALUE
+  const days = Math.floor(seconds / 86_400)
+  const hours = Math.floor((seconds % 86_400) / 3_600)
+  const minutes = Math.floor((seconds % 3_600) / 60)
+  if (days > 0) return `${days} d ${hours} h`
+  if (hours > 0) return `${hours} h ${minutes} min`
+  if (minutes > 0) return `${minutes} min`
+  return 'under 1 min'
+}
+
+export function playersText(server: AdminOperationsServer): string {
+  const players = server.players
+  if (!players) return 'Unknown'
+  return players.length > 0 ? players.join(', ') : 'Nobody playing'
+}
+
+function managedBuild(server: AdminOperationsServer) {
+  return server.control?.managed ? server.build : undefined
+}
+
+export function buildText(server: AdminOperationsServer): string {
+  const build = managedBuild(server)
+  if (!build) return NO_VALUE
+  return build.utbt_build ?? 'Legacy'
+}
+
+export function packagesText(server: AdminOperationsServer): string {
+  const build = managedBuild(server)
+  if (!build) return NO_VALUE
+  return build.server_packages.length > 0 ? build.server_packages.join(', ') : 'None reported'
 }

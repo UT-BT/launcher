@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { reopenOnDroppedModule } from './dev-server'
 import { serveFixtureSet } from './fixtures/router'
+import { person } from './fixtures/synthetic/people'
 import { crawlSurfaces, surfaceSteps } from './manifest'
 import { admin } from './manifest/admin'
 import { CONSENT_KEY } from './manifest/overlays'
@@ -303,6 +304,31 @@ test.describe('Admin cards', () => {
         await modal(page).getByRole('button', { name: 'Roll back' }).tap()
         await expect(page.getByText('Rolled back. The game password was not changed')).toBeVisible()
         expect(rollbacks.at(-1)?.body).toBeNull()
+    })
+
+    test('Server Operations: the card face shows the ruleset, and the panel shows who is playing and the config state', async ({ page }) => {
+        await openSection(page, 'server-operations')
+        const cards = await cardsOf(page, 'Game servers')
+        await expect(cards.filter({ hasText: 'Test BT Server #1 | EU' }).getByText('team run', { exact: true })).toBeVisible()
+        const card = cards.filter({ hasText: 'Test BT Server #2 | NA' })
+        await expect(card.getByText('Certified', { exact: true })).toBeVisible()
+        await expect(card.getByText('pending', { exact: true })).toBeVisible()
+        await openPanel(card)
+        await expect(terms(card)).toHaveText(['Config', 'Host', 'Probe', 'Process', 'Players', 'Map', 'Build', 'Region'])
+        await expect(card.getByRole('definition').first()).toHaveText('Drift (2)')
+        await expect(card.getByText('Who is playing')).toBeVisible()
+        await expect(card.getByText(person(60).alias, { exact: true })).toBeVisible()
+        await expect(card.getByText('Max players, Message of the day, line 1', { exact: true })).toBeVisible()
+        await expect(card.getByText('Changed on the server; will be overwritten at the next start.')).toBeVisible()
+        await expect(card.getByText('Certified: applies at the next map (in force: casual)')).toBeVisible()
+        await expectNoSidewaysScroll(page.getByRole('main').getByRole('list', { name: 'Game servers' }))
+
+        const held = cards.filter({ hasText: 'Test BT Server #5 | EU' })
+        await openPanel(held)
+        await expect(held.getByRole('definition').first()).toHaveText('Pending v3')
+        await expect(held.getByText('Pending v3: applies when the server is empty or restarts')).toBeVisible()
+        await expect(held.getByText('Running v2', { exact: true })).toBeVisible()
+        await expect(held.getByRole('definition').nth(6)).toHaveText('Legacy')
     })
 
     test('Game Hosts: the server editor has no name, region or records field, and saves none of them', async ({ page }) => {

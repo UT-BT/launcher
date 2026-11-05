@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { BellRing, CircleCheck, CircleHelp, CirclePause, CircleSlash, Play, RefreshCw, RotateCcw, Server, ServerCog, Settings, Square, TriangleAlert } from 'lucide-react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { BellRing, ChevronDown, ChevronRight, CircleCheck, CircleHelp, CirclePause, CircleSlash, Play, RefreshCw, RotateCcw, Server, ServerCog, Settings, Square, TriangleAlert } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import {
   fetchAdminServerOperations,
@@ -7,6 +7,7 @@ import {
   type AdminOperationsServer,
   type AdminServerOperations,
   type ServerAction,
+  type ServerConfigState,
 } from '@/app/utils/api'
 import { capabilities } from '@/app/platform'
 import { restartServer, startServer, stopServer, type ServerActionOutcome } from './serverActions'
@@ -20,19 +21,30 @@ import { AdminCardFace, adminCardsPlaceholder } from '../components/AdminCardFac
 import { AdminSelect, ConfirmDialog, Feedback, SearchInput, errMessage, relTime } from '../components/controls'
 import { ActionMenu, type ActionMenuItem } from '../components/ActionMenu'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
+import { useNavState } from '@/app/components/navigation/useNavState'
+import { PANEL_LABEL } from '../components/shared'
 import { AlertsPanel } from './AlertsPanel'
 import { ServerSettingsDialog, type ServerSettingsSaved } from './serverSettings/ServerSettingsDialog'
 import { canOpenServerSettings } from './serverSettings/serverSettings'
 import {
   SERVER_ACTION_LABELS,
+  buildText,
+  configStateHint,
+  configStateText,
+  driftLabels,
   isDownHealth,
   isHungHealth,
   isProblemHealth,
+  packagesText,
+  playersText,
+  rulesetCell,
+  runningConfigText,
   serverActionConfirm,
   serverActionFailureMessage,
   serverActionSuccessMessage,
   serverActionsFor,
   serverHealth,
+  uptimeText,
   type Health,
   type HealthKey,
 } from './serverControl'
@@ -45,17 +57,22 @@ import {
   DataTableShell,
   DataTableSkeletonRow,
 } from '@/app/components/shared/DataTable'
+import { DataTableExpandRow } from '@/app/components/shared/DataTableExpandRow'
+import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 
 const AUTO_REFRESH_MS = 30_000
 
 const COLUMNS: AdminColumn[] = [
   { id: 'server', label: 'Server', required: true, tier: 'essential' },
   { id: 'health', label: 'Health', required: true, tier: 'essential' },
+  { id: 'ruleset', label: 'Ruleset', tier: 'essential' },
+  { id: 'config', label: 'Config', tier: 'detail' },
   { id: 'host', label: 'Host', tier: 'detail' },
   { id: 'probe', label: 'Probe', tier: 'detail' },
   { id: 'process', label: 'Process', tier: 'detail' },
   { id: 'players', label: 'Players', tier: 'detail' },
   { id: 'map', label: 'Map', tier: 'detail' },
+  { id: 'build', label: 'Build', tier: 'detail' },
   { id: 'region', label: 'Region', tier: 'detail' },
   { id: 'actions', label: 'Actions', required: true, tier: 'essential' },
 ]
@@ -63,14 +80,20 @@ const COLUMNS: AdminColumn[] = [
 const LAYOUT: Record<string, { width: string; priority?: number }> = {
   server: { width: '15rem' },
   health: { width: '9rem' },
+  ruleset: { width: '8rem', priority: 70 },
+  config: { width: '8rem', priority: 60 },
   host: { width: '10rem', priority: 50 },
   players: { width: '7rem', priority: 40 },
   probe: { width: '8rem', priority: 30 },
   process: { width: '8rem', priority: 25 },
   map: { width: '12rem', priority: 20 },
+  build: { width: '8rem', priority: 15 },
   region: { width: '8rem', priority: 10 },
   actions: { width: '5rem' },
 }
+
+const CHEVRON_WIDTH_REM = 2.75
+const CHEVRON_WIDTH = `${CHEVRON_WIDTH_REM}rem`
 
 const STATUS_OPTIONS = [
   { value: 'all', label: 'All servers' },
@@ -97,6 +120,15 @@ const HEALTH_CLASS: Record<Tone, string> = {
   amber: 'bg-amber-500/10 border-amber-500/30 text-amber-300',
   red: 'bg-red-500/10 border-red-500/30 text-red-300',
   accent: 'bg-card/40 border-hairline/20 text-muted-foreground',
+}
+
+const MARKER = 'px-1.5 py-0.5 rounded border text-[10px] font-medium uppercase tracking-wide'
+
+const CONFIG_CLASS: Record<ServerConfigState, string> = {
+  applied: 'text-emerald-300',
+  pending: 'text-amber-300',
+  drift: 'text-red-300',
+  not_managed: 'text-muted-foreground',
 }
 
 const ACTION_ICON: Record<ServerAction, LucideIcon> = { restart: RefreshCw, start: Play, stop: Square }
@@ -158,6 +190,83 @@ function ProbePill({ server }: { server: AdminOperationsServer }) {
   )
 }
 
+function RulesetBadge({ server }: { server: AdminOperationsServer }) {
+  const ruleset = rulesetCell(server)
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1.5">
+      <span>{ruleset.label}</span>
+      {ruleset.pending && <span title={ruleset.pending} className={cn(MARKER, HEALTH_CLASS.amber)}>pending</span>}
+      {ruleset.teamRun && <span title="A team run is in progress" className={cn(MARKER, HEALTH_CLASS.emerald)}>team run</span>}
+    </span>
+  )
+}
+
+function ConfigState({ server }: { server: AdminOperationsServer }) {
+  const state = server.config?.state
+  return (
+    <span className={cn('text-xs', state ? CONFIG_CLASS[state] : 'text-muted-foreground')} title={configStateHint(server) ?? undefined}>
+      {configStateText(server)}
+    </span>
+  )
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="space-y-1 min-w-0">
+      <div className={PANEL_LABEL}>{label}</div>
+      <div className="text-sm text-foreground break-words">{children}</div>
+    </div>
+  )
+}
+
+function WhoIsPlaying({ server }: { server: AdminOperationsServer }) {
+  const players = server.players
+  if (!players || players.length === 0) return <>{playersText(server)}</>
+  return (
+    <ul className="flex flex-wrap gap-x-3 gap-y-1">
+      {players.map((name, i) => (
+        <li key={`${i}-${name}`} className="min-w-0">
+          <PlayerInfo alias={name} size="sm" presentation="name" />
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function explained(lead: string, hint: string): string {
+  return `${lead}: ${hint.charAt(0).toLowerCase()}${hint.slice(1)}`
+}
+
+function ServerDetail({ server, inCard = false }: { server: AdminOperationsServer; inCard?: boolean }) {
+  const ruleset = rulesetCell(server)
+  const configHint = server.config?.state === 'pending' ? configStateHint(server) : null
+  const running = runningConfigText(server)
+  const drift = driftLabels(server)
+  return (
+    <div className={cn('bg-card/30 border border-hairline/5 rounded-xl', inCard ? 'p-3 space-y-4' : 'p-5 space-y-5')}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+        <Field label="Who is playing"><WhoIsPlaying server={server} /></Field>
+        {!inCard && <Field label="Map">{server.probe.map_name ?? '—'}</Field>}
+        <Field label="Uptime"><span className="tabular-nums">{uptimeText(server.runtime?.uptime_seconds)}</span></Field>
+        <Field label="Packages">{packagesText(server)}</Field>
+        {ruleset.pending && <Field label="Ruleset">{explained(ruleset.label, ruleset.pending)}</Field>}
+        {configHint && (
+          <Field label="Settings">
+            <p>{explained(configStateText(server), configHint)}</p>
+            {running && <p className="text-xs text-muted-foreground">{running}</p>}
+          </Field>
+        )}
+      </div>
+      {drift.length > 0 && (
+        <Field label="Drift">
+          <p>{drift.join(', ')}</p>
+          <p className="text-xs text-muted-foreground">Changed on the server; will be overwritten at the next start.</p>
+        </Field>
+      )}
+    </div>
+  )
+}
+
 function serverCell(id: string, server: AdminOperationsServer, health: Health, actions: ReactNode): ReactNode {
   switch (id) {
     case 'server':
@@ -169,6 +278,10 @@ function serverCell(id: string, server: AdminOperationsServer, health: Health, a
       )
     case 'health':
       return <HealthPill health={health} />
+    case 'ruleset':
+      return <RulesetBadge server={server} />
+    case 'config':
+      return <ConfigState server={server} />
     case 'host':
       return server.host_name ?? <span className="text-amber-300/80">Not linked</span>
     case 'probe':
@@ -183,6 +296,8 @@ function serverCell(id: string, server: AdminOperationsServer, health: Health, a
       )
     case 'map':
       return <span className="truncate block">{server.probe.map_name ?? '--'}</span>
+    case 'build':
+      return <span className="text-xs">{buildText(server)}</span>
     case 'region':
       return server.region ?? '--'
     case 'actions':
@@ -207,9 +322,10 @@ export function ServerOperationsSection({ userProfile }: AdminSectionProps) {
   const [busy, setBusy] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [settingsId, setSettingsId] = useState<string | null>(null)
+  const [expanded, setExpanded] = useNavState<string | null>('admin.serverops.expanded', null)
   const role = userProfile?.utbt_role
 
-  const table = useAdminTable('utbt:admin:serverops:cols:v1', COLUMNS, { defaultFiltersOpen: false })
+  const table = useAdminTable('utbt:admin:serverops:cols:v2', COLUMNS, { defaultFiltersOpen: false })
   const abortRef = useRef<AbortController | null>(null)
 
   const resolveColumns = useCallback((ids: Set<string>) => setVisibleColumns(ids), [])
@@ -365,7 +481,7 @@ export function ServerOperationsSection({ userProfile }: AdminSectionProps) {
     if (saved.failed) setError(saved.message)
   }
 
-  const columnCount = 3 + (['host', 'probe', 'process', 'players', 'map', 'region'] as const).filter(shows).length
+  const columnCount = 4 + (['ruleset', 'config', 'host', 'probe', 'process', 'players', 'map', 'build', 'region'] as const).filter(shows).length
 
   const columns = table.responsiveColumns<AdminOperationsServer>((id) => ({
     width: LAYOUT[id]?.width, priority: LAYOUT[id]?.priority, cell: (server) => cell(id, server),
@@ -405,6 +521,7 @@ export function ServerOperationsSection({ userProfile }: AdminSectionProps) {
         responsive={{
           columns,
           onResolve: resolveColumns,
+          extraRem: CHEVRON_WIDTH_REM,
           onCompactChange: table.onCompactChange,
           compactAriaLabel: 'Game servers',
           cards: {
@@ -412,18 +529,23 @@ export function ServerOperationsSection({ userProfile }: AdminSectionProps) {
             rowKey: (server) => server.id,
             rowClassName: (server) => (server.active ? undefined : 'opacity-50'),
             face: (server) => <AdminCardFace columns={columns} row={server} />,
+            panel: (server) => <ServerDetail server={server} inCard />,
             placeholder: adminCardsPlaceholder(loading, servers.length === 0, 'No servers match your filters.'),
           },
         }}
       >
         <DataTableHeaderRow>
+          <DataTableHeaderCell width={CHEVRON_WIDTH}> </DataTableHeaderCell>
           <DataTableHeaderCell width="15rem">Server</DataTableHeaderCell>
           <DataTableHeaderCell align="center" width="9rem">Health</DataTableHeaderCell>
+          {shows('ruleset') && <DataTableHeaderCell width="8rem">Ruleset</DataTableHeaderCell>}
+          {shows('config') && <DataTableHeaderCell width="8rem">Config</DataTableHeaderCell>}
           {shows('host') && <DataTableHeaderCell width="10rem">Host</DataTableHeaderCell>}
           {shows('probe') && <DataTableHeaderCell align="center" width="8rem">Probe</DataTableHeaderCell>}
           {shows('process') && <DataTableHeaderCell align="center" width="8rem">Process</DataTableHeaderCell>}
           {shows('players') && <DataTableHeaderCell align="center" width="7rem">Players</DataTableHeaderCell>}
           {shows('map') && <DataTableHeaderCell width="12rem">Map</DataTableHeaderCell>}
+          {shows('build') && <DataTableHeaderCell width="8rem">Build</DataTableHeaderCell>}
           {shows('region') && <DataTableHeaderCell width="8rem">Region</DataTableHeaderCell>}
           <DataTableHeaderCell align="right" width="5rem">Actions</DataTableHeaderCell>
         </DataTableHeaderRow>
@@ -436,21 +558,47 @@ export function ServerOperationsSection({ userProfile }: AdminSectionProps) {
             <DataTableEmpty colSpan={columnCount} message="No servers match your filters." />
           )}
 
-          {!loading && servers.map((server) => (
-            <DataTableRow key={server.id} className={cn(!server.active && 'opacity-50')}>
-              <DataTableCell width="15rem">{cell('server', server)}</DataTableCell>
-              <DataTableCell align="center" width="9rem">{cell('health', server)}</DataTableCell>
-              {shows('host') && <DataTableCell width="10rem">{cell('host', server)}</DataTableCell>}
-              {shows('probe') && <DataTableCell align="center" width="8rem">{cell('probe', server)}</DataTableCell>}
-              {shows('process') && <DataTableCell align="center" width="8rem">{cell('process', server)}</DataTableCell>}
-              {shows('players') && <DataTableCell align="center" width="7rem">{cell('players', server)}</DataTableCell>}
-              {shows('map') && <DataTableCell width="12rem">{cell('map', server)}</DataTableCell>}
-              {shows('region') && <DataTableCell width="8rem">{cell('region', server)}</DataTableCell>}
-              <DataTableCell align="right" width="5rem">
-                <div className="flex items-center justify-end">{cell('actions', server)}</div>
-              </DataTableCell>
-            </DataTableRow>
-          ))}
+          {!loading && servers.map((server) => {
+            const open = expanded === server.id
+            const detailId = `serverops-detail-${server.id}`
+            return (
+              <Fragment key={server.id}>
+                <DataTableRow className={cn(!server.active && 'opacity-50', open && 'bg-hairline/[0.04]')}>
+                  <DataTableCell align="center" width={CHEVRON_WIDTH}>
+                    <button
+                      type="button"
+                      aria-label={`Details for ${server.name}`}
+                      aria-expanded={open}
+                      aria-controls={open ? detailId : undefined}
+                      onClick={() => setExpanded(open ? null : server.id)}
+                      className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-hairline/5 hover:text-foreground transition-colors cursor-pointer"
+                    >
+                      {open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+                    </button>
+                  </DataTableCell>
+                  <DataTableCell width="15rem">{cell('server', server)}</DataTableCell>
+                  <DataTableCell align="center" width="9rem">{cell('health', server)}</DataTableCell>
+                  {shows('ruleset') && <DataTableCell width="8rem">{cell('ruleset', server)}</DataTableCell>}
+                  {shows('config') && <DataTableCell width="8rem">{cell('config', server)}</DataTableCell>}
+                  {shows('host') && <DataTableCell width="10rem">{cell('host', server)}</DataTableCell>}
+                  {shows('probe') && <DataTableCell align="center" width="8rem">{cell('probe', server)}</DataTableCell>}
+                  {shows('process') && <DataTableCell align="center" width="8rem">{cell('process', server)}</DataTableCell>}
+                  {shows('players') && <DataTableCell align="center" width="7rem">{cell('players', server)}</DataTableCell>}
+                  {shows('map') && <DataTableCell width="12rem">{cell('map', server)}</DataTableCell>}
+                  {shows('build') && <DataTableCell width="8rem">{cell('build', server)}</DataTableCell>}
+                  {shows('region') && <DataTableCell width="8rem">{cell('region', server)}</DataTableCell>}
+                  <DataTableCell align="right" width="5rem">
+                    <div className="flex items-center justify-end">{cell('actions', server)}</div>
+                  </DataTableCell>
+                </DataTableRow>
+                {open && (
+                  <DataTableExpandRow id={detailId} colSpan={columnCount}>
+                    <ServerDetail server={server} />
+                  </DataTableExpandRow>
+                )}
+              </Fragment>
+            )
+          })}
         </tbody>
       </DataTableShell>
 

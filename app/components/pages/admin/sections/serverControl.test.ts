@@ -1,11 +1,21 @@
 import { describe, expect, it } from 'vitest'
-import type { AdminAlert, AdminOperationsServer, ServerAction, ServerControl, ServerUnitState } from '@/app/utils/api'
+import type { AdminAlert, AdminOperationsServer, ServerAction, ServerConfigKeyId, ServerControl, ServerUnitState } from '@/app/utils/api'
 import { serverOperationsFixture } from '@/app/utils/fixtures/serverControlFixtures'
+import { serverConfigOperationsFixture } from '@/app/utils/fixtures/serverConfigFixtures'
 import { ROLE } from '@/app/utils/roles'
 import {
   isHungHealth,
   isProblemHealth,
   playerCountText,
+  rulesetCell,
+  buildText,
+  packagesText,
+  playersText,
+  uptimeText,
+  configStateHint,
+  configStateText,
+  driftLabels,
+  runningConfigText,
   serverActionConfirm,
   serverActionFailureMessage,
   serverActionSuccessMessage,
@@ -274,5 +284,167 @@ describe('serverActionFailureMessage', () => {
 describe('serverActionSuccessMessage', () => {
   it('names the server and the state the host answered with', () => {
     expect(serverActionSuccessMessage('restart', managed, 'activating')).toBe('Restart sent. BT Test Server | EU is starting.')
+  })
+})
+
+const operations = serverConfigOperationsFixture()
+const operationsRow = (id: string) => {
+  const server = operations.servers.find((row) => row.id.endsWith(id))
+  if (!server) throw new Error(`no operations fixture row ${id}`)
+  return server
+}
+const drifted = operationsRow('6f03')
+const applied = operationsRow('6f01')
+const pendingConfig = operationsRow('6f04')
+const unmanagedConfig = operationsRow('6f02')
+const withoutBlocks = (server: AdminOperationsServer): AdminOperationsServer => {
+  const { ruleset: _ruleset, config: _config, build: _build, players: _players, ...rest } = server
+  return rest
+}
+
+describe('rulesetCell', () => {
+  it('names the saved ruleset and marks it pending while the game reports another', () => {
+    expect(rulesetCell(drifted)).toEqual({
+      label: 'Certified',
+      pending: 'Applies at the next map (in force: casual)',
+      teamRun: false,
+    })
+  })
+
+  it('shows a team run marker on a certified server running one', () => {
+    expect(rulesetCell(applied)).toEqual({ label: 'Certified', pending: null, teamRun: true })
+  })
+
+  it('is not pending when the game has not reported a ruleset', () => {
+    expect(rulesetCell(pendingConfig)).toEqual({ label: 'Casual', pending: null, teamRun: false })
+    expect(rulesetCell(unmanagedConfig)).toEqual({ label: 'Certified', pending: null, teamRun: false })
+  })
+
+  it('never marks a team run on a casual server', () => {
+    const casual = { ...applied, ruleset: { desired: 'casual' as const, in_force: 'casual' as const, pending: false, team_run_active: true } }
+    expect(rulesetCell(casual).teamRun).toBe(false)
+  })
+
+  it('shows a dash for a row without the block', () => {
+    expect(rulesetCell(withoutBlocks(applied))).toEqual({ label: '—', pending: null, teamRun: false })
+  })
+})
+
+describe('configStateText', () => {
+  it('names the version that is applied', () => {
+    expect(configStateText(applied)).toBe('Applied v4')
+    expect(configStateHint(applied)).toBeNull()
+  })
+
+  it('names the saved version that waits to apply', () => {
+    expect(configStateText(pendingConfig)).toBe('Pending v5')
+    expect(configStateHint(pendingConfig)).toBe('Applies when the server is empty or restarts')
+  })
+
+  it('counts the drifted settings and lists them by label', () => {
+    expect(configStateText(drifted)).toBe('Drift (1)')
+    expect(configStateHint(drifted)).toBe('Changed on the server: Message of the day, line 1')
+  })
+
+  it('lists several drifted settings in the order the server sent them', () => {
+    const server = { ...drifted, config: { ...drifted.config!, drift: ['max_players', 'motd_1'] as ServerConfigKeyId[] } }
+    expect(configStateText(server)).toBe('Drift (2)')
+    expect(driftLabels(server)).toEqual(['Max players', 'Message of the day, line 1'])
+  })
+
+  it('says when the settings are not managed', () => {
+    expect(configStateText(unmanagedConfig)).toBe('Not managed')
+    expect(configStateHint(unmanagedConfig)).toBeNull()
+    expect(driftLabels(unmanagedConfig)).toEqual([])
+  })
+
+  it('leaves out a missing version', () => {
+    const server = { ...pendingConfig, config: { ...pendingConfig.config!, version: null } }
+    expect(configStateText(server)).toBe('Pending')
+  })
+
+  it('shows a dash for a row without the block', () => {
+    expect(configStateText(withoutBlocks(drifted))).toBe('—')
+    expect(configStateHint(withoutBlocks(drifted))).toBeNull()
+    expect(driftLabels(withoutBlocks(drifted))).toEqual([])
+  })
+})
+
+describe('runningConfigText', () => {
+  it('names the running version while a saved one waits to apply', () => {
+    expect(runningConfigText(pendingConfig)).toBe('Running v4')
+  })
+
+  it('stays empty when the running version is the saved one', () => {
+    expect(runningConfigText(applied)).toBeNull()
+    expect(runningConfigText(drifted)).toBeNull()
+    expect(runningConfigText(unmanagedConfig)).toBeNull()
+  })
+
+  it('stays empty when no version has run yet or the block is missing', () => {
+    const server = { ...pendingConfig, config: { ...pendingConfig.config!, applied_version: null } }
+    expect(runningConfigText(server)).toBeNull()
+    expect(runningConfigText(withoutBlocks(pendingConfig))).toBeNull()
+  })
+})
+
+describe('uptimeText', () => {
+  it('shows days and hours from a day up', () => {
+    expect(uptimeText(3 * 86_400 + 4 * 3_600 + 59 * 60)).toBe('3 d 4 h')
+    expect(uptimeText(86_400)).toBe('1 d 0 h')
+    expect(uptimeText(207_610)).toBe('2 d 9 h')
+  })
+
+  it('shows hours and minutes under a day, and minutes under an hour', () => {
+    expect(uptimeText(5 * 3_600 + 7 * 60 + 30)).toBe('5 h 7 min')
+    expect(uptimeText(42 * 60)).toBe('42 min')
+    expect(uptimeText(59)).toBe('under 1 min')
+  })
+
+  it('shows a dash when the uptime is unknown', () => {
+    expect(uptimeText(null)).toBe('—')
+    expect(uptimeText(undefined)).toBe('—')
+  })
+})
+
+describe('playersText', () => {
+  it('lists the names the server reported', () => {
+    expect(playersText(applied)).toBe('Player1, Player2, Player3')
+  })
+
+  it('says nobody is playing on an empty server', () => {
+    expect(playersText(drifted)).toBe('Nobody playing')
+  })
+
+  it('is unknown when the server is not managed, never reported or sent no block', () => {
+    expect(playersText(unmanagedConfig)).toBe('Unknown')
+    expect(playersText(withoutBlocks(applied))).toBe('Unknown')
+  })
+})
+
+describe('buildText', () => {
+  it('names the build the server reported', () => {
+    expect(buildText(applied)).toBe('UTBT_v3')
+  })
+
+  it('calls a managed server without a build Legacy', () => {
+    expect(buildText(pendingConfig)).toBe('Legacy')
+  })
+
+  it('shows a dash when the server is not managed or sent no block', () => {
+    expect(buildText(unmanagedConfig)).toBe('—')
+    expect(buildText(withoutBlocks(applied))).toBe('—')
+  })
+})
+
+describe('packagesText', () => {
+  it('lists the loaded packages in order', () => {
+    expect(packagesText(applied)).toBe('Botpack, UTBT_v3, UTBT_Fonts, CountryFlags3')
+  })
+
+  it('says none were reported, or shows a dash without a block', () => {
+    expect(packagesText({ ...applied, build: { utbt_build: null, server_packages: [] } })).toBe('None reported')
+    expect(packagesText(unmanagedConfig)).toBe('—')
+    expect(packagesText(withoutBlocks(applied))).toBe('—')
   })
 })

@@ -132,7 +132,7 @@ table's required columns plus its main action; every other column is in the expa
 | Anti-Cheat: High Cap Delta | selection, player, actions | sortable (Delta, Added; descending only, as the header) |
 | Anti-Cheat: Low FPS WRs | selection, player, actions | |
 | Anti-Cheat: cap stats percentiles | percentile, FPS, ping | every column on the face, labelled; no panel |
-| Server Operations | server, health, actions | inactive servers dimmed |
+| Server Operations | server, health, ruleset, actions | inactive servers dimmed; the panel adds the [server details](#server-operations-moderators-and-admins) |
 | Game Hosts | host, actions | disabled hosts dimmed |
 
 **Audit Logs details.** On the table a row click opens the details in a `DataTableExpandRow`
@@ -225,6 +225,36 @@ The map-author fetchers back `MapAuthorsModal`, opened from Maps Management.
   `server.watchdog_gave_up` alert for that server, taken from the alerts `AlertsPanel`
   loads. "Problems only" includes all three; the Hung filter and card include Hung
   (watchdog), and the Down card includes Crash loop.
+
+- Each row also carries four blocks, all optional on `AdminOperationsServer` (a row without one
+  shows "—"):
+  - `ruleset`: `desired`, `in_force` (what the game reports, or null), `pending` and
+    `team_run_active`;
+  - `config`: `state` (`applied`, `pending`, `drift`, `not_managed`), `version`,
+    `cached_version`, `applied_version` and `drift` (the key ids that differ from the saved
+    settings);
+  - `build`: `utbt_build` and `server_packages`;
+  - `players`: the names on the server, or null when it is not managed or never reported.
+- The columns that show them:
+  - **Ruleset** (`essential`, on the phone card face): "Certified" or "Casual" from `desired`.
+    A "pending" marker, titled "Applies at the next map (in force: casual)", shows while
+    `pending`, and a certified server running a team run shows a "team run" marker.
+  - **Config** (`detail`): "Applied v4", "Pending v4" (titled "Applies when the server is empty
+    or restarts"), "Drift (N)" (titled with the drifted settings' labels from `SETTING_SPECS`,
+    never the key ids) or "Not managed".
+  - **Build** (`detail`, lowest priority after Map): `utbt_build`, "Legacy" when a managed
+    server reports none, "—" when the host is not managed.
+- **Details.** A chevron at the start of each table row ("Details for <server>") opens a
+  `DataTableExpandRow`; on a phone card the same `ServerDetail` renders through `cards.panel`,
+  without the map, which the panel's grid already lists. It shows who is playing (each
+  in-game name through `PlayerInfo` with no `userId`, so plain text; "Nobody playing" or
+  "Unknown"), the map, the uptime from `runtime.uptime_seconds` ("3 d 4 h", "5 h 7 min"),
+  the loaded packages, the pending ruleset or settings with their explanation (pending
+  settings also name the running version, "Running v4"), and the drifted settings by label
+  with "Changed on the server; will be overwritten at the next start."
+- `rulesetCell`, `configStateText`, `configStateHint`, `runningConfigText`, `driftLabels`,
+  `buildText`, `packagesText`, `uptimeText` and `playersText` in `sections/serverControl.ts`
+  hold these strings and are unit-tested against the operations contract fixture.
 
 - Alerts: `fetchAdminAlerts`, `acknowledgeAdminAlert`, `unacknowledgeAdminAlert`,
   `resolveAdminAlert`, shown in `AlertsPanel` at the top of Server Operations. Hosts raise
