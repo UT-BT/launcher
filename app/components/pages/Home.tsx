@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef, lazy } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense } from 'react'
 import { LazyModalGate } from '@/app/components/shared/LazyModalGate'
 import { Activity, AlertTriangle, RefreshCw } from 'lucide-react'
 import {
@@ -36,6 +36,10 @@ import { requestLogin } from '@/app/components/shared/AuthRequiredModal'
 const ReviewModal = lazy(() => import('@/app/components/modals/ReviewModal').then(m => ({ default: m.ReviewModal })))
 const HistoryModal = lazy(() => import('@/app/components/modals/HistoryModal').then(m => ({ default: m.HistoryModal })))
 const ReplayVideoModal = lazy(() => import('@/app/components/shared/ReplayVideoModal').then(m => ({ default: m.ReplayVideoModal })))
+const SeasonalThemeNotice = lazy(() => import('./home/SeasonalThemeNotice').then(
+    m => ({ default: m.SeasonalThemeNotice }),
+    () => ({ default: () => null }),
+))
 
 const ACCENTS: Record<string, SectionAccent> = {
     worldRecords: { tick: 'bg-blue-400' },
@@ -408,6 +412,9 @@ export function Home({
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-0 duration-500 pb-12 pt-2">
+            <Suspense fallback={null}>
+                <SeasonalThemeNotice />
+            </Suspense>
             {userProfile && <ClosingSoonBanner accessToken={userProfile.accessToken} />}
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">

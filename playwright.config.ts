@@ -1,6 +1,7 @@
 import { resolve } from 'path'
 import { defineConfig, devices } from '@playwright/test'
 import { DESKTOP_SEEN_STORAGE_KEY } from './app/components/desktopPromo/desktopPromoStorage'
+import { SEASONAL_NOTICE_STORAGE_KEY } from './app/components/pages/home/seasonalNoticeStorage'
 
 const port = process.env.E2E_PORT ?? '5175'
 const origin = `http://127.0.0.1:${port}`
@@ -19,6 +20,7 @@ const APP_STORAGE_STATE = {
       origin,
       localStorage: [
         { name: 'utbt:seasonPin:v1', value: 'none' },
+        { name: SEASONAL_NOTICE_STORAGE_KEY, value: JSON.stringify(new Date().toISOString()) },
         { name: DESKTOP_SEEN_STORAGE_KEY, value: JSON.stringify(new Date().toISOString()) },
       ],
     },

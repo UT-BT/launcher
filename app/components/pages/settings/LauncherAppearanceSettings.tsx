@@ -8,6 +8,9 @@ import { THEMES, type ThemeMeta } from '@/app/theme/themes'
 import { TIMEZONE_OPTIONS, browserResolvedTimezone, useDisplayTimezoneOverride } from '@/app/utils/timezone'
 import { readSeasonOverride, subscribeSeasonOverride, writeSeasonOverride } from '@/app/seasonal/preferences'
 import { ENTRIES, isEntryPreview } from '@/app/seasonal/seasons'
+import { SEASONAL_THEME_ID } from '@/app/seasonal/appearance'
+import { dismissSeasonalNotice } from '@/app/components/pages/home/seasonalNoticeStorage'
+import { HemisphereRow, useSeasonalCard } from './SeasonalThemeOptions'
 
 const SEASON_PREVIEW_OPTIONS = [
     { value: '', label: 'Automatic (by date)' },
@@ -23,16 +26,21 @@ export function LauncherAppearanceSettings({ unlockExclusive }: LauncherAppearan
     const { themeId, setThemeId } = useTheme()
     const [timezoneOverride, setTimezoneOverride] = useDisplayTimezoneOverride()
     const seasonPreview = useSyncExternalStore(subscribeSeasonOverride, readSeasonOverride)
+    const seasonalCard = useSeasonalCard()
 
     const renderCard = (theme: ThemeMeta) => {
         const active = theme.id === themeId
         const locked = !!theme.exclusive && !unlockExclusive
+        const seasonal = theme.id === SEASONAL_THEME_ID
         return (
             <button
                 key={theme.id}
                 onClick={() => {
                     if (locked) openExternal('https://patreon.com/utbt')
-                    else setThemeId(theme.id)
+                    else {
+                        setThemeId(theme.id)
+                        if (seasonal) dismissSeasonalNotice()
+                    }
                 }}
                 aria-pressed={active}
                 title={locked ? 'Exclusive to Patreon supporters — click to learn more' : undefined}
@@ -46,7 +54,7 @@ export function LauncherAppearanceSettings({ unlockExclusive }: LauncherAppearan
             >
                 <span
                     className="size-9 shrink-0 rounded-md border border-hairline/10"
-                    style={{ background: theme.swatch }}
+                    style={{ background: seasonal ? seasonalCard.swatch : theme.swatch }}
                 />
                 <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
@@ -57,9 +65,17 @@ export function LauncherAppearanceSettings({ unlockExclusive }: LauncherAppearan
                                 Patreon
                             </span>
                         )}
+                        {theme.new && (
+                            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wider px-1 py-0.5 rounded bg-hairline/10 border border-hairline/25 text-foreground shrink-0">
+                                <Sparkles className="size-2.5" />
+                                New
+                            </span>
+                        )}
                     </div>
                     <div className="text-xs text-muted-foreground truncate">
-                        {locked ? 'Patreon supporters only. Click to join' : theme.description}
+                        {locked
+                            ? 'Patreon supporters only. Click to join'
+                            : (seasonal && seasonalCard.summary) || theme.description}
                     </div>
                 </div>
                 {locked
@@ -83,6 +99,7 @@ export function LauncherAppearanceSettings({ unlockExclusive }: LauncherAppearan
                 <div className="grid grid-cols-1 @md/panel:grid-cols-2 gap-3 p-4">
                     {gradients.map(renderCard)}
                 </div>
+                {themeId === SEASONAL_THEME_ID && <HemisphereRow />}
             </SettingsSection>
 
             <SettingsSection title="Solid Colours" icon={Contrast}>
