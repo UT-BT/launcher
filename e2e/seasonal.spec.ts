@@ -1,9 +1,29 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
 import { horizontalOverflow } from './layout'
 import { SEASON_IDS } from '../app/seasonal/seasons'
 
 const SEASONAL_LOGO = new RegExp(`logo-(${SEASON_IDS.join('|')})`)
 const COMPOSITOR_PROPERTIES = new Set(['offset', 'easing', 'composite', 'computedOffset', 'transform', 'opacity'])
+const THEMES_CSS = readFileSync(resolve(__dirname, '../app/styles/themes.css'), 'utf8')
+const SEASONS_CSS = readFileSync(resolve(__dirname, '../app/styles/seasons.css'), 'utf8')
+
+function declared(css: string, selector: string, name: string): string {
+    const block = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].find(match => match[1].trim() === selector)!
+    return block[2].match(new RegExp(String.raw`(?:^|[\s;])${name}\s*:\s*([^;]+);`))![1].trim()
+}
+
+async function resolvedColors(page: Page, colors: string[]): Promise<string[]> {
+    return page.evaluate(values => values.map(value => {
+        const probe = document.createElement('div')
+        probe.style.color = value
+        document.body.append(probe)
+        const color = getComputedStyle(probe).color
+        probe.remove()
+        return color
+    }), colors)
+}
 
 async function mockApi(page: Page) {
     await page.route(/https:\/\/(api|gateway)\.utbt\.net\/.*/, async route => {
@@ -96,6 +116,26 @@ test('ambient particles stay on Home while the seasonal logo stays everywhere', 
     await page.goto('/maps?season=halloween')
     await expect(logo(page, isMobile)).toHaveAttribute('src', /logo-halloween/)
     await expect(page.locator('.seasonal-layer')).toHaveCount(0)
+})
+
+test('Classic keeps its own accent and background during a holiday preview', async ({ page, isMobile }) => {
+    await page.goto('/?season=halloween')
+    await expect(logo(page, isMobile)).toBeVisible()
+    await expect(page.locator('html')).toHaveAttribute('data-season', 'halloween')
+    await expect(page.locator('html')).not.toHaveAttribute('data-theme', /.+/)
+    const classic = await resolvedColors(page, ['--accent-500', '--background'].map(name => declared(THEMES_CSS, ':root', name)))
+    await expect.poll(() => resolvedColors(page, ['var(--accent-500)', 'var(--background)'])).toEqual(classic)
+})
+
+test('the saved Seasonal theme takes the holiday tint', async ({ page, isMobile }) => {
+    await page.addInitScript(() => localStorage.setItem('utbt:theme:v1', JSON.stringify({ id: 'seasonal' })))
+    await page.goto('/?season=halloween')
+    await expect(logo(page, isMobile)).toBeVisible()
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'seasonal')
+    await expect(page.locator('html')).toHaveAttribute('data-season', 'halloween')
+    await expect(page.locator('html')).toHaveClass(/(^|\s)dark(\s|$)/)
+    const [halloween] = await resolvedColors(page, [declared(SEASONS_CSS, ":root[data-theme='seasonal'][data-season='halloween']", '--accent-500')])
+    await expect.poll(() => resolvedColors(page, ['var(--accent-500)'])).toEqual([halloween])
 })
 
 test('stream routes never get a season', async ({ page }) => {

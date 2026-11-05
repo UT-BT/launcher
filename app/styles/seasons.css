@@ -1,4 +1,4 @@
-:root[data-season='halloween']:not([data-theme]) {
+:root[data-theme='seasonal'][data-season='halloween'] {
   --accent-50: oklch(0.98 0.016 73.684);
   --accent-100: oklch(0.954 0.038 75.164);
   --accent-200: oklch(0.901 0.076 70.697);
@@ -17,7 +17,7 @@
   --nebula-4: 194, 65, 12;
 }
 
-:root[data-season='christmas']:not([data-theme]) {
+:root[data-theme='seasonal'][data-season='christmas'] {
   --accent-50: oklch(0.971 0.013 16);
   --accent-100: oklch(0.936 0.032 16);
   --accent-200: oklch(0.885 0.062 16);
@@ -36,7 +36,7 @@
   --nebula-4: 234, 179, 8;
 }
 
-:root[data-season='easter']:not([data-theme]) {
+:root[data-theme='seasonal'][data-season='easter'] {
   --accent-50: oklch(0.977 0.014 305);
   --accent-100: oklch(0.946 0.033 305);
   --accent-200: oklch(0.902 0.06 305);
