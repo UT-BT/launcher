@@ -5111,10 +5111,50 @@ export interface AdminServerRuntime {
     changed_at: string | null
 }
 
+export type ServerAction = 'restart' | 'start' | 'stop'
+
+export type ServerUnitState = 'active' | 'activating' | 'failed' | 'held' | 'inactive'
+
+export type ServerControlUnavailable = 'not_managed' | 'agent_unreachable'
+
+export interface ServerControl {
+    managed: boolean
+    unit_state: ServerUnitState | null
+    held: boolean
+    restarts: number | null
+    started_at: string | null
+    actions: ServerAction[]
+    unavailable: ServerControlUnavailable | null
+}
+
+export interface ServerActionResult {
+    server_id: string
+    action: ServerAction
+    unit_state: ServerUnitState
+    held: boolean
+}
+
+export type ServerActionErrorCode = 'not_managed' | 'action_not_offered' | 'rate_limited' | 'agent_error'
+
+export interface ServerActionNotOffered {
+    unit_state: ServerUnitState
+    actions: ServerAction[]
+}
+
+export interface ServerActionRateLimited {
+    retry_after: number
+}
+
+export type ServerActionErrorBody =
+    | { success: false; error: string; code: 'not_managed' | 'agent_error' }
+    | { success: false; error: string; code: 'action_not_offered'; data: ServerActionNotOffered }
+    | { success: false; error: string; code: 'rate_limited'; data: ServerActionRateLimited }
+
 export interface AdminOperationsServer extends AdminHostServer {
     host_name: string | null
     probe: AdminServerProbe
     runtime: AdminServerRuntime
+    control?: ServerControl
 }
 
 export interface AdminServerOperations {

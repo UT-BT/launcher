@@ -1,0 +1,5 @@
+{
+  "code": "agent_error",
+  "error": "That host's agent did not respond. It may be offline.",
+  "success": false
+}

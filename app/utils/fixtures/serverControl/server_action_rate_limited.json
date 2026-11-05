@@ -1,0 +1,8 @@
+{
+  "code": "rate_limited",
+  "data": {
+    "retry_after": 9
+  },
+  "error": "Another action reached this server less than 15 seconds ago.",
+  "success": false
+}
