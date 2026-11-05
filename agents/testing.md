@@ -45,7 +45,11 @@ can reach it.
 - **Fetchers** in `app/utils/api.ts`: stub `fetch` with `vi.stubGlobal('fetch', vi.fn()...)`,
   assert URL, method, headers and the parsed result, and call `vi.unstubAllGlobals()` in
   `afterEach`. Copy `app/utils/api.pickBan.test.ts`.
-- **Time**: `vi.useFakeTimers()` and `vi.setSystemTime()`.
+- **Time**: `vi.useFakeTimers()` and `vi.setSystemTime()`. A pure function that takes `now` (the
+  seasonal resolver) needs neither: pass the date.
+- **Stylesheets**: Vitest returns CSS imports empty, `?raw` included, so a test of code that reads
+  a `?raw` stylesheet passes the file read from disk (copy
+  `app/components/pages/settings/seasonalCard.test.ts`).
 - **Main-process modules that import `electron`**: `vi.mock('electron', ...)` with only the
   members the module uses (copy `lib/main/config.test.ts`). Services that touch files run against
   a `mkdtempSync(join(tmpdir(), ...))` folder made in `beforeEach` and removed in `afterEach`.
@@ -69,8 +73,8 @@ These read source files and guard wiring rules rather than behaviour:
 | `app/components/navigation/routes.contract.test.ts` | every view in `viewToPath` has an entry in `app/public/route-contract.json` and round-trips; `robots.txt` blocks stream pages and leaves every other non-admin route crawlable; every contract view has a [mobile manifest](#mobile-route-manifest) entry, every entry names a contract view, the role-gated entries exist, and the `admin` entry crawls every section in `ADMIN_SECTIONS` |
 | `app/components/pages/events/stream/streamPanels.test.ts` | Stream tab panels and Match sections keep their order and load only lazily |
 | `app/components/shared/LazyModalGate.test.ts` | pages, cards and the shell never value-import a modal listed as opened by a user action; those mount only through `LazyModalGate` ([web-target.md](web-target.md)) |
-| `app/prePaint.test.ts`, `app/styles/themes.test.ts`, `app/seasonal/logos.test.ts` | the `index.html` pre-paint script's default theme, light themes and seasons equal the registries; every non-default theme has a palette block and only the `solid` group hides the nebula; every season has its logo file |
-| `app/styles/seasons.test.ts`, `app/components/pages/events/stats/teamAccent.test.ts` | seasonal palettes target only the Classic theme; every team accent slot has a dark and a light value and its own hue |
+| `app/prePaint.test.ts`, `app/styles/themes.test.ts`, `app/seasonal/logos.test.ts` | the `index.html` pre-paint script's default theme, light themes, Seasonal theme id, entry ids, season months and southern zones equal the registries, and the script paints the right root against fake storage, location, `Date` and `Intl`; every non-default theme has a palette block, the Seasonal base block equals Classic, and only the `solid` group hides the nebula; every entry without a logo alias has its logo file |
+| `app/styles/seasons.test.ts`, `app/components/pages/events/stats/teamAccent.test.ts` | `seasons.css` has exactly one Seasonal block per registry entry, sets only the palette-contract variables and meets the contrast floor ([styling.md](styling.md#palette-contract)); every team accent slot has a dark and a light value and its own hue, and reaches 4.5:1 on every theme's and every seasonal block's background and card |
 | `app/utils/recordsDefinitions.test.ts` | cap types, medal multipliers, difficulty tiers, the map author name and the team-run label are defined once in `app/utils/` and never copied into a records file |
 
 When one fails after you add a page, route, panel or palette, its message names the rule: change
@@ -163,8 +167,11 @@ widths set `test.use({ viewport })` per `describe` (copy `e2e/event-stats-respon
 expect `horizontalOverflow(page)` from `e2e/layout.ts` to be at most 1. Both app projects share
 one storage state (`APP_STORAGE_STATE` in `playwright.config.ts`) that preloads:
 
-- `utbt:seasonalThemes:v1 = "off"`, so seasonal decor stays out of layout checks;
-  `seasonal.spec.ts` turns it on itself.
+- `utbt:seasonPin:v1 = none`, the pinned season preview, so no spec sees a season or holiday
+  logo, tint or decoration on the run date ([Seasonal specs](#seasonal-specs)).
+- `utbt:seasonalNotice:v1` = the time the config loaded (the key comes from
+  `SEASONAL_NOTICE_STORAGE_KEY`), so Home's one-time new-theme notice stays away; only
+  `seasonal-notice.spec.ts` clears it.
 - `utbt:desktopSeen:v1` = the time the config loaded (the key comes from
   `DESKTOP_SEEN_STORAGE_KEY`). This is the **quiet default**: `desktop-chromium`'s user agent is
   Windows 10, so without it every signed-out spec would show the desktop promotion. Signed-in
@@ -257,6 +264,48 @@ and `desktop-promo-stream.spec.ts`. The older Stream specs (`stream-tab`, `strea
   `describe` that expects none.
 - The promo UI is lazy, so a "nothing shows" check first waits for the page's anchor and
   `networkidle`, then asserts the count is 0. Locate inline lines with `[data-desktop-app-notice]`.
+
+### Seasonal specs
+
+The Seasonal theme ([styling.md](styling.md#seasonal-theme)) has three specs. The rules behind
+them are plain-input Vitest suites in `app/seasonal/` (`appearance.test.ts` for every calendar,
+hemisphere and precedence rule, `hemisphere.test.ts`, `lunarNewYear.test.ts`, `seasons.test.ts`,
+`logos.test.ts`, `preferences.test.ts`), plus `app/prePaint.test.ts`, `app/styles/seasons.test.ts`
+and `app/components/pages/settings/seasonalCard.test.ts`; drive a rule there first.
+
+- **No spec depends on the run date.** The storage state pins the season preview to `none`. A
+  spec that needs the calendar removes `utbt:seasonPin:v1` in an init script and pins the page
+  clock with `page.clock.setFixedTime` (`followCalendar` in `seasonal.spec.ts`); one that needs a
+  hemisphere sets `test.use({ timezoneId })` or opens `?hemisphere=`. A `?season=<id>` preview
+  needs neither. Pick clock dates before the config's `utbt:desktopSeen:v1` or within 90 days of
+  it, so the desktop promotion stays quiet ([Projects](#projects)).
+- **`e2e/seasonal.spec.ts`** runs in `Europe/London` (file-level `timezoneId`) and computes
+  expected local midnights in the browser (`localMidnight`), since Node may sit in another zone.
+  - The preview loop runs `?season=<id>` for every `ENTRY_IDS` entry: `data-season`,
+    `data-theme='seasonal'`, `dark`, the root's `--accent-500` equal to the entry's block in
+    `seasons.css` on disk, the logo `logo-<alias or id>` (`LOGO_FILES`), a non-empty layer with
+    `pointer-events: none`, no overflow and compositor-only animations.
+  - The calendar: holidays and seasons on a saved Seasonal and on Red (the holiday logo, no
+    `data-season`, no layer, no `SeasonalDecor` request), the `utbt:season:v2` cache, `?season=none`,
+    an entry preview over a saved theme, the dev preview select, and stream routes.
+  - The first frame: an init script seeds storage, `renderer-web.tsx` is aborted, and the root is
+    read right after load, so only the pre-paint script ran.
+  - Decorations: the particle budget at 1280 and 390 px per entry, the layer on Home, on World
+    Records (the recorded `world-records` fixture set, so a real table renders) and on Maps, under
+    `main` and outside the scroller; the burst's own shapes and its cooldown; the spinner glyph on
+    `/compare` with the API held so "Loading records…" stays up; reduced motion; and Effects off
+    (`utbt:seasonalEffects:v1` false: tint and logo stay, no layer, no burst).
+  - Each holiday added after the seasons has its own `describe` (Summer Christmas; New Year and
+    Lunar New Year; Valentine's Day and St Patrick's Day); a new entry adds one the same way.
+- **`e2e/seasonal-card.spec.ts`**: the "New" chip, the Hemisphere and Effects rows shown only
+  while Seasonal is saved, Auto naming the detected hemisphere in `Australia/Sydney`, a chosen
+  hemisphere and Effects off surviving a reload, the "Now: …" subtitle and the swatch against
+  `seasons.css`, and the 360 px fit with 44 px targets.
+- **`e2e/seasonal-notice.spec.ts`** clears the dismissed preset once per tab (a sessionStorage
+  flag, so its reload checks see what the page wrote): the notice on Classic, "Try it", the × and
+  picking Seasonal retiring it across a reload, never on a saved Seasonal, and the 360 px fit.
+  The "gone once the `new` marker is removed" rule is a Vitest case in
+  `seasonalNoticeStorage.test.ts`, since e2e can't edit the registry.
 
 ### Live tests
 
@@ -373,11 +422,12 @@ dev server. WebKit must be installed: `npx playwright install webkit chromium`, 
 the `Mobile suite` job does ([CI](#ci)).
 
 The projects are `mobile-suite-webkit` (iPhone 14 base) and `mobile-suite-chromium` (Pixel 7 base),
-both with touch and `isMobile`, seasonal decor off, and each test at its own viewport and screen
-size. `MOBILE_MATRIX=full` (set by the `:full` scripts) picks the full matrix. When a viewport
-belongs to one engine only, the crawl tags its tests `@webkit-only` or `@chromium-only`, and each
-project's `grepInvert` drops the other engine's tests. Untagged tests, such as interaction specs, run
-on both engines at the project's default size (390×844 and 360×780).
+both with touch and `isMobile`, the season pin at `none` and the new-theme notice dismissed, and
+each test at its own viewport and screen size. `MOBILE_MATRIX=full` (set by the `:full` scripts)
+picks the full matrix. When a viewport belongs to one engine only, the crawl tags its tests
+`@webkit-only` or `@chromium-only`, and each project's `grepInvert` drops the other engine's tests.
+Untagged tests, such as interaction specs, run on both engines at the project's default size
+(390×844 and 360×780).
 
 ### Mobile route manifest
 
