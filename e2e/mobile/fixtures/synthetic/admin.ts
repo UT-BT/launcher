@@ -10,6 +10,7 @@ import type {
     AdminAlertsResponse,
     AdminHostsResponse,
     AdminServerOperations,
+    ServerControl,
     AdminMapRow,
     AdminOverview,
     AdminPatch,
@@ -640,11 +641,44 @@ const hosts: AdminHostsResponse = {
     available_scopes: ['records:write', 'status:write', 'demos:write'],
 }
 
+const NOT_MANAGED: ServerControl = {
+    managed: false,
+    unit_state: null,
+    held: false,
+    restarts: null,
+    started_at: null,
+    actions: [],
+    unavailable: 'not_managed',
+}
+
+const SERVER_CONTROL: { [serverId: string]: ServerControl } = {
+    'synthetic-server-1': {
+        managed: true,
+        unit_state: 'active',
+        held: false,
+        restarts: 0,
+        started_at: daysAgo(1),
+        actions: ['restart', 'stop'],
+        unavailable: null,
+    },
+    'synthetic-server-5': {
+        managed: true,
+        unit_state: 'held',
+        held: true,
+        restarts: 0,
+        started_at: null,
+        actions: ['start'],
+        unavailable: null,
+    },
+}
+
 const serverOperations: AdminServerOperations = {
     hosts: hosts.hosts,
     servers: hosts.servers.map((server, index) => {
-        const answering = index % 4 !== 2
-        const processUp = index % 4 !== 3
+        const control = SERVER_CONTROL[server.id] ?? NOT_MANAGED
+        const stopped = control.unit_state === 'held'
+        const answering = index % 4 !== 2 && !stopped
+        const processUp = index % 4 !== 3 && !stopped
         return {
             ...server,
             host_name: hosts.hosts.find(host => host.id === server.host_ref)?.name ?? null,
@@ -668,6 +702,7 @@ const serverOperations: AdminServerOperations = {
                 observed_at: hoursAgo(0),
                 changed_at: daysAgo(index + 1),
             },
+            control,
         }
     }),
     generated_at: hoursAgo(0),

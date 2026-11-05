@@ -19,6 +19,9 @@ const KIND_LABELS: Record<string, string> = {
   'mapvote.degraded': 'Map vote data not serving',
   'host.unreachable': 'Host unreachable',
   'server.process_down': 'Server process down',
+  'server.hung_restarted': 'Hung server restarted',
+  'server.watchdog_gave_up': 'Hung, watchdog gave up',
+  'server.crash_loop': 'Server in a crash loop',
 }
 
 function target(alert: AdminAlert) {
@@ -90,9 +93,10 @@ function AlertRow({ alert, busy, onAck, onUnack, onResolve }: {
   )
 }
 
-export function AlertsPanel({ token, onCountChange }: {
+export function AlertsPanel({ token, onCountChange, onAlertsChange }: {
   token?: string
   onCountChange?: (unresolved: number) => void
+  onAlertsChange?: (alerts: AdminAlert[]) => void
 }) {
   const [alerts, setAlerts] = useState<AdminAlert[]>([])
   const [loading, setLoading] = useState(true)
@@ -109,10 +113,11 @@ export function AlertsPanel({ token, onCountChange }: {
         setAlerts(data.items ?? [])
         setError(null)
         onCountChange?.(data.unresolved_count ?? 0)
+        onAlertsChange?.(data.items ?? [])
       })
       .catch((e) => { if (!signal?.aborted) setError(errMessage(e)) })
       .finally(() => { if (!signal?.aborted) setLoading(false) })
-  }, [token, showResolved, onCountChange])
+  }, [token, showResolved, onCountChange, onAlertsChange])
 
   useEffect(() => {
     const controller = new AbortController()
