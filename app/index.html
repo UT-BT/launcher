@@ -21,17 +21,28 @@
       try {
         var seg = location.pathname.split('/').filter(Boolean)
         var streamRoute = (seg[0] === 'stream' && seg.length === 4) || (seg[0] === 'events' && seg[2] === 'matches' && seg[4] === 'stream' && seg.length === 5)
-        var seasons = ['halloween', 'christmas', 'easter']
-        var valid = function (v) { return v === 'none' || seasons.indexOf(v) >= 0 }
-        var param = new URLSearchParams(location.search).get('season')
-        var preview = valid(param) ? param : sessionStorage.getItem('utbt:seasonOverride:v1')
-        var season = null
-        if (valid(preview)) season = preview === 'none' ? null : preview
-        else if (JSON.parse(localStorage.getItem('utbt:seasonalThemes:v1') || 'null') !== 'off') {
-          var cached = JSON.parse(localStorage.getItem('utbt:season:v1') || 'null')
-          if (cached && cached.until > Date.now() && valid(cached.id)) season = cached.id
+        var seasonalTheme = 'seasonal'
+        var entries = ['halloween', 'christmas', 'easter']
+        var isEntry = function (v) { return entries.indexOf(v) >= 0 }
+        var valid = function (v) { return v === 'none' || isEntry(v) }
+        var root = document.documentElement
+        if (!streamRoute) {
+          var param = new URLSearchParams(location.search).get('season')
+          var preview = valid(param) ? param : sessionStorage.getItem('utbt:seasonOverride:v1')
+          if (!valid(preview)) preview = localStorage.getItem('utbt:seasonPin:v1')
+          var season = null
+          if (valid(preview)) {
+            if (isEntry(preview)) {
+              season = preview
+              root.setAttribute('data-theme', seasonalTheme)
+              root.classList.add('dark')
+            }
+          } else if (t === seasonalTheme) {
+            var cached = JSON.parse(localStorage.getItem('utbt:season:v2') || 'null')
+            if (cached && cached.until > Date.now() && isEntry(cached.id)) season = cached.id
+          }
+          if (season) root.setAttribute('data-season', season)
         }
-        if (season && !streamRoute) document.documentElement.setAttribute('data-season', season)
       } catch {}
     </script>
   </head>

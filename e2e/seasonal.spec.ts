@@ -115,10 +115,45 @@ for (const season of ENTRY_IDS) {
     })
 }
 
-test('the season is painted before the app script runs', async ({ page }) => {
+async function firstFrame(page: Page, path: string, local: Record<string, string> = {}) {
+    await page.addInitScript(entries => {
+        for (const [key, value] of Object.entries(entries)) localStorage.setItem(key, value)
+    }, local)
     await page.route('**/renderer-web.tsx*', route => route.abort())
-    await page.goto('/?season=christmas')
-    await expect(page.locator('html')).toHaveAttribute('data-season', 'christmas')
+    await page.goto(path)
+    const root = page.locator('html')
+    return {
+        theme: await root.getAttribute('data-theme'),
+        season: await root.getAttribute('data-season'),
+        dark: await root.evaluate(element => element.classList.contains('dark')),
+    }
+}
+
+test.describe('the first frame, painted before the app script runs', () => {
+    const SAVED_SEASONAL = { 'utbt:theme:v1': JSON.stringify({ id: 'seasonal' }) }
+    const CHRISTMAS_CACHE = { 'utbt:season:v2': JSON.stringify({ id: 'christmas', until: HALLOWEEN_NIGHT.getTime() + 7 * 24 * 60 * 60 * 1000 }) }
+
+    test('a preview on the saved Seasonal theme', async ({ page }) => {
+        expect(await firstFrame(page, '/?season=christmas', SAVED_SEASONAL))
+            .toEqual({ theme: 'seasonal', season: 'christmas', dark: true })
+    })
+
+    test('a preview on Classic shows the Seasonal theme', async ({ page }) => {
+        expect(await firstFrame(page, '/?season=christmas'))
+            .toEqual({ theme: 'seasonal', season: 'christmas', dark: true })
+    })
+
+    test('the saved Seasonal theme follows the unexpired cache', async ({ page }) => {
+        await followCalendar(page, HALLOWEEN_NIGHT, 'seasonal')
+        expect(await firstFrame(page, '/', CHRISTMAS_CACHE))
+            .toEqual({ theme: 'seasonal', season: 'christmas', dark: true })
+    })
+
+    test('Red ignores the cache', async ({ page }) => {
+        await followCalendar(page, HALLOWEEN_NIGHT, 'red')
+        expect(await firstFrame(page, '/', CHRISTMAS_CACHE))
+            .toEqual({ theme: 'red', season: null, dark: true })
+    })
 })
 
 test('the calendar gives Classic the Christmas logo and the Seasonal theme the Christmas look', async ({ page, isMobile }) => {
