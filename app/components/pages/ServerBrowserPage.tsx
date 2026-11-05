@@ -5,7 +5,7 @@ import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRes
 import {
     RefreshCw, Play, BadgeCheck, Signal, Swords, Gamepad2, HelpCircle, User, ExternalLink,
     Twitch, Eye, SlidersHorizontal, AlertCircle,
-    Clock, Flag,
+    Clock, Flag, Lock,
 } from 'lucide-react'
 import { Modal } from '@/app/components/ui/modal'
 import { Tutorial } from '@/app/components/shared/Tutorial'
@@ -16,7 +16,7 @@ import { useLogger } from '@/app/hooks/use-logger'
 import {
     CapacityValue, DEFAULT_FILTERS, FilterState, ServerPreset, ServerPresetFilters,
     ServerSortField, ServerType, filterServers, getGameStatusText, getRegionFlag,
-    getServerRegion, getServerType, sanitizeServerFilters, sortServers,
+    getServerType, sanitizeServerFilters, sortServers,
     trimServerName, type Server, type ServerPlayer,
 } from '@/app/utils/server-utils'
 
@@ -125,7 +125,6 @@ const TYPE_OPTIONS: [ServerType, string][] = [
     ['Certified', 'Certified'],
     ['Duel', 'Duel'],
     ['Casual', 'Casual'],
-    ['Unknown', 'Unknown'],
 ]
 
 const CAPACITY_OPTIONS: [CapacityValue, string][] = [
@@ -160,9 +159,32 @@ const TypeIcon = ({ type, className = 'size-4' }: { type: ServerType, className?
         case 'Certified': return <BadgeCheck className={cn(className, 'text-yellow-500 fill-yellow-500/20')} />
         case 'Duel': return <Swords className={cn(className, 'text-red-500 fill-red-500/20')} />
         case 'Casual': return <Gamepad2 className={cn(className, 'text-green-500')} />
-        default: return <HelpCircle className={cn(className, 'text-muted-foreground')} />
     }
 }
+
+const PASSWORD_REQUIRED = 'Password required'
+
+const PasswordLock = ({ server, withTooltip = true }: { server: Server; withTooltip?: boolean }) => {
+    if (server.password_protected !== true) return null
+    const lock = (
+        <span role="img" aria-label={PASSWORD_REQUIRED} className="inline-flex shrink-0">
+            <Lock aria-hidden className="size-3.5 text-amber-300" />
+        </span>
+    )
+    return withTooltip ? <Tooltip content={PASSWORD_REQUIRED} side="top">{lock}</Tooltip> : lock
+}
+
+const RegionFlag = ({ region, className }: { region: string; className?: string }) => (
+    <img
+        src={getRegionFlag(region)}
+        alt={region}
+        width={24}
+        height={16}
+        loading="lazy"
+        decoding="async"
+        className={cn('h-4 w-6 object-cover rounded-[2px] border border-hairline/10', className)}
+    />
+)
 
 const SERVER_PLAYER_AVATAR_PX = 20
 
@@ -340,13 +362,7 @@ const playerCountColor = (server: Server): string =>
         server.player_count > 0 ? 'text-emerald-400' : 'text-muted-foreground'
 
 const StatusBadge = ({ server, className }: { server: Server; className?: string }) => {
-    const text = getGameStatusText(
-        server.remaining_time_seconds,
-        server.certified_records,
-        getServerType(server.hostname),
-        server.red_team_score,
-        server.blue_team_score,
-    )
+    const text = getGameStatusText(server)
     const isEnded = text === 'Match Ended' || text === 'Overtime'
     return (
         <div className={cn(
@@ -487,8 +503,7 @@ export function ServerBrowserPage({
     const availableRegions = useMemo(() => {
         const regions = new Set<string>()
         caches.servers.forEach(s => {
-            const region = getServerRegion(s.hostname)
-            if (region) regions.add(region)
+            if (s.region) regions.add(s.region)
         })
         return Array.from(regions).sort()
     }, [caches.servers])
@@ -669,15 +684,15 @@ export function ServerBrowserPage({
     }
 
     const serverCell = (id: ServerColumnId, server: Server, isFirstRow = false): React.ReactNode => {
-        const type = getServerType(server.hostname)
-        const region = getServerRegion(server.hostname)
+        const type = getServerType(server)
+        const region = server.region
         switch (id) {
             case 'thumbnail':
                 return <MapThumbnail mapName={server.map_name} className="mx-auto w-12 h-12 rounded shadow-sm" />
             case 'type':
                 return (
                     <Tooltip content={type} side="top">
-                        <span className="inline-flex"><TypeIcon type={type} /></span>
+                        <span role="img" aria-label={type} className="inline-flex"><TypeIcon type={type} /></span>
                     </Tooltip>
                 )
             case 'name': {
@@ -693,6 +708,7 @@ export function ServerBrowserPage({
                             />
                         </span>
                         <span className="min-w-0 truncate text-sm font-bold text-foreground" title={trimmed}>{trimmed}</span>
+                        <PasswordLock server={server} />
                     </div>
                 )
             }
@@ -711,19 +727,11 @@ export function ServerBrowserPage({
                     </span>
                 )
             case 'region':
-                return (
+                return region ? (
                     <Tooltip content={region} side="top">
-                        <img
-                            src={getRegionFlag(region)}
-                            alt={region}
-                            width={24}
-                            height={16}
-                            loading="lazy"
-                            decoding="async"
-                            className="inline-block align-middle h-4 w-6 object-cover rounded-[2px] border border-hairline/10"
-                        />
+                        <RegionFlag region={region} className="inline-block align-middle" />
                     </Tooltip>
-                )
+                ) : null
             case 'ping': {
                 const ping = server.ping
                 const pingColor = !ping ? 'text-muted-foreground' :
@@ -807,11 +815,12 @@ export function ServerBrowserPage({
     const serverPanelCell = (id: ServerColumnId, server: Server): React.ReactNode => {
         switch (id) {
             case 'type': {
-                const type = getServerType(server.hostname)
+                const type = getServerType(server)
                 return (
                     <span className="inline-flex items-center gap-1.5">
                         <TypeIcon type={type} />
                         {type}
+                        <PasswordLock server={server} />
                     </span>
                 )
             }
@@ -878,8 +887,7 @@ export function ServerBrowserPage({
     ) : undefined
 
     const serverFace = (server: Server) => {
-        const type = getServerType(server.hostname)
-        const region = getServerRegion(server.hostname)
+        const type = getServerType(server)
         const trimmed = displayServerName(server)
         const canJoin = installationStatus === 'valid' && server.player_count < server.max_players
         return (
@@ -891,22 +899,15 @@ export function ServerBrowserPage({
                         onToggle={() => onToggleServerFavorite(server.id)}
                         size="sm"
                     />
-                    <TypeIcon type={type} />
+                    <span role="img" aria-label={type} className="inline-flex shrink-0"><TypeIcon type={type} /></span>
                     <span className="text-sm font-bold text-foreground truncate">{trimmed}</span>
+                    <PasswordLock server={server} withTooltip={false} />
                     <span className={cn('ml-auto shrink-0 text-sm font-bold tabular-nums', playerCountColor(server))}>
                         {server.player_count}/{server.max_players}
                     </span>
                 </div>
                 <div className="flex items-center gap-2 min-w-0">
-                    <img
-                        src={getRegionFlag(region)}
-                        alt={region}
-                        width={24}
-                        height={16}
-                        loading="lazy"
-                        decoding="async"
-                        className="h-4 w-6 shrink-0 object-cover rounded-[2px] border border-hairline/10"
-                    />
+                    {server.region && <RegionFlag region={server.region} className="shrink-0" />}
                     {onMapSelect ? (
                         <MapNavLink
                             mapName={server.map_name}

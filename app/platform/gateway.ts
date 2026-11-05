@@ -1,6 +1,17 @@
-import { GATEWAY_BASE_URL, asArray, asNum, asStr } from '@/app/utils/api'
+import { GATEWAY_BASE_URL, asArray, asNum, asStr, type ServerRuleset } from '@/app/utils/api'
 import type { Server } from '@/app/utils/server-utils'
 import { IS_WEB } from './target'
+
+const SERVER_RULESETS: readonly ServerRuleset[] = ['casual', 'certified']
+
+const asRuleset = (value: unknown): ServerRuleset =>
+    SERVER_RULESETS.find(ruleset => ruleset === value) ?? 'casual'
+
+const asRegion = (value: unknown): string | null =>
+    typeof value === 'string' && value !== '' ? value : null
+
+const asFlag = (value: unknown): boolean | null =>
+    typeof value === 'boolean' ? value : null
 
 async function fetchGatewayJson<T>(path: string): Promise<T> {
     const response = await fetch(`${GATEWAY_BASE_URL}${path}`)
@@ -33,6 +44,10 @@ export function normaliseGatewayServers(raw: unknown): Server[] {
             red_team_score: asNum(server.red_team_score),
             blue_team_score: asNum(server.blue_team_score),
             certified_records: Boolean(server.certified_records),
+            ruleset: asRuleset(server.ruleset),
+            region: asRegion(server.region),
+            tournament: asFlag(server.tournament),
+            password_protected: asFlag(server.password_protected),
             players: asArray<any>(server.players)
                 .filter(player => player && typeof player === 'object')
                 .map(player => ({

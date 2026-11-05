@@ -16,6 +16,19 @@ loop. Feature-specific endpoints live in the feature docs (table below).
 
 Gateway replies are plain JSON, not the `{ success, data }` envelope.
 
+`/server-info` is a bare list of server rows (`Server` in `app/utils/server-utils.ts`). Next to
+the address, map, scores and players, each row carries the server's listing fields
+(`ServerListingFields` in `api.ts`):
+
+- `ruleset`: `casual` or `certified`;
+- `region`: the server's region, or `null`;
+- `tournament`: whether tournament mode is on, `null` when the server has not reported lately;
+- `password_protected`: whether joining needs a password, `null` when the server has not
+  reported lately. The password itself is never public.
+
+`certified_records` stays on the row for older readers; the server browser reads `ruleset`.
+The normaliser coerces the four fields ([web-target.md](web-target.md)).
+
 Remote hosts are pinned in the desktop renderer CSP in `lib/main/app.ts` (`connect-src`,
 `img-src`, `media-src`). A new remote host does not load on desktop until it is added
 there.
@@ -483,7 +496,8 @@ is only a cache buster. The video supports range requests.
 ### Region flags
 
 `getRegionFlag(region)` in `app/utils/server-utils.ts` →
-`https://flagcdn.com/w40/{code}.png` (unknown regions map to `aq`).
+`https://flagcdn.com/w40/{code}.png` (unknown regions map to `aq`). Callers pass the server's
+`region` field, never text parsed from its name; a server with no region shows no flag.
 
 ## Map download
 

@@ -4,7 +4,7 @@ import { Tooltip } from '@/app/components/ui/tooltip'
 import { Button } from '@/app/components/ui/button'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import type { Server } from '@/app/utils/server-utils'
-import { getRegionFlag, getServerRegion, trimServerName } from '@/app/utils/server-utils'
+import { getRegionFlag, trimServerName } from '@/app/utils/server-utils'
 import { displayMapName } from '@/app/utils/format'
 import { cn } from '@/lib/utils'
 import { capabilities } from '@/app/platform'
@@ -112,7 +112,7 @@ export function FavoriteServersCard({
                 const canJoin = installationStatus === 'valid' && !isFull
                 const canSpec = installationStatus === 'valid'
                 const mapName = server.map_name ? displayMapName(server.map_name) : '-'
-                const region = getServerRegion(server.hostname)
+                const region = server.region
                 const serverName = trimServerName(server.hostname)
                 const ping = server.ping ?? pingByIp.get(server.ip)
                 const pingColor = !ping ? 'text-muted-foreground' :
@@ -145,22 +145,24 @@ export function FavoriteServersCard({
                         <div className="hidden @lg/favservers:block w-32 shrink-0 min-w-0 text-xs font-medium text-muted-foreground truncate" title={mapName}>
                             {mapName}
                         </div>
-                        <Tooltip content={region} side="top" className="shrink-0 justify-center">
+                        <Tooltip content={region ?? 'No region'} side="top" className="shrink-0 justify-center">
                             <span className="flex w-9 flex-col items-center justify-center gap-1">
                                 {capabilities.ping && (
                                     <span className={cn('text-[10px] font-bold leading-none tabular-nums', pingColor)}>
                                         {ping ? `${ping}ms` : '...'}
                                     </span>
                                 )}
-                                <img
-                                    src={getRegionFlag(region)}
-                                    alt={region}
-                                    width={24}
-                                    height={16}
-                                    loading="lazy"
-                                    decoding="async"
-                                    className="h-4 w-6 object-cover rounded-[2px] border border-hairline/10"
-                                />
+                                {region && (
+                                    <img
+                                        src={getRegionFlag(region)}
+                                        alt={region}
+                                        width={24}
+                                        height={16}
+                                        loading="lazy"
+                                        decoding="async"
+                                        className="h-4 w-6 object-cover rounded-[2px] border border-hairline/10"
+                                    />
+                                )}
                             </span>
                         </Tooltip>
                         <div className={cn('w-10 shrink-0 text-center text-xs font-bold tabular-nums', playerTone)}>
