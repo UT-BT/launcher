@@ -469,7 +469,7 @@ both.
 
 | Entry | Signed in as | Crawls |
 |---|---|---|
-| `admin` | Admin, so every section shows | Overview, then one sub-view per section in `ADMIN_SECTIONS`, picked in the section `<select>` (or the side nav from `lg`), plus the Anti-Cheat High Cap Delta and Low FPS WRs tabs and the Map Uploads Publishing / Recent and Drift tabs; modals: Maps Management's Difficulty Sync and Map authors (both tabs), Anti-Cheat's shared-identifier detail |
+| `admin` | Admin, so every section shows | Overview, then one sub-view per section in `ADMIN_SECTIONS`, picked in the section `<select>` (or the side nav from `lg`), plus the Anti-Cheat High Cap Delta and Low FPS WRs tabs and the Map Uploads Publishing / Recent and Drift tabs; modals: Maps Management's Difficulty Sync and Map authors (both tabs), Anti-Cheat's shared-identifier detail, Server Operations' Server settings |
 | `home:signed-in` | a user | the signed-in Home, the Recent Caps History modal (See More) and Settings (drawer, user card menu) |
 | `maps:signed-in` | a user | the Maps page with the viewer's medals, PBs and reviews in the cards and table |
 | `event-detail:manager` | an event manager (`/tournaments/<slug>/me` with `can_manage`) | the Manage tab and its Signups, Format, Bracket, Matches (plus the match editor), Picks & Bans, Schedule and Predictions sub-tabs, and the Stream tab as a manager sees it |

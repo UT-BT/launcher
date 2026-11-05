@@ -36,7 +36,7 @@ import type {
 } from '../../../../app/utils/api'
 import { ROLE } from '../../../../app/utils/roles'
 import { MAP_UPLOAD_FIXTURES } from '../../../../app/utils/fixtures/mapUploadFixtures'
-import { auditServerConfigFixture } from '../../../../app/utils/fixtures/serverConfigFixtures'
+import { auditServerConfigFixture, serverConfigFixture, serverConfigPatchFixture } from '../../../../app/utils/fixtures/serverConfigFixtures'
 import { ok, type FixtureReply, type FixtureRoute, type FixtureSet } from '../types'
 import { daysAgo, documentationIp, fakeBtpog, fakeHwid, hoursAgo, person, syntheticId, syntheticMap, TITLE, VIEWER } from './people'
 import { sessionRoutes } from './session'
@@ -813,5 +813,21 @@ export const ADMIN_SET: FixtureSet = {
         { host: 'api', path: '/admin/hosts', reply: ok(hostsWithRuleset) },
         { host: 'api', path: '/admin/servers/operations', reply: ok(serverOperations) },
         { host: 'api', path: '/admin/alerts', reply: ok(serverAlerts) },
+        {
+            host: 'api',
+            path: /^\/admin\/servers\/[^/]+\/config$/,
+            reply: url => {
+                const config = serverConfigFixture('serverConfigResponse')
+                return ok({ ...config, server_id: url.pathname.split('/')[3], values: { ...config.values, admin_email: '' } })
+            },
+        },
+        {
+            host: 'api',
+            path: /^\/admin\/servers\/[^/]+\/config\/basic$/,
+            reply: () => {
+                const saved = serverConfigPatchFixture('serverConfigPatchOk')
+                return ok({ ...saved, values: { ...saved.values, admin_email: '' } })
+            },
+        },
     ],
 }

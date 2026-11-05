@@ -16,9 +16,10 @@ Paths starting `admin/` are under `app/components/pages/`.
 | `admin/components/` | the kit every section is built from: `SectionShell`, `TableControls` + `useAdminTable`, `AdminCardFace`, `controls.tsx`, `useAdminFilterPresets`, `AuthorPicker`, `TagEditor` |
 | `admin/sections/` | one `<Name>Section.tsx` per section, its modals, and pure helpers with tests (`streamerRoster.ts`, `mapVideoFile.ts`) |
 | `admin/sections/mapUploads/` | Map Uploads ([map-uploads.md](map-uploads.md)) |
+| `admin/sections/serverSettings/` | the Server Settings dialog, its fetchers and its pure state ([Server settings](#server-settings)) |
 | `app/utils/roles.ts` | `ROLE`, `isStaff` and the role allow-lists |
 | `app/utils/api.ts`, `app/utils/chartBuckets.ts` | the admin fetchers, each next to its domain; the Overview chart's ranges and buckets |
-| `e2e/admin-streamers.spec.ts`, `e2e/admin-maps-video.spec.ts` | Playwright with a mocked staff session |
+| `e2e/admin-streamers.spec.ts`, `e2e/admin-maps-video.spec.ts`, `e2e/admin-server-operations.spec.ts` | Playwright with a mocked staff session |
 | `e2e/mobile/admin-cards.spec.ts` | the phone cards of the tiered admin tables ([Tables on phones](#tables-on-phones)) |
 
 ## Access
@@ -235,6 +236,53 @@ The map-author fetchers back `MapAuthorsModal`, opened from Maps Management.
 - `status` is `open`, `acknowledged` or `resolved`. Resolving claims it was dealt with; it
   fixes nothing, and a recurrence opens a fresh alert, so resolving early costs nothing.
   Acknowledge and resolve are audited, and resolve takes a reason.
+
+### Server settings
+
+- **Settings** in a row's `ActionMenu` (table rows and phone cards, Moderators and Admins) opens
+  `ServerSettingsDialog` (`sections/serverSettings/`). `fetchServerConfig` reads
+  `GET /admin/servers/<id>/config`; `saveServerConfig` saves. Both live in `serverConfigApi.ts`, not
+  `api.ts`, for the same bundle reason as `serverActions.ts`.
+- **One route per role.** Admins save through `PATCH /admin/servers/<id>/config`, Moderators through
+  `PATCH /admin/servers/<id>/config/basic` (server name, game password and ruleset only);
+  `saveRoute(role)` picks it. The server authorises every key; the client only decides what is
+  enabled and which route to call.
+- **Keys.** The read lists every key, in the server's order, with its `group`, `editable_by`
+  (`staff` or `admin`) and `state`. The dialog groups them Listing, Access, Match, Start map,
+  Gameplay and MapVote, with the ruleset (Casual / Certified) on top. `SETTING_SPECS` (`serverSettings.ts`) holds
+  each key's plain-word label, control (text, password, map name, number, switch, colour) and limits.
+- **States**, worked out by `settingMode`:
+  - `editable` and the role may change it: enabled;
+  - `editable` but Admin only, for a Moderator: read-only, with one notice at the top naming what
+    they can change;
+  - `locked`: disabled, "Set by certified". The certified ruleset sets max players, boosted caps and
+    player collisions. The locks follow the ruleset being edited: switching to Casual in the dialog
+    unlocks them before saving, and back;
+  - `after_cutover`: greyed in its group under "Available after cutover";
+  - `not_managed`: disabled, under the notice "This server is not managed yet; only the ruleset and
+    region can change".
+- **Values.** The game password is masked with a Show toggle; staff may see it. The client checks
+  mirror the server's, so most errors show inline: the length limits, printable ASCII (32 to 126),
+  no `=` or `"` in the server name, admin, message lines and game password, no `[ ] = "` in the
+  region and board label, and for map names also no spaces, `'`, `\`, `$` or backticks; whole numbers
+  in range; colour components 0 to 255. Only changed keys are checked and sent, so a value already on
+  the server never blocks another save. A 400 or 409 answer with `keys` marks those fields
+  (`serverConfigFieldErrors`) and shows the server's message.
+- **Save** stays disabled until something changed, and opens a `ConfirmDialog` with the server name
+  and the player count (`playerCountText`):
+  - **Apply when the server is empty** (the default) or **Apply now (restarts the server)**, for the
+    roles that may restart (`canApplyNow`). A change of only the ruleset or region restarts nothing,
+    so the choice is not shown.
+  - A ruleset change requires a written reason and says whether a certified team run is in progress:
+    "A team run is in progress", "No team run in progress" or "Team run state unknown" (`teamRunText`,
+    from the row's `ruleset.team_run_active`). Other changes need no reason.
+- **Outcome** (`saveOutcome`, from the answer's `apply` and the change): "Saved. Applies when the
+  server is empty", "Saved. Restarting", "Saved. Applies at the next map" (only the ruleset, or the
+  ruleset and region, changed), "Saved" (only the region changed) or "Saved, but the restart failed:
+  …" (the save stands). The section then reloads its rows.
+- Tests: `serverSettings.test.ts`, `serverConfigApi.test.ts` (on the `serverConfig/` fixtures),
+  `e2e/admin-server-operations.spec.ts` and the `admin/server-operations/settings` modal in the
+  mobile manifest.
 
 ## Game hosts (Admin only)
 

@@ -38,9 +38,12 @@ there.
 Every HTTP fetcher lives in `app/utils/api.ts`, roughly grouped by domain with each
 domain's types beside its fetchers; grep the endpoint path or the type name. The
 exceptions: stream-kit reads and writes sit beside their UI on the shared `apiRequest`,
-and the gateway server list and Patreon list go through `app/platform/gateway.ts` (IPC on
-desktop, direct fetch on web, same shape). Anything that needs the main process goes over
-IPC: see [lib/conveyor/README.md](../lib/conveyor/README.md).
+the gateway server list and Patreon list go through `app/platform/gateway.ts` (IPC on
+desktop, direct fetch on web, same shape), and the Server Operations calls
+(`sections/serverActions.ts`, `sections/serverSettings/serverConfigApi.ts`) load with the
+admin chunk ([admin.md](features/admin.md#server-operations-moderators-and-admins)).
+Anything that needs the main process goes over IPC: see
+[lib/conveyor/README.md](../lib/conveyor/README.md).
 
 | Area | Contract in |
 |---|---|

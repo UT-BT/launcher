@@ -69,6 +69,18 @@ const ANTI_CHEAT_MODALS: MobileModal[] = [
     },
 ]
 
+const SERVER_OPERATIONS_MODALS: MobileModal[] = [
+    {
+        id: 'settings',
+        label: 'Server settings',
+        open: steps(
+            tap(page => page.getByRole('button', { name: 'Actions for Test BT Server #1 | EU' }).filter({ visible: true }).first()),
+            opens(page => page.getByRole('menuitem', { name: 'Settings' }), 'Server settings'),
+            inModal('Server name'),
+        ),
+    },
+]
+
 function mapUploadsTab(id: string, label: string, data: string | RegExp): MobileSubView {
     return {
         id: `map-uploads-${id}`,
@@ -105,7 +117,7 @@ export const admin: MobileRouteEntry = {
         antiCheatTab('low-fps', 'Low FPS WRs', person(10).alias),
         section('audit-logs', 'Audit Logs', 'Audit Logs', person(12).alias),
         section('role-management', 'Staff Roles', 'Staff Roles', person(31).alias),
-        section('server-operations', 'Server Operations', 'Server Operations', 'Test BT Server #1 | EU'),
+        { ...section('server-operations', 'Server Operations', 'Server Operations', 'Test BT Server #1 | EU'), modals: SERVER_OPERATIONS_MODALS },
         section('hosts-management', 'Game Hosts', 'Game Hosts', 'test-host-eu'),
     ],
 }

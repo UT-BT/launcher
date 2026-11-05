@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { BellRing, CircleCheck, CircleHelp, CirclePause, CircleSlash, Play, RefreshCw, RotateCcw, Server, ServerCog, Square, TriangleAlert } from 'lucide-react'
+import { BellRing, CircleCheck, CircleHelp, CirclePause, CircleSlash, Play, RefreshCw, RotateCcw, Server, ServerCog, Settings, Square, TriangleAlert } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import {
   fetchAdminServerOperations,
@@ -21,6 +21,8 @@ import { AdminSelect, ConfirmDialog, Feedback, SearchInput, errMessage, relTime 
 import { ActionMenu, type ActionMenuItem } from '../components/ActionMenu'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import { AlertsPanel } from './AlertsPanel'
+import { ServerSettingsDialog, type ServerSettingsSaved } from './serverSettings/ServerSettingsDialog'
+import { canOpenServerSettings } from './serverSettings/serverSettings'
 import {
   SERVER_ACTION_LABELS,
   isDownHealth,
@@ -204,6 +206,7 @@ export function ServerOperationsSection({ userProfile }: AdminSectionProps) {
   const [pending, setPending] = useState<{ server: AdminOperationsServer; action: ServerAction } | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [settingsId, setSettingsId] = useState<string | null>(null)
   const role = userProfile?.utbt_role
 
   const table = useAdminTable('utbt:admin:serverops:cols:v1', COLUMNS, { defaultFiltersOpen: false })
@@ -341,6 +344,9 @@ export function ServerOperationsSection({ userProfile }: AdminSectionProps) {
       hint: item.reason ?? undefined,
       onSelect: () => setPending({ server, action: item.action }),
     }))
+    if (canOpenServerSettings(role)) {
+      items.push({ key: 'settings', label: 'Settings', icon: Settings, separatorBefore: items.length > 0, onSelect: () => setSettingsId(server.id) })
+    }
     return <ActionMenu items={items} heading={server.name} busy={busy === server.id} ariaLabel={`Actions for ${server.name}`} />
   }
 
@@ -348,6 +354,16 @@ export function ServerOperationsSection({ userProfile }: AdminSectionProps) {
     serverCell(id, server, healthOf(server), id === 'actions' ? serverActions(server) : null)
 
   const confirm = pending ? serverActionConfirm(pending.action, pending.server) : null
+
+  const settingsServer = settingsId ? data?.servers.find((server) => server.id === settingsId) ?? null : null
+
+  const settingsSaved = async (saved: ServerSettingsSaved) => {
+    setSettingsId(null)
+    setError(null)
+    setNotice(saved.failed ? null : saved.message)
+    await load({ silent: true })
+    if (saved.failed) setError(saved.message)
+  }
 
   const columnCount = 3 + (['host', 'probe', 'process', 'players', 'map', 'region'] as const).filter(shows).length
 
@@ -459,6 +475,16 @@ export function ServerOperationsSection({ userProfile }: AdminSectionProps) {
         onConfirm={runAction}
         onCancel={() => setPending(null)}
       />
+
+      {settingsServer && token && (
+        <ServerSettingsDialog
+          server={settingsServer}
+          token={token}
+          role={role}
+          onClose={() => setSettingsId(null)}
+          onSaved={settingsSaved}
+        />
+      )}
     </SectionShell>
   )
 }
