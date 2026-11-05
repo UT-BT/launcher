@@ -114,8 +114,8 @@ const SEASONS = {
   halloween: {
     fur: [206, 201, 189],
     swirl: {
-      red: { light: { h: 26, s: 0.95, scale: 1, lift: 0.02 }, dark: { h: 286, s: 0.55, scale: 0.85, lift: 0 } },
-      blue: { light: { h: 272, s: 0.6, scale: 0.95, lift: 0 }, dark: { h: 270, s: 0.45, scale: 0.55, lift: 0 } },
+      red: { light: { h: 26, s: 0.95, scale: 1, lift: 0.02 }, dark: { h: 286, s: 0.55, scale: 1, lift: 0.03 } },
+      blue: { light: { h: 272, s: 0.6, scale: 0.95, lift: 0 }, dark: { h: 270, s: 0.45, scale: 0.8, lift: 0.03 } },
     },
     layers: [
       {
@@ -213,8 +213,8 @@ const SEASONS = {
     fur: null,
     ears: { color: [255, 194, 214], seeds: [[180, 165], [140, 205]], fadeX: [226, 262], fadeY: [226, 244] },
     swirl: {
-      red: { light: { h: 335, s: 0.75, scale: 0.45, lift: 0.45 }, dark: { h: 285, s: 0.45, scale: 0.5, lift: 0.35 } },
-      blue: { light: { h: 160, s: 0.5, scale: 0.4, lift: 0.5 }, dark: { h: 255, s: 0.45, scale: 0.5, lift: 0.33 } },
+      red: { light: { h: 335, s: 0.75, scale: 0.6, lift: 0.3 }, dark: { h: 285, s: 0.45, scale: 0.5, lift: 0.35 } },
+      blue: { light: { h: 160, s: 0.5, scale: 0.55, lift: 0.32 }, dark: { h: 255, s: 0.45, scale: 0.5, lift: 0.33 } },
     },
     layers: [
       {
