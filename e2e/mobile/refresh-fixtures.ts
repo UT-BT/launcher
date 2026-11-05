@@ -6,6 +6,7 @@ import { publicClientFields } from './fixtures/client-fields'
 import { keepOffline, LOCAL_HOSTS } from './fixtures/router'
 import { scrubRecorded } from './fixtures/scrub'
 import { crawlSurfaces, MOBILE_MANIFEST, surfaceSteps, type CrawlSurface } from './manifest'
+import { SEASONAL_NOTICE_STORAGE_KEY } from '../../app/components/pages/home/seasonalNoticeStorage'
 
 const API_HOSTS = /^https:\/\/(api|gateway)\.utbt\.net\//
 const PRIVATE_HEADERS = new Set(['authorization', 'cookie', 'if-none-match', 'if-modified-since'])
@@ -75,7 +76,12 @@ async function untilApiQuiet(page: Page, recorder: Recorder) {
 }
 
 async function recordSurface(page: Page, surface: CrawlSurface, recorder: Recorder): Promise<string | null> {
-    const storage = { 'utbt:analyticsConsent:v1': 'denied', 'utbt:seasonalThemes:v1': '"off"', ...surface.entry.storage }
+    const storage = {
+        'utbt:analyticsConsent:v1': 'denied',
+        'utbt:seasonPin:v1': 'none',
+        [SEASONAL_NOTICE_STORAGE_KEY]: JSON.stringify(new Date().toISOString()),
+        ...surface.entry.storage,
+    }
     await page.addInitScript(entries => {
         for (const [key, value] of Object.entries(entries)) localStorage.setItem(key, value)
     }, storage)

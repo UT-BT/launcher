@@ -66,6 +66,36 @@
   --input: hsl(2 22% 14.9%);
 }
 
+:root[data-theme='seasonal'] {
+  --accent-50: oklch(0.97 0.014 254.604);
+  --accent-100: oklch(0.932 0.032 255.585);
+  --accent-200: oklch(0.882 0.059 254.128);
+  --accent-300: oklch(0.809 0.105 251.813);
+  --accent-400: oklch(0.707 0.165 254.624);
+  --accent-500: oklch(0.623 0.214 259.815);
+  --accent-600: oklch(0.546 0.245 262.881);
+  --accent-700: oklch(0.488 0.243 264.376);
+  --accent-800: oklch(0.424 0.199 265.638);
+  --accent-900: oklch(0.379 0.146 265.522);
+  --accent-950: oklch(0.282 0.091 267.935);
+
+  --accent-glow-rgb: 56 189 248;
+
+  --nebula-1: 14, 165, 233;
+  --nebula-2: 29, 78, 216;
+  --nebula-3: 239, 68, 68;
+  --nebula-4: 99, 102, 241;
+
+  --background: hsl(217 35% 3.9%);
+  --card: hsl(217 35% 3.9%);
+  --popover: hsl(217 35% 3.9%);
+  --secondary: hsl(217 22% 14.9%);
+  --muted: hsl(217 22% 14.9%);
+  --accent: hsl(217 22% 14.9%);
+  --border: hsl(217 22% 14.9%);
+  --input: hsl(217 22% 14.9%);
+}
+
 :root[data-theme='aurum'] {
   --accent-50: oklch(0.987 0.022 95.277);
   --accent-100: oklch(0.962 0.059 95.617);

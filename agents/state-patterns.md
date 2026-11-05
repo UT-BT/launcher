@@ -184,10 +184,10 @@ Rules:
 - **The whitelist is `isSyncedKey`** in `userState.ts`: a set of exact keys plus two prefix
   rules, `utbt:homeMedalHuntHidden:v1:<userId>` and `utbt:admin:<section>:filters:v1`. It
   holds what a person expects to follow them (theme, tutorial seen-flags, filter presets,
-  display timezone, seasonal-themes toggle, pick/ban sound and animations, Medal Hunt
-  dismissals). Layout and device choices (columns, page sizes, panel flags, `ui-scale`,
-  replay volume, the collapsed rail, the stream kit folder) stay device-local on purpose: a
-  4K desktop and a phone want different layouts. Auth never syncs.
+  display timezone, the Seasonal theme's hemisphere and Effects settings, pick/ban sound and
+  animations, Medal Hunt dismissals). Layout and device choices (columns, page sizes, panel
+  flags, `ui-scale`, replay volume, the collapsed rail, the stream kit folder) stay device-local
+  on purpose: a 4K desktop and a phone want different layouts. Auth never syncs.
 - Read and write a whitelisted key only through the store helpers, never raw
   `localStorage`, and `subscribeSynced` wherever a value arriving after mount (the sign-in
   sync) must re-render. `useSyncedPresets` and `useTutorialState` already do.
@@ -236,10 +236,29 @@ as `utbt:login-required`). Page pref keys are the `*_STATE_STORAGE_KEY` constant
 - `utbt:homeMedalHuntHidden:v1:<userId>` is user-suffixed and synced; the suffix stays in
   the account blob.
 - `utbt:streamKitFolder:v1` is one device-local map `{ [userId]: folder }`.
-- `app/index.html`'s pre-paint script reads `utbt:theme:v1`, `utbt:seasonalThemes:v1` and
-  `utbt:season:v1` from localStorage and `utbt:seasonOverride:v1` from sessionStorage before
-  React mounts (the synced store mirrors to localStorage, so this works). Change one of
-  these shapes and update that script in the same commit.
+- `app/index.html`'s pre-paint script reads, before React mounts, `utbt:theme:v1`,
+  `utbt:seasonPin:v1`, `utbt:season:v2` and `utbt:hemisphere:v1` from localStorage and
+  `utbt:seasonOverride:v1` and `utbt:hemisphereOverride:v1` from sessionStorage, plus the
+  `?season=` and `?hemisphere=` query (the synced store mirrors to localStorage, so the synced
+  keys work). Change one of these shapes and update that script in the same commit; the order
+  it reads them in is in [styling.md](styling.md#storage-pre-paint-and-the-e2e-pin).
+- The Seasonal theme's keys, all through `app/seasonal/preferences.ts`
+  ([styling.md](styling.md#seasonal-theme)):
+  - synced: `utbt:hemisphere:v1` (JSON `"auto"`, `"north"` or `"south"`; anything else reads as
+    `auto`) and `utbt:seasonalEffects:v1` (JSON boolean; anything but a boolean reads as on),
+    each with load, save and subscribe helpers;
+  - session previews, raw strings in sessionStorage, never synced: `utbt:seasonOverride:v1` (an
+    entry id or `none`, captured from `?season=` by `renderer-web.tsx` or written by the
+    dev-only select) and `utbt:hemisphereOverride:v1` (`north` or `south`, from `?hemisphere=`);
+    an invalid value counts as none;
+  - device-local localStorage: `utbt:seasonPin:v1`, the pinned preview (raw, the session
+    preview's values, below it in precedence; no UI writes it, the e2e presets do), and
+    `utbt:season:v2`, the provider's cache for the pre-paint script, JSON
+    `{ id: EntryId | null, until: number }`.
+- `utbt:seasonalNotice:v1`, Home's new-theme notice, is device-local and never synced: the
+  JSON-encoded ISO time it was dismissed, read and written only through
+  `app/components/pages/home/seasonalNoticeStorage.ts`, which guards every access and treats a
+  wrongly shaped value as not dismissed ([home.md](features/home.md#new-theme-notice)).
 - `utbt:syncAccount:v1` is internal to the synced store.
 - The desktop promotion's two keys are device-local and never account-synced, on purpose:
   they describe this browser. `utbt:desktopSeen:v1` holds the last `last_desktop_seen_at`

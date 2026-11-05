@@ -231,8 +231,10 @@ Rules that hold the mechanism together:
   renders it; `routes.contract.test.ts` (`the stream sub-route`) pins that it never
   resolves to `match-pickban`.
 - **No seasonal look.** The pre-paint script in `app/index.html` re-implements the two
-  stream path shapes so it can skip `data-season` on them. Change a stream path shape and
-  you must update that script too.
+  stream path shapes so it can skip them: on a stream path it paints only the stored theme,
+  never `data-season` and never the `data-theme='seasonal'` a season preview would force, and
+  the stream roots never mount `SeasonProvider`, which would set them later. Change a stream
+  path shape and you must update that script too.
 
 ### Pick/ban stream view
 
@@ -542,11 +544,11 @@ platform gates.
 
 | Budget | Limit |
 |---|---|
-| Initial JS | 190 KiB |
-| Initial CSS | 37 KiB |
-| Initial total | 225 KiB |
+| Initial JS | 192 KiB |
+| Initial CSS | 38 KiB |
+| Initial total | 229 KiB |
 | Largest lazy chunk (and each stream scene chunk) | 120 KiB |
-| App JS (every JS file except those only the stream scene pages load) | 975 KiB |
+| App JS (every JS file except those only the stream scene pages load) | 985 KiB |
 | Stream scene JS (files reachable only from the scene root) | 120 KiB |
 
 It also asserts `dist-web/index.html`: exactly one module script, at least one
@@ -566,6 +568,15 @@ stylesheet `<link>` and modulepreload hints in the document. Behind a runtime `i
 the browser sees neither until the shim has run: two extra serial round trips before
 paint, and CSS injected by JavaScript. The 50 KiB entry floor in `check:bundle` exists to
 catch that regression.
+
+`index.html` also carries the inline pre-paint script, which runs before either entry and
+sets the root's `data-theme`, `dark` and `data-season` from storage and the URL, so the first
+frame is already in the right palette on both targets. Its season part (previews, the
+`utbt:season:v2` cache, the month and hemisphere fallback, and the inline lists that
+`app/prePaint.test.ts` holds to the registries) is in
+[styling.md](styling.md#storage-pre-paint-and-the-e2e-pin). It skips the stream paths
+([No seasonal look](#pre-shell-routes)). The logo is not pre-painted: React picks it from the
+first render, and the web boot screen shows the holiday logo too.
 
 ## Home Screen app (PWA)
 
@@ -622,4 +633,6 @@ release's `assets/` into each new release (no-clobber, pruned after 30 days), an
 `renderer-web.tsx` listens for Vite's `vite:preloadError` and reloads once
 (sessionStorage key `utbt:chunkReloadedAt`, at most once a minute) to pick up the fresh
 `index.html`. It ignores failures of the seasonal decorations chunk
-(`isSeasonalDecorChunkError`); those decorations just stay away.
+(`isSeasonalDecorChunkError` in `app/seasonal/lazyDecor.tsx`); those decorations just stay
+away. The exemption covers every entry's ambient layer, glyph and burst, which all live in that
+one chunk; the chunk is never modulepreloaded by `index.html`.

@@ -1,7 +1,8 @@
-import { Component, lazy, Suspense, type ComponentType, type ReactNode } from 'react'
+import { Component, lazy, Suspense, useSyncExternalStore, type ComponentType, type ReactNode } from 'react'
 import type { LucideProps } from 'lucide-react'
-import { useSeason } from './SeasonProvider'
-import type { SeasonId } from './seasons'
+import { useSeasonalEntry } from './SeasonProvider'
+import { loadSeasonalEffects, subscribeSeasonalEffects } from './preferences'
+import type { EntryId } from './seasons'
 
 type DecorModule = typeof import('./SeasonalDecor')
 
@@ -44,14 +45,15 @@ class SilentBoundary extends Component<{ children: ReactNode; fallback?: ReactNo
 const LazyAmbient = lazyDecor('AmbientLayer')
 const LazyGlyph = lazyDecor('SeasonGlyph')
 
-export function fireSeasonalBurst(season: SeasonId, x: number, y: number): void {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+export function fireSeasonalBurst(season: EntryId, x: number, y: number): void {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !loadSeasonalEffects()) return
     void loadDecor().then(module => module?.fireBurst(season, x, y))
 }
 
 export function SeasonalAmbient() {
-    const season = useSeason()
-    if (!season) return null
+    const season = useSeasonalEntry()
+    const effects = useSyncExternalStore(subscribeSeasonalEffects, loadSeasonalEffects, () => true)
+    if (!season || !effects) return null
     return (
         <SilentBoundary>
             <Suspense fallback={null}>
@@ -62,7 +64,7 @@ export function SeasonalAmbient() {
 }
 
 export function SeasonalSpinnerGlyph({ fallback, ...props }: LucideProps & { fallback: ReactNode }) {
-    const season = useSeason()
+    const season = useSeasonalEntry()
     if (!season) return fallback
     return (
         <SilentBoundary fallback={fallback}>

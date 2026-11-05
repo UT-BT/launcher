@@ -116,6 +116,9 @@ position against.
 - `light: true` marks a light theme (`light`): it drops the `dark` class
   ([Light](#light)). Read it through `isLightTheme(id)` or `LIGHT_THEME_IDS`
   (`themes.ts`), never by comparing ids.
+- `new: true` puts a neutral "New" chip on the theme's picker card, for one release. On
+  `seasonal` it also keeps the Home [new-theme notice](#new-theme-notice) alive; removing it
+  retires both.
 - `slate-blue-squared` sets every `--radius-*` to 0. Keep radii on Tailwind's named
   scale so they follow it; `rounded-full` (avatars, pills) is off that scale and stays
   round.
@@ -138,50 +141,297 @@ in a light theme (`isLightTheme`) they map to a darker, contrast-targeted tone w
 text outline.
 `PlayerInfo` reads `useTheme`, so they update live.
 
-### Seasonal themes
+### Seasonal theme
 
-Halloween, Christmas and Easter decorate the launcher each year; the code is in
-`app/seasonal/`.
+`seasonal` (label "Seasonal", gradients group, free, dark) is the one theme that follows the
+year: a season's look, replaced by a holiday's look while the holiday runs. Classic and every
+other theme keep their own palette all year; on them a holiday changes only the logo
+([Logo on every theme](#logo-on-every-theme)). Seasonal never drops the `dark` class, and no
+entry is a light look. The code is in `app/seasonal/`; the picker card is in Settings →
+Appearance ([The Seasonal card](#the-seasonal-card)).
 
-- **Windows** (`seasons.ts`, viewer's local date, inclusive): Halloween Oct 24 – Nov
-  7, Christmas Dec 18 – Jan 15, Easter Sunday ± 7 days (Western, computed). Adding a
-  season: [Adding a theme](#adding-a-theme).
-- **Precedence**: a preview beats the toggle, the toggle beats the date. The preview
-  is `?season=<id>` or `?season=none` on web or a dev-only select in
-  Settings → Appearance on desktop, for the session; the toggle is "Seasonal themes"
-  in Settings → Appearance (`utbt:seasonalThemes:v1`). `SeasonProvider` (inside
-  `ThemeProvider` in both app roots) sets `data-season` on `<html>` and re-checks on
-  window focus and hourly. The `app/index.html` pre-paint script sets it from the
-  cached season so the accent never swaps after load; it skips the stream paths, and
-  the stream roots never mount the provider.
-- **Tint** (`app/styles/seasons.css`): selectors are
-  `:root[data-season='…']:not([data-theme])`, so only Classic is tinted, and only
-  `--accent-*`, `--accent-glow-rgb` and `--nebula-*` change. `seasons.test.ts`
-  enforces both and checks contrast: accent-200/300/400 text on the background and
-  white on accent-500 reach AA, or at least Classic's own ratio where Classic is below.
-- **Logo**: `app/assets/seasonal/logo-<season>.webp`, rendered from
-  `app/public/icon-512.png` by `node scripts/render-seasonal-logos.mjs [--preview <dir>]`;
-  replacing or adding a file under that name needs no code change: `useLogo()` /
-  `logoFor()` (`app/seasonal/logos.ts`) glob `logo-*.webp` and pick it for the sidebar,
-  the mobile top bar, the desktop splash and the web boot screen. The favicon, titlebar,
-  installer icons, stream scenes and stinger keep `logo.webp`. Only the active season's
-  file downloads.
-- **Decorations** are one lazy chunk (`SeasonalDecor.tsx`), requested only while a
-  season shows. Mount them through `lazyDecor.tsx` (`SeasonalAmbient`,
-  `SeasonalSpinnerGlyph`, `fireSeasonalBurst`): Suspense plus a silent boundary, so a
-  failed import renders nothing, and the web `vite:preloadError` reload ignores this
-  chunk.
-  - Burst: clicking the sidebar logo, 10 s cooldown, off under reduced motion.
-  - Ambient layer: Home only, behind content, `pointer-events: none`, at most 16
-    particles (half hidden below 768px), paused on window blur or a hidden page, not
-    rendered under reduced motion. Flight paths come from nested elements each running
-    one `transform` animation at periods that don't line up. Animate only `transform`
-    and `opacity` (`e2e/seasonal.spec.ts` asserts it); `offset-path` runs on the main
-    thread.
-  - Spinner: `<Spinner>` shows the season glyph instead of `Loader2`.
-- **e2e**: the desktop and mobile Playwright projects preset the toggle to off
-  (`storageState` in `playwright.config.ts`) so shell specs don't depend on the run
-  date; `seasonal.spec.ts` forces each season with `?season=`.
+Its base block, `:root[data-theme='seasonal']` in `themes.css`, holds Classic's values
+(`themes.test.ts` keeps them equal). It shows only when no entry resolves, which happens only
+under a `none` preview (`?season=none`, or the e2e pin).
+
+#### Entries
+
+`ENTRIES` in `app/seasonal/seasons.ts` is the one registry of seasons and holidays. Each entry
+has an `id`, a `label`, a `kind` (`season` or `holiday`), a `window(year, hemisphere)` that
+returns `{ start, endExclusive }` (or `null` for a year it doesn't occur), an optional
+`hemisphere` filter (`north` or `south`) and an optional `logo` alias (the entry whose logo it
+shows). `EntryId`, `ENTRY_IDS`, the dev preview options, the logo lookup, the stylesheet check
+and the e2e loop all derive from it; the pre-paint list is an inline copy that a test holds to it.
+Registry order is the table's, and it breaks ties between holidays of the same width.
+
+| Id | Label | Kind | Window (local date, inclusive) | Hemisphere |
+|---|---|---|---|---|
+| `spring` | Spring | season | North Mar 1 – May 31, South Sep 1 – Nov 30 | both |
+| `summer` | Summer | season | North Jun 1 – Aug 31, South Dec 1 – Feb 28/29 | both |
+| `autumn` | Autumn | season | North Sep 1 – Nov 30, South Mar 1 – May 31 | both |
+| `winter` | Winter | season | North Dec 1 – Feb 28/29, South Jun 1 – Aug 31 | both |
+| `new-year` | New Year | holiday | Dec 31 – Jan 3 | both |
+| `lunar-new-year` | Lunar New Year | holiday | the eve of Lunar New Year's Day to five days after it | both |
+| `valentines` | Valentine's Day | holiday | Feb 12 – 15 | both |
+| `st-patricks` | St Patrick's Day | holiday | Mar 15 – 17 | both |
+| `easter` | Easter | holiday | Western Easter Sunday ± 7 days (`easterSunday`) | both |
+| `halloween` | Halloween | holiday | Oct 24 – Nov 7 | both |
+| `christmas` | Christmas | holiday | Dec 18 – 30 | north |
+| `christmas-summer` | Summer Christmas | holiday | Dec 18 – 30 | south, logo alias `christmas` |
+
+- Seasons are meteorological whole months, and the southern window is the northern one six
+  months on. A holiday's window is the same in both hemispheres.
+- A window ends at the local midnight after its last day.
+- Lunar New Year's Day comes from the date table in `app/seasonal/lunarNewYear.ts`
+  (`lunarNewYearsDay`, `LUNAR_NEW_YEAR_YEARS`): 2026 through 2050, taken from the Hong Kong
+  Observatory's Gregorian–Lunar calendar conversion tables (the "1st Lunar Month" date). Outside
+  the table the holiday doesn't occur; `lunarNewYear.test.ts` pins the range and spot-checks
+  years. Extend the table from the same source before 2050.
+
+#### The appearance resolver
+
+`resolveAppearance({ now, themeId, preview, timeZone, hemisphereSetting, hemispherePreview })`
+in `app/seasonal/appearance.ts` is the one pure function that decides what shows. It returns
+`{ seasonal, logo, until }`: the **Seasonal entry** (whose palette and decorations show), the
+**logo entry** (whose logo shows) and the epoch ms at which either can next change. `themeId` is
+the saved theme; `preview` is the session preview, else the pinned preview, else `null`.
+
+1. Resolve the hemisphere ([Hemisphere](#hemisphere)) and drop every entry whose filter doesn't
+   match it.
+2. Among the entries active at `now`, a holiday beats a season. Among holidays the narrowest
+   window (fewest days in the window that holds `now`) wins, and registry order breaks a tie.
+   Known collisions: Valentine's Day beats Lunar New Year (Feb 12 – 15, 2029), and St Patrick's
+   Day beats an early Easter (Mar 16 – 17, 2008).
+3. **On Seasonal** some season is always active, so there is always a Seasonal entry: the
+   winner. The logo entry is the winner after its alias.
+4. **On any other theme** the Seasonal entry is `null`. The logo entry is the winner (after its
+   alias) only when the winner is a holiday; otherwise `null`.
+5. **An entry preview** makes that entry both outputs (the logo after its alias), whatever its
+   hemisphere filter, and the page renders as Seasonal for the session. **`none`** gives `null`
+   for both and leaves the theme alone.
+6. **`until`** is the next window start or end, in the windows of last year, this year and next
+   year, at which either unpreviewed output changes. A preview returns the same `until`.
+
+`app/seasonal/appearance.test.ts` drives every calendar, hemisphere and precedence rule through
+this function with table-driven cases; add a holiday's cases there.
+
+`SeasonProvider` mounts inside `ThemeProvider` in both app roots, on every theme, because the
+logo needs it everywhere. It reads the saved theme, the previews, the hemisphere setting and the
+device zone, runs the resolver, and re-runs it on window focus and hourly, so a launcher left
+open across a boundary changes within the hour. It exposes `useSeasonalEntry()`,
+`useLogoEntry()` and `useHemisphere()` (`{ resolved, detected, setting }`).
+
+- It sets `data-season='<id>'` on `<html>` only when there is a Seasonal entry, so a holiday on
+  another theme sets no attribute and no tint.
+- During an entry preview it calls `ThemeProvider`'s `setPreviewThemeId('seasonal')`: the root's
+  `data-theme` and `dark` follow the preview, while `useTheme().themeId`, `utbt:theme:v1` and
+  the picker keep the saved choice. Picking a theme during a preview saves it and keeps
+  Seasonal showing.
+- It writes `utbt:season:v2` for the pre-paint script: what Seasonal would show with no preview
+  applied, whatever the current theme (`resolveAppearance` with `themeId: 'seasonal'`,
+  `preview: null` and no hemisphere preview).
+- The stream roots mount `ThemeProvider` but never `SeasonProvider`, so stream routes never get
+  `data-season` or a preview's `data-theme`.
+
+#### Hemisphere
+
+`app/seasonal/hemisphere.ts`:
+
+- **Detection.** `deviceTimeZone()` reads the device's IANA zone
+  (`Intl.DateTimeFormat().resolvedOptions().timeZone`), never the display time zone override in
+  Settings. `detectHemisphere(timeZone)` is `south` for an exact, case-sensitive match in
+  `SOUTHERN_ZONES` and `north` for anything else, including a missing zone. Equatorial zones get
+  no special case: `Africa/Nairobi` and `Asia/Jakarta` are southern, `Asia/Singapore` and
+  `America/Bogota` northern.
+- **The table.** `SOUTHERN_ZONES` lists every zone whose reference location in the IANA zone
+  table lies south of the equator, plus their legacy aliases (built from tzdata 2026f), sorted,
+  one per line. To regenerate from a later tzdata release: a zone in `zone.tab` or
+  `zone1970.tab` takes the sign of its own latitude; every other name comes from a `Link` line
+  and takes its target's hemisphere, following chains; where `backward` marks a link with
+  `#= TARGET`, use that target, and let `backzone` override `backward`. Only a new southern zone
+  or a new alias of one changes the list. `hemisphere.test.ts` holds the samples on both sides,
+  the aliases and the sort order.
+- **The setting.** `utbt:hemisphere:v1`: `"auto"` (default), `"north"` or `"south"`,
+  account-synced, written by the Hemisphere control under the Seasonal card
+  (`saveHemisphereSetting` in `preferences.ts`).
+- **The preview.** `?hemisphere=north|south` on web (captured by `renderer-web.tsx` into
+  sessionStorage `utbt:hemisphereOverride:v1`) holds for the session. Other values are ignored.
+- **Precedence** (`resolveHemisphere`): the preview, then a setting other than `auto`, then
+  detection.
+
+#### Logo on every theme
+
+- `useLogo()` / `logoFor(entry)` (`app/seasonal/logos.ts`) show the logo entry's
+  `app/assets/seasonal/logo-<id>.webp`, following the entry's `logo` alias, and `logo.webp`
+  with no logo entry. **Holiday logos show on every theme, with no opt-out; season logos only on
+  Seasonal.** Summer Christmas shows Christmas's logo through its alias, so the logo never
+  depends on the hemisphere.
+- They show in the sidebar, the mobile top bar, the desktop splash and the web boot screen. The
+  favicon, the window and taskbar icon, the installer icons, the stream scenes and the stinger
+  keep `logo.webp`; the titlebar shows no logo.
+- The files are `import.meta.glob` URLs, so only the active entry's file downloads. React picks
+  the logo on the first render; the pre-paint script plays no part in it.
+- Each file is a recolour of `app/public/icon-512.png`, rendered by
+  `node scripts/render-seasonal-logos.mjs [--preview <dir>]` from one palette per entry in the
+  script's table. No redesigns and no per-theme variants: a logo that reads badly on some theme
+  (White in particular) gets its recolour palette adjusted. The script re-renders every file, and
+  unchanged palettes come out byte-identical, so commit only the files you meant to change.
+- `app/seasonal/logos.test.ts` requires a file for every entry without an alias, and an alias
+  only to an entry that has its own file.
+
+#### Palette contract
+
+Each entry has one block in `app/styles/seasons.css`, selected by
+`:root[data-theme='seasonal'][data-season='<id>']`; the file holds no other selector, so no
+other theme is ever tinted. A block may set only:
+
+- the accent ramp `--accent-50…950` and `--accent-glow-rgb`;
+- the nebula `--nebula-1…4`;
+- the surfaces `--background`, `--card`, `--popover`, `--secondary`, `--muted`, `--accent`,
+  `--border` and `--input`;
+- optionally `--window-c-titlebar-background`.
+
+Foregrounds, `--hairline-rgb`, radii, functional and chart colours stay inherited. Surfaces are
+tinted darks, lifted at most to mid-dark, never pastel. Write `--background` and `--card` as
+opaque `hsl(…)`, `rgb(…)`, `#hex` or `oklch(…)`.
+
+`app/styles/seasons.test.ts` fails on a missing, duplicate or foreign block, on a variable
+outside that list and on an unreadable or translucent surface. It resolves each block over the
+`globals.css` tokens and the Seasonal base, and holds the **contrast floor**:
+
+- accent-200, 300 and 400 text on the block's background, and white on accent-500: AA (4.5:1),
+  or at least Classic's own ratio where Classic is below (Classic's white on accent-500 is
+  3.76:1);
+- foreground and muted-foreground on the block's background and on its card: AA.
+
+`teamAccent.test.ts` also needs every team accent at 4.5:1 on each block's background and card.
+Each look keeps its character: summer a deep ocean blue with a sun tinge, spring cherry blossom,
+autumn amber and brown, winter slate and silver; Valentine's apart from Rosé, St Patrick's apart
+from Emerald and spring, Lunar New Year apart from Christmas red and Aurum gold, and every look
+apart from the Patreon themes.
+
+#### Decorations
+
+Decorations render only when there is a Seasonal entry: the Seasonal theme, or an entry preview.
+They are one lazy chunk (`SeasonalDecor.tsx` and `app/seasonal/decor/`), mounted through
+`lazyDecor.tsx` (`SeasonalAmbient`, `SeasonalSpinnerGlyph`, `fireSeasonalBurst`) behind Suspense
+and a silent boundary, so a failed import renders nothing, and the web `vite:preloadError`
+reload ignores this chunk.
+
+- **The Effects switch.** The "Effects" row under the Seasonal card writes
+  `utbt:seasonalEffects:v1` (JSON boolean, default `true`, account-synced). Off does what
+  reduced motion does: no ambient layer and no burst, while the palette, the logo and the spinner
+  glyph stay. The gate lives in `lazyDecor.tsx`, so no entry's branch checks it, and with it off
+  the chunk isn't loaded for the layer or a burst.
+- **Ambient layer.** `AppLayout` renders `SeasonalAmbient` on every page of the app shell, as a
+  sibling before `main` and under it, outside the scroller, with `pointer-events: none`; stream
+  routes never render `AppLayout`. The layer is `.seasonal-layer[data-season-layer='<id>']`. It
+  pauses on window blur or a hidden page (`data-paused`) and renders nothing under reduced
+  motion. Animate only `transform` and `opacity` (`e2e/seasonal.spec.ts` asserts it);
+  `offset-path` runs on the main thread, so flight paths come from nested elements each running
+  one `transform` animation at periods that don't line up. Keep particles faint enough that
+  tables and forms read as on a plain theme.
+- **Budgets.** A particle is a direct `span` child of `.seasonal-layer`; a slow effect is a
+  `div` and doesn't count. Below 768 px `.seasonal-layer > span:nth-of-type(2n)` hides every
+  second particle. Seasons: at most 8 particles or one slow effect. Holidays: at most 16
+  (Christmas's snow). Summer Christmas: summer's rays plus at most 8 twinkles. New Year counts
+  its sparks: 2 blooms of 8.
+- **Burst.** Clicking the sidebar logo (`SidebarBrand`) fires `.seasonal-burst`: 10 particles
+  for a season, 12 for a holiday, 14 for Christmas, each entry with its own shapes and drift.
+  10 s cooldown; nothing under reduced motion or with Effects off.
+- **Spinner glyph.** `<Spinner>` shows the entry's glyph instead of `Loader2`, from lucide (or
+  `createLucideIcon`, as for the pumpkin and the lantern). It stays under reduced motion and with
+  Effects off.
+
+| Entry | Ambient | Glyph | Burst |
+|---|---|---|---|
+| Spring | 8 drifting cherry-blossom petals | spinning `Flower` | blossom petals |
+| Summer | faint sun rays from the top-right corner, breathing (one slow effect) | spinning `Sun` | gold sun sparks |
+| Autumn | 8 falling leaves | wobbling `Leaf` | leaves |
+| Winter | icicles along the top edge (under the top bar below `lg`) plus 8 sparse slow flakes | still `Snowflake` | ice crystals |
+| New Year | 2 slow firework blooms in the upper third, moving while invisible | wobbling `PartyPopper` | sparkles and confetti |
+| Lunar New Year | 6 red-gold lanterns rising and swaying | swinging `Lantern` | lanterns and coins |
+| Valentine's Day | 8 hearts floating up and fading | beating `Heart` | hearts and rose petals |
+| St Patrick's Day | 8 drifting shamrocks plus 6 gold glints | slowly spinning `Clover` | shamrocks and gold glints |
+| Easter | petals and a butterfly | wobbling `Egg` | petals |
+| Halloween | fog and bats | wobbling `Pumpkin` | bats |
+| Christmas | 16 falling flakes | spinning `Snowflake` | snowflakes |
+| Summer Christmas | summer's rays plus 8 gold twinkles, no snow | slowly spinning `Star` | gold stars and red baubles |
+
+#### The Seasonal card
+
+Settings → Appearance (`LauncherAppearanceSettings.tsx`, `SeasonalThemeOptions.tsx`):
+
+- The card sits in the Gradients group. A theme with the registry's `new` flag gets a neutral
+  "New" chip (Sparkles icon) on its card.
+- `useSeasonalCard()` resolves what Seasonal would show now (with any preview applied), on any
+  saved theme. The swatch is that entry's `--accent-500`, read by `seasonalAccent()` in
+  `seasonalCard.ts` from `seasons.css` and the base block in `themes.css` through `?raw`
+  imports, so the stylesheet is the one source. The subtitle is `seasonalSummary()`:
+  "Now: Halloween" for a holiday, "Now: Autumn · Southern hemisphere" for a season.
+- While Seasonal is the saved theme, two rows follow the card grid: **Hemisphere**, a
+  `role="group"` of Auto (naming what it detected, "Auto (Southern)"), Northern and Southern,
+  44 px tall, wrapping below `@md/panel`; and **Effects**, the shared `Switch` padded to a
+  44 px target.
+- Picking Seasonal also dismisses the [new-theme notice](#new-theme-notice).
+- Dev builds add a "Season preview" section (`import.meta.env.DEV`) whose select lists
+  Automatic (by date), No season and every entry; it writes the session preview.
+
+#### Storage, pre-paint and the e2e pin
+
+| Key | Where | Holds |
+|---|---|---|
+| `utbt:theme:v1` | synced | `{ "id": "seasonal" }` like any theme |
+| `utbt:hemisphere:v1` | synced | `"auto"` / `"north"` / `"south"` |
+| `utbt:seasonalEffects:v1` | synced | `true` / `false` |
+| `utbt:seasonOverride:v1` | sessionStorage | the session preview, raw: an entry id or `none` |
+| `utbt:hemisphereOverride:v1` | sessionStorage | the hemisphere preview, raw `north` / `south` |
+| `utbt:seasonPin:v1` | localStorage, device-local | the pinned preview, raw: an entry id or `none` |
+| `utbt:season:v2` | localStorage | the pre-paint cache, `{ "id": EntryId \| null, "until": number }` |
+| `utbt:seasonalNotice:v1` | localStorage, device-local | the ISO time the notice was dismissed |
+
+Helpers live in `app/seasonal/preferences.ts`; how synced keys work is in
+[state-patterns.md](state-patterns.md). The Seasonal theme reads no other key.
+
+**Pre-paint.** The `app/index.html` script gets the palette right on the first frame, off the
+stream paths only:
+
+1. A preview decides first: `?season=`, then `utbt:seasonOverride:v1`, then
+   `utbt:seasonPin:v1`; an invalid value falls through to the next. An entry sets
+   `data-season`, `data-theme='seasonal'` and `dark`. `none` sets nothing and keeps the stored
+   theme.
+2. With no preview, only a stored `seasonal` theme gets a season: an unexpired
+   `utbt:season:v2` (`until` after now) naming a registered entry decides.
+3. Otherwise (a cold, expired or unknown cache) the script takes the season from the month:
+   `seasonMonths[(month + (south ? 6 : 0)) % 12]`. The hemisphere is `?hemisphere=`, then
+   `utbt:hemisphereOverride:v1`, then a stored `utbt:hemisphere:v1` of `north` or `south`, then
+   the device zone against the inline `southernZones`. Holidays appear once the provider has
+   resolved them.
+
+The script can't import the registries, so it carries `seasonalTheme`, `entries`,
+`seasonMonths` and `southernZones` inline; `app/prePaint.test.ts` fails until they match
+`SEASONAL_THEME_ID`, `ENTRY_IDS`, the season windows and `SOUTHERN_ZONES`, and runs the script
+against fake storage, location, `Date` and `Intl`. The cache ignores the hemisphere preview, so
+in a `?hemisphere=` session with a warm cache the first frame shows the cached look until the
+provider mounts.
+
+**The e2e pin.** `utbt:seasonPin:v1` takes the same values as the session preview and ranks
+below it; no UI writes it. The Playwright storage state and the mobile fixture refresh preset it
+to `none`, so no spec depends on the run date, and since `none` never changes the theme, each
+spec's own theme preset holds. A spec that needs the calendar removes the pin in an init script
+and pins the clock (`page.clock.setFixedTime`); one that needs a hemisphere sets
+`test.use({ timezoneId })` or `?hemisphere=` ([testing.md](testing.md#seasonal-specs)).
+
+#### New-theme notice
+
+A one-time card at the top of Home ("New: Seasonal theme · Follows the seasons and holidays
+where you are.") points returning players at the theme. It shows only while the `seasonal`
+registry entry carries `new`, Seasonal isn't the saved theme and `utbt:seasonalNotice:v1` is
+unset. "Try it", the × and picking Seasonal write the key; while Seasonal is saved the notice
+renders nothing and writes it too. **Removing `new` from the entry retires the "New" chip and the
+notice together** (the release after launch). The Playwright storage state and the mobile fixture
+refresh preset the key as dismissed; only `e2e/seasonal-notice.spec.ts` clears it. Component and
+rules: [home.md](features/home.md#new-theme-notice).
 
 ## Adding a theme
 
@@ -210,7 +460,8 @@ the pre-paint script pick it up.
    reads the list, so a stored id missing from it falls back to Classic.
 4. **No edit for Settings or storage.** `LauncherAppearanceSettings` renders `THEMES` by
    `group` and locks `exclusive` ones; the choice syncs with the account under
-   `utbt:theme:v1`. Seasons tint Classic only, so the new theme never shows one.
+   `utbt:theme:v1`. Season and holiday palettes tint only the Seasonal theme, so the new
+   theme never shows one; during a holiday it shows only the holiday logo.
 5. **No pre-paint edit for a dark theme.** The `app/index.html` script sets `data-theme`
    from `utbt:theme:v1` before React mounts, so the first frame is already themed. **A
    light theme** also gets `light: true` in the registry and its id in the script's
@@ -226,23 +477,49 @@ the pre-paint script pick it up.
    still looks as before. A Playwright spec can preset the theme the way
    `e2e/pickban-watch.spec.ts` does (`addInitScript` writing `utbt:theme:v1`).
 
-**A season** (copy Easter, #296) is one registry entry plus its tint, logo and decorations.
-`SeasonId`, `SEASON_IDS`, the Settings preview options and toggle text, the logo lookup,
-the CSS and e2e checks all derive from `SEASONS` (`app/seasonal/seasons.ts`).
+## Adding a season or holiday
 
-1. **Register.** Append `{ id, label, window }` to `SEASONS`, with a window case in
-   `app/seasonal/seasons.test.ts`.
-2. **Pre-paint.** Add the id to the `seasons` list in the `app/index.html` script;
-   `app/prePaint.test.ts` fails until it matches the registry.
-3. **Tint.** A `:root[data-season='<id>']:not([data-theme])` block in
-   `app/styles/seasons.css`; `app/styles/seasons.test.ts` fails until it exists and checks
-   its contrast.
-4. **Logo.** A palette in `scripts/render-seasonal-logos.mjs`, rendered to
-   `app/assets/seasonal/logo-<id>.webp` (`app/seasonal/logos.test.ts` checks the file).
-5. **Decorations.** Its branches in `app/seasonal/decor/` (`ambient.tsx`, `ambient.css`,
-   `burst.ts`, `glyphs.tsx`).
-6. **Verify.** `npm test` and `npx playwright test e2e/seasonal.spec.ts` pass (the spec
-   loops over the registry), and `/?season=<id>` shows the tint, logo and decorations.
+A season or holiday is one registry entry plus its palette block, its logo (or an alias), its
+decoration branches, its pre-paint id, its window cases and its e2e cases. Copy the latest
+holiday, Valentine's Day or St Patrick's Day. The dev preview options, the logo lookup, the
+stylesheet and logo checks and the e2e preview loop derive from `ENTRIES`, so they need no
+edit. Rules for each part: [Seasonal theme](#seasonal-theme).
+
+1. **Register.** Insert `{ id, label, kind, window }` into `ENTRIES`
+   (`app/seasonal/seasons.ts`), plus `hemisphere` for a one-hemisphere entry and `logo` to
+   reuse another entry's logo (as `christmas-summer` does). Registry order breaks ties between
+   holidays of the same width, so place it deliberately. A window comes from a rule or a table,
+   never a network lookup; a date table goes in its own module beside the registry, with a test
+   that pins its range (copy `lunarNewYear.ts`).
+2. **Window cases.** In `app/seasonal/seasons.test.ts`, the entry's fields and its window. In
+   `app/seasonal/appearance.test.ts`, its edges on and off at local midnight in both
+   hemispheres, the season and any holiday it collides with, the logo only on Red, Classic and
+   Light, a preview, and `until`. Expect to update existing cases whose dates fall inside the
+   new window.
+3. **Pre-paint.** Add the id to the inline `entries` list in `app/index.html`, at the same
+   position as in the registry; `app/prePaint.test.ts` fails until the two match.
+   `seasonMonths` and `southernZones` change only when the seasons or the zone table do.
+4. **Palette.** A `:root[data-theme='seasonal'][data-season='<id>']` block in
+   `app/styles/seasons.css` that sets only what the [palette contract](#palette-contract)
+   allows. `app/styles/seasons.test.ts` and `teamAccent.test.ts` fail until it exists and passes
+   the contrast floor. The Seasonal card's swatch reads it, with no edit.
+5. **Logo.** An entry in the logo palette table of `scripts/render-seasonal-logos.mjs`,
+   rendered to `app/assets/seasonal/logo-<id>.webp` (`app/seasonal/logos.test.ts` checks the
+   file), or a `logo` alias in step 1. Commit only the new file, and check it on every theme,
+   White included.
+6. **Decorations**, all in `app/seasonal/decor/`: its glyph in `glyphs.tsx` (and
+   `glyphs.css` for a new motion), its burst shapes, drift and count in `burst.ts` and
+   `burst.css`, and its ambient branch in `ambient.tsx` with one block at the end of
+   `ambient.css`, inside the [budgets](#decorations). Shared shapes and colours go in
+   `shapes.ts`. Give new keyframes names no other entry uses. The Effects switch and reduced
+   motion already gate every branch.
+7. **e2e.** In `e2e/seasonal.spec.ts` the preview loop covers the entry through `ENTRY_IDS`
+   (tint, logo, `dark`, a non-empty layer, compositor-only animations). Add a `describe` for
+   the entry: the calendar with the pin cleared and the clock pinned, on Seasonal and on Red;
+   the particle budget at 1280 and 390 px; the glyph; and the burst's shapes and cooldown.
+8. **Verify.** `npm test`, `npx playwright test e2e/seasonal.spec.ts e2e/seasonal-card.spec.ts`
+   and `npm run check:bundle` pass, and in `npm run dev:web`, `/?season=<id>` shows the tint,
+   logo and decorations on Home, a table page and with a modal open.
 
 ## Surfaces and radii
 

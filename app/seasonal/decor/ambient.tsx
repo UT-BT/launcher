@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { usePrefersReducedMotion } from '@/app/hooks/usePrefersReducedMotion'
-import type { SeasonId } from '../seasons'
-import { BAT_BODY, BAT_WING, MIRROR_BAT, seededRandom } from './shapes'
+import type { EntryId } from '../seasons'
+import { BAT_BODY, BAT_WING, BLOSSOM_COLORS, FIREWORK_COLORS, GOLD_COLORS, HEART, HEART_COLORS, LANTERN_BODY, LANTERN_CAPS, LANTERN_RIBS, LANTERN_TASSEL, LEAF, LEAF_COLORS, LEAF_VEIN, MIRROR_BAT, SHAMROCK_ANGLES, SHAMROCK_COLORS, SHAMROCK_LEAF, SHAMROCK_STEM, SPARKLE, seededRandom } from './shapes'
 
 type Vars = Record<`--${string}`, string>
 
@@ -33,6 +33,124 @@ const PETALS = particles(11, 10, (random, index) => {
         '--delay': `${(-random() * duration).toFixed(1)}s`,
         '--c': PETAL_COLORS[index % PETAL_COLORS.length],
         '--tumble': `${(4 + random() * 4).toFixed(1)}s`,
+    }
+})
+
+const SEASON_PARTICLES = 8
+
+const BLOSSOMS = particles(23, SEASON_PARTICLES, (random, index) => {
+    const duration = 26 + random() * 16
+    return {
+        '--x': `${(random() * 100).toFixed(1)}%`,
+        '--dx': `${(8 + random() * 14).toFixed(1)}vw`,
+        '--d': `${duration.toFixed(1)}s`,
+        '--delay': `${(-random() * duration).toFixed(1)}s`,
+        '--c': BLOSSOM_COLORS[index % BLOSSOM_COLORS.length],
+        '--tumble': `${(5 + random() * 4).toFixed(1)}s`,
+    }
+})
+
+const LEAVES = particles(31, SEASON_PARTICLES, (random, index) => {
+    const duration = 20 + random() * 14
+    return {
+        '--x': `${(random() * 100).toFixed(1)}%`,
+        '--s': `${(13 + random() * 7).toFixed(0)}px`,
+        '--d': `${duration.toFixed(1)}s`,
+        '--delay': `${(-random() * duration).toFixed(1)}s`,
+        '--c': LEAF_COLORS[index % LEAF_COLORS.length],
+        '--swing': `${(3.5 + random() * 2.5).toFixed(1)}s`,
+        '--sway': `${(18 + random() * 22).toFixed(0)}px`,
+    }
+})
+
+const WINTER_FLAKES = particles(43, SEASON_PARTICLES, random => {
+    const duration = 24 + random() * 14
+    return {
+        '--x': `${(random() * 100).toFixed(1)}%`,
+        '--s': `${(2 + random() * 1.8).toFixed(1)}px`,
+        '--o': (0.3 + random() * 0.25).toFixed(2),
+        '--d': `${duration.toFixed(1)}s`,
+        '--delay': `${(-random() * duration).toFixed(1)}s`,
+        '--sway': `${(6 + random() * 12).toFixed(0)}px`,
+        '--swayd': `${(4 + random() * 3).toFixed(1)}s`,
+    }
+})
+
+const TWINKLES = particles(53, SEASON_PARTICLES, (random, index) => {
+    const duration = 7 + random() * 6
+    return {
+        '--x': `${(4 + random() * 92).toFixed(1)}%`,
+        '--y': `${(6 + random() * 58).toFixed(1)}%`,
+        '--s': `${(7 + random() * 5).toFixed(0)}px`,
+        '--o': (0.35 + random() * 0.25).toFixed(2),
+        '--d': `${duration.toFixed(1)}s`,
+        '--delay': `${(-random() * duration).toFixed(1)}s`,
+        '--c': GOLD_COLORS[index % GOLD_COLORS.length],
+    }
+})
+
+const BLOOM_SPARKS = 8
+
+const BLOOMS: Vars[] = [
+    { '--x': '30%', '--y': '16%', '--hx1': '38vw', '--hy1': '8vh', '--hx2': '18vw', '--hy2': '-6vh', '--r': '44px', '--o': '0.5', '--d': '11s', '--delay': '-1.5s', '--c': FIREWORK_COLORS[0] },
+    { '--x': '80%', '--y': '26%', '--hx1': '-34vw', '--hy1': '-12vh', '--hx2': '-18vw', '--hy2': '4vh', '--r': '36px', '--o': '0.45', '--d': '14s', '--delay': '-8s', '--c': FIREWORK_COLORS[1] },
+]
+
+const SPARK_ANGLES = Array.from({ length: BLOOM_SPARKS }, (_, index) => ({ '--a': `${(index * 360) / BLOOM_SPARKS}deg` }) as CSSProperties)
+
+const LANTERNS = particles(67, 6, random => {
+    const duration = 34 + random() * 16
+    return {
+        '--x': `${(4 + random() * 90).toFixed(1)}%`,
+        '--s': `${(14 + random() * 8).toFixed(0)}px`,
+        '--o': (0.4 + random() * 0.2).toFixed(2),
+        '--d': `${duration.toFixed(1)}s`,
+        '--delay': `${(-random() * duration).toFixed(1)}s`,
+        '--sway': `${(8 + random() * 14).toFixed(0)}px`,
+        '--swayd': `${(4 + random() * 3).toFixed(1)}s`,
+    }
+})
+
+const HEARTS = particles(79, 8, (random, index) => {
+    const duration = 16 + random() * 10
+    return {
+        '--x': `${(4 + random() * 92).toFixed(1)}%`,
+        '--y': `${(45 + random() * 45).toFixed(1)}%`,
+        '--s': `${(10 + random() * 8).toFixed(0)}px`,
+        '--o': (0.3 + random() * 0.2).toFixed(2),
+        '--rise': `${(28 + random() * 18).toFixed(0)}vh`,
+        '--d': `${duration.toFixed(1)}s`,
+        '--delay': `${(-random() * duration).toFixed(1)}s`,
+        '--c': HEART_COLORS[index % HEART_COLORS.length],
+        '--sway': `${(6 + random() * 10).toFixed(0)}px`,
+        '--swayd': `${(3 + random() * 2.5).toFixed(1)}s`,
+    }
+})
+
+const SHAMROCKS = particles(83, 8, (random, index) => {
+    const duration = 26 + random() * 14
+    return {
+        '--x': `${(random() * 96).toFixed(1)}%`,
+        '--s': `${(12 + random() * 7).toFixed(0)}px`,
+        '--o': (0.35 + random() * 0.2).toFixed(2),
+        '--dx': `${(-10 + random() * 20).toFixed(1)}vw`,
+        '--d': `${duration.toFixed(1)}s`,
+        '--delay': `${(-random() * duration).toFixed(1)}s`,
+        '--c': SHAMROCK_COLORS[index % SHAMROCK_COLORS.length],
+        '--tumble': `${(5 + random() * 4).toFixed(1)}s`,
+        '--sway': `${(14 + random() * 16).toFixed(0)}px`,
+    }
+})
+
+const GOLD_GLINTS = particles(89, 6, random => {
+    const duration = 6 + random() * 5
+    return {
+        '--x': `${(4 + random() * 92).toFixed(1)}%`,
+        '--y': `${(6 + random() * 80).toFixed(1)}%`,
+        '--s': `${(5 + random() * 4).toFixed(0)}px`,
+        '--o': (0.25 + random() * 0.2).toFixed(2),
+        '--d': `${duration.toFixed(1)}s`,
+        '--delay': `${(-random() * duration).toFixed(1)}s`,
     }
 })
 
@@ -117,7 +235,7 @@ function usePaused(): boolean {
     return paused
 }
 
-export function AmbientLayer({ season }: { season: SeasonId }) {
+export function AmbientLayer({ season }: { season: EntryId }) {
     const reducedMotion = usePrefersReducedMotion()
     const paused = usePaused()
     if (reducedMotion) return null
@@ -138,6 +256,104 @@ export function AmbientLayer({ season }: { season: SeasonId }) {
                         <i />
                     </span>
                 ))}
+            {season === 'spring' &&
+                BLOSSOMS.map((style, index) => (
+                    <span key={index} className="seasonal-blossom" style={style}>
+                        <i />
+                    </span>
+                ))}
+            {season === 'summer' && <div className="seasonal-rays" />}
+            {season === 'autumn' &&
+                LEAVES.map((style, index) => (
+                    <span key={index} className="seasonal-leaf" style={style}>
+                        <i>
+                            <svg viewBox="0 0 24 24">
+                                <path d={LEAF} />
+                                <path d={LEAF_VEIN} />
+                            </svg>
+                        </i>
+                    </span>
+                ))}
+            {season === 'winter' && (
+                <>
+                    <div className="seasonal-icicles">
+                        <i />
+                    </div>
+                    {WINTER_FLAKES.map((style, index) => (
+                        <span key={index} className="seasonal-flake" style={style}>
+                            <i />
+                        </span>
+                    ))}
+                </>
+            )}
+            {season === 'christmas-summer' && (
+                <>
+                    <div className="seasonal-rays" />
+                    {TWINKLES.map((style, index) => (
+                        <span key={index} className="seasonal-twinkle" style={style}>
+                            <svg viewBox="0 0 24 24">
+                                <path d={SPARKLE} />
+                            </svg>
+                        </span>
+                    ))}
+                </>
+            )}
+            {season === 'new-year' &&
+                BLOOMS.map((style, index) => (
+                    <span key={index} className="seasonal-bloom" style={style as CSSProperties}>
+                        <i>
+                            {SPARK_ANGLES.map((angle, spark) => (
+                                <b key={spark} style={angle} />
+                            ))}
+                        </i>
+                    </span>
+                ))}
+            {season === 'lunar-new-year' &&
+                LANTERNS.map((style, index) => (
+                    <span key={index} className="seasonal-lantern" style={style}>
+                        <i>
+                            <svg viewBox="0 0 24 32">
+                                <path d={LANTERN_TASSEL} />
+                                <path d={LANTERN_BODY} />
+                                <path d={LANTERN_RIBS} />
+                                <path d={LANTERN_CAPS} />
+                            </svg>
+                        </i>
+                    </span>
+                ))}
+            {season === 'valentines' &&
+                HEARTS.map((style, index) => (
+                    <span key={index} className="seasonal-heart" style={style}>
+                        <i>
+                            <svg viewBox="0 0 24 24">
+                                <path d={HEART} />
+                            </svg>
+                        </i>
+                    </span>
+                ))}
+            {season === 'st-patricks' && (
+                <>
+                    {SHAMROCKS.map((style, index) => (
+                        <span key={index} className="seasonal-shamrock" style={style}>
+                            <i>
+                                <svg viewBox="0 0 24 24">
+                                    {SHAMROCK_ANGLES.map(angle => (
+                                        <path key={angle} d={SHAMROCK_LEAF} transform={`rotate(${angle} 12 12)`} />
+                                    ))}
+                                    <path d={SHAMROCK_STEM} fill="none" strokeWidth={1.6} strokeLinecap="round" />
+                                </svg>
+                            </i>
+                        </span>
+                    ))}
+                    {GOLD_GLINTS.map((style, index) => (
+                        <span key={index} className="seasonal-gold-glint" style={style}>
+                            <svg viewBox="0 0 24 24">
+                                <path d={SPARKLE} />
+                            </svg>
+                        </span>
+                    ))}
+                </>
+            )}
             {season === 'easter' && (
                 <>
                     {PETALS.map((style, index) => (

@@ -8,23 +8,23 @@ import { useTheme } from '@/app/theme/ThemeProvider'
 import { THEMES, type ThemeMeta } from '@/app/theme/themes'
 import { TIMEZONE_OPTIONS, browserResolvedTimezone, useDisplayTimezoneOverride } from '@/app/utils/timezone'
 import {
-    loadSeasonalThemes,
+    loadSeasonalEffects,
     readSeasonOverride,
-    saveSeasonalThemes,
-    subscribeSeasonalThemes,
+    saveSeasonalEffects,
+    subscribeSeasonalEffects,
     subscribeSeasonOverride,
     writeSeasonOverride,
 } from '@/app/seasonal/preferences'
-import { SEASONS, isSeasonOverride } from '@/app/seasonal/seasons'
-import { joinWithAnd } from '@/app/utils/wording'
+import { ENTRIES, isEntryPreview } from '@/app/seasonal/seasons'
+import { SEASONAL_THEME_ID } from '@/app/seasonal/appearance'
+import { dismissSeasonalNotice } from '@/app/components/pages/home/seasonalNoticeStorage'
+import { HemisphereRow, useSeasonalCard } from './SeasonalThemeOptions'
 
 const SEASON_PREVIEW_OPTIONS = [
     { value: '', label: 'Automatic (by date)' },
-    ...SEASONS.map(season => ({ value: season.id, label: season.label })),
     { value: 'none', label: 'No season' },
+    ...ENTRIES.map(entry => ({ value: entry.id, label: entry.label })),
 ]
-
-const SEASONAL_THEMES_DESCRIPTION = `Small ${joinWithAnd(SEASONS.map(season => season.label))} touches while those seasons are on. Colours only change on the UTBT Blue theme.`
 
 interface LauncherAppearanceSettingsProps {
     unlockExclusive?: boolean
@@ -33,18 +33,23 @@ interface LauncherAppearanceSettingsProps {
 export function LauncherAppearanceSettings({ unlockExclusive }: LauncherAppearanceSettingsProps) {
     const { themeId, setThemeId } = useTheme()
     const [timezoneOverride, setTimezoneOverride] = useDisplayTimezoneOverride()
-    const seasonalThemes = useSyncExternalStore(subscribeSeasonalThemes, loadSeasonalThemes)
     const seasonPreview = useSyncExternalStore(subscribeSeasonOverride, readSeasonOverride)
+    const seasonalCard = useSeasonalCard()
+    const seasonalEffects = useSyncExternalStore(subscribeSeasonalEffects, loadSeasonalEffects)
 
     const renderCard = (theme: ThemeMeta) => {
         const active = theme.id === themeId
         const locked = !!theme.exclusive && !unlockExclusive
+        const seasonal = theme.id === SEASONAL_THEME_ID
         return (
             <button
                 key={theme.id}
                 onClick={() => {
                     if (locked) openExternal('https://patreon.com/utbt')
-                    else setThemeId(theme.id)
+                    else {
+                        setThemeId(theme.id)
+                        if (seasonal) dismissSeasonalNotice()
+                    }
                 }}
                 aria-pressed={active}
                 title={locked ? 'Exclusive to Patreon supporters — click to learn more' : undefined}
@@ -58,7 +63,7 @@ export function LauncherAppearanceSettings({ unlockExclusive }: LauncherAppearan
             >
                 <span
                     className="size-9 shrink-0 rounded-md border border-hairline/10"
-                    style={{ background: theme.swatch }}
+                    style={{ background: seasonal ? seasonalCard.swatch : theme.swatch }}
                 />
                 <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
@@ -69,9 +74,17 @@ export function LauncherAppearanceSettings({ unlockExclusive }: LauncherAppearan
                                 Patreon
                             </span>
                         )}
+                        {theme.new && (
+                            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wider px-1 py-0.5 rounded bg-hairline/10 border border-hairline/25 text-foreground shrink-0">
+                                <Sparkles className="size-2.5" />
+                                New
+                            </span>
+                        )}
                     </div>
                     <div className="text-xs text-muted-foreground truncate">
-                        {locked ? 'Patreon supporters only. Click to join' : theme.description}
+                        {locked
+                            ? 'Patreon supporters only. Click to join'
+                            : (seasonal && seasonalCard.summary) || theme.description}
                     </div>
                 </div>
                 {locked
@@ -95,6 +108,22 @@ export function LauncherAppearanceSettings({ unlockExclusive }: LauncherAppearan
                 <div className="grid grid-cols-1 @md/panel:grid-cols-2 gap-3 p-4">
                     {gradients.map(renderCard)}
                 </div>
+                {themeId === SEASONAL_THEME_ID && (
+                    <>
+                        <HemisphereRow />
+                        <SettingsRow
+                            label="Effects"
+                            description="Ambient effects behind the pages, and a burst when you click the logo."
+                        >
+                            <Switch
+                                aria-label="Seasonal effects"
+                                checked={seasonalEffects}
+                                onCheckedChange={saveSeasonalEffects}
+                                className="h-11 border-x-0 border-y-[10px] px-0.5 bg-clip-padding"
+                            />
+                        </SettingsRow>
+                    </>
+                )}
             </SettingsSection>
 
             <SettingsSection title="Solid Colours" icon={Contrast}>
@@ -103,18 +132,12 @@ export function LauncherAppearanceSettings({ unlockExclusive }: LauncherAppearan
                 </div>
             </SettingsSection>
 
-            <SettingsSection title="Seasonal Themes" icon={Sparkles}>
-                <SettingsRow
-                    label="Seasonal themes"
-                    description={SEASONAL_THEMES_DESCRIPTION}
-                >
-                    <Switch checked={seasonalThemes} onCheckedChange={saveSeasonalThemes} aria-label="Seasonal themes" />
-                </SettingsRow>
-                {import.meta.env.DEV && (
-                    <SettingsRow label="Season preview" description="Development only. Forces a season for this session.">
+            {import.meta.env.DEV && (
+                <SettingsSection title="Season Preview" icon={Sparkles}>
+                    <SettingsRow label="Season preview" description="Development only. Shows a season or holiday on the Seasonal theme for this session.">
                         <select
                             value={seasonPreview ?? ''}
-                            onChange={e => writeSeasonOverride(isSeasonOverride(e.target.value) ? e.target.value : null)}
+                            onChange={e => writeSeasonOverride(isEntryPreview(e.target.value) ? e.target.value : null)}
                             style={{ colorScheme: 'dark' }}
                             className="h-9 w-full @md/panel:w-64 rounded-md border border-hairline/10 bg-card/50 px-3 text-sm text-foreground"
                         >
@@ -123,8 +146,8 @@ export function LauncherAppearanceSettings({ unlockExclusive }: LauncherAppearan
                             ))}
                         </select>
                     </SettingsRow>
-                )}
-            </SettingsSection>
+                </SettingsSection>
+            )}
 
             <SettingsSection title="Time Zone" icon={Clock}>
                 <SettingsRow

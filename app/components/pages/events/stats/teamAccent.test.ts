@@ -10,6 +10,7 @@ type Rgb = [number, number, number]
 const accentsCss = readFileSync(resolve(__dirname, 'teamAccents.css'), 'utf8')
 const themesCss = readFileSync(resolve(__dirname, '../../../../styles/themes.css'), 'utf8')
 const themeCss = readFileSync(resolve(__dirname, '../../../../styles/theme.css'), 'utf8')
+const seasonsCss = readFileSync(resolve(__dirname, '../../../../styles/seasons.css'), 'utf8')
 
 const MIN_TEXT_CONTRAST = 4.5
 const MIN_HUE_DISTANCE = 25
@@ -126,20 +127,26 @@ const darkAccents = declarations(accentBlocks.find(block => block.selector === '
 const lightAccents = declarations(accentBlocks.find(block => block.selector === ":root[data-theme='light']")!.body)
 
 const themeBlocks = blocks(themesCss).filter(block => /^:root(\[data-theme='[\w-]+'\])?$/.test(block.selector))
+function surfacesIn(theme: string, vars: Record<string, string>) {
+    return ['--background', '--card'].filter(name => name in vars).map(name => ({
+        theme,
+        name,
+        rgb: colorToLinear(vars[name], `${theme} ${name}`),
+    }))
+}
 function surfacesOf(cssBlocks: { selector: string; body: string }[], selectors: string[]) {
     return cssBlocks
         .filter(block => selectors.includes(block.selector))
-        .flatMap(block => {
-            const vars = declarations(block.body)
-            return ['--background', '--card'].filter(name => name in vars).map(name => ({
-                theme: block.selector,
-                name,
-                rgb: colorToLinear(vars[name], `${block.selector} ${name}`),
-            }))
-        })
+        .flatMap(block => surfacesIn(block.selector, declarations(block.body)))
 }
 const lightSelector = ":root[data-theme='light']"
-const darkSurfaces = surfacesOf(themeBlocks, themeBlocks.map(block => block.selector).filter(selector => selector !== lightSelector))
+const seasonalBase = declarations(themeBlocks.find(block => block.selector === ":root[data-theme='seasonal']")!.body)
+const seasonBlocks = blocks(seasonsCss)
+const seasonalSurfaces = seasonBlocks.flatMap(block => surfacesIn(block.selector, { ...seasonalBase, ...declarations(block.body) }))
+const darkSurfaces = [
+    ...surfacesOf(themeBlocks, themeBlocks.map(block => block.selector).filter(selector => selector !== lightSelector)),
+    ...seasonalSurfaces,
+]
 const lightSurfaces = surfacesOf(themeBlocks, [lightSelector])
 
 const pickBanTones = declarations(themeCss)
@@ -237,6 +244,14 @@ describe('theme surface parsing', () => {
             expect(() => surfaceOf(value)).toThrow(/probe.*--background.*translucent/)
         }
     )
+
+    it('reads the background and card of the Seasonal base and of every seasonal block, inherited ones included', () => {
+        const scored = (theme: string) => darkSurfaces.filter(surface => surface.theme === theme).map(surface => surface.name)
+        expect(seasonBlocks.length).toBeGreaterThan(0)
+        for (const selector of [":root[data-theme='seasonal']", ...seasonBlocks.map(block => block.selector)]) {
+            expect(scored(selector), selector).toEqual(['--background', '--card'])
+        }
+    })
 
     it('has a surface block for every registered theme', () => {
         const selectors = themeBlocks.map(block => block.selector)

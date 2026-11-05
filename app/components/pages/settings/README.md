@@ -57,8 +57,12 @@ web placeholder group below), and add the panel to each shell that shows it.
   `app.setWindowBehavior`, the Updates card and the Remove old copy row.
 - **Launcher Demos**: the demo watcher through `app.get/setDemoWatcherConfig`, plus
   `AutoDemoRec` in `UTBT_UserSettings.ini` `[UserSettings]`.
-- **Launcher Appearance**: theme (`useTheme`) and display timezone override; no IPC, works
-  on both targets.
+- **Launcher Appearance**: theme (`useTheme`), display timezone override, and while Seasonal
+  is the saved theme its Hemisphere (`utbt:hemisphere:v1`) and Effects
+  (`utbt:seasonalEffects:v1`) rows, both synced through `app/seasonal/preferences.ts`; picking
+  Seasonal also dismisses Home's new-theme notice (`utbt:seasonalNotice:v1`). Dev builds add a
+  "Season preview" select that writes the session preview. No IPC, works on both targets
+  ([styling.md](../../../../agents/styling.md#the-seasonal-card)).
 - **Launcher Privacy**: analytics consent (`app/utils/telemetry.ts`) and data deletion.
 - **Game panels** (player, controls, video, audio, gameplay) read and write the UT99 ini
   files directly.

@@ -1,10 +1,37 @@
-import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
-import { activeSeason, resolveSeason, type SeasonId } from './seasons'
-import { loadSeasonalThemes, readSeasonOverride, subscribeSeasonalThemes, subscribeSeasonOverride, writeSeasonCache } from './preferences'
+import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { useTheme } from '@/app/theme/ThemeProvider'
+import { SEASONAL_THEME_ID, resolveAppearance } from './appearance'
+import { detectHemisphere, deviceTimeZone, resolveHemisphere, type Hemisphere, type HemisphereSetting } from './hemisphere'
+import type { EntryId } from './seasons'
+import {
+    loadHemisphereSetting,
+    readEntryPreview,
+    readHemisphereOverride,
+    subscribeHemisphereOverride,
+    subscribeHemisphereSetting,
+    subscribeSeasonOverride,
+    writeSeasonCache,
+} from './preferences'
 
 const RECHECK_MS = 60 * 60 * 1000
 
-const SeasonContext = createContext<SeasonId | null>(null)
+export interface HemisphereState {
+    resolved: Hemisphere
+    detected: Hemisphere
+    setting: HemisphereSetting
+}
+
+interface SeasonContextValue {
+    seasonal: EntryId | null
+    logo: EntryId | null
+    hemisphere: HemisphereState
+}
+
+const SeasonContext = createContext<SeasonContextValue>({
+    seasonal: null,
+    logo: null,
+    hemisphere: { resolved: 'north', detected: 'north', setting: 'auto' },
+})
 
 function useNow(): Date {
     const [now, setNow] = useState(() => new Date())
@@ -22,26 +49,46 @@ function useNow(): Date {
 
 export function SeasonProvider({ children }: { children: ReactNode }) {
     const now = useNow()
-    const enabled = useSyncExternalStore(subscribeSeasonalThemes, loadSeasonalThemes, () => true)
-    const override = useSyncExternalStore(subscribeSeasonOverride, readSeasonOverride, () => null)
-    const dateSeason = activeSeason(now)
-    const dateSeasonId = dateSeason?.id ?? null
-    const dateSeasonUntil = dateSeason?.until ?? 0
-    const season = resolveSeason({ dateSeason: dateSeasonId, enabled, override })
+    const { themeId, setPreviewThemeId } = useTheme()
+    const preview = useSyncExternalStore(subscribeSeasonOverride, readEntryPreview, () => null)
+    const hemisphereSetting = useSyncExternalStore(subscribeHemisphereSetting, loadHemisphereSetting, () => 'auto' as const)
+    const hemispherePreview = useSyncExternalStore(subscribeHemisphereOverride, readHemisphereOverride, () => null)
+    const timeZone = deviceTimeZone()
+    const { seasonal, logo } = resolveAppearance({ now, themeId, preview, timeZone, hemisphereSetting, hemispherePreview })
+    const cache = resolveAppearance({ now, themeId: SEASONAL_THEME_ID, preview: null, timeZone, hemisphereSetting, hemispherePreview: null })
+    const detected = detectHemisphere(timeZone)
+    const resolved = resolveHemisphere({ timeZone, setting: hemisphereSetting, preview: hemispherePreview })
+    const previewingEntry = preview !== null && preview !== 'none'
 
     useEffect(() => {
-        writeSeasonCache(dateSeasonId ? { id: dateSeasonId, until: dateSeasonUntil } : null)
-    }, [dateSeasonId, dateSeasonUntil])
+        writeSeasonCache({ id: cache.seasonal, until: cache.until })
+    }, [cache.seasonal, cache.until])
+
+    useEffect(() => {
+        setPreviewThemeId(previewingEntry ? SEASONAL_THEME_ID : null)
+    }, [previewingEntry, setPreviewThemeId])
 
     useEffect(() => {
         const root = document.documentElement
-        if (season) root.setAttribute('data-season', season)
+        if (seasonal) root.setAttribute('data-season', seasonal)
         else root.removeAttribute('data-season')
-    }, [season])
+    }, [seasonal])
 
-    return <SeasonContext.Provider value={season}>{children}</SeasonContext.Provider>
+    const value = useMemo(
+        () => ({ seasonal, logo, hemisphere: { resolved, detected, setting: hemisphereSetting } }),
+        [seasonal, logo, resolved, detected, hemisphereSetting],
+    )
+    return <SeasonContext.Provider value={value}>{children}</SeasonContext.Provider>
 }
 
-export function useSeason(): SeasonId | null {
-    return useContext(SeasonContext)
+export function useSeasonalEntry(): EntryId | null {
+    return useContext(SeasonContext).seasonal
+}
+
+export function useLogoEntry(): EntryId | null {
+    return useContext(SeasonContext).logo
+}
+
+export function useHemisphere(): HemisphereState {
+    return useContext(SeasonContext).hemisphere
 }
