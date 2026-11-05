@@ -1,0 +1,10 @@
+{
+  "code": "unknown_key",
+  "data": {
+    "keys": [
+      "foo"
+    ]
+  },
+  "error": "These settings do not exist.",
+  "success": false
+}

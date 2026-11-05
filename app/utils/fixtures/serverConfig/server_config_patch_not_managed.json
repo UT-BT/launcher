@@ -1,0 +1,10 @@
+{
+  "code": "not_managed",
+  "data": {
+    "keys": [
+      "motd_1"
+    ]
+  },
+  "error": "This server's settings are not managed yet. Only the ruleset and region can change.",
+  "success": false
+}

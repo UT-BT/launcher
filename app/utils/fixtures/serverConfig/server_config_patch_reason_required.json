@@ -1,0 +1,5 @@
+{
+  "code": "reason_required",
+  "error": "A ruleset change needs a reason.",
+  "success": false
+}

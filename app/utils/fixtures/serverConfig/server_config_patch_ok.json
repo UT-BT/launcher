@@ -1,0 +1,269 @@
+{
+  "data": {
+    "apply": {
+      "mode": "now",
+      "restart": {
+        "held": false,
+        "unit_state": "activating"
+      }
+    },
+    "config": {
+      "applied_version": 3,
+      "cached_version": 4,
+      "drift": []
+    },
+    "keys": [
+      {
+        "editable_by": "staff",
+        "group": "listing",
+        "id": "server_name",
+        "state": "editable"
+      },
+      {
+        "editable_by": "admin",
+        "group": "listing",
+        "id": "region",
+        "state": "editable"
+      },
+      {
+        "editable_by": "admin",
+        "group": "listing",
+        "id": "admin_name",
+        "state": "editable"
+      },
+      {
+        "editable_by": "admin",
+        "group": "listing",
+        "id": "admin_email",
+        "state": "editable"
+      },
+      {
+        "editable_by": "admin",
+        "group": "listing",
+        "id": "motd_1",
+        "state": "editable"
+      },
+      {
+        "editable_by": "admin",
+        "group": "listing",
+        "id": "motd_2",
+        "state": "editable"
+      },
+      {
+        "editable_by": "admin",
+        "group": "listing",
+        "id": "motd_3",
+        "state": "editable"
+      },
+      {
+        "editable_by": "admin",
+        "group": "listing",
+        "id": "motd_4",
+        "state": "editable"
+      },
+      {
+        "editable_by": "admin",
+        "group": "access",
+        "id": "max_players",
+        "state": "locked"
+      },
+      {
+        "editable_by": "admin",
+        "group": "access",
+        "id": "max_spectators",
+        "state": "editable"
+      },
+      {
+        "editable_by": "staff",
+        "group": "access",
+        "id": "game_password",
+        "state": "editable"
+      },
+      {
+        "editable_by": "admin",
+        "group": "access",
+        "id": "mute_spectators",
+        "state": "editable"
+      },
+      {
+        "editable_by": "admin",
+        "group": "match",
+        "id": "tournament",
+        "state": "editable"
+      },
+      {
+        "editable_by": "admin",
+        "group": "start_map",
+        "id": "start_map",
+        "state": "editable"
+      },
+      {
+        "editable_by": "admin",
+        "group": "gameplay",
+        "id": "time_limit",
+        "state": "editable"
+      },
+      {
+        "editable_by": "admin",
+        "group": "gameplay",
+        "id": "goal_team_score",
+        "state": "editable"
+      },
+      {
+        "editable_by": "admin",
+        "group": "gameplay",
+        "id": "sudden_death",
+        "state": "editable"
+      },
+      {
+        "editable_by": "admin",
+        "group": "gameplay",
+        "id": "checkpoints",
+        "state": "editable"
+      },
+      {
+        "editable_by": "admin",
+        "group": "gameplay",
+        "id": "player_collisions",
+        "state": "locked"
+      },
+      {
+        "editable_by": "admin",
+        "group": "gameplay",
+        "id": "spectate_after_cap",
+        "state": "editable"
+      },
+      {
+        "editable_by": "admin",
+        "group": "gameplay",
+        "id": "allow_boosted_caps",
+        "state": "locked"
+      },
+      {
+        "editable_by": "admin",
+        "group": "gameplay",
+        "id": "idle_to_spec_minutes",
+        "state": "editable"
+      },
+      {
+        "editable_by": "admin",
+        "group": "gameplay",
+        "id": "board_label_text",
+        "state": "editable"
+      },
+      {
+        "editable_by": "admin",
+        "group": "gameplay",
+        "id": "board_label_color",
+        "state": "editable"
+      },
+      {
+        "editable_by": "admin",
+        "group": "gameplay",
+        "id": "allowed_teams",
+        "state": "editable"
+      },
+      {
+        "editable_by": "admin",
+        "group": "gameplay",
+        "id": "winter_scoreboard",
+        "state": "editable"
+      },
+      {
+        "editable_by": "admin",
+        "group": "mapvote",
+        "id": "spectator_votes",
+        "state": "editable"
+      },
+      {
+        "editable_by": "admin",
+        "group": "mapvote",
+        "id": "mid_game_vote_percent",
+        "state": "editable"
+      },
+      {
+        "editable_by": "admin",
+        "group": "mapvote",
+        "id": "vote_time_limit",
+        "state": "editable"
+      },
+      {
+        "editable_by": "admin",
+        "group": "mapvote",
+        "id": "scoreboard_delay",
+        "state": "editable"
+      },
+      {
+        "editable_by": "admin",
+        "group": "mapvote",
+        "id": "switch_on_empty",
+        "state": "editable"
+      },
+      {
+        "editable_by": "admin",
+        "group": "mapvote",
+        "id": "empty_minutes",
+        "state": "editable"
+      },
+      {
+        "editable_by": "admin",
+        "group": "mapvote",
+        "id": "random_map",
+        "state": "editable"
+      },
+      {
+        "editable_by": "admin",
+        "group": "mapvote",
+        "id": "default_map",
+        "state": "editable"
+      }
+    ],
+    "layout": "cutover",
+    "managed": true,
+    "ruleset": "certified",
+    "server_id": "7c3e9d14-2a5b-4f68-8e01-3b9c4d5e6f01",
+    "values": {
+      "admin_email": "admins@example.com",
+      "admin_name": "BT Admins",
+      "allow_boosted_caps": false,
+      "allowed_teams": 0,
+      "board_label_color": {
+        "a": 0,
+        "b": 55,
+        "g": 175,
+        "r": 212
+      },
+      "board_label_text": "Certified Server",
+      "checkpoints": true,
+      "default_map": "",
+      "empty_minutes": 10,
+      "game_password": "example-pass",
+      "goal_team_score": 0,
+      "idle_to_spec_minutes": 5,
+      "max_players": 2,
+      "max_spectators": 10,
+      "mid_game_vote_percent": 50,
+      "motd_1": "Cup qualifiers tonight at 20:00 UTC",
+      "motd_2": "",
+      "motd_3": "Join us on Discord",
+      "motd_4": "https://example.com/",
+      "mute_spectators": false,
+      "player_collisions": false,
+      "random_map": true,
+      "region": "Germany",
+      "scoreboard_delay": 10,
+      "server_name": "[BT] Test Server #1 (EU)",
+      "spectate_after_cap": false,
+      "spectator_votes": false,
+      "start_map": "CTF-BT-andACTION-dbl",
+      "sudden_death": true,
+      "switch_on_empty": true,
+      "time_limit": 0,
+      "tournament": false,
+      "vote_time_limit": 60,
+      "winter_scoreboard": false
+    },
+    "version": 5
+  },
+  "success": true
+}

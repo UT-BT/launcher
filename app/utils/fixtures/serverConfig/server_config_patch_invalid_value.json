@@ -1,0 +1,10 @@
+{
+  "code": "invalid_value",
+  "data": {
+    "keys": [
+      "max_players"
+    ]
+  },
+  "error": "These values are not allowed for their settings.",
+  "success": false
+}

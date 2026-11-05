@@ -1,0 +1,10 @@
+{
+  "code": "after_cutover",
+  "data": {
+    "keys": [
+      "sudden_death"
+    ]
+  },
+  "error": "These settings are available after this server's cutover.",
+  "success": false
+}

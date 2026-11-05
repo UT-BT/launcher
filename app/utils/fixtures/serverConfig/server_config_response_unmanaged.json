@@ -1,0 +1,221 @@
+{
+  "data": {
+    "config": null,
+    "keys": [
+      {
+        "editable_by": "staff",
+        "group": "listing",
+        "id": "server_name",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "admin",
+        "group": "listing",
+        "id": "region",
+        "state": "editable"
+      },
+      {
+        "editable_by": "admin",
+        "group": "listing",
+        "id": "admin_name",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "admin",
+        "group": "listing",
+        "id": "admin_email",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "admin",
+        "group": "listing",
+        "id": "motd_1",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "admin",
+        "group": "listing",
+        "id": "motd_2",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "admin",
+        "group": "listing",
+        "id": "motd_3",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "admin",
+        "group": "listing",
+        "id": "motd_4",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "admin",
+        "group": "access",
+        "id": "max_players",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "admin",
+        "group": "access",
+        "id": "max_spectators",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "staff",
+        "group": "access",
+        "id": "game_password",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "admin",
+        "group": "access",
+        "id": "mute_spectators",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "admin",
+        "group": "match",
+        "id": "tournament",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "admin",
+        "group": "start_map",
+        "id": "start_map",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "admin",
+        "group": "gameplay",
+        "id": "time_limit",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "admin",
+        "group": "gameplay",
+        "id": "goal_team_score",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "admin",
+        "group": "gameplay",
+        "id": "sudden_death",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "admin",
+        "group": "gameplay",
+        "id": "checkpoints",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "admin",
+        "group": "gameplay",
+        "id": "player_collisions",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "admin",
+        "group": "gameplay",
+        "id": "spectate_after_cap",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "admin",
+        "group": "gameplay",
+        "id": "allow_boosted_caps",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "admin",
+        "group": "gameplay",
+        "id": "idle_to_spec_minutes",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "admin",
+        "group": "gameplay",
+        "id": "board_label_text",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "admin",
+        "group": "gameplay",
+        "id": "board_label_color",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "admin",
+        "group": "gameplay",
+        "id": "allowed_teams",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "admin",
+        "group": "gameplay",
+        "id": "winter_scoreboard",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "admin",
+        "group": "mapvote",
+        "id": "spectator_votes",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "admin",
+        "group": "mapvote",
+        "id": "mid_game_vote_percent",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "admin",
+        "group": "mapvote",
+        "id": "vote_time_limit",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "admin",
+        "group": "mapvote",
+        "id": "scoreboard_delay",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "admin",
+        "group": "mapvote",
+        "id": "switch_on_empty",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "admin",
+        "group": "mapvote",
+        "id": "empty_minutes",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "admin",
+        "group": "mapvote",
+        "id": "random_map",
+        "state": "not_managed"
+      },
+      {
+        "editable_by": "admin",
+        "group": "mapvote",
+        "id": "default_map",
+        "state": "not_managed"
+      }
+    ],
+    "layout": null,
+    "managed": false,
+    "ruleset": "casual",
+    "server_id": "7c3e9d14-2a5b-4f68-8e01-3b9c4d5e6f02",
+    "values": {
+      "region": "United States",
+      "server_name": "BT Test Server | US"
+    },
+    "version": null
+  },
+  "success": true
+}

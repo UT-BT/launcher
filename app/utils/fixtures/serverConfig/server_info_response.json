@@ -1,0 +1,103 @@
+[
+  {
+    "blue_team_score": 0,
+    "certified_records": true,
+    "goal_team_score": 3,
+    "hostname": "[BT] Duel Server #1 (EU)",
+    "hostport": 7777,
+    "id": "7c3e9d14-2a5b-4f68-8e01-3b9c4d5e6f01",
+    "ip": "192.0.2.10",
+    "map_name": "CTF-BT-andACTION-dbl",
+    "max_players": 2,
+    "password_protected": false,
+    "player_count": 2,
+    "players": [
+      {
+        "active_title": null,
+        "alias": "Player1",
+        "deaths": 0,
+        "id": "1001",
+        "is_spectator": false,
+        "name": "Player1",
+        "ping": 48,
+        "slot": 0,
+        "team": 0,
+        "time": 600
+      },
+      {
+        "active_title": null,
+        "alias": null,
+        "deaths": 0,
+        "id": "1002",
+        "is_spectator": false,
+        "name": "Player2",
+        "ping": 48,
+        "slot": 1,
+        "team": 1,
+        "time": 600
+      }
+    ],
+    "red_team_score": 1,
+    "region": "Germany",
+    "remaining_time_seconds": 540,
+    "ruleset": "certified",
+    "spectators": 0,
+    "time_limit_minutes": 15,
+    "tournament": true
+  },
+  {
+    "blue_team_score": 0,
+    "certified_records": false,
+    "goal_team_score": 0,
+    "hostname": "BT Test Server | US",
+    "hostport": 7777,
+    "id": "7c3e9d14-2a5b-4f68-8e01-3b9c4d5e6f02",
+    "ip": "198.51.100.20",
+    "map_name": "CTF-BT-Maverick",
+    "max_players": 12,
+    "password_protected": true,
+    "player_count": 1,
+    "players": [
+      {
+        "active_title": null,
+        "alias": null,
+        "deaths": 0,
+        "id": "1003",
+        "is_spectator": false,
+        "name": "Player3",
+        "ping": 48,
+        "slot": 0,
+        "team": 0,
+        "time": 600
+      }
+    ],
+    "red_team_score": 0,
+    "region": "United States",
+    "remaining_time_seconds": 0,
+    "ruleset": "casual",
+    "spectators": 0,
+    "time_limit_minutes": 0,
+    "tournament": false
+  },
+  {
+    "blue_team_score": 0,
+    "certified_records": true,
+    "goal_team_score": 0,
+    "hostname": "BT Test Server | AU",
+    "hostport": 7777,
+    "id": "7c3e9d14-2a5b-4f68-8e01-3b9c4d5e6f03",
+    "ip": "203.0.113.30",
+    "map_name": "CTF-BT-Example",
+    "max_players": 16,
+    "password_protected": null,
+    "player_count": 0,
+    "players": [],
+    "red_team_score": 0,
+    "region": "Australia",
+    "remaining_time_seconds": 0,
+    "ruleset": "certified",
+    "spectators": 0,
+    "time_limit_minutes": 0,
+    "tournament": null
+  }
+]

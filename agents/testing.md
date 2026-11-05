@@ -86,9 +86,9 @@ add `-t "<test name>"`. `npm test -- pickBan` runs every file whose path contain
 ### Golden contract fixtures
 
 Each area under `app/utils/fixtures/` (`eventStats/`, `mapUploads/`, `pickBanVeto/`,
-`runCompare/`, `serverControl/`, `streamSides/`) holds API responses as JSON, frozen byte for
-byte. `runCompare/` holds the pairwise comparison bodies and the team comparison bodies
-(`team_compare_*.json`), each a copy of the API's own contract example
+`runCompare/`, `serverConfig/`, `serverControl/`, `streamSides/`) holds API responses as JSON,
+frozen byte for byte. `runCompare/` holds the pairwise comparison bodies and the team comparison
+bodies (`team_compare_*.json`), each a copy of the API's own contract example
 ([api.md](api.md#team-comparison)):
 
 - `<area>Fixtures.ts` imports every file into a registry (`file`, `route`, `status`, `body` per
@@ -102,6 +102,10 @@ byte. `runCompare/` holds the pairwise comparison bodies and the team comparison
   because the API repo holds byte-identical copies with the same lines; change a file only together
   with every copy and its `SHA256SUMS` line. Its floats always carry a fraction (`2.5`, never `2.0`),
   so every JSON serializer writes the same bytes.
+- `serverConfig/` (server settings, rulesets, the operations rows with their ruleset, config,
+  build and players blocks, the public server rows and the settings audit rows) follows the same
+  `SHA256SUMS` rule. The operations field-for-field check runs on its `operations_response.json`;
+  the `serverControl/` copy stays as it is and is checked without those four blocks.
 - The folder's `.gitattributes` (`*.json -text`) keeps git from rewriting line endings, which
   would break the pins. `.prettierignore` keeps Prettier off them for the same reason.
 

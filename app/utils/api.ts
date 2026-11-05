@@ -5155,12 +5155,187 @@ export interface AdminOperationsServer extends AdminHostServer {
     probe: AdminServerProbe
     runtime: AdminServerRuntime
     control?: ServerControl
+    ruleset?: ServerOperationsRuleset
+    config?: ServerOperationsConfig
+    build?: ServerOperationsBuild
+    players?: string[] | null
 }
 
 export interface AdminServerOperations {
     hosts: AdminHost[]
     servers: AdminOperationsServer[]
     generated_at: string | null
+}
+
+export type ServerRuleset = 'casual' | 'certified'
+
+export interface ServerConfigColor {
+    r: number
+    g: number
+    b: number
+    a: number
+}
+
+export interface ServerConfigValueMap {
+    server_name: string
+    region: string
+    admin_name: string
+    admin_email: string
+    motd_1: string
+    motd_2: string
+    motd_3: string
+    motd_4: string
+    max_players: number
+    max_spectators: number
+    game_password: string
+    mute_spectators: boolean
+    tournament: boolean
+    start_map: string
+    time_limit: number
+    goal_team_score: number
+    sudden_death: boolean
+    checkpoints: boolean
+    player_collisions: boolean
+    spectate_after_cap: boolean
+    allow_boosted_caps: boolean
+    idle_to_spec_minutes: number
+    board_label_text: string
+    board_label_color: ServerConfigColor
+    allowed_teams: number
+    winter_scoreboard: boolean
+    spectator_votes: boolean
+    mid_game_vote_percent: number
+    vote_time_limit: number
+    scoreboard_delay: number
+    switch_on_empty: boolean
+    empty_minutes: number
+    random_map: boolean
+    default_map: string
+}
+
+export type ServerConfigKeyId = keyof ServerConfigValueMap
+
+export type ServerConfigValues = Partial<ServerConfigValueMap>
+
+export type ServerConfigGroup = 'listing' | 'access' | 'match' | 'start_map' | 'gameplay' | 'mapvote'
+
+export type ServerConfigEditor = 'staff' | 'admin'
+
+export type ServerConfigKeyState = 'editable' | 'locked' | 'after_cutover' | 'not_managed'
+
+export type ServerConfigLayout = 'cutover' | 'legacy'
+
+export interface ServerConfigKey {
+    id: ServerConfigKeyId
+    group: ServerConfigGroup
+    editable_by: ServerConfigEditor
+    state: ServerConfigKeyState
+}
+
+export interface ServerConfigRuntime {
+    cached_version: number | null
+    applied_version: number | null
+    drift: ServerConfigKeyId[]
+}
+
+export interface AdminServerConfig {
+    server_id: string
+    managed: boolean
+    layout: ServerConfigLayout | null
+    version: number | null
+    ruleset: ServerRuleset
+    values: ServerConfigValues
+    keys: ServerConfigKey[]
+    config: ServerConfigRuntime | null
+}
+
+export type ServerConfigApplyChoice = 'when_empty' | 'now'
+
+export type ServerConfigApplyMode = ServerConfigApplyChoice | 'next_map'
+
+export interface ServerConfigChange {
+    changes: ServerConfigValues & { ruleset?: ServerRuleset }
+    apply?: ServerConfigApplyChoice
+    reason?: string
+}
+
+export type ServerConfigRestart =
+    | { unit_state: ServerUnitState; held: boolean }
+    | { error: 'rate_limited'; retry_after: number }
+    | { error: 'agent_error' }
+
+export interface ServerConfigApply {
+    mode: ServerConfigApplyMode
+    restart: ServerConfigRestart | null
+}
+
+export interface ServerConfigPatchResult extends AdminServerConfig {
+    apply: ServerConfigApply
+}
+
+export type ServerConfigKeysErrorCode =
+    | 'unknown_key'
+    | 'invalid_value'
+    | 'forbidden_key'
+    | 'not_managed'
+    | 'after_cutover'
+    | 'locked_key'
+
+export type ServerConfigErrorCode = ServerConfigKeysErrorCode | 'reason_required' | 'no_changes'
+
+export interface ServerConfigErrorKeys {
+    keys: string[]
+}
+
+export type ServerConfigErrorBody =
+    | { success: false; error: string; code: ServerConfigKeysErrorCode; data: ServerConfigErrorKeys }
+    | { success: false; error: string; code: 'reason_required' | 'no_changes' }
+
+export interface ServerOperationsRuleset {
+    desired: ServerRuleset
+    in_force: ServerRuleset | null
+    pending: boolean
+    team_run_active: boolean | null
+}
+
+export type ServerConfigState = 'applied' | 'pending' | 'drift' | 'not_managed'
+
+export interface ServerOperationsConfig {
+    state: ServerConfigState
+    version: number | null
+    cached_version: number | null
+    applied_version: number | null
+    drift: ServerConfigKeyId[]
+}
+
+export interface ServerOperationsBuild {
+    utbt_build: string | null
+    server_packages: string[]
+}
+
+export interface ServerListingFields {
+    ruleset: ServerRuleset
+    region: string | null
+    tournament: boolean | null
+    password_protected: boolean | null
+}
+
+export interface ServerRulesetAuditDetails {
+    before: { ruleset: ServerRuleset }
+    after: { ruleset: ServerRuleset }
+}
+
+export interface ServerConfigAuditDetails {
+    before: ServerConfigValues
+    after: ServerConfigValues
+    version: number
+    apply: ServerConfigApplyChoice
+}
+
+export interface ServerConfigSeedAuditDetails {
+    after: ServerConfigValues
+    version: number
+    renamed?: { before: string; after: string }
 }
 
 export interface AdminHostMetricPoint {

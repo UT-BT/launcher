@@ -1,0 +1,10 @@
+{
+  "code": "locked_key",
+  "data": {
+    "keys": [
+      "allow_boosted_caps"
+    ]
+  },
+  "error": "The certified ruleset sets these settings.",
+  "success": false
+}

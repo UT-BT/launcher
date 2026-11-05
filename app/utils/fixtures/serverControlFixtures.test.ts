@@ -221,7 +221,9 @@ const control = object<ServerControl>({
     unavailable: nullable(oneOf(UNAVAILABLE)),
 })
 
-const operationsServer = object<AdminOperationsServer>({
+type Phase5OperationsServer = Omit<AdminOperationsServer, 'ruleset' | 'config' | 'build' | 'players'>
+
+const operationsServer = object<Phase5OperationsServer>({
     id: uuid,
     name: str,
     region: nullable(str),
