@@ -3,16 +3,13 @@ import { BellRing, CircleCheck, CircleHelp, CirclePause, CircleSlash, Play, Refr
 import type { LucideIcon } from 'lucide-react'
 import {
   fetchAdminServerOperations,
-  restartServer,
-  startServer,
-  stopServer,
   type AdminAlert,
   type AdminOperationsServer,
   type AdminServerOperations,
   type ServerAction,
-  type ServerActionOutcome,
 } from '@/app/utils/api'
 import { capabilities } from '@/app/platform'
+import { restartServer, startServer, stopServer, type ServerActionOutcome } from './serverActions'
 import { cn } from '@/lib/utils'
 import type { AdminSectionProps, Tone } from '../types'
 import { SectionShell } from '../components/SectionShell'

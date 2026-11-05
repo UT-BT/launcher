@@ -207,7 +207,9 @@ The map-author fetchers back `MapAuthorsModal`, opened from Maps Management.
   `restartServer`, `startServer` and `stopServer` (`POST /admin/servers/<id>/<action>`, empty
   body) answer a `ServerActionOutcome`: the result, or a typed failure (`rate_limited` with
   `retry_after`, `action_not_offered` with the current `unit_state` and `actions`,
-  `not_managed`, `agent_error`). Anything else throws an `ApiError`.
+  `not_managed`, `agent_error`). Anything else throws an `ApiError`. They live in
+  `sections/serverActions.ts`, not `api.ts`, so they load with the admin chunk instead of the
+  web entry, which has no room for them.
 - The launcher never works the state machine out itself. An item is enabled exactly when its
   action is in `control.actions`; otherwise it is disabled with the reason as its title and
   hint: "Host not managed", "Host agent unreachable", or "Not available while <state>"

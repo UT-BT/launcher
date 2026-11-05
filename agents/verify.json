@@ -495,6 +495,7 @@
     "app/components/pages/admin/sections/OverviewSection.tsx",
     "app/components/pages/admin/sections/PatchesManagementSection.tsx",
     "app/components/pages/admin/sections/ServerOperationsSection.tsx",
+    "app/components/pages/admin/sections/serverActions.ts",
     "app/components/pages/admin/sections/serverControl.ts",
     "app/components/pages/admin/sections/StreamersSection.tsx",
     "app/components/pages/admin/sections/TitleManagementSection.tsx",

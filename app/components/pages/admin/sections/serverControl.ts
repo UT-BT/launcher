@@ -3,10 +3,10 @@ import type {
   AdminOperationsServer,
   AdminServerProbe,
   ServerAction,
-  ServerActionFailure,
   ServerControl,
   ServerUnitState,
 } from '@/app/utils/api'
+import type { ServerActionFailure } from './serverActions'
 import { ADMIN_DASHBOARD_ROLES, ADMIN_ONLY_ROLES } from '@/app/utils/roles'
 import type { Tone } from '../types'
 
