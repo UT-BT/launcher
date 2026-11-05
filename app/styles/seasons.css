@@ -178,6 +178,66 @@
   --input: hsl(354 28% 17.5%);
 }
 
+:root[data-theme='seasonal'][data-season='valentines'] {
+  --accent-50: oklch(0.97 0.014 12);
+  --accent-100: oklch(0.94 0.03 12);
+  --accent-200: oklch(0.89 0.058 11);
+  --accent-300: oklch(0.815 0.106 10);
+  --accent-400: oklch(0.72 0.178 10);
+  --accent-500: oklch(0.59 0.205 10);
+  --accent-600: oklch(0.535 0.195 11);
+  --accent-700: oklch(0.475 0.175 12);
+  --accent-800: oklch(0.415 0.148 12);
+  --accent-900: oklch(0.37 0.118 12);
+  --accent-950: oklch(0.27 0.08 12);
+
+  --accent-glow-rgb: 253 164 175;
+
+  --nebula-1: 225, 29, 72;
+  --nebula-2: 251, 113, 133;
+  --nebula-3: 159, 18, 57;
+  --nebula-4: 254, 205, 211;
+
+  --background: hsl(340 38% 10%);
+  --card: hsl(340 38% 11.5%);
+  --popover: hsl(340 38% 11.5%);
+  --secondary: hsl(340 26% 19%);
+  --muted: hsl(340 26% 19%);
+  --accent: hsl(340 26% 19%);
+  --border: hsl(340 26% 19%);
+  --input: hsl(340 26% 19%);
+}
+
+:root[data-theme='seasonal'][data-season='st-patricks'] {
+  --accent-50: oklch(0.98 0.025 150);
+  --accent-100: oklch(0.955 0.06 150);
+  --accent-200: oklch(0.912 0.11 150);
+  --accent-300: oklch(0.857 0.165 149);
+  --accent-400: oklch(0.785 0.2 149);
+  --accent-500: oklch(0.545 0.149 150);
+  --accent-600: oklch(0.495 0.132 151);
+  --accent-700: oklch(0.45 0.118 152);
+  --accent-800: oklch(0.405 0.104 153);
+  --accent-900: oklch(0.36 0.09 154);
+  --accent-950: oklch(0.27 0.06 155);
+
+  --accent-glow-rgb: 74 222 128;
+
+  --nebula-1: 34, 197, 94;
+  --nebula-2: 21, 128, 61;
+  --nebula-3: 250, 204, 21;
+  --nebula-4: 22, 163, 74;
+
+  --background: hsl(138 36% 7.5%);
+  --card: hsl(138 36% 9%);
+  --popover: hsl(138 36% 9%);
+  --secondary: hsl(138 22% 16.5%);
+  --muted: hsl(138 22% 16.5%);
+  --accent: hsl(138 22% 16.5%);
+  --border: hsl(138 22% 16.5%);
+  --input: hsl(138 22% 16.5%);
+}
+
 :root[data-theme='seasonal'][data-season='halloween'] {
   --accent-50: oklch(0.98 0.016 73.684);
   --accent-100: oklch(0.954 0.038 75.164);

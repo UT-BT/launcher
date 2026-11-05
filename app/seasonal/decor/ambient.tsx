@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { usePrefersReducedMotion } from '@/app/hooks/usePrefersReducedMotion'
 import type { EntryId } from '../seasons'
-import { BAT_BODY, BAT_WING, BLOSSOM_COLORS, FIREWORK_COLORS, GOLD_COLORS, LANTERN_BODY, LANTERN_CAPS, LANTERN_RIBS, LANTERN_TASSEL, LEAF, LEAF_COLORS, LEAF_VEIN, MIRROR_BAT, SPARKLE, seededRandom } from './shapes'
+import { BAT_BODY, BAT_WING, BLOSSOM_COLORS, FIREWORK_COLORS, GOLD_COLORS, HEART, HEART_COLORS, LANTERN_BODY, LANTERN_CAPS, LANTERN_RIBS, LANTERN_TASSEL, LEAF, LEAF_COLORS, LEAF_VEIN, MIRROR_BAT, SHAMROCK_ANGLES, SHAMROCK_COLORS, SHAMROCK_LEAF, SHAMROCK_STEM, SPARKLE, seededRandom } from './shapes'
 
 type Vars = Record<`--${string}`, string>
 
@@ -108,6 +108,49 @@ const LANTERNS = particles(67, 6, random => {
         '--delay': `${(-random() * duration).toFixed(1)}s`,
         '--sway': `${(8 + random() * 14).toFixed(0)}px`,
         '--swayd': `${(4 + random() * 3).toFixed(1)}s`,
+    }
+})
+
+const HEARTS = particles(79, 8, (random, index) => {
+    const duration = 16 + random() * 10
+    return {
+        '--x': `${(4 + random() * 92).toFixed(1)}%`,
+        '--y': `${(45 + random() * 45).toFixed(1)}%`,
+        '--s': `${(10 + random() * 8).toFixed(0)}px`,
+        '--o': (0.3 + random() * 0.2).toFixed(2),
+        '--rise': `${(28 + random() * 18).toFixed(0)}vh`,
+        '--d': `${duration.toFixed(1)}s`,
+        '--delay': `${(-random() * duration).toFixed(1)}s`,
+        '--c': HEART_COLORS[index % HEART_COLORS.length],
+        '--sway': `${(6 + random() * 10).toFixed(0)}px`,
+        '--swayd': `${(3 + random() * 2.5).toFixed(1)}s`,
+    }
+})
+
+const SHAMROCKS = particles(83, 8, (random, index) => {
+    const duration = 26 + random() * 14
+    return {
+        '--x': `${(random() * 96).toFixed(1)}%`,
+        '--s': `${(12 + random() * 7).toFixed(0)}px`,
+        '--o': (0.35 + random() * 0.2).toFixed(2),
+        '--dx': `${(-10 + random() * 20).toFixed(1)}vw`,
+        '--d': `${duration.toFixed(1)}s`,
+        '--delay': `${(-random() * duration).toFixed(1)}s`,
+        '--c': SHAMROCK_COLORS[index % SHAMROCK_COLORS.length],
+        '--tumble': `${(5 + random() * 4).toFixed(1)}s`,
+        '--sway': `${(14 + random() * 16).toFixed(0)}px`,
+    }
+})
+
+const GOLD_GLINTS = particles(89, 6, random => {
+    const duration = 6 + random() * 5
+    return {
+        '--x': `${(4 + random() * 92).toFixed(1)}%`,
+        '--y': `${(6 + random() * 80).toFixed(1)}%`,
+        '--s': `${(5 + random() * 4).toFixed(0)}px`,
+        '--o': (0.25 + random() * 0.2).toFixed(2),
+        '--d': `${duration.toFixed(1)}s`,
+        '--delay': `${(-random() * duration).toFixed(1)}s`,
     }
 })
 
@@ -278,6 +321,39 @@ export function AmbientLayer({ season }: { season: EntryId }) {
                         </i>
                     </span>
                 ))}
+            {season === 'valentines' &&
+                HEARTS.map((style, index) => (
+                    <span key={index} className="seasonal-heart" style={style}>
+                        <i>
+                            <svg viewBox="0 0 24 24">
+                                <path d={HEART} />
+                            </svg>
+                        </i>
+                    </span>
+                ))}
+            {season === 'st-patricks' && (
+                <>
+                    {SHAMROCKS.map((style, index) => (
+                        <span key={index} className="seasonal-shamrock" style={style}>
+                            <i>
+                                <svg viewBox="0 0 24 24">
+                                    {SHAMROCK_ANGLES.map(angle => (
+                                        <path key={angle} d={SHAMROCK_LEAF} transform={`rotate(${angle} 12 12)`} />
+                                    ))}
+                                    <path d={SHAMROCK_STEM} fill="none" strokeWidth={1.6} strokeLinecap="round" />
+                                </svg>
+                            </i>
+                        </span>
+                    ))}
+                    {GOLD_GLINTS.map((style, index) => (
+                        <span key={index} className="seasonal-gold-glint" style={style}>
+                            <svg viewBox="0 0 24 24">
+                                <path d={SPARKLE} />
+                            </svg>
+                        </span>
+                    ))}
+                </>
+            )}
             {season === 'easter' && (
                 <>
                     {PETALS.map((style, index) => (

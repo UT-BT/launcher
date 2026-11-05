@@ -82,6 +82,26 @@ describe('ENTRIES', () => {
         expect(lunarNewYear?.window(2051, 'north')).toBeNull()
     })
 
+    it('follows Lunar New Year with Valentine\'s Day and St Patrick\'s Day, holidays for both hemispheres with their own logos', () => {
+        expect(REGISTRY.slice(6, 8).map(({ id, label, kind, hemisphere, logo }) => ({ id, label, kind, hemisphere, logo }))).toEqual([
+            { id: 'valentines', label: 'Valentine\'s Day', kind: 'holiday', hemisphere: undefined, logo: undefined },
+            { id: 'st-patricks', label: 'St Patrick\'s Day', kind: 'holiday', hemisphere: undefined, logo: undefined },
+        ])
+        expect(REGISTRY[8].id).toBe('easter')
+    })
+
+    it('runs Valentine\'s Day from Feb 12 to 15, in both hemispheres', () => {
+        const valentines = REGISTRY.find(entry => entry.id === 'valentines')
+        expect(valentines?.window(2026, 'north')).toEqual({ start: new Date(2026, 1, 12), endExclusive: new Date(2026, 1, 16) })
+        expect(valentines?.window(2026, 'south')).toEqual(valentines?.window(2026, 'north'))
+    })
+
+    it('runs St Patrick\'s Day from Mar 15 to 17, in both hemispheres', () => {
+        const stPatricks = REGISTRY.find(entry => entry.id === 'st-patricks')
+        expect(stPatricks?.window(2026, 'north')).toEqual({ start: new Date(2026, 2, 15), endExclusive: new Date(2026, 2, 18) })
+        expect(stPatricks?.window(2026, 'south')).toEqual(stPatricks?.window(2026, 'north'))
+    })
+
     it('closes with Summer Christmas, southern only and on the Christmas logo, while Christmas stays northern', () => {
         const last = REGISTRY[REGISTRY.length - 1]
         expect({ id: last.id, label: last.label, kind: last.kind, hemisphere: last.hemisphere, logo: last.logo }).toEqual({

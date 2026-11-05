@@ -3,14 +3,13 @@ import { resolve } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
 import { horizontalOverflow } from './layout'
 import { ENTRIES, ENTRY_IDS, type Entry, type EntryId } from '../app/seasonal/seasons'
-import { COIN, ICE_CRYSTAL, LANTERN_BODY, LEAF, SPARKLE, STAR } from '../app/seasonal/decor/shapes'
+import { COIN, HEART, ICE_CRYSTAL, LANTERN_BODY, LEAF, SHAMROCK_STEM, SPARKLE, STAR } from '../app/seasonal/decor/shapes'
 import { dataFrom } from './mobile/fixtures/data'
 import { fixtureSetNamed } from './mobile/fixtures'
 import { serveFixtureSet } from './mobile/fixtures/router'
 import { worldRecords } from './mobile/manifest/world-records'
 
 const SEASONAL_LOGO = new RegExp(`logo-(${ENTRY_IDS.join('|')})`)
-const NO_AMBIENT: readonly EntryId[] = []
 const SEASONS = ENTRIES.filter(entry => entry.kind === 'season').map(entry => entry.id)
 const SEASON_PARTICLES = 8
 const LOGO_FILES = new Map((ENTRIES as readonly Entry[]).map(entry => [entry.id, entry.logo ?? entry.id]))
@@ -129,8 +128,7 @@ for (const season of ENTRY_IDS) {
         const layer = page.locator('.seasonal-layer')
         await expect(layer).toHaveAttribute('data-season-layer', season)
         await expect(layer).toHaveCSS('pointer-events', 'none')
-        if (NO_AMBIENT.includes(season)) await expect(layer.locator(':scope > *')).toHaveCount(0)
-        else await expect(layer.locator(':scope > *').first()).toBeAttached()
+        await expect(layer.locator(':scope > *').first()).toBeAttached()
         expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1)
         expect(await nonCompositorProperties(page)).toEqual([])
     })
@@ -701,6 +699,133 @@ test.describe('New Year and Lunar New Year', () => {
     const BURSTS: Array<[EntryId, string, string, string]> = [
         ['new-year', 'sparkles and confetti', `:scope > span > svg > path[d="${SPARKLE}"]`, ':scope > span.seasonal-burst-confetti'],
         ['lunar-new-year', 'lanterns and gold coins', `:scope > span > svg > path[d="${LANTERN_BODY}"]`, `:scope > span > svg > path[d="${COIN}"]`],
+    ]
+
+    for (const [season, label, first, second] of BURSTS) {
+        test(`clicking the sidebar logo on ${season} fires ${label} once per cooldown`, async ({ page, isMobile }) => {
+            test.skip(isMobile, 'the burst lives on the desktop sidebar logo')
+            await page.goto(`/?season=${season}`)
+            await expect(sidebarLogo(page)).toHaveAttribute('src', new RegExp(`logo-${season}`))
+            await sidebarLogo(page).click()
+            const burst = page.locator('.seasonal-burst')
+            await expect(burst).toHaveCount(1)
+            const particles = await burst.locator(':scope > span').count()
+            const firsts = await burst.locator(first).count()
+            const seconds = await burst.locator(second).count()
+            expect(firsts).toBeGreaterThan(0)
+            expect(seconds).toBeGreaterThan(0)
+            expect(firsts + seconds).toBe(particles)
+            expect(await nonCompositorProperties(page)).toEqual([])
+            await sidebarLogo(page).click()
+            await expect(burst).toHaveCount(1)
+            await expect(burst).toHaveCount(0, { timeout: 5000 })
+        })
+    }
+})
+
+test.describe('Valentine\'s Day and St Patrick\'s Day', () => {
+    const HOLIDAY_PARTICLES = 16
+    const VALENTINES_2029 = new Date(2029, 1, 13, 12, 0)
+    const LUNAR_NEW_YEAR_2029 = new Date(2029, 1, 16, 12, 0)
+    const ST_PATRICKS_2008 = new Date(2008, 2, 16, 12, 0)
+    const EASTER_2008 = new Date(2008, 2, 18, 12, 0)
+
+    const NARROWEST: Array<[string, Date, EntryId, Date, EntryId]> = [
+        ['Valentine\'s Day beats Lunar New Year in 2029, which then takes over', VALENTINES_2029, 'valentines', LUNAR_NEW_YEAR_2029, 'lunar-new-year'],
+        ['St Patrick\'s Day beats an early Easter in 2008, which then takes over', ST_PATRICKS_2008, 'st-patricks', EASTER_2008, 'easter'],
+    ]
+
+    for (const [label, on, holiday, after, next] of NARROWEST) {
+        test(`on the Seasonal theme, ${label}`, async ({ page, isMobile }) => {
+            await followCalendar(page, on, 'seasonal')
+            await page.goto('/')
+            await expect(page.locator('html')).toHaveAttribute('data-season', holiday)
+            await expect(page.locator('html')).toHaveClass(/(^|\s)dark(\s|$)/)
+            await expect(logo(page, isMobile)).toHaveAttribute('src', new RegExp(`logo-${holiday}`))
+            await expect(page.locator('.seasonal-layer')).toHaveAttribute('data-season-layer', holiday)
+
+            await page.clock.setFixedTime(after)
+            await page.reload()
+            await expect(page.locator('html')).toHaveAttribute('data-season', next)
+            await expect(logo(page, isMobile)).toHaveAttribute('src', new RegExp(`logo-${next}`))
+        })
+    }
+
+    const ON_RED: Array<[string, Date, RegExp]> = [
+        ['Valentine\'s Day', VALENTINES_2029, /logo-valentines/],
+        ['St Patrick\'s Day', ST_PATRICKS_2008, /logo-st-patricks/],
+    ]
+
+    for (const [label, now, file] of ON_RED) {
+        test(`Red shows only the ${label} logo and never loads the decorations`, async ({ page, isMobile }) => {
+            const requests = decorRequests(page)
+            await followCalendar(page, now, 'red')
+            await page.goto('/')
+            await expect(logo(page, isMobile)).toHaveAttribute('src', file)
+            await expect(page.locator('html')).toHaveAttribute('data-theme', 'red')
+            await expect(page.locator('html')).not.toHaveAttribute('data-season', /.+/)
+            await expect(page.locator('.seasonal-layer')).toHaveCount(0)
+            expect(requests.filter(url => url.includes('SeasonalDecor'))).toEqual([])
+        })
+    }
+
+    test('Valentine\'s Day floats a few soft hearts up, within the holiday budget', async ({ page }) => {
+        await page.setViewportSize({ width: 1280, height: 800 })
+        await page.goto('/?season=valentines')
+        const layer = page.locator('.seasonal-layer')
+        await expect(layer).toHaveAttribute('data-season-layer', 'valentines')
+        const desktop = await particleCounts(page)
+        expect(desktop.total).toBeGreaterThan(0)
+        expect(desktop.total).toBeLessThanOrEqual(HOLIDAY_PARTICLES)
+        expect(desktop.visible).toBe(desktop.total)
+        expect(await layer.locator(`:scope > span.seasonal-heart path[d="${HEART}"]`).count()).toBe(desktop.total)
+
+        await page.setViewportSize({ width: 390, height: 844 })
+        const phone = await particleCounts(page)
+        expect(phone.visible).toBeLessThanOrEqual(HOLIDAY_PARTICLES / 2)
+        expect(phone.visible).toBeLessThanOrEqual(Math.ceil(desktop.total / 2))
+        expect(await nonCompositorProperties(page)).toEqual([])
+    })
+
+    test('St Patrick\'s Day drifts a few shamrocks with faint gold glints, within the holiday budget', async ({ page }) => {
+        await page.setViewportSize({ width: 1280, height: 800 })
+        await page.goto('/?season=st-patricks')
+        const layer = page.locator('.seasonal-layer')
+        await expect(layer).toHaveAttribute('data-season-layer', 'st-patricks')
+        const desktop = await particleCounts(page)
+        const shamrocks = await layer.locator(`:scope > span.seasonal-shamrock:has(path[d="${SHAMROCK_STEM}"])`).count()
+        const glints = await layer.locator(`:scope > span.seasonal-gold-glint:has(path[d="${SPARKLE}"])`).count()
+        expect(shamrocks).toBeGreaterThan(0)
+        expect(glints).toBeGreaterThan(0)
+        expect(shamrocks + glints).toBe(desktop.total)
+        expect(desktop.total).toBeLessThanOrEqual(HOLIDAY_PARTICLES)
+        expect(desktop.visible).toBe(desktop.total)
+
+        await page.setViewportSize({ width: 390, height: 844 })
+        const phone = await particleCounts(page)
+        expect(phone.visible).toBeLessThanOrEqual(HOLIDAY_PARTICLES / 2)
+        expect(phone.visible).toBeLessThanOrEqual(Math.ceil(desktop.total / 2))
+        expect(await nonCompositorProperties(page)).toEqual([])
+    })
+
+    const GLYPHS: Array<[EntryId, string]> = [
+        ['valentines', 'lucide-heart'],
+        ['st-patricks', 'lucide-clover'],
+    ]
+
+    for (const [season, glyph] of GLYPHS) {
+        test(`the ${season} spinner shows its own moving glyph`, async ({ page }) => {
+            await page.route(/https:\/\/api\.utbt\.net\/.*/, () => {})
+            await page.goto(`/compare?season=${season}`)
+            const spinner = page.locator('.compare-start-empty').filter({ hasText: 'Loading records' }).locator('svg')
+            await expect(spinner).toHaveClass(new RegExp(`(^|\\s)${glyph}(\\s|$)`))
+            await expect(spinner).not.toHaveCSS('animation-name', 'none')
+        })
+    }
+
+    const BURSTS: Array<[EntryId, string, string, string]> = [
+        ['valentines', 'hearts and rose petals', `:scope > span > svg > path[d="${HEART}"]`, ':scope > span.seasonal-burst-petal'],
+        ['st-patricks', 'shamrocks and gold glints', `:scope > span:has(path[d="${SHAMROCK_STEM}"])`, `:scope > span > svg > path[d="${SPARKLE}"]`],
     ]
 
     for (const [season, label, first, second] of BURSTS) {

@@ -43,3 +43,16 @@ export const LANTERN_RIBS = 'M12 6V24M8 6.5C5.5 10 5.5 20 8 23.5M16 6.5C18.5 10 
 export const LANTERN_TASSEL = 'M12 0V4M12 26V31'
 
 export const COIN = 'M12 2A10 10 0 1 0 12 22A10 10 0 1 0 12 2ZM9.5 9.5V14.5H14.5V9.5Z'
+
+export const HEART = 'M12 21 C12 21 2 14.6 2 8.4 C2 5.4 4.4 3 7.3 3 C9.3 3 11 4.1 12 5.8 C13 4.1 14.7 3 16.7 3 C19.6 3 22 5.4 22 8.4 C22 14.6 12 21 12 21 Z'
+
+export const HEART_COLORS = ['#fb7185', '#fda4af', '#f43f5e', '#fecdd3']
+
+export const SHAMROCK_LEAF =
+    'M12 12 C9.5 10.2 6.6 8 6.6 5.4 C6.6 3.6 8 2.3 9.6 2.3 C10.7 2.3 11.5 2.9 12 3.8 C12.5 2.9 13.3 2.3 14.4 2.3 C16 2.3 17.4 3.6 17.4 5.4 C17.4 8 14.5 10.2 12 12 Z'
+
+export const SHAMROCK_STEM = 'M12 12 C12.6 15.6 13.6 18.6 15.6 21.6'
+
+export const SHAMROCK_ANGLES = [0, 120, 240]
+
+export const SHAMROCK_COLORS = ['#4ade80', '#22c55e', '#86efac', '#16a34a']

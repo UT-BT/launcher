@@ -53,7 +53,15 @@ const HOLIDAY_WINDOWS: WindowCase[] = [
     ['an early Easter, 2035', at(2035, 3, 18), 'easter', 'easter'],
     ['the last day of a late Easter, 2038', at(2038, 5, 2), 'easter', 'easter'],
     ['the day after a late Easter, 2038', at(2038, 5, 3), null, 'spring'],
-    ['Valentine\'s Day', at(2026, 2, 14), null, 'winter'],
+    ['the minute before Valentine\'s Day', at(2028, 2, 11, 23, 59), null, 'winter'],
+    ['the local midnight Valentine\'s Day starts', at(2028, 2, 12), 'valentines', 'valentines'],
+    ['Valentine\'s Day', at(2026, 2, 14), 'valentines', 'valentines'],
+    ['the last minute of Valentine\'s Day', at(2028, 2, 15, 23, 59), 'valentines', 'valentines'],
+    ['the local midnight Valentine\'s Day ends', at(2028, 2, 16), null, 'winter'],
+    ['the minute before St Patrick\'s Day', at(2027, 3, 14, 23, 59), null, 'spring'],
+    ['the local midnight St Patrick\'s Day starts', at(2027, 3, 15), 'st-patricks', 'st-patricks'],
+    ['the last minute of St Patrick\'s Day', at(2027, 3, 17, 23, 59), 'st-patricks', 'st-patricks'],
+    ['the local midnight St Patrick\'s Day ends', at(2027, 3, 18), null, 'spring'],
     ['midsummer', at(2026, 7, 1), null, 'summer'],
     ['early December', at(2026, 12, 1), null, 'winter'],
 ]
@@ -106,7 +114,8 @@ describe('resolveAppearance until', () => {
         ['the next change from the midnight Christmas starts', at(2026, 12, 18), 'red', null, at(2026, 12, 31)],
         ['New Year ends, across the year change', at(2026, 12, 31), 'red', null, at(2027, 1, 4)],
         ['Lunar New Year starts, from early January', at(2027, 1, 10), 'classic', null, at(2027, 2, 5)],
-        ['Easter starts, after Lunar New Year', at(2027, 2, 20), 'classic', null, at(2027, 3, 21)],
+        ['St Patrick\'s Day starts, after Lunar New Year and Valentine\'s Day', at(2027, 2, 20), 'classic', null, at(2027, 3, 15)],
+        ['Easter starts, after St Patrick\'s Day', at(2027, 3, 18), 'classic', null, at(2027, 3, 21)],
         ['Easter ends', at(2026, 4, 1), 'red', null, at(2026, 4, 13)],
         ['the unpreviewed boundary under an entry preview', at(2026, 11, 20), 'red', 'christmas', at(2026, 12, 18)],
         ['the unpreviewed boundary under none', at(2026, 10, 30), 'seasonal', 'none', at(2026, 11, 8)],
@@ -338,7 +347,7 @@ describe('resolveAppearance at Lunar New Year', () => {
     const SOUTH: Where = { timeZone: 'Australia/Sydney' }
 
     const WINDOW: Array<[string, Date, EntryId, EntryId]> = [
-        ['the last minute before the eve, 2026', at(2026, 2, 15, 23, 59), 'winter', 'summer'],
+        ['the last minute before the eve, 2026, on Valentine\'s Day', at(2026, 2, 15, 23, 59), 'valentines', 'valentines'],
         ['the local midnight of the eve, 2026', at(2026, 2, 16), 'lunar-new-year', 'lunar-new-year'],
         ['Lunar New Year\'s Day, 2026', at(2026, 2, 17, 12), 'lunar-new-year', 'lunar-new-year'],
         ['the last minute of day 6, 2026', at(2026, 2, 22, 23, 59), 'lunar-new-year', 'lunar-new-year'],
@@ -373,8 +382,122 @@ describe('resolveAppearance at Lunar New Year', () => {
     })
 
     const UNTIL: Array<[string, Date, string, Date]> = [
-        ['it starts on the eve', at(2026, 2, 1), 'red', at(2026, 2, 16)],
+        ['it starts on the eve, as Valentine\'s Day ends', at(2026, 2, 14), 'red', at(2026, 2, 16)],
         ['it ends at the midnight after day 6', at(2026, 2, 17), 'seasonal', at(2026, 2, 23)],
+    ]
+
+    it.each(UNTIL)('until: %s', (_, now, themeId, next) => {
+        expect(resolveWhere(now, themeId, NORTH).until).toBe(next.getTime())
+    })
+})
+
+describe('resolveAppearance at Valentine\'s Day', () => {
+    const NORTH: Where = { timeZone: 'Europe/London' }
+    const SOUTH: Where = { timeZone: 'Australia/Sydney' }
+
+    const WINDOW: Array<[string, Date, EntryId, EntryId]> = [
+        ['the minute before it starts', at(2028, 2, 11, 23, 59), 'winter', 'summer'],
+        ['the local midnight it starts, Feb 12', at(2028, 2, 12), 'valentines', 'valentines'],
+        ['Feb 14', at(2028, 2, 14, 12), 'valentines', 'valentines'],
+        ['the last minute of Feb 15', at(2028, 2, 15, 23, 59), 'valentines', 'valentines'],
+        ['the local midnight it ends, Feb 16', at(2028, 2, 16), 'winter', 'summer'],
+    ]
+
+    it.each(WINDOW)('%s, in the north and in the south', (_, now, north, south) => {
+        expect(resolveWhere(now, 'seasonal', NORTH)).toMatchObject({ seasonal: north, logo: north })
+        expect(resolveWhere(now, 'seasonal', SOUTH)).toMatchObject({ seasonal: south, logo: south })
+    })
+
+    const COLLISION: Array<[string, Date, EntryId]> = [
+        ['Feb 12, 2029, when both start', at(2029, 2, 12), 'valentines'],
+        ['Feb 13, 2029, Lunar New Year\'s Day', at(2029, 2, 13, 12), 'valentines'],
+        ['the last minute of Feb 15, 2029', at(2029, 2, 15, 23, 59), 'valentines'],
+        ['Feb 16, 2029', at(2029, 2, 16, 12), 'lunar-new-year'],
+        ['the last minute of Feb 18, 2029', at(2029, 2, 18, 23, 59), 'lunar-new-year'],
+        ['Feb 19, 2029', at(2029, 2, 19), 'winter'],
+    ]
+
+    it.each(COLLISION)('beats the longer Lunar New Year: %s', (_, now, expected) => {
+        expect(resolveWhere(now, 'seasonal', NORTH)).toMatchObject({ seasonal: expected, logo: expected })
+        expect(resolveWhere(now, 'red', NORTH)).toMatchObject({ seasonal: null, logo: expected === 'winter' ? null : expected })
+    })
+
+    it('beats winter in the north and summer in the south, with its own logo', () => {
+        expect(resolveWhere(at(2027, 2, 14), 'seasonal', NORTH)).toMatchObject({ seasonal: 'valentines', logo: 'valentines' })
+        expect(resolveWhere(at(2027, 2, 14), 'seasonal', SOUTH)).toMatchObject({ seasonal: 'valentines', logo: 'valentines' })
+    })
+
+    it.each(['red', 'classic', 'light'])('on %s gives only the Valentine\'s Day logo', themeId => {
+        expect(resolveWhere(at(2027, 2, 14), themeId, NORTH)).toMatchObject({ seasonal: null, logo: 'valentines' })
+        expect(resolveWhere(at(2027, 2, 14), themeId, SOUTH)).toMatchObject({ seasonal: null, logo: 'valentines' })
+    })
+
+    it('a preview shows it in July', () => {
+        expect(resolveWhere(at(2026, 7, 1), 'red', NORTH, 'valentines')).toMatchObject({ seasonal: 'valentines', logo: 'valentines' })
+    })
+
+    const UNTIL: Array<[string, Date, string, Date]> = [
+        ['it starts in winter', at(2028, 2, 1), 'seasonal', at(2028, 2, 12)],
+        ['it ends at the midnight after Feb 15', at(2028, 2, 14), 'seasonal', at(2028, 2, 16)],
+        ['Lunar New Year takes over from it, 2029', at(2029, 2, 13), 'seasonal', at(2029, 2, 16)],
+        ['on Red, its end is the next change', at(2028, 2, 14), 'red', at(2028, 2, 16)],
+    ]
+
+    it.each(UNTIL)('until: %s', (_, now, themeId, next) => {
+        expect(resolveWhere(now, themeId, NORTH).until).toBe(next.getTime())
+    })
+})
+
+describe('resolveAppearance at St Patrick\'s Day', () => {
+    const NORTH: Where = { timeZone: 'Europe/London' }
+    const SOUTH: Where = { timeZone: 'Australia/Sydney' }
+
+    const WINDOW: Array<[string, Date, EntryId, EntryId]> = [
+        ['the minute before it starts', at(2027, 3, 14, 23, 59), 'spring', 'autumn'],
+        ['the local midnight it starts, Mar 15', at(2027, 3, 15), 'st-patricks', 'st-patricks'],
+        ['Mar 17', at(2027, 3, 17, 12), 'st-patricks', 'st-patricks'],
+        ['the last minute of Mar 17', at(2027, 3, 17, 23, 59), 'st-patricks', 'st-patricks'],
+        ['the local midnight it ends, Mar 18', at(2027, 3, 18), 'spring', 'autumn'],
+    ]
+
+    it.each(WINDOW)('%s, in the north and in the south', (_, now, north, south) => {
+        expect(resolveWhere(now, 'seasonal', NORTH)).toMatchObject({ seasonal: north, logo: north })
+        expect(resolveWhere(now, 'seasonal', SOUTH)).toMatchObject({ seasonal: south, logo: south })
+    })
+
+    const COLLISION: Array<[string, Date, EntryId]> = [
+        ['Mar 15, 2008, before Easter starts', at(2008, 3, 15, 12), 'st-patricks'],
+        ['Mar 16, 2008, when Easter starts', at(2008, 3, 16), 'st-patricks'],
+        ['Mar 17, 2008', at(2008, 3, 17, 12), 'st-patricks'],
+        ['the last minute of Mar 17, 2008', at(2008, 3, 17, 23, 59), 'st-patricks'],
+        ['Mar 18, 2008', at(2008, 3, 18), 'easter'],
+        ['Easter Sunday, Mar 23, 2008', at(2008, 3, 23, 12), 'easter'],
+    ]
+
+    it.each(COLLISION)('beats an early Easter: %s', (_, now, expected) => {
+        expect(resolveWhere(now, 'seasonal', NORTH)).toMatchObject({ seasonal: expected, logo: expected })
+        expect(resolveWhere(now, 'red', NORTH)).toMatchObject({ seasonal: null, logo: expected })
+    })
+
+    it('beats spring in the north and autumn in the south, with its own logo', () => {
+        expect(resolveWhere(at(2027, 3, 17), 'seasonal', NORTH)).toMatchObject({ seasonal: 'st-patricks', logo: 'st-patricks' })
+        expect(resolveWhere(at(2027, 3, 17), 'seasonal', SOUTH)).toMatchObject({ seasonal: 'st-patricks', logo: 'st-patricks' })
+    })
+
+    it.each(['red', 'classic', 'light'])('on %s gives only the St Patrick\'s Day logo', themeId => {
+        expect(resolveWhere(at(2027, 3, 17), themeId, NORTH)).toMatchObject({ seasonal: null, logo: 'st-patricks' })
+        expect(resolveWhere(at(2027, 3, 17), themeId, SOUTH)).toMatchObject({ seasonal: null, logo: 'st-patricks' })
+    })
+
+    it('a preview shows it in July', () => {
+        expect(resolveWhere(at(2026, 7, 1), 'red', NORTH, 'st-patricks')).toMatchObject({ seasonal: 'st-patricks', logo: 'st-patricks' })
+    })
+
+    const UNTIL: Array<[string, Date, string, Date]> = [
+        ['it starts in spring', at(2027, 3, 5), 'seasonal', at(2027, 3, 15)],
+        ['it ends at the midnight after Mar 17', at(2027, 3, 16), 'seasonal', at(2027, 3, 18)],
+        ['Easter takes over from it, 2008', at(2008, 3, 16), 'seasonal', at(2008, 3, 18)],
+        ['on Red, Easter takes over from it, 2008', at(2008, 3, 16), 'red', at(2008, 3, 18)],
     ]
 
     it.each(UNTIL)('until: %s', (_, now, themeId, next) => {

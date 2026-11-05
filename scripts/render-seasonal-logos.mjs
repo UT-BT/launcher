@@ -159,6 +159,22 @@ const SEASONS = {
     },
     layers: [],
   },
+  valentines: {
+    fur: null,
+    swirl: {
+      red: { light: { h: 352, s: 0.85, scale: 1, lift: 0 }, dark: { h: 345, s: 0.75, scale: 1, lift: 0.03 } },
+      blue: { light: { h: 330, s: 0.75, scale: 0.9, lift: 0.12 }, dark: { h: 320, s: 0.55, scale: 0.85, lift: 0.08 } },
+    },
+    layers: [],
+  },
+  'st-patricks': {
+    fur: null,
+    swirl: {
+      red: { light: { h: 28, s: 0.95, scale: 1, lift: 0.02 }, dark: { h: 18, s: 0.85, scale: 0.85, lift: 0 } },
+      blue: { light: { h: 135, s: 0.7, scale: 0.95, lift: 0 }, dark: { h: 145, s: 0.65, scale: 0.6, lift: 0 } },
+    },
+    layers: [],
+  },
   halloween: {
     fur: [206, 201, 189],
     swirl: {

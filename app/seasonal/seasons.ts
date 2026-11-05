@@ -72,6 +72,18 @@ export const ENTRIES = [
         },
     },
     {
+        id: 'valentines',
+        label: 'Valentine\'s Day',
+        kind: 'holiday',
+        window: year => ({ start: new Date(year, 1, 12), endExclusive: new Date(year, 1, 16) }),
+    },
+    {
+        id: 'st-patricks',
+        label: 'St Patrick\'s Day',
+        kind: 'holiday',
+        window: year => ({ start: new Date(year, 2, 15), endExclusive: new Date(year, 2, 18) }),
+    },
+    {
         id: 'easter',
         label: 'Easter',
         kind: 'holiday',

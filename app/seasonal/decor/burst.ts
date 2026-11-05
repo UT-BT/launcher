@@ -1,5 +1,5 @@
 import type { EntryId } from '../seasons'
-import { BAT_BODY, BAT_WING, BLOSSOM_COLORS, COIN, FIREWORK_COLORS, GOLD_COLORS, ICE_CRYSTAL, LANTERN_BODY, LANTERN_CAPS, LANTERN_RIBS, LANTERN_TASSEL, LEAF, LEAF_COLORS, LEAF_VEIN, MIRROR_BAT, SPARKLE, STAR, seededRandom } from './shapes'
+import { BAT_BODY, BAT_WING, BLOSSOM_COLORS, COIN, FIREWORK_COLORS, GOLD_COLORS, HEART, HEART_COLORS, ICE_CRYSTAL, LANTERN_BODY, LANTERN_CAPS, LANTERN_RIBS, LANTERN_TASSEL, LEAF, LEAF_COLORS, LEAF_VEIN, MIRROR_BAT, SHAMROCK_ANGLES, SHAMROCK_COLORS, SHAMROCK_LEAF, SHAMROCK_STEM, SPARKLE, STAR, seededRandom } from './shapes'
 
 const COOLDOWN_MS = 10_000
 const LIFETIME_MS = 2300
@@ -19,6 +19,8 @@ function drift(season: EntryId, angle: number, distance: number): [number, numbe
     if (season === 'christmas-summer') return [dx, Math.sin(angle) * distance * 0.7 + 20]
     if (season === 'new-year') return [dx * 1.1, Math.sin(angle) * distance * 1.1 + 15]
     if (season === 'lunar-new-year') return [dx * 0.9, -Math.abs(Math.sin(angle) * distance) * 0.6 - 25]
+    if (season === 'valentines') return [dx * 0.8, -Math.abs(Math.sin(angle) * distance) * 0.7 - 20]
+    if (season === 'st-patricks') return [dx, Math.sin(angle) * distance * 0.7 + 20]
     return [dx, Math.sin(angle) * distance]
 }
 
@@ -59,6 +61,19 @@ function particle(season: EntryId, index: number, random: () => number): HTMLSpa
     } else if (season === 'lunar-new-year') {
         const size = 9 + Math.round(random() * 3)
         element.innerHTML = `<svg viewBox="0 0 24 24" width="${size}" fill="#facc15" fill-rule="evenodd" stroke="#b45309" stroke-width="1.2"><path d="${COIN}"/></svg>`
+    } else if (season === 'valentines' && index % 2 === 0) {
+        const size = 11 + Math.round(random() * 6)
+        element.innerHTML = `<svg viewBox="0 0 24 24" width="${size}" fill="${HEART_COLORS[(index / 2) % HEART_COLORS.length]}" stroke="#9f1239" stroke-opacity="0.5" stroke-width="1"><path d="${HEART}"/></svg>`
+    } else if (season === 'valentines') {
+        element.className = 'seasonal-burst-petal'
+        element.style.setProperty('--c', HEART_COLORS[(index + 1) % HEART_COLORS.length])
+    } else if (season === 'st-patricks' && index % 2 === 0) {
+        const size = 12 + Math.round(random() * 6)
+        const color = SHAMROCK_COLORS[(index / 2) % SHAMROCK_COLORS.length]
+        element.innerHTML = `<svg viewBox="0 0 24 24" width="${size}" fill="${color}" stroke="${color}">${SHAMROCK_ANGLES.map(angle => `<path d="${SHAMROCK_LEAF}" transform="rotate(${angle} 12 12)"/>`).join('')}<path d="${SHAMROCK_STEM}" fill="none" stroke-width="1.6" stroke-linecap="round"/></svg>`
+    } else if (season === 'st-patricks') {
+        const size = 9 + Math.round(random() * 4)
+        element.innerHTML = `<svg viewBox="0 0 24 24" width="${size}" fill="${GOLD_COLORS[index % GOLD_COLORS.length]}"><path d="${SPARKLE}"/></svg>`
     } else {
         element.className = 'seasonal-burst-petal'
         element.style.setProperty('--c', PETAL_COLORS[index % PETAL_COLORS.length])
