@@ -36,6 +36,13 @@ export function easterSunday(year: number): Date {
     return new Date(year, month - 1, day)
 }
 
+function meteorological(northStartMonth: number): (year: number, hemisphere: Hemisphere) => EntryWindow {
+    return (year, hemisphere) => {
+        const month = hemisphere === 'north' ? northStartMonth : (northStartMonth + 6) % 12
+        return { start: new Date(year, month, 1), endExclusive: new Date(year, month + 3, 1) }
+    }
+}
+
 function daysAround(anchor: Date, before: number, after: number): EntryWindow {
     const year = anchor.getFullYear()
     const month = anchor.getMonth()
@@ -44,6 +51,16 @@ function daysAround(anchor: Date, before: number, after: number): EntryWindow {
 }
 
 export const ENTRIES = [
+    { id: 'spring', label: 'Spring', kind: 'season', window: meteorological(2) },
+    { id: 'summer', label: 'Summer', kind: 'season', window: meteorological(5) },
+    { id: 'autumn', label: 'Autumn', kind: 'season', window: meteorological(8) },
+    { id: 'winter', label: 'Winter', kind: 'season', window: meteorological(11) },
+    {
+        id: 'easter',
+        label: 'Easter',
+        kind: 'holiday',
+        window: year => daysAround(easterSunday(year), 7, 7),
+    },
     {
         id: 'halloween',
         label: 'Halloween',
@@ -56,12 +73,6 @@ export const ENTRIES = [
         kind: 'holiday',
         hemisphere: 'north',
         window: year => ({ start: new Date(year, 11, 18), endExclusive: new Date(year, 11, 31) }),
-    },
-    {
-        id: 'easter',
-        label: 'Easter',
-        kind: 'holiday',
-        window: year => daysAround(easterSunday(year), 7, 7),
     },
 ] as const satisfies readonly EntryDefinition[]
 

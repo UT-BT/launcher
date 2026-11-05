@@ -1,4 +1,4 @@
-import { createLucideIcon, Egg, Snowflake, type LucideProps } from 'lucide-react'
+import { createLucideIcon, Egg, Flower, Leaf, Snowflake, Sun, type LucideProps } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { EntryId } from '../seasons'
 
@@ -16,6 +16,10 @@ const Pumpkin = createLucideIcon('Pumpkin', [
 ])
 
 export function SeasonGlyph({ season, className, ...props }: LucideProps & { season: EntryId }) {
+    if (season === 'spring') return <Flower className={cn('animate-spin', className)} {...props} />
+    if (season === 'summer') return <Sun className={cn('animate-spin', className)} {...props} />
+    if (season === 'autumn') return <Leaf className={cn('seasonal-wobble', className)} {...props} />
+    if (season === 'winter') return <Snowflake className={className} {...props} />
     if (season === 'christmas') return <Snowflake className={cn('animate-spin', className)} {...props} />
     if (season === 'easter') return <Egg className={cn('seasonal-wobble', className)} {...props} />
     return <Pumpkin className={cn('seasonal-wobble', className)} {...props} />

@@ -111,6 +111,38 @@ const MOUSTACHE_LOWER = 'M 416 285 C 406 284 394 288 388 295 C 384 300 385 306 3
 const svg = body => `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">${body}</svg>`
 
 const SEASONS = {
+  spring: {
+    fur: null,
+    swirl: {
+      red: { light: { h: 335, s: 0.75, scale: 0.95, lift: 0.08 }, dark: { h: 330, s: 0.55, scale: 0.8, lift: 0 } },
+      blue: { light: { h: 92, s: 0.7, scale: 0.95, lift: 0.02 }, dark: { h: 118, s: 0.55, scale: 0.7, lift: 0 } },
+    },
+    layers: [],
+  },
+  summer: {
+    fur: null,
+    swirl: {
+      red: { light: { h: 40, s: 0.95, scale: 1, lift: 0.04 }, dark: { h: 22, s: 0.85, scale: 0.9, lift: 0 } },
+      blue: { light: { h: 192, s: 0.85, scale: 1, lift: 0.02 }, dark: { h: 205, s: 0.75, scale: 0.85, lift: 0.03 } },
+    },
+    layers: [],
+  },
+  autumn: {
+    fur: null,
+    swirl: {
+      red: { light: { h: 20, s: 0.9, scale: 1, lift: 0 }, dark: { h: 8, s: 0.75, scale: 1, lift: 0.04 } },
+      blue: { light: { h: 38, s: 0.85, scale: 1, lift: 0.02 }, dark: { h: 25, s: 0.6, scale: 0.85, lift: 0.04 } },
+    },
+    layers: [],
+  },
+  winter: {
+    fur: null,
+    swirl: {
+      red: { light: { h: 200, s: 0.2, scale: 0.7, lift: 0.32 }, dark: { h: 210, s: 0.2, scale: 0.7, lift: 0.12 } },
+      blue: { light: { h: 198, s: 0.7, scale: 0.9, lift: 0.12 }, dark: { h: 212, s: 0.45, scale: 0.85, lift: 0.08 } },
+    },
+    layers: [],
+  },
   halloween: {
     fur: [206, 201, 189],
     swirl: {

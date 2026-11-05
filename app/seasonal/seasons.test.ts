@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { ENTRIES, ENTRY_IDS, easterSunday, isEntryPreview } from './seasons'
+import { ENTRIES, ENTRY_IDS, easterSunday, isEntryPreview, type Entry } from './seasons'
+
+const REGISTRY: readonly Entry[] = ENTRIES
 
 const WESTERN_EASTER: Array<[number, number, number]> = [
     [2019, 4, 21],
@@ -43,6 +45,21 @@ describe('ENTRIES', () => {
 
     it('keeps Halloween, Christmas and Easter as holidays', () => {
         expect(ENTRIES.filter(entry => entry.kind === 'holiday').map(entry => entry.id)).toEqual(expect.arrayContaining(['halloween', 'christmas', 'easter']))
+    })
+
+    it('opens with the four seasons, each for both hemispheres', () => {
+        expect(REGISTRY.slice(0, 4).map(({ id, label, kind }) => ({ id, label, kind }))).toEqual([
+            { id: 'spring', label: 'Spring', kind: 'season' },
+            { id: 'summer', label: 'Summer', kind: 'season' },
+            { id: 'autumn', label: 'Autumn', kind: 'season' },
+            { id: 'winter', label: 'Winter', kind: 'season' },
+        ])
+        const seasons = REGISTRY.filter(entry => entry.kind === 'season')
+        expect(seasons).toHaveLength(4)
+        for (const season of seasons) {
+            expect(season.hemisphere, season.id).toBeUndefined()
+            expect(season.logo, season.id).toBeUndefined()
+        }
     })
 
     it('is where ENTRY_IDS comes from', () => {

@@ -2,11 +2,14 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
 import { horizontalOverflow } from './layout'
-import { ENTRIES, ENTRY_IDS } from '../app/seasonal/seasons'
+import { ENTRIES, ENTRY_IDS, type EntryId } from '../app/seasonal/seasons'
 
 const SEASONAL_LOGO = new RegExp(`logo-(${ENTRY_IDS.join('|')})`)
+const NO_AMBIENT: readonly EntryId[] = ['spring', 'summer', 'autumn', 'winter']
 const HALLOWEEN_NIGHT = new Date(2026, 9, 31, 20, 0)
 const CHRISTMAS_EVE = new Date(2026, 11, 24, 12, 0)
+const MIDSUMMER = new Date(2026, 6, 15, 12, 0)
+const DAY_MS = 24 * 60 * 60 * 1000
 const COMPOSITOR_PROPERTIES = new Set(['offset', 'easing', 'composite', 'computedOffset', 'transform', 'opacity'])
 const THEMES_CSS = readFileSync(resolve(__dirname, '../app/styles/themes.css'), 'utf8')
 const SEASONS_CSS = readFileSync(resolve(__dirname, '../app/styles/seasons.css'), 'utf8')
@@ -68,6 +71,10 @@ function decorRequests(page: Page): string[] {
     return requests
 }
 
+async function localMidnight(page: Page, year: number, monthIndex: number, day: number): Promise<number> {
+    return page.evaluate(([y, m, d]) => new Date(y, m, d).getTime(), [year, monthIndex, day])
+}
+
 async function storedTheme(page: Page): Promise<unknown> {
     return page.evaluate(() => JSON.parse(localStorage.getItem('utbt:theme:v1') ?? 'null'))
 }
@@ -95,6 +102,8 @@ async function nonCompositorProperties(page: Page): Promise<string[]> {
     return [...new Set(properties)].filter(property => !COMPOSITOR_PROPERTIES.has(property))
 }
 
+test.use({ timezoneId: 'Europe/London' })
+
 test.beforeEach(async ({ page }) => {
     await mockApi(page)
 })
@@ -105,11 +114,15 @@ for (const season of ENTRY_IDS) {
         await expect(page.locator('html')).toHaveAttribute('data-season', season)
         await expect(page.locator('html')).toHaveAttribute('data-theme', 'seasonal')
         await expect(page.locator('html')).toHaveClass(/(^|\s)dark(\s|$)/)
+        const [tint] = await resolvedColors(page, [declared(SEASONS_CSS, `:root[data-theme='seasonal'][data-season='${season}']`, '--accent-500')])
+        await expect.poll(() => resolvedColors(page, ['var(--accent-500)'])).toEqual([tint])
         await expect(logo(page, isMobile)).toHaveAttribute('src', new RegExp(`logo-${season}`))
         await expect(logo(page, isMobile)).toBeVisible()
         const layer = page.locator('.seasonal-layer')
         await expect(layer).toHaveAttribute('data-season-layer', season)
         await expect(layer).toHaveCSS('pointer-events', 'none')
+        if (NO_AMBIENT.includes(season)) await expect(layer.locator(':scope > *')).toHaveCount(0)
+        else await expect(layer.locator(':scope > *').first()).toBeAttached()
         expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1)
         expect(await nonCompositorProperties(page)).toEqual([])
     })
@@ -154,6 +167,25 @@ test.describe('the first frame, painted before the app script runs', () => {
         expect(await firstFrame(page, '/', CHRISTMAS_CACHE))
             .toEqual({ theme: 'red', season: null, dark: true })
     })
+
+    test('the saved Seasonal theme paints the season from the month and the timezone on a cold cache', async ({ page }) => {
+        await followCalendar(page, MIDSUMMER, 'seasonal')
+        expect(await firstFrame(page, '/'))
+            .toEqual({ theme: 'seasonal', season: 'summer', dark: true })
+    })
+
+    test('an expired cache falls back to the month, and the hemisphere preview flips the season', async ({ page }) => {
+        await followCalendar(page, MIDSUMMER, 'seasonal')
+        const expired = { 'utbt:season:v2': JSON.stringify({ id: 'christmas', until: MIDSUMMER.getTime() - DAY_MS }) }
+        expect(await firstFrame(page, '/?hemisphere=south', expired))
+            .toEqual({ theme: 'seasonal', season: 'winter', dark: true })
+    })
+
+    test('a stored hemisphere beats the timezone on a cold cache', async ({ page }) => {
+        await followCalendar(page, MIDSUMMER, 'seasonal')
+        expect(await firstFrame(page, '/', { 'utbt:hemisphere:v1': JSON.stringify('south') }))
+            .toEqual({ theme: 'seasonal', season: 'winter', dark: true })
+    })
 })
 
 test('the calendar gives Classic the Christmas logo and the Seasonal theme the Christmas look', async ({ page, isMobile }) => {
@@ -162,8 +194,9 @@ test('the calendar gives Classic the Christmas logo and the Seasonal theme the C
     await expect(logo(page, isMobile)).toHaveAttribute('src', /logo-christmas/)
     await expect(page.locator('html')).not.toHaveAttribute('data-season', /.+/)
     await expect(page.locator('html')).not.toHaveAttribute('data-theme', /.+/)
+    const christmasEnds = await localMidnight(page, 2026, 11, 31)
     await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('utbt:season:v2') ?? 'null')))
-        .toEqual({ id: 'christmas', until: new Date(2026, 11, 31).getTime() })
+        .toEqual({ id: 'christmas', until: christmasEnds })
 
     await page.evaluate(() => {
         localStorage.setItem('utbt:theme:v1', JSON.stringify({ id: 'seasonal' }))
@@ -173,6 +206,51 @@ test('the calendar gives Classic the Christmas logo and the Seasonal theme the C
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'seasonal')
     await expect(page.locator('html')).toHaveAttribute('data-season', 'christmas')
     await expect(logo(page, isMobile)).toHaveAttribute('src', /logo-christmas/)
+})
+
+test('the saved Seasonal theme follows the season where the player is', async ({ page, isMobile }) => {
+    await followCalendar(page, MIDSUMMER, 'seasonal')
+    await page.goto('/')
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'seasonal')
+    await expect(page.locator('html')).toHaveAttribute('data-season', 'summer')
+    await expect(logo(page, isMobile)).toHaveAttribute('src', /logo-summer/)
+    const summerEnds = await localMidnight(page, 2026, 8, 1)
+    await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('utbt:season:v2') ?? 'null')))
+        .toEqual({ id: 'summer', until: summerEnds })
+
+    await page.goto('/?hemisphere=south')
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'seasonal')
+    await expect(page.locator('html')).toHaveAttribute('data-season', 'winter')
+    await expect(logo(page, isMobile)).toHaveAttribute('src', /logo-winter/)
+})
+
+test('a plain season on Red changes nothing and never loads the decorations', async ({ page, isMobile }) => {
+    const requests = decorRequests(page)
+    await followCalendar(page, MIDSUMMER, 'red')
+    await page.goto('/')
+    await expect(logo(page, isMobile)).toBeVisible()
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'red')
+    await expect(page.locator('html')).not.toHaveAttribute('data-season', /.+/)
+    await expect(logo(page, isMobile)).not.toHaveAttribute('src', SEASONAL_LOGO)
+    await expect(page.locator('.seasonal-layer')).toHaveCount(0)
+    expect(requests).toEqual([])
+})
+
+test('the spinner shows each season\'s glyph, with winter\'s ice crystal held still', async ({ page }) => {
+    await page.route(/https:\/\/api\.utbt\.net\/.*/, () => {})
+    const glyphs: Array<[EntryId, string, RegExp | null]> = [
+        ['spring', 'lucide-flower', /(^|\s)animate-spin(\s|$)/],
+        ['summer', 'lucide-sun', /(^|\s)animate-spin(\s|$)/],
+        ['autumn', 'lucide-leaf', /(^|\s)seasonal-wobble(\s|$)/],
+        ['winter', 'lucide-snowflake', null],
+    ]
+    for (const [season, icon, motion] of glyphs) {
+        await page.goto(`/compare?season=${season}`)
+        const spinner = page.locator('.compare-start-empty').filter({ hasText: 'Loading records' }).locator('svg')
+        await expect(spinner).toHaveClass(new RegExp(`(^|\\s)${icon}(\\s|$)`))
+        if (motion) await expect(spinner).toHaveClass(motion)
+        else await expect(spinner).toHaveCSS('animation-name', 'none')
+    }
 })
 
 test('a holiday on Red shows only its logo and never loads the decorations', async ({ page, isMobile }) => {

@@ -5,6 +5,7 @@ import { horizontalOverflow } from './layout'
 import { mockApi } from './sidebarRail'
 
 const HALLOWEEN_NIGHT = new Date(2026, 9, 31, 20, 0)
+const SOUTHERN_AUTUMN = new Date(2026, 3, 20, 12, 0)
 const SEASONS_CSS = readFileSync(resolve(__dirname, '../app/styles/seasons.css'), 'utf8')
 
 function declared(css: string, selector: string, name: string): string {
@@ -81,6 +82,19 @@ test.describe('in Sydney', () => {
         await expect(hemisphereControl(page).getByRole('button', { name: 'Northern' })).toHaveAttribute('aria-pressed', 'true')
         await expect(hemisphereControl(page).getByRole('button', { name: 'Auto (Southern)' })).toHaveAttribute('aria-pressed', 'false')
     })
+
+    test('in April the card names the southern autumn and shows its accent', async ({ page }) => {
+        await page.addInitScript(() => localStorage.removeItem('utbt:seasonPin:v1'))
+        await saveTheme(page, 'seasonal')
+        await page.clock.setFixedTime(SOUTHERN_AUTUMN)
+        await page.goto('/')
+        await expect(page.locator('html')).toHaveAttribute('data-season', 'autumn')
+        await openAppearance(page)
+        const card = themeCard(page, 'Seasonal')
+        await expect(card).toContainText('Now: Autumn · Southern hemisphere')
+        const expected = await resolvedColor(page, declared(SEASONS_CSS, ":root[data-theme='seasonal'][data-season='autumn']", '--accent-500'))
+        await expect(card.locator('span').first()).toHaveCSS('background-color', expected)
+    })
 })
 
 for (const theme of ['classic', 'seasonal']) {
@@ -111,6 +125,22 @@ test.describe('at 360 px', () => {
             expect(box.height).toBeGreaterThanOrEqual(44)
             expect(box.width).toBeGreaterThanOrEqual(44)
         }
+        const card = (await themeCard(page, 'Seasonal').boundingBox())!
+        expect(card.x + card.width).toBeLessThanOrEqual(360)
+    })
+})
+
+test.describe('at 360 px in Sydney in April', () => {
+    test.use({ viewport: { width: 360, height: 780 }, timezoneId: 'Australia/Sydney' })
+
+    test('the card names the season without overflowing the page', async ({ page }) => {
+        await page.addInitScript(() => localStorage.removeItem('utbt:seasonPin:v1'))
+        await saveTheme(page, 'seasonal')
+        await page.clock.setFixedTime(SOUTHERN_AUTUMN)
+        await page.goto('/')
+        await openAppearance(page)
+        await expect(themeCard(page, 'Seasonal').getByText('Now: Autumn · Southern hemisphere', { exact: true })).toBeVisible()
+        expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1)
         const card = (await themeCard(page, 'Seasonal').boundingBox())!
         expect(card.x + card.width).toBeLessThanOrEqual(360)
     })
