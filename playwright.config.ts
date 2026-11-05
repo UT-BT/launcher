@@ -18,7 +18,7 @@ const APP_STORAGE_STATE = {
     {
       origin,
       localStorage: [
-        { name: 'utbt:seasonalThemes:v1', value: '"off"' },
+        { name: 'utbt:seasonPin:v1', value: 'none' },
         { name: DESKTOP_SEEN_STORAGE_KEY, value: JSON.stringify(new Date().toISOString()) },
       ],
     },

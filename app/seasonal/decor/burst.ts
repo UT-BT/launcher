@@ -1,4 +1,4 @@
-import type { SeasonId } from '../seasons'
+import type { EntryId } from '../seasons'
 import { BAT_BODY, BAT_WING, MIRROR_BAT, seededRandom } from './shapes'
 
 const COOLDOWN_MS = 10_000
@@ -7,14 +7,14 @@ const PETAL_COLORS = ['#f9a8d4', '#fde68a', '#c4b5fd', '#86efac']
 
 let lastBurstAt = -Infinity
 
-function drift(season: SeasonId, angle: number, distance: number): [number, number] {
+function drift(season: EntryId, angle: number, distance: number): [number, number] {
     const dx = Math.cos(angle) * distance
     if (season === 'halloween') return [dx, -Math.abs(Math.sin(angle) * distance) - 30]
     if (season === 'christmas') return [dx, Math.sin(angle) * distance * 0.6 + 50]
     return [dx, Math.sin(angle) * distance]
 }
 
-function particle(season: SeasonId, index: number, random: () => number): HTMLSpanElement {
+function particle(season: EntryId, index: number, random: () => number): HTMLSpanElement {
     const element = document.createElement('span')
     if (season === 'halloween') {
         const width = 16 + Math.round(random() * 8)
@@ -29,7 +29,7 @@ function particle(season: SeasonId, index: number, random: () => number): HTMLSp
     return element
 }
 
-export function fireBurst(season: SeasonId, x: number, y: number): void {
+export function fireBurst(season: EntryId, x: number, y: number): void {
     const now = Date.now()
     if (now - lastBurstAt < COOLDOWN_MS) return
     lastBurstAt = now

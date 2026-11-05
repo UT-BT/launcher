@@ -75,7 +75,7 @@ async function untilApiQuiet(page: Page, recorder: Recorder) {
 }
 
 async function recordSurface(page: Page, surface: CrawlSurface, recorder: Recorder): Promise<string | null> {
-    const storage = { 'utbt:analyticsConsent:v1': 'denied', 'utbt:seasonalThemes:v1': '"off"', ...surface.entry.storage }
+    const storage = { 'utbt:analyticsConsent:v1': 'denied', 'utbt:seasonPin:v1': 'none', ...surface.entry.storage }
     await page.addInitScript(entries => {
         for (const [key, value] of Object.entries(entries)) localStorage.setItem(key, value)
     }, storage)

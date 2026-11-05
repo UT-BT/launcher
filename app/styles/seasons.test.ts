@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { SEASON_IDS } from '@/app/seasonal/seasons'
+import { ENTRY_IDS as SEASON_IDS } from '@/app/seasonal/seasons'
 
 type Rgb = [number, number, number]
 type Vars = Record<string, string>

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { SEASON_IDS } from '@/app/seasonal/seasons'
+import { ENTRY_IDS as SEASON_IDS } from '@/app/seasonal/seasons'
 import { DEFAULT_THEME_ID, LIGHT_THEME_IDS, THEMES, isLightTheme } from '@/app/theme/themes'
 
 const html = readFileSync(resolve(__dirname, 'index.html'), 'utf8')

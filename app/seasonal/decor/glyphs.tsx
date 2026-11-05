@@ -1,6 +1,6 @@
 import { createLucideIcon, Egg, Snowflake, type LucideProps } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { SeasonId } from '../seasons'
+import type { EntryId } from '../seasons'
 
 const Pumpkin = createLucideIcon('Pumpkin', [
     [
@@ -15,7 +15,7 @@ const Pumpkin = createLucideIcon('Pumpkin', [
     ['path', { d: 'M12 7.5V5c0-1 .6-1.7 1.6-2', key: 'stem' }],
 ])
 
-export function SeasonGlyph({ season, className, ...props }: LucideProps & { season: SeasonId }) {
+export function SeasonGlyph({ season, className, ...props }: LucideProps & { season: EntryId }) {
     if (season === 'christmas') return <Snowflake className={cn('animate-spin', className)} {...props} />
     if (season === 'easter') return <Egg className={cn('seasonal-wobble', className)} {...props} />
     return <Pumpkin className={cn('seasonal-wobble', className)} {...props} />

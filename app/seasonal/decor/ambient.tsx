@@ -1,6 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { usePrefersReducedMotion } from '@/app/hooks/usePrefersReducedMotion'
-import type { SeasonId } from '../seasons'
+import type { EntryId } from '../seasons'
 import { BAT_BODY, BAT_WING, MIRROR_BAT, seededRandom } from './shapes'
 
 type Vars = Record<`--${string}`, string>
@@ -117,7 +117,7 @@ function usePaused(): boolean {
     return paused
 }
 
-export function AmbientLayer({ season }: { season: SeasonId }) {
+export function AmbientLayer({ season }: { season: EntryId }) {
     const reducedMotion = usePrefersReducedMotion()
     const paused = usePaused()
     if (reducedMotion) return null

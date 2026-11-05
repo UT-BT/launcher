@@ -1,17 +1,19 @@
-export interface ActiveSeason {
-    id: SeasonId
-    until: number
-}
+export type Hemisphere = 'north' | 'south'
 
-interface SeasonWindow {
+export type EntryKind = 'season' | 'holiday'
+
+export interface EntryWindow {
     start: Date
     endExclusive: Date
 }
 
-interface Season {
+interface EntryDefinition {
     id: string
     label: string
-    window(year: number): SeasonWindow
+    kind: EntryKind
+    window(year: number, hemisphere: Hemisphere): EntryWindow | null
+    hemisphere?: Hemisphere
+    logo?: string
 }
 
 export function easterSunday(year: number): Date {
@@ -32,56 +34,45 @@ export function easterSunday(year: number): Date {
     return new Date(year, month - 1, day)
 }
 
-function daysAround(anchor: Date, before: number, after: number): SeasonWindow {
+function daysAround(anchor: Date, before: number, after: number): EntryWindow {
     const year = anchor.getFullYear()
     const month = anchor.getMonth()
     const day = anchor.getDate()
     return { start: new Date(year, month, day - before), endExclusive: new Date(year, month, day + after + 1) }
 }
 
-export const SEASONS = [
+export const ENTRIES = [
     {
         id: 'halloween',
         label: 'Halloween',
+        kind: 'holiday',
         window: year => ({ start: new Date(year, 9, 24), endExclusive: new Date(year, 10, 8) }),
     },
     {
         id: 'christmas',
         label: 'Christmas',
-        window: year => ({ start: new Date(year, 11, 18), endExclusive: new Date(year + 1, 0, 16) }),
+        kind: 'holiday',
+        window: year => ({ start: new Date(year, 11, 18), endExclusive: new Date(year, 11, 31) }),
     },
     {
         id: 'easter',
         label: 'Easter',
+        kind: 'holiday',
         window: year => daysAround(easterSunday(year), 7, 7),
     },
-] as const satisfies readonly Season[]
+] as const satisfies readonly EntryDefinition[]
 
-export type SeasonId = (typeof SEASONS)[number]['id']
+export type EntryId = (typeof ENTRIES)[number]['id']
 
-export type SeasonOverride = SeasonId | 'none'
-
-export const SEASON_IDS: readonly SeasonId[] = SEASONS.map(season => season.id)
-
-export function activeSeason(now: Date): ActiveSeason | null {
-    const time = now.getTime()
-    const year = now.getFullYear()
-    for (const season of SEASONS) {
-        for (const windowYear of [year - 1, year]) {
-            const { start, endExclusive } = season.window(windowYear)
-            if (time >= start.getTime() && time < endExclusive.getTime()) {
-                return { id: season.id, until: endExclusive.getTime() }
-            }
-        }
-    }
-    return null
+export interface Entry extends Omit<EntryDefinition, 'id' | 'logo'> {
+    id: EntryId
+    logo?: EntryId
 }
 
-export function isSeasonOverride(value: unknown): value is SeasonOverride {
-    return value === 'none' || SEASON_IDS.includes(value as SeasonId)
-}
+export type EntryPreview = EntryId | 'none'
 
-export function resolveSeason(input: { dateSeason: SeasonId | null; enabled: boolean; override: SeasonOverride | null }): SeasonId | null {
-    if (input.override) return input.override === 'none' ? null : input.override
-    return input.enabled ? input.dateSeason : null
+export const ENTRY_IDS: readonly EntryId[] = ENTRIES.map(entry => entry.id)
+
+export function isEntryPreview(value: unknown): value is EntryPreview {
+    return value === 'none' || ENTRY_IDS.includes(value as EntryId)
 }

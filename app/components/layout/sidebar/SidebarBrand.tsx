@@ -1,16 +1,16 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { fireSeasonalBurst } from '@/app/seasonal/lazyDecor'
-import type { SeasonId } from '@/app/seasonal/seasons'
+import type { EntryId } from '@/app/seasonal/seasons'
 
 interface SidebarBrandProps {
     logo: string
-    season: SeasonId | null
+    seasonal: EntryId | null
     collapsed: boolean
     toggle: ReactNode
 }
 
-export function SidebarBrand({ logo, season, collapsed, toggle }: SidebarBrandProps) {
+export function SidebarBrand({ logo, seasonal, collapsed, toggle }: SidebarBrandProps) {
     return (
         <div className={cn(
             "max-lg:hidden flex flex-col items-center relative z-10",
@@ -26,9 +26,9 @@ export function SidebarBrand({ logo, season, collapsed, toggle }: SidebarBrandPr
                 alt="UTBT Logo"
                 data-diagnostic-trigger
                 style={{ WebkitTouchCallout: 'none' }}
-                onClick={season ? event => {
+                onClick={seasonal ? event => {
                     const rect = event.currentTarget.getBoundingClientRect()
-                    fireSeasonalBurst(season, rect.left + rect.width / 2, rect.top + rect.height / 2)
+                    fireSeasonalBurst(seasonal, rect.left + rect.width / 2, rect.top + rect.height / 2)
                 } : undefined}
                 className={cn(
                     "object-contain select-none drop-shadow-[0_0_15px_rgb(var(--accent-glow-rgb)/0.3)] transition hover:scale-105 duration-300",

@@ -1,10 +1,19 @@
 import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { SEASON_IDS } from './seasons'
+import { ENTRIES, ENTRY_IDS, type Entry } from './seasons'
+
+const REGISTRY: readonly Entry[] = ENTRIES
 
 describe('seasonal logos', () => {
-    it.each(SEASON_IDS)('%s has its logo file', id => {
+    it.each(REGISTRY.filter(entry => !entry.logo).map(entry => entry.id))('%s has its logo file', id => {
         expect(existsSync(resolve(__dirname, `../assets/seasonal/logo-${id}.webp`))).toBe(true)
+    })
+
+    it('aliases a logo only to an entry that has its own file', () => {
+        for (const entry of REGISTRY.filter(candidate => candidate.logo)) {
+            expect(ENTRY_IDS).toContain(entry.logo)
+            expect(REGISTRY.find(candidate => candidate.id === entry.logo)?.logo).toBeUndefined()
+        }
     })
 })
