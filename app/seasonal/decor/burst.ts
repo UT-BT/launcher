@@ -1,5 +1,5 @@
 import type { EntryId } from '../seasons'
-import { BAT_BODY, BAT_WING, BLOSSOM_COLORS, GOLD_COLORS, ICE_CRYSTAL, LEAF, LEAF_COLORS, LEAF_VEIN, MIRROR_BAT, STAR, seededRandom } from './shapes'
+import { BAT_BODY, BAT_WING, BLOSSOM_COLORS, COIN, FIREWORK_COLORS, GOLD_COLORS, ICE_CRYSTAL, LANTERN_BODY, LANTERN_CAPS, LANTERN_RIBS, LANTERN_TASSEL, LEAF, LEAF_COLORS, LEAF_VEIN, MIRROR_BAT, SPARKLE, STAR, seededRandom } from './shapes'
 
 const COOLDOWN_MS = 10_000
 const LIFETIME_MS = 2300
@@ -17,6 +17,8 @@ function drift(season: EntryId, angle: number, distance: number): [number, numbe
     if (season === 'autumn') return [dx * 0.8, Math.abs(Math.sin(angle) * distance) * 0.5 + 40]
     if (season === 'winter') return [dx, Math.sin(angle) * distance * 0.6 + 35]
     if (season === 'christmas-summer') return [dx, Math.sin(angle) * distance * 0.7 + 20]
+    if (season === 'new-year') return [dx * 1.1, Math.sin(angle) * distance * 1.1 + 15]
+    if (season === 'lunar-new-year') return [dx * 0.9, -Math.abs(Math.sin(angle) * distance) * 0.6 - 25]
     return [dx, Math.sin(angle) * distance]
 }
 
@@ -45,6 +47,18 @@ function particle(season: EntryId, index: number, random: () => number): HTMLSpa
     } else if (season === 'christmas-summer') {
         element.className = 'seasonal-burst-bauble'
         element.style.setProperty('--s', `${5 + Math.round(random() * 3)}px`)
+    } else if (season === 'new-year' && index % 2 === 0) {
+        const size = 10 + Math.round(random() * 6)
+        element.innerHTML = `<svg viewBox="0 0 24 24" width="${size}" fill="${FIREWORK_COLORS[(index / 2) % FIREWORK_COLORS.length]}"><path d="${SPARKLE}"/></svg>`
+    } else if (season === 'new-year') {
+        element.className = 'seasonal-burst-confetti'
+        element.style.setProperty('--c', FIREWORK_COLORS[(index + 1) % FIREWORK_COLORS.length])
+    } else if (season === 'lunar-new-year' && index % 2 === 0) {
+        const width = 11 + Math.round(random() * 5)
+        element.innerHTML = `<svg viewBox="0 0 24 32" width="${width}"><path d="${LANTERN_TASSEL}" stroke="#facc15" stroke-width="1.5" fill="none"/><path d="${LANTERN_BODY}" fill="#dc2626"/><path d="${LANTERN_RIBS}" stroke="#fbbf24" stroke-opacity="0.7" stroke-width="1" fill="none"/><path d="${LANTERN_CAPS}" fill="#facc15"/></svg>`
+    } else if (season === 'lunar-new-year') {
+        const size = 9 + Math.round(random() * 3)
+        element.innerHTML = `<svg viewBox="0 0 24 24" width="${size}" fill="#facc15" fill-rule="evenodd" stroke="#b45309" stroke-width="1.2"><path d="${COIN}"/></svg>`
     } else {
         element.className = 'seasonal-burst-petal'
         element.style.setProperty('--c', PETAL_COLORS[index % PETAL_COLORS.length])

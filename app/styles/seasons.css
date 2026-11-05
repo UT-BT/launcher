@@ -118,6 +118,66 @@
   --input: hsl(214 13% 19%);
 }
 
+:root[data-theme='seasonal'][data-season='new-year'] {
+  --accent-50: oklch(0.985 0.015 95);
+  --accent-100: oklch(0.962 0.034 93);
+  --accent-200: oklch(0.926 0.06 91);
+  --accent-300: oklch(0.88 0.088 88);
+  --accent-400: oklch(0.82 0.112 85);
+  --accent-500: oklch(0.56 0.118 76);
+  --accent-600: oklch(0.505 0.108 72);
+  --accent-700: oklch(0.455 0.1 68);
+  --accent-800: oklch(0.405 0.085 64);
+  --accent-900: oklch(0.36 0.07 62);
+  --accent-950: oklch(0.27 0.05 60);
+
+  --accent-glow-rgb: 253 230 138;
+
+  --nebula-1: 250, 204, 21;
+  --nebula-2: 79, 70, 229;
+  --nebula-3: 236, 72, 153;
+  --nebula-4: 56, 189, 248;
+
+  --background: hsl(234 34% 8%);
+  --card: hsl(234 34% 9.5%);
+  --popover: hsl(234 34% 9.5%);
+  --secondary: hsl(234 22% 17%);
+  --muted: hsl(234 22% 17%);
+  --accent: hsl(234 22% 17%);
+  --border: hsl(234 22% 17%);
+  --input: hsl(234 22% 17%);
+}
+
+:root[data-theme='seasonal'][data-season='lunar-new-year'] {
+  --accent-50: oklch(0.975 0.011 42);
+  --accent-100: oklch(0.945 0.027 40);
+  --accent-200: oklch(0.895 0.056 38);
+  --accent-300: oklch(0.825 0.099 37);
+  --accent-400: oklch(0.735 0.164 36);
+  --accent-500: oklch(0.59 0.195 33);
+  --accent-600: oklch(0.535 0.185 32);
+  --accent-700: oklch(0.475 0.165 31);
+  --accent-800: oklch(0.415 0.14 30);
+  --accent-900: oklch(0.37 0.11 29);
+  --accent-950: oklch(0.27 0.075 29);
+
+  --accent-glow-rgb: 250 204 21;
+
+  --nebula-1: 220, 38, 38;
+  --nebula-2: 250, 204, 21;
+  --nebula-3: 153, 27, 27;
+  --nebula-4: 245, 158, 11;
+
+  --background: hsl(354 48% 8.5%);
+  --card: hsl(354 48% 10%);
+  --popover: hsl(354 48% 10%);
+  --secondary: hsl(354 28% 17.5%);
+  --muted: hsl(354 28% 17.5%);
+  --accent: hsl(354 28% 17.5%);
+  --border: hsl(354 28% 17.5%);
+  --input: hsl(354 28% 17.5%);
+}
+
 :root[data-theme='seasonal'][data-season='halloween'] {
   --accent-50: oklch(0.98 0.016 73.684);
   --accent-100: oklch(0.954 0.038 75.164);

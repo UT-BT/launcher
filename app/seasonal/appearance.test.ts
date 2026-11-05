@@ -40,8 +40,10 @@ const HOLIDAY_WINDOWS: WindowCase[] = [
     ['the local midnight Christmas starts', at(2026, 12, 18), 'christmas', 'christmas'],
     ['Christmas Eve', at(2026, 12, 24, 12), 'christmas', 'christmas'],
     ['the last minute of Dec 30', at(2026, 12, 30, 23, 59), 'christmas', 'christmas'],
-    ['the local midnight Christmas ends, Dec 31', at(2026, 12, 31), null, 'winter'],
-    ['New Year\'s Day', at(2027, 1, 1), null, 'winter'],
+    ['the local midnight Christmas ends, Dec 31', at(2026, 12, 31), 'new-year', 'new-year'],
+    ['New Year\'s Day', at(2027, 1, 1), 'new-year', 'new-year'],
+    ['the last minute of Jan 3', at(2027, 1, 3, 23, 59), 'new-year', 'new-year'],
+    ['the local midnight New Year ends, Jan 4', at(2027, 1, 4), null, 'winter'],
     ['Jan 15, inside the old Christmas window', at(2027, 1, 15, 12), null, 'winter'],
     ['the minute before Easter 2026', at(2026, 3, 28, 23, 59), null, 'spring'],
     ['the local midnight Easter 2026 starts', at(2026, 3, 29), 'easter', 'easter'],
@@ -102,8 +104,9 @@ describe('resolveAppearance until', () => {
         ['Christmas starts, after a quiet November', at(2026, 11, 20), 'red', null, at(2026, 12, 18)],
         ['Christmas ends at the midnight after Dec 30', at(2026, 12, 24), 'seasonal', null, at(2026, 12, 31)],
         ['the next change from the midnight Christmas starts', at(2026, 12, 18), 'red', null, at(2026, 12, 31)],
-        ['Easter starts next year, across the year change', at(2026, 12, 31), 'red', null, at(2027, 3, 21)],
-        ['Easter starts, from early January', at(2027, 1, 2), 'classic', null, at(2027, 3, 21)],
+        ['New Year ends, across the year change', at(2026, 12, 31), 'red', null, at(2027, 1, 4)],
+        ['Lunar New Year starts, from early January', at(2027, 1, 10), 'classic', null, at(2027, 2, 5)],
+        ['Easter starts, after Lunar New Year', at(2027, 2, 20), 'classic', null, at(2027, 3, 21)],
         ['Easter ends', at(2026, 4, 1), 'red', null, at(2026, 4, 13)],
         ['the unpreviewed boundary under an entry preview', at(2026, 11, 20), 'red', 'christmas', at(2026, 12, 18)],
         ['the unpreviewed boundary under none', at(2026, 10, 30), 'seasonal', 'none', at(2026, 11, 8)],
@@ -183,7 +186,7 @@ describe('resolveAppearance through the seasons', () => {
         ['winter ends after Feb 29', at(2028, 2, 29, 12), 'seasonal', NORTH, at(2028, 3, 1)],
         ['Halloween starts in autumn', at(2026, 10, 10), 'seasonal', NORTH, at(2026, 10, 24)],
         ['Christmas starts in winter', at(2026, 12, 10), 'seasonal', NORTH, at(2026, 12, 18)],
-        ['winter takes over from Christmas', at(2026, 12, 24), 'seasonal', NORTH, at(2026, 12, 31)],
+        ['New Year takes over from Christmas', at(2026, 12, 24), 'seasonal', NORTH, at(2026, 12, 31)],
         ['on Red, the season changes are skipped up to Halloween', at(2026, 7, 10), 'red', NORTH, at(2026, 10, 24)],
         ['on Red, Dec 1 is skipped', at(2026, 11, 20), 'red', NORTH, at(2026, 12, 18)],
     ]
@@ -246,7 +249,7 @@ describe('resolveAppearance at Summer Christmas', () => {
         ['the local midnight it starts', at(2026, 12, 18), 'christmas-summer'],
         ['Dec 20', at(2026, 12, 20, 12), 'christmas-summer'],
         ['the last minute of Dec 30', at(2026, 12, 30, 23, 59), 'christmas-summer'],
-        ['the local midnight it ends, Dec 31', at(2026, 12, 31), 'summer'],
+        ['the local midnight it ends, Dec 31', at(2026, 12, 31), 'new-year'],
     ]
 
     it.each(WINDOW)('in the south, %s', (_, now, expected) => {
@@ -278,11 +281,103 @@ describe('resolveAppearance at Summer Christmas', () => {
 
     const UNTIL: Array<[string, Date, string, Date]> = [
         ['it starts inside the southern summer', at(2026, 12, 5), 'seasonal', at(2026, 12, 18)],
-        ['summer takes over from it', at(2026, 12, 24), 'seasonal', at(2026, 12, 31)],
+        ['New Year takes over from it', at(2026, 12, 24), 'seasonal', at(2026, 12, 31)],
         ['on Red, its end is the next change', at(2026, 12, 24), 'red', at(2026, 12, 31)],
     ]
 
     it.each(UNTIL)('until in the south: %s', (_, now, themeId, next) => {
         expect(resolveWhere(now, themeId, SOUTH).until).toBe(next.getTime())
+    })
+})
+
+describe('resolveAppearance at New Year', () => {
+    const NORTH: Where = { timeZone: 'Europe/London' }
+    const SOUTH: Where = { timeZone: 'Australia/Sydney' }
+
+    const WINDOW: Array<[string, Date, EntryId, EntryId]> = [
+        ['the last minute of Dec 30', at(2026, 12, 30, 23, 59), 'christmas', 'christmas-summer'],
+        ['the local midnight it starts, Dec 31', at(2026, 12, 31), 'new-year', 'new-year'],
+        ['the last minute of the year', at(2026, 12, 31, 23, 59), 'new-year', 'new-year'],
+        ['the local midnight of the year change', at(2027, 1, 1), 'new-year', 'new-year'],
+        ['Jan 3', at(2027, 1, 3, 12), 'new-year', 'new-year'],
+        ['the local midnight it ends, Jan 4', at(2027, 1, 4), 'winter', 'summer'],
+    ]
+
+    it.each(WINDOW)('%s, in the north and in the south', (_, now, north, south) => {
+        expect(resolveWhere(now, 'seasonal', NORTH).seasonal).toBe(north)
+        expect(resolveWhere(now, 'seasonal', SOUTH).seasonal).toBe(south)
+    })
+
+    it('beats winter in the north and summer in the south, with its own logo', () => {
+        expect(resolveWhere(at(2027, 1, 2), 'seasonal', NORTH)).toMatchObject({ seasonal: 'new-year', logo: 'new-year' })
+        expect(resolveWhere(at(2027, 1, 2), 'seasonal', SOUTH)).toMatchObject({ seasonal: 'new-year', logo: 'new-year' })
+    })
+
+    it.each(['red', 'classic', 'light'])('on %s gives only the New Year logo', themeId => {
+        expect(resolveWhere(at(2027, 1, 1), themeId, NORTH)).toMatchObject({ seasonal: null, logo: 'new-year' })
+        expect(resolveWhere(at(2027, 1, 1), themeId, SOUTH)).toMatchObject({ seasonal: null, logo: 'new-year' })
+    })
+
+    it('a preview shows it in July', () => {
+        expect(resolveWhere(at(2026, 7, 1), 'red', NORTH, 'new-year')).toMatchObject({ seasonal: 'new-year', logo: 'new-year' })
+    })
+
+    const UNTIL: Array<[string, Date, string, Where, Date]> = [
+        ['it ends at the midnight after Jan 3', at(2026, 12, 31, 12), 'seasonal', NORTH, at(2027, 1, 4)],
+        ['it ends there in the south too', at(2027, 1, 1), 'seasonal', SOUTH, at(2027, 1, 4)],
+        ['on Red, its end is the next change', at(2027, 1, 2), 'red', NORTH, at(2027, 1, 4)],
+    ]
+
+    it.each(UNTIL)('until: %s', (_, now, themeId, where, next) => {
+        expect(resolveWhere(now, themeId, where).until).toBe(next.getTime())
+    })
+})
+
+describe('resolveAppearance at Lunar New Year', () => {
+    const NORTH: Where = { timeZone: 'Europe/London' }
+    const SOUTH: Where = { timeZone: 'Australia/Sydney' }
+
+    const WINDOW: Array<[string, Date, EntryId, EntryId]> = [
+        ['the last minute before the eve, 2026', at(2026, 2, 15, 23, 59), 'winter', 'summer'],
+        ['the local midnight of the eve, 2026', at(2026, 2, 16), 'lunar-new-year', 'lunar-new-year'],
+        ['Lunar New Year\'s Day, 2026', at(2026, 2, 17, 12), 'lunar-new-year', 'lunar-new-year'],
+        ['the last minute of day 6, 2026', at(2026, 2, 22, 23, 59), 'lunar-new-year', 'lunar-new-year'],
+        ['the local midnight after day 6, 2026', at(2026, 2, 23), 'winter', 'summer'],
+        ['the day before the eve, 2028', at(2028, 1, 24, 12), 'winter', 'summer'],
+        ['the eve, 2028', at(2028, 1, 25), 'lunar-new-year', 'lunar-new-year'],
+        ['day 6, 2034', at(2034, 2, 24, 12), 'lunar-new-year', 'lunar-new-year'],
+        ['the day after day 6, 2034', at(2034, 2, 25), 'winter', 'summer'],
+        ['the eve, 2050', at(2050, 1, 22), 'lunar-new-year', 'lunar-new-year'],
+        ['day 6, 2050', at(2050, 1, 28, 12), 'lunar-new-year', 'lunar-new-year'],
+        ['the day after day 6, 2050', at(2050, 1, 29), 'winter', 'summer'],
+    ]
+
+    it.each(WINDOW)('%s, in the north and in the south', (_, now, north, south) => {
+        expect(resolveWhere(now, 'seasonal', NORTH)).toMatchObject({ seasonal: north, logo: north })
+        expect(resolveWhere(now, 'seasonal', SOUTH)).toMatchObject({ seasonal: south, logo: south })
+    })
+
+    it.each(['red', 'classic', 'light'])('on %s gives only the Lunar New Year logo', themeId => {
+        expect(resolveWhere(at(2026, 2, 17), themeId, NORTH)).toMatchObject({ seasonal: null, logo: 'lunar-new-year' })
+    })
+
+    it('never occurs in a year past the table', () => {
+        for (let day = new Date(2051, 0, 15); day < new Date(2051, 1, 25); day = new Date(2051, day.getMonth(), day.getDate() + 1)) {
+            expect(resolveWhere(day, 'seasonal', NORTH).seasonal, day.toDateString()).not.toBe('lunar-new-year')
+            expect(resolveWhere(day, 'red', NORTH).logo, day.toDateString()).not.toBe('lunar-new-year')
+        }
+    })
+
+    it('a preview shows it in a year past the table', () => {
+        expect(resolveWhere(at(2051, 2, 11), 'red', NORTH, 'lunar-new-year')).toMatchObject({ seasonal: 'lunar-new-year', logo: 'lunar-new-year' })
+    })
+
+    const UNTIL: Array<[string, Date, string, Date]> = [
+        ['it starts on the eve', at(2026, 2, 1), 'red', at(2026, 2, 16)],
+        ['it ends at the midnight after day 6', at(2026, 2, 17), 'seasonal', at(2026, 2, 23)],
+    ]
+
+    it.each(UNTIL)('until: %s', (_, now, themeId, next) => {
+        expect(resolveWhere(now, themeId, NORTH).until).toBe(next.getTime())
     })
 })

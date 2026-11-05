@@ -143,6 +143,22 @@ const SEASONS = {
     },
     layers: [],
   },
+  'new-year': {
+    fur: null,
+    swirl: {
+      red: { light: { h: 46, s: 0.9, scale: 1, lift: 0.05 }, dark: { h: 40, s: 0.85, scale: 0.9, lift: 0.02 } },
+      blue: { light: { h: 235, s: 0.65, scale: 1, lift: 0.06 }, dark: { h: 248, s: 0.55, scale: 1, lift: 0.08 } },
+    },
+    layers: [],
+  },
+  'lunar-new-year': {
+    fur: null,
+    swirl: {
+      red: { light: { h: 2, s: 0.9, scale: 1, lift: 0 }, dark: { h: 356, s: 0.8, scale: 1, lift: 0.03 } },
+      blue: { light: { h: 45, s: 0.95, scale: 1, lift: 0.04 }, dark: { h: 30, s: 0.9, scale: 0.95, lift: 0.02 } },
+    },
+    layers: [],
+  },
   halloween: {
     fur: [206, 201, 189],
     swirl: {

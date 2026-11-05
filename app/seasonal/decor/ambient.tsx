@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { usePrefersReducedMotion } from '@/app/hooks/usePrefersReducedMotion'
 import type { EntryId } from '../seasons'
-import { BAT_BODY, BAT_WING, BLOSSOM_COLORS, GOLD_COLORS, LEAF, LEAF_COLORS, LEAF_VEIN, MIRROR_BAT, SPARKLE, seededRandom } from './shapes'
+import { BAT_BODY, BAT_WING, BLOSSOM_COLORS, FIREWORK_COLORS, GOLD_COLORS, LANTERN_BODY, LANTERN_CAPS, LANTERN_RIBS, LANTERN_TASSEL, LEAF, LEAF_COLORS, LEAF_VEIN, MIRROR_BAT, SPARKLE, seededRandom } from './shapes'
 
 type Vars = Record<`--${string}`, string>
 
@@ -86,6 +86,28 @@ const TWINKLES = particles(53, SEASON_PARTICLES, (random, index) => {
         '--d': `${duration.toFixed(1)}s`,
         '--delay': `${(-random() * duration).toFixed(1)}s`,
         '--c': GOLD_COLORS[index % GOLD_COLORS.length],
+    }
+})
+
+const BLOOM_SPARKS = 8
+
+const BLOOMS: Vars[] = [
+    { '--x': '30%', '--y': '16%', '--hx1': '38vw', '--hy1': '8vh', '--hx2': '18vw', '--hy2': '-6vh', '--r': '44px', '--o': '0.5', '--d': '11s', '--delay': '-1.5s', '--c': FIREWORK_COLORS[0] },
+    { '--x': '80%', '--y': '26%', '--hx1': '-34vw', '--hy1': '-12vh', '--hx2': '-18vw', '--hy2': '4vh', '--r': '36px', '--o': '0.45', '--d': '14s', '--delay': '-8s', '--c': FIREWORK_COLORS[1] },
+]
+
+const SPARK_ANGLES = Array.from({ length: BLOOM_SPARKS }, (_, index) => ({ '--a': `${(index * 360) / BLOOM_SPARKS}deg` }) as CSSProperties)
+
+const LANTERNS = particles(67, 6, random => {
+    const duration = 34 + random() * 16
+    return {
+        '--x': `${(4 + random() * 90).toFixed(1)}%`,
+        '--s': `${(14 + random() * 8).toFixed(0)}px`,
+        '--o': (0.4 + random() * 0.2).toFixed(2),
+        '--d': `${duration.toFixed(1)}s`,
+        '--delay': `${(-random() * duration).toFixed(1)}s`,
+        '--sway': `${(8 + random() * 14).toFixed(0)}px`,
+        '--swayd': `${(4 + random() * 3).toFixed(1)}s`,
     }
 })
 
@@ -233,6 +255,29 @@ export function AmbientLayer({ season }: { season: EntryId }) {
                     ))}
                 </>
             )}
+            {season === 'new-year' &&
+                BLOOMS.map((style, index) => (
+                    <span key={index} className="seasonal-bloom" style={style as CSSProperties}>
+                        <i>
+                            {SPARK_ANGLES.map((angle, spark) => (
+                                <b key={spark} style={angle} />
+                            ))}
+                        </i>
+                    </span>
+                ))}
+            {season === 'lunar-new-year' &&
+                LANTERNS.map((style, index) => (
+                    <span key={index} className="seasonal-lantern" style={style}>
+                        <i>
+                            <svg viewBox="0 0 24 32">
+                                <path d={LANTERN_TASSEL} />
+                                <path d={LANTERN_BODY} />
+                                <path d={LANTERN_RIBS} />
+                                <path d={LANTERN_CAPS} />
+                            </svg>
+                        </i>
+                    </span>
+                ))}
             {season === 'easter' && (
                 <>
                     {PETALS.map((style, index) => (

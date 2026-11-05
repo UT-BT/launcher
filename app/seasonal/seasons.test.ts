@@ -62,6 +62,26 @@ describe('ENTRIES', () => {
         }
     })
 
+    it('follows the seasons with New Year and Lunar New Year, holidays for both hemispheres with their own logos', () => {
+        expect(REGISTRY.slice(4, 6).map(({ id, label, kind, hemisphere, logo }) => ({ id, label, kind, hemisphere, logo }))).toEqual([
+            { id: 'new-year', label: 'New Year', kind: 'holiday', hemisphere: undefined, logo: undefined },
+            { id: 'lunar-new-year', label: 'Lunar New Year', kind: 'holiday', hemisphere: undefined, logo: undefined },
+        ])
+    })
+
+    it('runs New Year from Dec 31 to Jan 3, across the year change', () => {
+        const newYear = REGISTRY.find(entry => entry.id === 'new-year')
+        expect(newYear?.window(2026, 'north')).toEqual({ start: new Date(2026, 11, 31), endExclusive: new Date(2027, 0, 4) })
+        expect(newYear?.window(2026, 'south')).toEqual(newYear?.window(2026, 'north'))
+    })
+
+    it('runs Lunar New Year from its eve to day 6, in both hemispheres', () => {
+        const lunarNewYear = REGISTRY.find(entry => entry.id === 'lunar-new-year')
+        expect(lunarNewYear?.window(2029, 'north')).toEqual({ start: new Date(2029, 1, 12), endExclusive: new Date(2029, 1, 19) })
+        expect(lunarNewYear?.window(2029, 'south')).toEqual(lunarNewYear?.window(2029, 'north'))
+        expect(lunarNewYear?.window(2051, 'north')).toBeNull()
+    })
+
     it('closes with Summer Christmas, southern only and on the Christmas logo, while Christmas stays northern', () => {
         const last = REGISTRY[REGISTRY.length - 1]
         expect({ id: last.id, label: last.label, kind: last.kind, hemisphere: last.hemisphere, logo: last.logo }).toEqual({

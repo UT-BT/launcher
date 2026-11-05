@@ -20,3 +20,8 @@
     transform: rotate(360deg);
   }
 }
+
+.seasonal-lantern-swing {
+  transform-origin: 50% 0;
+  animation: seasonal-wobble 0.9s ease-in-out infinite alternate;
+}

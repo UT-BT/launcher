@@ -1,4 +1,5 @@
 import type { Hemisphere } from './hemisphere'
+import { lunarNewYearsDay } from './lunarNewYear'
 
 export type { Hemisphere }
 
@@ -55,6 +56,21 @@ export const ENTRIES = [
     { id: 'summer', label: 'Summer', kind: 'season', window: meteorological(5) },
     { id: 'autumn', label: 'Autumn', kind: 'season', window: meteorological(8) },
     { id: 'winter', label: 'Winter', kind: 'season', window: meteorological(11) },
+    {
+        id: 'new-year',
+        label: 'New Year',
+        kind: 'holiday',
+        window: year => ({ start: new Date(year, 11, 31), endExclusive: new Date(year + 1, 0, 4) }),
+    },
+    {
+        id: 'lunar-new-year',
+        label: 'Lunar New Year',
+        kind: 'holiday',
+        window: year => {
+            const day = lunarNewYearsDay(year)
+            return day && daysAround(day, 1, 5)
+        },
+    },
     {
         id: 'easter',
         label: 'Easter',

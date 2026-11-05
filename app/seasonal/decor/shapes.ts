@@ -31,3 +31,15 @@ export const STAR = 'M12 2 L14.9 8.6 L22 9.3 L16.6 14 L18.2 21 L12 17.3 L5.8 21 
 export const SPARKLE = 'M12 1 C12.8 8 16 11.2 23 12 C16 12.8 12.8 16 12 23 C11.2 16 8 12.8 1 12 C8 11.2 11.2 8 12 1 Z'
 
 export const GOLD_COLORS = ['#fde68a', '#facc15', '#fbbf24', '#fef3c7']
+
+export const FIREWORK_COLORS = ['#fde68a', '#f9a8d4', '#67e8f9', '#c7d2fe']
+
+export const LANTERN_BODY = 'M8 6H16C20 7.5 22 10.5 22 15S20 22.5 16 24H8C4 22.5 2 19.5 2 15S4 7.5 8 6Z'
+
+export const LANTERN_CAPS = 'M8 4H16V6H8ZM8 24H16V26H8Z'
+
+export const LANTERN_RIBS = 'M12 6V24M8 6.5C5.5 10 5.5 20 8 23.5M16 6.5C18.5 10 18.5 20 16 23.5'
+
+export const LANTERN_TASSEL = 'M12 0V4M12 26V31'
+
+export const COIN = 'M12 2A10 10 0 1 0 12 22A10 10 0 1 0 12 2ZM9.5 9.5V14.5H14.5V9.5Z'

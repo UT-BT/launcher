@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
 import { horizontalOverflow } from './layout'
 import { ENTRIES, ENTRY_IDS, type Entry, type EntryId } from '../app/seasonal/seasons'
-import { ICE_CRYSTAL, LEAF, STAR } from '../app/seasonal/decor/shapes'
+import { COIN, ICE_CRYSTAL, LANTERN_BODY, LEAF, SPARKLE, STAR } from '../app/seasonal/decor/shapes'
 import { dataFrom } from './mobile/fixtures/data'
 import { fixtureSetNamed } from './mobile/fixtures'
 import { serveFixtureSet } from './mobile/fixtures/router'
@@ -593,4 +593,134 @@ test.describe('Summer Christmas', () => {
         await expect(burst).toHaveCount(1)
         await expect(burst).toHaveCount(0, { timeout: 5000 })
     })
+})
+
+test.describe('New Year and Lunar New Year', () => {
+    const HOLIDAY_PARTICLES = 16
+    const NEW_YEARS_EVE = new Date(2026, 11, 31, 12, 0)
+    const JAN_4 = new Date(2027, 0, 4, 12, 0)
+    const LUNAR_NEW_YEARS_DAY = new Date(2026, 1, 17, 12, 0)
+
+    test('the Seasonal theme hands Christmas over to New Year, which ends on Jan 4', async ({ page, isMobile }) => {
+        await followCalendar(page, NEW_YEARS_EVE, 'seasonal')
+        await page.goto('/')
+        await expect(page.locator('html')).toHaveAttribute('data-season', 'new-year')
+        await expect(page.locator('html')).toHaveClass(/(^|\s)dark(\s|$)/)
+        await expect(logo(page, isMobile)).toHaveAttribute('src', /logo-new-year/)
+        await expect(page.locator('.seasonal-layer')).toHaveAttribute('data-season-layer', 'new-year')
+        const newYearEnds = await localMidnight(page, 2027, 0, 4)
+        await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('utbt:season:v2') ?? 'null')))
+            .toEqual({ id: 'new-year', until: newYearEnds })
+
+        await page.clock.setFixedTime(JAN_4)
+        await page.reload()
+        await expect(page.locator('html')).toHaveAttribute('data-season', 'winter')
+        await expect(logo(page, isMobile)).toHaveAttribute('src', /logo-winter/)
+    })
+
+    test('the Seasonal theme shows Lunar New Year on its day', async ({ page, isMobile }) => {
+        await followCalendar(page, LUNAR_NEW_YEARS_DAY, 'seasonal')
+        await page.goto('/')
+        await expect(page.locator('html')).toHaveAttribute('data-season', 'lunar-new-year')
+        await expect(logo(page, isMobile)).toHaveAttribute('src', /logo-lunar-new-year/)
+        await expect(page.locator('.seasonal-layer')).toHaveAttribute('data-season-layer', 'lunar-new-year')
+    })
+
+    const ON_RED: Array<[string, Date, RegExp]> = [
+        ['New Year', NEW_YEARS_EVE, /logo-new-year/],
+        ['Lunar New Year', LUNAR_NEW_YEARS_DAY, /logo-lunar-new-year/],
+    ]
+
+    for (const [label, now, file] of ON_RED) {
+        test(`Red shows only the ${label} logo and never loads the decorations`, async ({ page, isMobile }) => {
+            const requests = decorRequests(page)
+            await followCalendar(page, now, 'red')
+            await page.goto('/')
+            await expect(logo(page, isMobile)).toHaveAttribute('src', file)
+            await expect(page.locator('html')).toHaveAttribute('data-theme', 'red')
+            await expect(page.locator('html')).not.toHaveAttribute('data-season', /.+/)
+            await expect(page.locator('.seasonal-layer')).toHaveCount(0)
+            expect(requests.filter(url => url.includes('SeasonalDecor'))).toEqual([])
+        })
+    }
+
+    test('New Year blooms one or two rings of sparks in the upper part, within the holiday budget', async ({ page }) => {
+        await page.setViewportSize({ width: 1280, height: 800 })
+        await page.goto('/?season=new-year')
+        const layer = page.locator('.seasonal-layer')
+        await expect(layer).toHaveAttribute('data-season-layer', 'new-year')
+        const blooms = layer.locator(':scope > span.seasonal-bloom')
+        const desktop = await particleCounts(page)
+        expect(desktop.total).toBe(await blooms.count())
+        expect(desktop.total).toBeGreaterThanOrEqual(1)
+        expect(desktop.total).toBeLessThanOrEqual(2)
+        expect(desktop.visible).toBe(desktop.total)
+        expect(await layer.locator('.seasonal-bloom b').count()).toBeLessThanOrEqual(HOLIDAY_PARTICLES)
+        const tops = await blooms.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().top / window.innerHeight))
+        for (const top of tops) expect(top).toBeLessThan(0.5)
+
+        await page.setViewportSize({ width: 390, height: 844 })
+        const phone = await particleCounts(page)
+        expect(phone.visible).toBeLessThanOrEqual(Math.ceil(desktop.total / 2))
+        expect(await nonCompositorProperties(page)).toEqual([])
+    })
+
+    test('Lunar New Year sends a few red-gold lanterns up, within the holiday budget', async ({ page }) => {
+        await page.setViewportSize({ width: 1280, height: 800 })
+        await page.goto('/?season=lunar-new-year')
+        const layer = page.locator('.seasonal-layer')
+        await expect(layer).toHaveAttribute('data-season-layer', 'lunar-new-year')
+        const desktop = await particleCounts(page)
+        expect(desktop.total).toBeGreaterThan(0)
+        expect(desktop.total).toBeLessThanOrEqual(HOLIDAY_PARTICLES)
+        expect(desktop.visible).toBe(desktop.total)
+        expect(await layer.locator(`:scope > span.seasonal-lantern path[d="${LANTERN_BODY}"]`).count()).toBe(desktop.total)
+
+        await page.setViewportSize({ width: 390, height: 844 })
+        const phone = await particleCounts(page)
+        expect(phone.visible).toBeLessThanOrEqual(HOLIDAY_PARTICLES / 2)
+        expect(phone.visible).toBeLessThanOrEqual(Math.ceil(desktop.total / 2))
+        expect(await nonCompositorProperties(page)).toEqual([])
+    })
+
+    const GLYPHS: Array<[EntryId, string]> = [
+        ['new-year', 'lucide-party-popper'],
+        ['lunar-new-year', 'lucide-lantern'],
+    ]
+
+    for (const [season, glyph] of GLYPHS) {
+        test(`the ${season} spinner shows its own moving glyph`, async ({ page }) => {
+            await page.route(/https:\/\/api\.utbt\.net\/.*/, () => {})
+            await page.goto(`/compare?season=${season}`)
+            const spinner = page.locator('.compare-start-empty').filter({ hasText: 'Loading records' }).locator('svg')
+            await expect(spinner).toHaveClass(new RegExp(`(^|\\s)${glyph}(\\s|$)`))
+            await expect(spinner).not.toHaveCSS('animation-name', 'none')
+        })
+    }
+
+    const BURSTS: Array<[EntryId, string, string, string]> = [
+        ['new-year', 'sparkles and confetti', `:scope > span > svg > path[d="${SPARKLE}"]`, ':scope > span.seasonal-burst-confetti'],
+        ['lunar-new-year', 'lanterns and gold coins', `:scope > span > svg > path[d="${LANTERN_BODY}"]`, `:scope > span > svg > path[d="${COIN}"]`],
+    ]
+
+    for (const [season, label, first, second] of BURSTS) {
+        test(`clicking the sidebar logo on ${season} fires ${label} once per cooldown`, async ({ page, isMobile }) => {
+            test.skip(isMobile, 'the burst lives on the desktop sidebar logo')
+            await page.goto(`/?season=${season}`)
+            await expect(sidebarLogo(page)).toHaveAttribute('src', new RegExp(`logo-${season}`))
+            await sidebarLogo(page).click()
+            const burst = page.locator('.seasonal-burst')
+            await expect(burst).toHaveCount(1)
+            const particles = await burst.locator(':scope > span').count()
+            const firsts = await burst.locator(first).count()
+            const seconds = await burst.locator(second).count()
+            expect(firsts).toBeGreaterThan(0)
+            expect(seconds).toBeGreaterThan(0)
+            expect(firsts + seconds).toBe(particles)
+            expect(await nonCompositorProperties(page)).toEqual([])
+            await sidebarLogo(page).click()
+            await expect(burst).toHaveCount(1)
+            await expect(burst).toHaveCount(0, { timeout: 5000 })
+        })
+    }
 })

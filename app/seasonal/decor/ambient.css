@@ -588,3 +588,130 @@
     transform: scale(1) rotate(45deg);
   }
 }
+
+.seasonal-bloom {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: 0;
+  height: 0;
+  animation: seasonal-bloom-hop calc(var(--d) * 3) linear var(--delay) infinite;
+  will-change: transform;
+}
+
+.seasonal-bloom i {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  animation: seasonal-bloom var(--d) ease-out var(--delay) infinite;
+  will-change: transform, opacity;
+}
+
+.seasonal-bloom b {
+  position: absolute;
+  left: -1.25px;
+  top: -6px;
+  width: 2.5px;
+  height: 12px;
+  border-radius: 9999px;
+  background: var(--c);
+  box-shadow: 0 0 6px var(--c);
+  transform: rotate(var(--a)) translate3d(0, calc(var(--r) * -1), 0);
+}
+
+@keyframes seasonal-bloom {
+  0% {
+    opacity: 0;
+    transform: scale(0.15);
+  }
+  6% {
+    opacity: var(--o);
+  }
+  24%,
+  100% {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0) scale(1);
+  }
+}
+
+@keyframes seasonal-bloom-hop {
+  0%,
+  19.99% {
+    transform: translate3d(0, 0, 0);
+  }
+  20%,
+  54.99% {
+    transform: translate3d(var(--hx1), var(--hy1), 0);
+  }
+  55%,
+  87.99% {
+    transform: translate3d(var(--hx2), var(--hy2), 0);
+  }
+  88%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.seasonal-lantern {
+  position: absolute;
+  top: 100%;
+  left: var(--x);
+  animation: seasonal-rise var(--d) linear var(--delay) infinite;
+  will-change: transform;
+}
+
+.seasonal-lantern i {
+  display: block;
+  width: var(--s);
+  opacity: var(--o);
+  transform-origin: 50% 0;
+  animation: seasonal-lantern-sway var(--swayd) ease-in-out infinite alternate;
+}
+
+.seasonal-lantern svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  filter: drop-shadow(0 0 4px rgb(251 191 36 / 0.45));
+}
+
+.seasonal-lantern path:nth-child(1) {
+  fill: none;
+  stroke: #facc15;
+  stroke-width: 1.5;
+}
+
+.seasonal-lantern path:nth-child(2) {
+  fill: #dc2626;
+}
+
+.seasonal-lantern path:nth-child(3) {
+  fill: none;
+  stroke: #fbbf24;
+  stroke-opacity: 0.7;
+  stroke-width: 1;
+}
+
+.seasonal-lantern path:nth-child(4) {
+  fill: #facc15;
+}
+
+@keyframes seasonal-rise {
+  from {
+    transform: translate3d(0, 4vh, 0);
+  }
+  to {
+    transform: translate3d(0, -112vh, 0);
+  }
+}
+
+@keyframes seasonal-lantern-sway {
+  from {
+    transform: translate3d(calc(var(--sway) * -1), 0, 0) rotate(-6deg);
+  }
+  to {
+    transform: translate3d(var(--sway), 0, 0) rotate(6deg);
+  }
+}

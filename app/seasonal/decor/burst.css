@@ -64,3 +64,11 @@
   background: radial-gradient(circle at 35% 30%, #fecaca, #dc2626 45%, #991b1b);
   box-shadow: 0 0 5px rgb(220 38 38 / 0.5);
 }
+
+.seasonal-burst-confetti {
+  width: 4px;
+  height: 9px;
+  border-radius: 1px;
+  background: var(--c);
+  box-shadow: 0 0 4px rgb(253 230 138 / 0.4);
+}
