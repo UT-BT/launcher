@@ -2,11 +2,19 @@ import { useSyncExternalStore } from 'react'
 import { Palette, Contrast, Check, Lock, Heart, Clock, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { SettingsSection, SettingsRow } from './SettingsComponents'
+import { Switch } from '@/app/components/ui/switch'
 import { openExternal } from '@/app/platform'
 import { useTheme } from '@/app/theme/ThemeProvider'
 import { THEMES, type ThemeMeta } from '@/app/theme/themes'
 import { TIMEZONE_OPTIONS, browserResolvedTimezone, useDisplayTimezoneOverride } from '@/app/utils/timezone'
-import { readSeasonOverride, subscribeSeasonOverride, writeSeasonOverride } from '@/app/seasonal/preferences'
+import {
+    loadSeasonalEffects,
+    readSeasonOverride,
+    saveSeasonalEffects,
+    subscribeSeasonalEffects,
+    subscribeSeasonOverride,
+    writeSeasonOverride,
+} from '@/app/seasonal/preferences'
 import { ENTRIES, isEntryPreview } from '@/app/seasonal/seasons'
 import { SEASONAL_THEME_ID } from '@/app/seasonal/appearance'
 import { dismissSeasonalNotice } from '@/app/components/pages/home/seasonalNoticeStorage'
@@ -27,6 +35,7 @@ export function LauncherAppearanceSettings({ unlockExclusive }: LauncherAppearan
     const [timezoneOverride, setTimezoneOverride] = useDisplayTimezoneOverride()
     const seasonPreview = useSyncExternalStore(subscribeSeasonOverride, readSeasonOverride)
     const seasonalCard = useSeasonalCard()
+    const seasonalEffects = useSyncExternalStore(subscribeSeasonalEffects, loadSeasonalEffects)
 
     const renderCard = (theme: ThemeMeta) => {
         const active = theme.id === themeId
@@ -99,7 +108,22 @@ export function LauncherAppearanceSettings({ unlockExclusive }: LauncherAppearan
                 <div className="grid grid-cols-1 @md/panel:grid-cols-2 gap-3 p-4">
                     {gradients.map(renderCard)}
                 </div>
-                {themeId === SEASONAL_THEME_ID && <HemisphereRow />}
+                {themeId === SEASONAL_THEME_ID && (
+                    <>
+                        <HemisphereRow />
+                        <SettingsRow
+                            label="Effects"
+                            description="Ambient effects behind the pages, and a burst when you click the logo."
+                        >
+                            <Switch
+                                aria-label="Seasonal effects"
+                                checked={seasonalEffects}
+                                onCheckedChange={saveSeasonalEffects}
+                                className="h-11 border-x-0 border-y-[10px] px-0.5 bg-clip-padding"
+                            />
+                        </SettingsRow>
+                    </>
+                )}
             </SettingsSection>
 
             <SettingsSection title="Solid Colours" icon={Contrast}>

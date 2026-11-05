@@ -1,9 +1,11 @@
 import type { EntryId } from '../seasons'
-import { BAT_BODY, BAT_WING, MIRROR_BAT, seededRandom } from './shapes'
+import { BAT_BODY, BAT_WING, BLOSSOM_COLORS, ICE_CRYSTAL, LEAF, LEAF_COLORS, LEAF_VEIN, MIRROR_BAT, seededRandom } from './shapes'
 
 const COOLDOWN_MS = 10_000
 const LIFETIME_MS = 2300
 const PETAL_COLORS = ['#f9a8d4', '#fde68a', '#c4b5fd', '#86efac']
+const SEASON_BURST_PARTICLES = 10
+const SEASON_ENTRIES: ReadonlySet<EntryId> = new Set(['spring', 'summer', 'autumn', 'winter'])
 
 let lastBurstAt = -Infinity
 
@@ -11,6 +13,9 @@ function drift(season: EntryId, angle: number, distance: number): [number, numbe
     const dx = Math.cos(angle) * distance
     if (season === 'halloween') return [dx, -Math.abs(Math.sin(angle) * distance) - 30]
     if (season === 'christmas') return [dx, Math.sin(angle) * distance * 0.6 + 50]
+    if (season === 'spring') return [dx, Math.sin(angle) * distance * 0.7 + 25]
+    if (season === 'autumn') return [dx * 0.8, Math.abs(Math.sin(angle) * distance) * 0.5 + 40]
+    if (season === 'winter') return [dx, Math.sin(angle) * distance * 0.6 + 35]
     return [dx, Math.sin(angle) * distance]
 }
 
@@ -22,6 +27,17 @@ function particle(season: EntryId, index: number, random: () => number): HTMLSpa
     } else if (season === 'christmas') {
         element.className = 'seasonal-burst-flake'
         element.style.setProperty('--s', `${3 + Math.round(random() * 4)}px`)
+    } else if (season === 'summer') {
+        element.className = 'seasonal-burst-spark'
+    } else if (season === 'spring') {
+        element.className = 'seasonal-burst-petal'
+        element.style.setProperty('--c', BLOSSOM_COLORS[index % BLOSSOM_COLORS.length])
+    } else if (season === 'autumn') {
+        const size = 12 + Math.round(random() * 6)
+        element.innerHTML = `<svg viewBox="0 0 24 24" width="${size}" fill="${LEAF_COLORS[index % LEAF_COLORS.length]}" stroke="#451a03" stroke-opacity="0.5" stroke-width="1.2"><path d="${LEAF}" stroke="none"/><path d="${LEAF_VEIN}" fill="none"/></svg>`
+    } else if (season === 'winter') {
+        const size = 10 + Math.round(random() * 5)
+        element.innerHTML = `<svg viewBox="0 0 24 24" width="${size}" fill="none" stroke="#e0f2fe" stroke-width="1.6" stroke-linecap="round"><path d="${ICE_CRYSTAL}"/></svg>`
     } else {
         element.className = 'seasonal-burst-petal'
         element.style.setProperty('--c', PETAL_COLORS[index % PETAL_COLORS.length])
@@ -41,7 +57,7 @@ export function fireBurst(season: EntryId, x: number, y: number): void {
     host.style.setProperty('--by', `${y}px`)
 
     const random = seededRandom(now)
-    const count = season === 'christmas' ? 14 : 12
+    const count = season === 'christmas' ? 14 : SEASON_ENTRIES.has(season) ? SEASON_BURST_PARTICLES : 12
     for (let index = 0; index < count; index++) {
         const angle = (index / count) * Math.PI * 2 + random() * 0.5
         const [dx, dy] = drift(season, angle, 60 + random() * 70)

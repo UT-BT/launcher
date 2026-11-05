@@ -7,6 +7,7 @@ const PIN_KEY = 'utbt:seasonPin:v1'
 const CACHE_KEY = 'utbt:season:v2'
 const HEMISPHERE_KEY = 'utbt:hemisphere:v1'
 const HEMISPHERE_OVERRIDE_KEY = 'utbt:hemisphereOverride:v1'
+const EFFECTS_KEY = 'utbt:seasonalEffects:v1'
 
 export interface SeasonCache {
     id: EntryId | null
@@ -84,6 +85,22 @@ export function saveHemisphereSetting(setting: HemisphereSetting): void {
 
 export function subscribeHemisphereSetting(callback: () => void): () => void {
     return subscribeSynced(HEMISPHERE_KEY, callback)
+}
+
+export function parseSeasonalEffects(stored: unknown): boolean {
+    return typeof stored === 'boolean' ? stored : true
+}
+
+export function loadSeasonalEffects(): boolean {
+    return parseSeasonalEffects(getSynced<unknown>(EFFECTS_KEY, null))
+}
+
+export function saveSeasonalEffects(on: boolean): void {
+    setSynced(EFFECTS_KEY, on)
+}
+
+export function subscribeSeasonalEffects(callback: () => void): () => void {
+    return subscribeSynced(EFFECTS_KEY, callback)
 }
 
 export function parseHemisphereParam(search: string): Hemisphere | null {

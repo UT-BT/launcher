@@ -3,9 +3,16 @@ import { resolve } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
 import { horizontalOverflow } from './layout'
 import { ENTRIES, ENTRY_IDS, type EntryId } from '../app/seasonal/seasons'
+import { ICE_CRYSTAL, LEAF } from '../app/seasonal/decor/shapes'
+import { dataFrom } from './mobile/fixtures/data'
+import { fixtureSetNamed } from './mobile/fixtures'
+import { serveFixtureSet } from './mobile/fixtures/router'
+import { worldRecords } from './mobile/manifest/world-records'
 
 const SEASONAL_LOGO = new RegExp(`logo-(${ENTRY_IDS.join('|')})`)
-const NO_AMBIENT: readonly EntryId[] = ['spring', 'summer', 'autumn', 'winter']
+const NO_AMBIENT: readonly EntryId[] = []
+const SEASONS = ENTRIES.filter(entry => entry.kind === 'season').map(entry => entry.id)
+const SEASON_PARTICLES = 8
 const HALLOWEEN_NIGHT = new Date(2026, 9, 31, 20, 0)
 const CHRISTMAS_EVE = new Date(2026, 11, 24, 12, 0)
 const MIDSUMMER = new Date(2026, 6, 15, 12, 0)
@@ -312,11 +319,62 @@ test('Settings has no seasonal themes toggle, and the dev preview lists every en
     await expect(page.locator('html')).not.toHaveAttribute('data-season', /.+/)
 })
 
-test('ambient particles stay on Home while the seasonal logo stays everywhere', async ({ page, isMobile }) => {
+test('the ambient layer runs behind every page of the app shell', async ({ page, isMobile }) => {
+    await page.goto('/?season=winter')
+    await expect(page.locator('.seasonal-layer')).toHaveAttribute('data-season-layer', 'winter')
+
+    await serveFixtureSet(page, worldRecords.fixtures)
+    await page.goto(`${worldRecords.path}?season=winter`)
+    await worldRecords.ready(page, dataFrom(fixtureSetNamed(worldRecords.fixtures)!))
+    await expect(logo(page, isMobile)).toHaveAttribute('src', /logo-winter/)
+    const layer = page.locator('.seasonal-layer')
+    await expect(layer).toHaveAttribute('data-season-layer', 'winter')
+    await expect(layer).toHaveCSS('pointer-events', 'none')
+    const stacking = await page.evaluate(() => {
+        const main = document.querySelector('main')!
+        const ambient = document.querySelector('.seasonal-layer')!
+        return {
+            inScroller: main.contains(ambient),
+            under: Number(getComputedStyle(ambient).zIndex) < Number(getComputedStyle(main).zIndex),
+            before: !!(ambient.compareDocumentPosition(main) & Node.DOCUMENT_POSITION_FOLLOWING),
+        }
+    })
+    expect(stacking).toEqual({ inScroller: false, under: true, before: true })
+
     await page.goto('/maps?season=halloween')
-    await expect(logo(page, isMobile)).toHaveAttribute('src', /logo-halloween/)
+    await expect(page.locator('.seasonal-layer')).toHaveAttribute('data-season-layer', 'halloween')
+})
+
+test('stream routes never mount the ambient layer', async ({ page }) => {
+    await page.goto('/stream/2v2-cup-2026/1/overlay?season=winter')
+    await page.waitForLoadState('load')
+    await page.waitForTimeout(500)
     await expect(page.locator('.seasonal-layer')).toHaveCount(0)
 })
+
+async function particleCounts(page: Page): Promise<{ total: number; visible: number }> {
+    return page.locator('.seasonal-layer').evaluate(layer => {
+        const particles = [...layer.children].filter(child => child.tagName === 'SPAN')
+        return { total: particles.length, visible: particles.filter(child => getComputedStyle(child).display !== 'none').length }
+    })
+}
+
+for (const season of SEASONS) {
+    test(`${season} stays within the season particle budget, with half hidden below 768 px`, async ({ page }) => {
+        await page.setViewportSize({ width: 1280, height: 800 })
+        await page.goto(`/?season=${season}`)
+        await expect(page.locator('.seasonal-layer')).toHaveAttribute('data-season-layer', season)
+        const desktop = await particleCounts(page)
+        expect(desktop.total).toBeLessThanOrEqual(SEASON_PARTICLES)
+        expect(desktop.visible).toBe(desktop.total)
+
+        await page.setViewportSize({ width: 390, height: 844 })
+        const phone = await particleCounts(page)
+        expect(phone.visible).toBeLessThanOrEqual(SEASON_PARTICLES / 2)
+        expect(phone.visible).toBeLessThanOrEqual(Math.ceil(desktop.total / 2))
+        expect(await nonCompositorProperties(page)).toEqual([])
+    })
+}
 
 test('Classic keeps its own accent and background during a holiday', async ({ page, isMobile }) => {
     await followCalendar(page, HALLOWEEN_NIGHT)
@@ -358,6 +416,52 @@ test('clicking the sidebar logo fires one burst per cooldown', async ({ page, is
     await expect(page.locator('.seasonal-burst')).toHaveCount(0, { timeout: 5000 })
 })
 
+const SEASON_BURSTS: Array<[EntryId, string]> = [
+    ['spring', 'span.seasonal-burst-petal'],
+    ['summer', 'span.seasonal-burst-spark'],
+    ['autumn', `span > svg > path[d="${LEAF}"]`],
+    ['winter', `span > svg > path[d="${ICE_CRYSTAL}"]`],
+]
+
+for (const [season, shape] of SEASON_BURSTS) {
+    test(`clicking the sidebar logo on ${season} fires its own burst once per cooldown`, async ({ page, isMobile }) => {
+        test.skip(isMobile, 'the burst lives on the desktop sidebar logo')
+        await page.goto(`/?season=${season}`)
+        await expect(sidebarLogo(page)).toHaveAttribute('src', new RegExp(`logo-${season}`))
+        await sidebarLogo(page).click()
+        const burst = page.locator('.seasonal-burst')
+        await expect(burst).toHaveCount(1)
+        const particles = burst.locator(':scope > span')
+        await expect(particles.first()).toBeAttached()
+        expect(await burst.locator(`:scope > ${shape}`).count()).toBe(await particles.count())
+        expect(await nonCompositorProperties(page)).toEqual([])
+        await sidebarLogo(page).click()
+        await expect(burst).toHaveCount(1)
+        await expect(burst).toHaveCount(0, { timeout: 5000 })
+    })
+}
+
+for (const season of ['autumn', 'halloween'] as const) {
+    test(`with the effects switch off ${season} keeps its look but has no layer and no burst`, async ({ page, isMobile }) => {
+        await page.addInitScript(() => localStorage.setItem('utbt:seasonalEffects:v1', 'false'))
+        await page.goto(`/?season=${season}`)
+        await expect(page.locator('html')).toHaveAttribute('data-season', season)
+        await expect(page.locator('html')).toHaveAttribute('data-theme', 'seasonal')
+        const [tint] = await resolvedColors(page, [declared(SEASONS_CSS, `:root[data-theme='seasonal'][data-season='${season}']`, '--accent-500')])
+        await expect.poll(() => resolvedColors(page, ['var(--accent-500)'])).toEqual([tint])
+        await expect(logo(page, isMobile)).toHaveAttribute('src', new RegExp(`logo-${season}`))
+        await expect(logo(page, isMobile)).toBeVisible()
+        if (!isMobile) {
+            await sidebarLogo(page).click()
+            await page.waitForTimeout(300)
+            await expect(page.locator('.seasonal-burst')).toHaveCount(0)
+        }
+        await page.waitForLoadState('load')
+        await page.waitForTimeout(500)
+        await expect(page.locator('.seasonal-layer')).toHaveCount(0)
+    })
+}
+
 test.describe('with reduced motion', () => {
     test('keeps the seasonal logo but drops particles and the burst', async ({ page, isMobile }) => {
         await page.emulateMedia({ reducedMotion: 'reduce' })
@@ -369,5 +473,18 @@ test.describe('with reduced motion', () => {
             await page.waitForTimeout(300)
             await expect(page.locator('.seasonal-burst')).toHaveCount(0)
         }
+    })
+
+    test('a season shows no layer and no burst', async ({ page, isMobile }) => {
+        await page.emulateMedia({ reducedMotion: 'reduce' })
+        await page.goto('/?season=summer')
+        await expect(page.locator('html')).toHaveAttribute('data-season', 'summer')
+        await expect(logo(page, isMobile)).toHaveAttribute('src', /logo-summer/)
+        if (!isMobile) {
+            await sidebarLogo(page).click()
+            await page.waitForTimeout(300)
+            await expect(page.locator('.seasonal-burst')).toHaveCount(0)
+        }
+        await expect(page.locator('.seasonal-layer')).toHaveCount(0)
     })
 })

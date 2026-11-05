@@ -13,3 +13,15 @@ export function seededRandom(seed: number): () => number {
         return state / 4294967296
     }
 }
+
+export const LEAF =
+    'M12 1.5 C17.5 5.5 20 11 16.6 17 C15.2 19.4 13.4 20.6 12 21 C10.6 20.6 8.8 19.4 7.4 17 C4 11 6.5 5.5 12 1.5 Z'
+
+export const LEAF_VEIN = 'M12 4.5 L12 23'
+
+export const BLOSSOM_COLORS = ['#fbcfe8', '#f9a8d4', '#fce7f3', '#f5d0fe']
+
+export const LEAF_COLORS = ['#d97706', '#c2410c', '#ca8a04', '#b45309', '#9a3412']
+
+export const ICE_CRYSTAL =
+    'M12 3V21M4.2 7.5L19.8 16.5M4.2 16.5L19.8 7.5M12 6.5L13.9 4.2M12 6.5L10.1 4.2M12 17.5L10.1 19.8M12 17.5L13.9 19.8M7.2 9.2L6.2 6.4M7.2 9.2L4.3 9.8M7.2 14.8L4.3 14.2M7.2 14.8L6.2 17.6M16.8 14.8L17.8 17.6M16.8 14.8L19.7 14.2M16.8 9.2L19.7 9.8M16.8 9.2L17.8 6.4'

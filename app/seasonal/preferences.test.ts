@@ -2,14 +2,18 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
     captureHemisphereOverride,
     loadHemisphereSetting,
+    loadSeasonalEffects,
     parseHemisphereParam,
     parseHemisphereSetting,
+    parseSeasonalEffects,
     parseSeasonParam,
     readEntryPreview,
     readHemisphereOverride,
     saveHemisphereSetting,
+    saveSeasonalEffects,
     subscribeHemisphereOverride,
     subscribeHemisphereSetting,
+    subscribeSeasonalEffects,
     writeHemisphereOverride,
     writeSeasonCache,
 } from './preferences'
@@ -99,6 +103,10 @@ describe('seasonal storage keys', () => {
         expect(isSyncedKey('utbt:hemisphere:v1')).toBe(true)
         expect(isSyncedKey('utbt:hemisphereOverride:v1')).toBe(false)
     })
+
+    it('syncs the seasonal effects switch with the account', () => {
+        expect(isSyncedKey('utbt:seasonalEffects:v1')).toBe(true)
+    })
 })
 
 describe('parseHemisphereSetting', () => {
@@ -177,5 +185,44 @@ describe('the hemisphere preview', () => {
         expect(readHemisphereOverride()).toBeNull()
         expect(listener).toHaveBeenCalledTimes(2)
         unsubscribe()
+    })
+})
+
+describe('parseSeasonalEffects', () => {
+    it('keeps an explicit on or off', () => {
+        expect(parseSeasonalEffects(true)).toBe(true)
+        expect(parseSeasonalEffects(false)).toBe(false)
+    })
+
+    it.each([null, undefined, '', 'false', 0, { on: false }])('defaults %j to on', stored => {
+        expect(parseSeasonalEffects(stored)).toBe(true)
+    })
+})
+
+describe('the seasonal effects switch', () => {
+    it('defaults to on with nothing stored', () => {
+        withStorage({}, {})
+        expect(loadSeasonalEffects()).toBe(true)
+    })
+
+    it('reads a stored off', () => {
+        withStorage({}, { 'utbt:seasonalEffects:v1': 'false' })
+        expect(loadSeasonalEffects()).toBe(false)
+    })
+
+    it('saves a JSON value under its synced key and notifies subscribers', () => {
+        const { localStorage } = withStorage({}, {})
+        const listener = vi.fn()
+        const unsubscribe = subscribeSeasonalEffects(listener)
+        saveSeasonalEffects(false)
+        expect(localStorage.getItem('utbt:seasonalEffects:v1')).toBe('false')
+        expect(loadSeasonalEffects()).toBe(false)
+        expect(listener).toHaveBeenCalledTimes(1)
+        saveSeasonalEffects(true)
+        expect(localStorage.getItem('utbt:seasonalEffects:v1')).toBe('true')
+        expect(loadSeasonalEffects()).toBe(true)
+        unsubscribe()
+        saveSeasonalEffects(false)
+        expect(listener).toHaveBeenCalledTimes(2)
     })
 })

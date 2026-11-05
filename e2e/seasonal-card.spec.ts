@@ -43,6 +43,10 @@ function hemisphereControl(page: Page) {
     return page.getByRole('group', { name: 'Hemisphere' })
 }
 
+function effectsSwitch(page: Page) {
+    return page.getByRole('switch', { name: 'Seasonal effects' })
+}
+
 test.beforeEach(async ({ page }) => {
     await mockApi(page)
 })
@@ -62,6 +66,38 @@ test('the hemisphere control shows only while Seasonal is the saved theme', asyn
     await expect(hemisphereControl(page)).toBeVisible()
     await themeCard(page, 'UTBT Red').click()
     await expect(hemisphereControl(page)).toHaveCount(0)
+})
+
+test('the effects switch shows only while Seasonal is the saved theme', async ({ page }) => {
+    await page.goto('/')
+    await openAppearance(page)
+    await expect(effectsSwitch(page)).toHaveCount(0)
+    await themeCard(page, 'Seasonal').click()
+    await expect(effectsSwitch(page)).toBeVisible()
+    await expect(effectsSwitch(page)).toHaveAttribute('aria-checked', 'true')
+    await themeCard(page, 'UTBT Red').click()
+    await expect(effectsSwitch(page)).toHaveCount(0)
+})
+
+test('turning the effects off removes the ambient layer, persists, and survives a reload', async ({ page }) => {
+    await saveTheme(page, 'seasonal')
+    await page.goto('/?season=winter')
+    await expect(page.locator('.seasonal-layer')).toHaveAttribute('data-season-layer', 'winter')
+    await openAppearance(page)
+    await effectsSwitch(page).click()
+    await expect(effectsSwitch(page)).toHaveAttribute('aria-checked', 'false')
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('utbt:seasonalEffects:v1'))).toBe('false')
+    await expect(page.locator('.seasonal-layer')).toHaveCount(0)
+    await expect(page.locator('html')).toHaveAttribute('data-season', 'winter')
+
+    await page.reload()
+    await openAppearance(page)
+    await expect(effectsSwitch(page)).toHaveAttribute('aria-checked', 'false')
+    await expect(page.locator('.seasonal-layer')).toHaveCount(0)
+    await effectsSwitch(page).click()
+    await expect(effectsSwitch(page)).toHaveAttribute('aria-checked', 'true')
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('utbt:seasonalEffects:v1'))).toBe('true')
+    await expect(page.locator('.seasonal-layer')).toHaveAttribute('data-season-layer', 'winter')
 })
 
 test.describe('in Sydney', () => {
@@ -114,17 +150,19 @@ for (const theme of ['classic', 'seasonal']) {
 test.describe('at 360 px', () => {
     test.use({ viewport: { width: 360, height: 780 } })
 
-    test('the card and the hemisphere control fit with 44 px targets', async ({ page }) => {
+    test('the card, the hemisphere control and the effects switch fit with 44 px targets', async ({ page }) => {
         await saveTheme(page, 'seasonal')
         await page.goto('/')
         await openAppearance(page)
         await expect(hemisphereControl(page)).toBeVisible()
         expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1)
-        for (const option of await hemisphereControl(page).getByRole('button').all()) {
+        for (const option of [...await hemisphereControl(page).getByRole('button').all(), effectsSwitch(page)]) {
             const box = (await option.boundingBox())!
             expect(box.height).toBeGreaterThanOrEqual(44)
             expect(box.width).toBeGreaterThanOrEqual(44)
         }
+        const effects = (await effectsSwitch(page).boundingBox())!
+        expect(effects.x + effects.width).toBeLessThanOrEqual(360)
         const card = (await themeCard(page, 'Seasonal').boundingBox())!
         expect(card.x + card.width).toBeLessThanOrEqual(360)
     })

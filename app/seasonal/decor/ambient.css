@@ -424,3 +424,136 @@
     transform: translate3d(4%, 0, 0);
   }
 }
+
+.seasonal-blossom,
+.seasonal-leaf {
+  position: absolute;
+  top: -24px;
+  left: var(--x);
+  will-change: transform;
+}
+
+.seasonal-blossom {
+  animation: seasonal-drift var(--d) linear var(--delay) infinite;
+}
+
+.seasonal-blossom i {
+  display: block;
+  width: 9px;
+  height: 7px;
+  border-radius: 0 100% 0 100%;
+  background: var(--c);
+  opacity: 0.5;
+  animation: seasonal-tumble var(--tumble) ease-in-out infinite alternate;
+}
+
+@keyframes seasonal-drift {
+  from {
+    transform: translate3d(0, -2vh, 0);
+  }
+  to {
+    transform: translate3d(var(--dx), 104vh, 0);
+  }
+}
+
+.seasonal-leaf {
+  animation: seasonal-fall var(--d) linear var(--delay) infinite;
+}
+
+.seasonal-leaf i {
+  display: block;
+  width: var(--s);
+  height: var(--s);
+  opacity: 0.45;
+  animation: seasonal-swing var(--swing) ease-in-out infinite alternate;
+}
+
+.seasonal-leaf svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.seasonal-leaf path:first-child {
+  fill: var(--c);
+}
+
+.seasonal-leaf path:last-child {
+  fill: none;
+  stroke: rgb(69 26 3 / 0.55);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+}
+
+@keyframes seasonal-swing {
+  from {
+    transform: translate3d(calc(var(--sway) * -1), 0, 0) rotate(-40deg);
+  }
+  to {
+    transform: translate3d(var(--sway), 0, 0) rotate(40deg);
+  }
+}
+
+.seasonal-rays {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 150vmax;
+  height: 150vmax;
+  transform: translate3d(50%, -50%, 0);
+  background:
+    radial-gradient(circle, rgb(253 224 71 / 0.1), transparent 18%),
+    repeating-conic-gradient(from 3deg, rgb(253 230 138 / 0.07) 0deg 3deg, transparent 3deg 11deg);
+  mask-image: radial-gradient(circle, #000 4%, transparent 46%);
+  opacity: 0.5;
+  animation: seasonal-breathe 11s ease-in-out infinite alternate;
+  will-change: opacity;
+}
+
+@keyframes seasonal-breathe {
+  from {
+    opacity: 0.4;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.seasonal-icicles,
+.seasonal-icicles i {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background-repeat: repeat-x;
+}
+
+.seasonal-icicles {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='204' height='40'%3E%3Cdefs%3E%3ClinearGradient id='i' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23e0f2fe' stop-opacity='.45'/%3E%3Cstop offset='1' stop-color='%23bae6fd' stop-opacity='.05'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='204' height='2.5' fill='%23e0f2fe' fill-opacity='.28'/%3E%3Cpath d='M4 2Q7.2 18 8.5 30Q9.9 18 13 2ZM24 2Q26.1 9.6 27 16Q27.9 9.6 30 2ZM41 2Q44.5 22.8 46 38Q47.5 22.8 51 2ZM66 2Q67.8 7.2 68.5 12Q69.2 7.2 71 2ZM80 2Q82.8 14.4 84 24Q85.2 14.4 88 2ZM103 2Q106.8 20.4 108.5 34Q110.2 20.4 114 2ZM129 2Q131.1 10.8 132 18Q132.9 10.8 135 2ZM146 2Q149.2 16.8 150.5 28Q151.8 16.8 155 2ZM171 2Q173.4 8.4 174.5 14Q175.6 8.4 178 2ZM188 2Q190.1 12 191 20Q191.9 12 194 2Z' fill='url(%23i)'/%3E%3C/svg%3E");
+}
+
+.seasonal-icicles i {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='204' height='40'%3E%3Cpath d='M6.9 3L8.2 24M25.9 3L26.8 12.8M44.2 3L45.7 30.4M67.6 3L68.3 9.6M82.6 3L83.8 19.2M106.5 3L108.2 27.2M130.9 3L131.8 14.4M148.9 3L150.2 22.4M173.2 3L174.3 11.2M189.9 3L190.8 16' stroke='%23fff' stroke-opacity='.8' stroke-width='1.2' stroke-linecap='round' fill='none'/%3E%3C/svg%3E");
+  opacity: 0;
+  animation: seasonal-glint 14s ease-in-out infinite;
+  will-change: opacity;
+}
+
+@media (max-width: 1023px) {
+  .seasonal-icicles {
+    top: var(--top-bar-offset);
+  }
+}
+
+@keyframes seasonal-glint {
+  0%,
+  70%,
+  100% {
+    opacity: 0;
+  }
+  82% {
+    opacity: 0.7;
+  }
+}

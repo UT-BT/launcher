@@ -35,6 +35,14 @@
   background: var(--c);
 }
 
+.seasonal-burst-spark {
+  width: 3px;
+  height: 10px;
+  border-radius: 9999px;
+  background: linear-gradient(#fef08a, #f59e0b);
+  box-shadow: 0 0 6px rgb(253 224 71 / 0.6);
+}
+
 @keyframes seasonal-pop {
   0% {
     transform: translate(-50%, -50%) scale(0.3) rotate(0deg);

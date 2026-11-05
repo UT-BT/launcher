@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { usePrefersReducedMotion } from '@/app/hooks/usePrefersReducedMotion'
 import type { EntryId } from '../seasons'
-import { BAT_BODY, BAT_WING, MIRROR_BAT, seededRandom } from './shapes'
+import { BAT_BODY, BAT_WING, BLOSSOM_COLORS, LEAF, LEAF_COLORS, LEAF_VEIN, MIRROR_BAT, seededRandom } from './shapes'
 
 type Vars = Record<`--${string}`, string>
 
@@ -33,6 +33,46 @@ const PETALS = particles(11, 10, (random, index) => {
         '--delay': `${(-random() * duration).toFixed(1)}s`,
         '--c': PETAL_COLORS[index % PETAL_COLORS.length],
         '--tumble': `${(4 + random() * 4).toFixed(1)}s`,
+    }
+})
+
+const SEASON_PARTICLES = 8
+
+const BLOSSOMS = particles(23, SEASON_PARTICLES, (random, index) => {
+    const duration = 26 + random() * 16
+    return {
+        '--x': `${(random() * 100).toFixed(1)}%`,
+        '--dx': `${(8 + random() * 14).toFixed(1)}vw`,
+        '--d': `${duration.toFixed(1)}s`,
+        '--delay': `${(-random() * duration).toFixed(1)}s`,
+        '--c': BLOSSOM_COLORS[index % BLOSSOM_COLORS.length],
+        '--tumble': `${(5 + random() * 4).toFixed(1)}s`,
+    }
+})
+
+const LEAVES = particles(31, SEASON_PARTICLES, (random, index) => {
+    const duration = 20 + random() * 14
+    return {
+        '--x': `${(random() * 100).toFixed(1)}%`,
+        '--s': `${(13 + random() * 7).toFixed(0)}px`,
+        '--d': `${duration.toFixed(1)}s`,
+        '--delay': `${(-random() * duration).toFixed(1)}s`,
+        '--c': LEAF_COLORS[index % LEAF_COLORS.length],
+        '--swing': `${(3.5 + random() * 2.5).toFixed(1)}s`,
+        '--sway': `${(18 + random() * 22).toFixed(0)}px`,
+    }
+})
+
+const WINTER_FLAKES = particles(43, SEASON_PARTICLES, random => {
+    const duration = 24 + random() * 14
+    return {
+        '--x': `${(random() * 100).toFixed(1)}%`,
+        '--s': `${(2 + random() * 1.8).toFixed(1)}px`,
+        '--o': (0.3 + random() * 0.25).toFixed(2),
+        '--d': `${duration.toFixed(1)}s`,
+        '--delay': `${(-random() * duration).toFixed(1)}s`,
+        '--sway': `${(6 + random() * 12).toFixed(0)}px`,
+        '--swayd': `${(4 + random() * 3).toFixed(1)}s`,
     }
 })
 
@@ -138,6 +178,36 @@ export function AmbientLayer({ season }: { season: EntryId }) {
                         <i />
                     </span>
                 ))}
+            {season === 'spring' &&
+                BLOSSOMS.map((style, index) => (
+                    <span key={index} className="seasonal-blossom" style={style}>
+                        <i />
+                    </span>
+                ))}
+            {season === 'summer' && <div className="seasonal-rays" />}
+            {season === 'autumn' &&
+                LEAVES.map((style, index) => (
+                    <span key={index} className="seasonal-leaf" style={style}>
+                        <i>
+                            <svg viewBox="0 0 24 24">
+                                <path d={LEAF} />
+                                <path d={LEAF_VEIN} />
+                            </svg>
+                        </i>
+                    </span>
+                ))}
+            {season === 'winter' && (
+                <>
+                    <div className="seasonal-icicles">
+                        <i />
+                    </div>
+                    {WINTER_FLAKES.map((style, index) => (
+                        <span key={index} className="seasonal-flake" style={style}>
+                            <i />
+                        </span>
+                    ))}
+                </>
+            )}
             {season === 'easter' && (
                 <>
                     {PETALS.map((style, index) => (
