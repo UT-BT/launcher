@@ -38,7 +38,7 @@ A cap carries three independent signals:
 
 | Field | Meaning |
 |---|---|
-| `cap_type` | where it was set: `2` a certified UTBT server (`CAP_TYPE_UTBT_CERTIFIED`), `3` I4Games (`CAP_TYPE_I4GAMES`), anything else casual. "Certified" in the UI always means `isCertifiedCap(cap)`. |
+| `cap_type` | where it was set: `2` a certified UTBT server (`CAP_TYPE_UTBT_CERTIFIED`), `3` I4Games (`CAP_TYPE_I4GAMES`), anything else casual. "Certified" in the UI always means `isCertifiedCap(cap)`. Certified status is the ruleset stamped on the cap when it was set, not the server's current ruleset, so changing a server's ruleset never relabels its records. |
 | `verified` | its demo was uploaded and accepted. Only verified caps have a replay video and count toward the World Record. |
 | `disallowed` | removed by staff: it no longer counts toward leaderboards, medals or world records, and cannot be watched. |
 

@@ -68,11 +68,6 @@ const SERVER_STATUS_OPTIONS = [
   { value: 'false', label: 'Inactive' },
 ]
 
-const SERVER_RECORDS_OPTIONS = [
-  { value: 'true', label: 'Certified records' },
-  { value: 'false', label: 'Casual records' },
-]
-
 const SERVER_STATE_META: Record<string, { Icon: typeof CircleCheck; className: string }> = {
   Online: { Icon: CircleCheck, className: 'text-emerald-400' },
   Offline: { Icon: CircleX, className: 'text-red-400' },
@@ -778,13 +773,10 @@ function EditServerModal({ server, hosts, busy, onCancel, onSave }: {
   onCancel: () => void
   onSave: (input: AdminServerUpdate) => void
 }) {
-  const [name, setName] = useState(server.name)
-  const [region, setRegion] = useState(server.region ?? '')
   const [ip, setIp] = useState(server.ip ?? '')
   const [port, setPort] = useState(String(server.port))
   const [state, setState] = useState(server.state ?? 'Online')
   const [active, setActive] = useState(server.active)
-  const [certified, setCertified] = useState(server.certified_records)
   const [hostRef, setHostRef] = useState(server.host_ref ?? '')
 
   const hostOptions = [
@@ -806,13 +798,10 @@ function EditServerModal({ server, hosts, busy, onCancel, onSave }: {
           <Button
             disabled={busy}
             onClick={() => onSave({
-              name: name.trim(),
-              region: region.trim(),
               ip: ip.trim(),
               port: Number(port),
               state,
               active,
-              certified_records: certified,
               host_ref: hostRef || null,
             })}
           >
@@ -823,10 +812,6 @@ function EditServerModal({ server, hosts, busy, onCancel, onSave }: {
     >
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1 col-span-2">
-          <span className={PANEL_LABEL}>Name</span>
-          <Input value={name} onChange={(e) => setName(e.target.value)} className="h-9" maxLength={120} />
-        </div>
         <div className="space-y-1">
           <span className={PANEL_LABEL}>Address</span>
           <Input value={ip} onChange={(e) => setIp(e.target.value)} className="h-9" placeholder="203.0.113.10" maxLength={45} />
@@ -834,10 +819,6 @@ function EditServerModal({ server, hosts, busy, onCancel, onSave }: {
         <div className="space-y-1">
           <span className={PANEL_LABEL}>Port</span>
           <Input value={port} onChange={(e) => setPort(e.target.value)} className="h-9" inputMode="numeric" />
-        </div>
-        <div className="space-y-1">
-          <span className={PANEL_LABEL}>Region</span>
-          <Input value={region} onChange={(e) => setRegion(e.target.value)} className="h-9" maxLength={64} />
         </div>
         <div className="space-y-1">
           <span className={PANEL_LABEL}>State</span>
@@ -852,21 +833,15 @@ function EditServerModal({ server, hosts, busy, onCancel, onSave }: {
             ariaLabel="Server status"
           />
         </div>
-        <div className="space-y-1">
-          <span className={PANEL_LABEL}>Records</span>
-          <AdminSelect
-            value={String(certified)}
-            onChange={(v) => setCertified(v === 'true')}
-            options={SERVER_RECORDS_OPTIONS}
-            ariaLabel="Record certification"
-          />
-        </div>
         <div className="space-y-1 col-span-2">
           <span className={PANEL_LABEL}>Game host</span>
           <AdminSelect value={hostRef} onChange={setHostRef} options={hostOptions} ariaLabel="Game host" />
         </div>
         </div>
 
+        <p className="text-[11px] text-muted-foreground">
+          Name, region and ruleset are in Server Settings, under Server Operations.
+        </p>
         <p className="text-[11px] text-muted-foreground">
           Address and port must match what the server actually binds, or players cannot join it from the launcher.
         </p>

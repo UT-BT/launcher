@@ -24,6 +24,10 @@ import {
   DataTableEmpty, DataTableSkeletonRow,
 } from '@/app/components/shared/DataTable'
 import { DataTableExpandRow } from '@/app/components/shared/DataTableExpandRow'
+import {
+  SERVER_AUDIT_ACTIONS, auditActorName, auditDiffRow, isNotReversible, rollbackNeedsReason, rollbackNotice,
+  serverAuditDescription,
+} from './auditDescriptions'
 
 const ACTIONS = [
   '', 'user.ban', 'user.unban', 'user.warn', 'user.alias_change', 'user.title_assign', 'user.title_unassign',
@@ -33,7 +37,7 @@ const ACTIONS = [
   'mapvote.regenerate', 'mapvote.announcement',
   'host.create', 'host.update', 'host.servers',
   'host.token.issue', 'host.token.replace', 'host.token.revoke',
-  'server.update',
+  'server.update', ...SERVER_AUDIT_ACTIONS,
   'alert.ack', 'alert.unack', 'alert.resolve',
 ]
 const ACTION_OPTIONS = ACTIONS.map((a) => ({ value: a, label: a || 'All actions' }))
@@ -86,14 +90,6 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v)
 }
 
-function formatValue(v: unknown): string {
-  if (v === undefined) return '—'
-  if (v === null) return 'null'
-  if (typeof v === 'string') return v
-  if (typeof v === 'number' || typeof v === 'boolean') return String(v)
-  return JSON.stringify(v)
-}
-
 function RawJson({ value }: { value: unknown }) {
   return (
     <pre className="bg-card/30 border border-hairline/5 rounded p-3 text-xs font-mono text-muted-foreground whitespace-pre-wrap break-words overflow-x-auto">
@@ -124,9 +120,7 @@ function DetailDiffView({ details }: { details: unknown }) {
       return (
         <div className="rounded-lg border border-hairline/5 overflow-hidden">
           {keys.map((k, i) => {
-            const b = beforeObj?.[k]
-            const a = afterObj?.[k]
-            const changed = formatValue(b) !== formatValue(a)
+            const { before: b, after: a, changed, masked } = auditDiffRow(k, beforeObj?.[k], afterObj?.[k])
             return (
               <div
                 key={k}
@@ -137,17 +131,21 @@ function DetailDiffView({ details }: { details: unknown }) {
                 )}
               >
                 <span className="font-mono text-muted-foreground truncate" title={k}>{k}</span>
-                <div className="flex items-center gap-2 min-w-0 flex-wrap">
-                  <span className={cn('font-mono truncate', changed ? 'text-red-300/80 line-through decoration-red-400/40' : 'text-muted-foreground')}>
-                    {formatValue(b)}
-                  </span>
-                  {changed && (
-                    <>
-                      <ArrowRight className="size-3 text-muted-foreground/50 shrink-0" />
-                      <span className="font-mono text-emerald-300 truncate">{formatValue(a)}</span>
-                    </>
-                  )}
-                </div>
+                {masked ? (
+                  <span className="italic text-amber-300/90">{a === '—' ? b : a}</span>
+                ) : (
+                  <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                    <span className={cn('font-mono truncate', changed ? 'text-red-300/80 line-through decoration-red-400/40' : 'text-muted-foreground')}>
+                      {b}
+                    </span>
+                    {changed && (
+                      <>
+                        <ArrowRight className="size-3 text-muted-foreground/50 shrink-0" />
+                        <span className="font-mono text-emerald-300 truncate">{a}</span>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             )
           })}
@@ -274,6 +272,10 @@ function AuditDescription({ e, onMapSelect }: { e: AuditEntry; onMapSelect?: (ma
       const maps = Array.isArray(after?.maps) ? (after!.maps as unknown[]).length : 0
       return <span>Unlinked <PlayerRef id={before?.author_ref as string} alias={before?.alias as string} /> from <span className="font-mono text-xs">{String(after?.author_str ?? e.target_id)}</span> <span className="text-muted-foreground/60">· {maps} {maps === 1 ? 'map' : 'maps'}</span></span>
     }
+    case 'server.ruleset':
+    case 'server.config':
+    case 'server.config.seed':
+      return <span>{serverAuditDescription(e)}</span>
     default: return <span>{e.summary || e.action}</span>
   }
 }
@@ -326,7 +328,7 @@ function ExpandedDetail({ e, onRollback, busy, onMapSelect, inCard = false }: {
             {e.actor_id ? (
               <PlayerInfo userId={e.actor_id} alias={e.actor_alias ?? undefined} title={toActiveTitle(e.actor_title)} size="sm" />
             ) : (
-              <span className="text-muted-foreground">{e.actor_alias || e.actor_id || 'System'}</span>
+              <span className="text-muted-foreground">{auditActorName(e)}</span>
             )}
             {role && (
               <span className={cn('shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide', role.className)}>
@@ -380,6 +382,7 @@ export function AuditLogsSection({ userProfile, onMapSelect, onNavigate }: Admin
   const [error, setError] = useState<string | null>(null)
   const [rollbackTarget, setRollbackTarget] = useState<AuditEntry | null>(null)
   const [rollbackBusy, setRollbackBusy] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
 
   useResetOnChange(() => setOffset(0), [search, action, targetType, actors, PAGE])
 
@@ -441,15 +444,18 @@ export function AuditLogsSection({ userProfile, onMapSelect, onNavigate }: Admin
   const targetLabel = TARGET_OPTIONS.find((o) => o.value === targetType)?.label ?? targetType
   const actorsLabel = ACTORS_OPTIONS.find((o) => o.value === actors)?.label ?? actors
 
-  const doRollback = useCallback(async () => {
+  const doRollback = useCallback(async (reason?: string) => {
     if (!token || !rollbackTarget) return
     setRollbackBusy(true)
     setError(null)
+    setNotice(null)
     try {
-      await rollbackAudit(token, rollbackTarget.id)
+      const result = await rollbackAudit(token, rollbackTarget.id, reason)
       setRollbackTarget(null)
+      setNotice(rollbackNotice(result))
       reload()
     } catch (e) {
+      if (isNotReversible(e)) setRollbackTarget(null)
       setError(errMessage(e))
     } finally {
       setRollbackBusy(false)
@@ -475,7 +481,7 @@ export function AuditLogsSection({ userProfile, onMapSelect, onNavigate }: Admin
         return e.actor_id ? (
           <PlayerInfo userId={e.actor_id} alias={e.actor_alias ?? undefined} title={toActiveTitle(e.actor_title)} size="sm" />
         ) : (
-          <span className="font-medium text-muted-foreground">{e.actor_alias || e.actor_id || 'System'}</span>
+          <span className="font-medium text-muted-foreground">{auditActorName(e)}</span>
         )
       case 'action':
         return <span className="font-mono text-xs text-muted-foreground">{e.action}</span>
@@ -537,6 +543,7 @@ export function AuditLogsSection({ userProfile, onMapSelect, onNavigate }: Admin
       actions={<ActionButton tone="accent" icon={RefreshCw} onClick={() => reload()} loading={loading}>Refresh</ActionButton>}
     >
       <Feedback message={error} tone="red" onDismiss={() => setError(null)} />
+      <Feedback message={notice} tone="emerald" onDismiss={() => setNotice(null)} />
 
       <div className="flex flex-wrap items-center gap-3">
         <SearchInput value={search} onChange={setSearch} placeholder="Search summary…" className="flex-1 min-w-48 max-w-sm" />
@@ -639,6 +646,9 @@ export function AuditLogsSection({ userProfile, onMapSelect, onNavigate }: Admin
         busy={rollbackBusy}
         onCancel={() => setRollbackTarget(null)}
         onConfirm={doRollback}
+        withReason={!!rollbackTarget && rollbackNeedsReason(rollbackTarget)}
+        reasonRequired
+        reasonPlaceholder="Why roll back this ruleset change?"
         message={rollbackTarget ? (
           <div className="space-y-2">
             <p>This reverses the action and records a new, non-reversible audit entry:</p>

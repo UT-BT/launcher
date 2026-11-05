@@ -31,10 +31,12 @@ import type {
     MapvoteStatus,
     RosterStreamer,
     RosterSuggestion,
+    ServerRuleset,
     TitleHolder,
 } from '../../../../app/utils/api'
 import { ROLE } from '../../../../app/utils/roles'
 import { MAP_UPLOAD_FIXTURES } from '../../../../app/utils/fixtures/mapUploadFixtures'
+import { auditServerConfigFixture } from '../../../../app/utils/fixtures/serverConfigFixtures'
 import { ok, type FixtureReply, type FixtureRoute, type FixtureSet } from '../types'
 import { daysAgo, documentationIp, fakeBtpog, fakeHwid, hoursAgo, person, syntheticId, syntheticMap, TITLE, VIEWER } from './people'
 import { sessionRoutes } from './session'
@@ -595,6 +597,14 @@ function auditRow(index: number): AuditEntry {
     }
 }
 
+const SERVER_CONFIG_AUDIT = JSON.parse(
+    JSON.stringify(withSyntheticIds(auditServerConfigFixture())).replace(/[\w.+-]+@[\w-]+\.[\w.]+/g, 'staff mailbox'),
+) as AuditEntry[]
+
+function auditEntry(index: number): AuditEntry {
+    return SERVER_CONFIG_AUDIT[index] ?? auditRow(index - SERVER_CONFIG_AUDIT.length)
+}
+
 const roles: AdminRoleRow[] = Array.from({ length: 7 }, (_, index) => ({
     user: person(index + 30).id,
     alias: person(index + 30).alias,
@@ -639,6 +649,14 @@ const hosts: AdminHostsResponse = {
         host_ref: index < 6 ? `synthetic-host-${(index % 4) + 1}` : null,
     })),
     available_scopes: ['records:write', 'status:write', 'demos:write'],
+}
+
+const hostsWithRuleset = {
+    ...hosts,
+    servers: hosts.servers.map(server => ({
+        ...server,
+        ruleset: (server.certified_records ? 'certified' : 'casual') satisfies ServerRuleset,
+    })),
 }
 
 const NOT_MANAGED: ServerControl = {
@@ -790,9 +808,9 @@ export const ADMIN_SET: FixtureSet = {
         { host: 'api', path: '/admin/anti-cheat/identifier', reply: identifierDetail },
         { host: 'api', path: /^\/admin\/anti-cheat\/cap\/[^/]+\/map-comparison$/, reply: ok(mapComparison) },
         { host: 'api', path: /^\/admin\/anti-cheat\/cap\/[^/]+$/, reply: capStats },
-        ...paged('/admin/audit', auditRow, 18342),
+        ...paged('/admin/audit', auditEntry, 18342),
         items('/admin/roles', roles),
-        { host: 'api', path: '/admin/hosts', reply: ok(hosts) },
+        { host: 'api', path: '/admin/hosts', reply: ok(hostsWithRuleset) },
         { host: 'api', path: '/admin/servers/operations', reply: ok(serverOperations) },
         { host: 'api', path: '/admin/alerts', reply: ok(serverAlerts) },
     ],

@@ -247,7 +247,33 @@ The map-author fetchers back `MapAuthorsModal`, opened from Maps Management.
   consequence (players on that host lose their personal bests in the mapvote until the
   host runs with a new token; the map list keeps working).
 - Server chips in the section are buttons that open the server's registry entry for
-  editing through `updateAdminServer`.
+  editing through `updateAdminServer`. The chips show the server name.
+- The editor changes only the address, port, state, status and game host. Name, region and
+  ruleset belong to Server Settings under Server Operations, and the editor says so. The
+  `AdminServerUpdate` body has no `name`, `region` or `certified_records`, and the server
+  refuses them on this route. The hosts list still sends `certified_records` and `ruleset`
+  on each server.
+
+## Audit log
+
+- The Action filter lists the three server actions. Their descriptions (`auditDescriptions.ts`,
+  pinned by `auditDescriptions.test.ts` against the contract fixture) are:
+  - `server.ruleset`: "Changed ruleset of <server> from casual to certified", with the reason
+    on the row;
+  - `server.config`: "Changed <n> settings on <server>", counting the changed keys only;
+  - `server.config.seed`: "Seeded settings for <server>", plus ", renamed from <old name>" when
+    `details.renamed` is set.
+- `<server>` is the row's `target_alias`, else the name in its details, else `server` and the
+  first 8 characters of its id. The row's tooltip keeps the server-written summary.
+- The game password never shows as a value. The diff shows `game_password` as "Changed" on a
+  settings change and "Hidden" on a seed, whatever the row holds.
+- A row with no actor (`actor_id` and `actor_alias` null) was written by the system. The row,
+  the card and the expanded detail show "System", with no role badge.
+- Roll back shows when the server says `can_rollback`; the server re-checks roles. A
+  `server.ruleset` rollback asks for a required reason and sends it as `{reason}`. When the
+  answer lists `skipped: ["game_password"]`, the section says "Rolled back. The game password
+  was not changed". A `not_reversible` answer (only the password changed) closes the dialog
+  and shows the server's message.
 
 ## Streamer roster (Admin → Streamers)
 

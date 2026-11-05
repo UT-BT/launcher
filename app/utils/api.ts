@@ -933,8 +933,8 @@ export async function fetchAuditLogCount(token: string, params: AuditParams = {}
     return data.count
 }
 
-export async function rollbackAudit(token: string, auditId: string): Promise<{ ok: boolean }> {
-    return apiGet(`/admin/audit/${encodeURIComponent(auditId)}/rollback`, { token, method: 'POST' })
+export async function rollbackAudit(token: string, auditId: string, reason?: string): Promise<{ ok: boolean; skipped?: string[] }> {
+    return apiGet(`/admin/audit/${encodeURIComponent(auditId)}/rollback`, { token, method: 'POST', body: reason ? { reason } : undefined })
 }
 
 export interface AdminMapRow {
@@ -5022,12 +5022,9 @@ export interface AdminHostServer {
 }
 
 export interface AdminServerUpdate {
-    name?: string
-    region?: string
     ip?: string
     port?: number
     active?: boolean
-    certified_records?: boolean
     state?: string
     host_ref?: string | null
 }
