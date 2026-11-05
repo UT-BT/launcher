@@ -1,6 +1,7 @@
 import { BrowserWindow, app, session } from 'electron'
 import { join } from 'path'
-import appIcon from '@/resources/build/icon.png?asset'
+import appIconPng from '@/resources/build/icon.png?asset'
+import appIconIco from '@/resources/build/icon.ico?asset'
 import { registerResourcesProtocol } from './protocols'
 import { openExternalSafe } from './url-safety'
 import { registerWindowHandlers } from '@/lib/conveyor/handlers/window-handler'
@@ -72,10 +73,10 @@ export function createAppWindow(): void {
     height: mainWindowState.height,
     show: !startHidden,
     backgroundColor: '#1c1c1c',
-    icon: appIcon,
+    icon: process.platform === 'win32' ? appIconIco : appIconPng,
     frame: false,
     titleBarStyle: 'hiddenInset',
-    title: 'UTBT.net',
+    title: 'UTBT',
     maximizable: true,
     resizable: true,
     minWidth: 1280,
@@ -114,6 +115,8 @@ export function createAppWindow(): void {
     }
     updaterService.startBackgroundChecks()
   })
+
+  mainWindow.on('page-title-updated', (event) => event.preventDefault())
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
     openExternalSafe(details.url)

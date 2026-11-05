@@ -283,11 +283,16 @@ through `app.setDemoWatcherConfig`, and the game's own recording switch `AutoDem
 - The window is frameless (`frame: false` in `lib/main/app.ts`, minimum 1280 × 720), so
   the renderer draws the titlebar. `app/renderer-desktop.tsx` wraps the app in
   `WindowContextProvider`; the web entry does not ([web-target.md](../web-target.md)).
+- The window `icon` is `resources/build/icon.ico` on Windows, so the taskbar preview header
+  and Alt+Tab get a pre-sized frame instead of a downscaled PNG; other platforms use
+  `icon.png`. The taskbar button itself shows the exe icon. The window title is `UTBT`;
+  `page-title-updated` is cancelled so the shared `index.html` title (`UTBT.net`, the
+  website's) never reaches the taskbar.
 - `WindowContextProvider` asks `window-init` for `{ width, height, minimizable,
   maximizable, platform }`, renders `TitlebarContextProvider` + `Titlebar` above
   `.window-content`, and marks the parent `.window-frame`. The titlebar sits outside
   `App`: it has no navigation context, user profile or updater state.
-- `Titlebar`: centred icon and brand; on the right `.window-titlebar-actions` holds
+- `Titlebar`: no logo or title text, by design; on the right `.window-titlebar-actions` holds
   Links, About, Settings, Game Profiles, Demo Uploads and, in dev builds, Impersonate.
   Minimise / maximise / close render only on `win32` and call `window-minimize`,
   `window-maximize-toggle`, `window-close`. The maximise icon guesses the state from the
