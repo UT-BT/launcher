@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { BellRing, CircleCheck, CircleHelp, CircleSlash, Server, ServerCog, TriangleAlert } from 'lucide-react'
 import { fetchAdminServerOperations, type AdminOperationsServer, type AdminServerOperations } from '@/app/utils/api'
 import { capabilities } from '@/app/platform'
@@ -7,7 +7,8 @@ import type { AdminSectionProps, Tone } from '../types'
 import { SectionShell } from '../components/SectionShell'
 import { StatCard } from '../components/StatCard'
 import { TableControls } from '../components/TableControls'
-import { useAdminTable } from '../components/useAdminTable'
+import { useAdminTable, type AdminColumn } from '../components/useAdminTable'
+import { AdminCardFace, adminCardsPlaceholder } from '../components/AdminCardFace'
 import { AdminSelect, Feedback, SearchInput, errMessage, relTime } from '../components/controls'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import { AlertsPanel } from './AlertsPanel'
@@ -23,27 +24,27 @@ import {
 
 const AUTO_REFRESH_MS = 30_000
 
-const COLUMNS = [
-  { id: 'server', label: 'Server', required: true },
-  { id: 'health', label: 'Health', required: true },
-  { id: 'host', label: 'Host' },
-  { id: 'probe', label: 'Probe' },
-  { id: 'process', label: 'Process' },
-  { id: 'players', label: 'Players' },
-  { id: 'map', label: 'Map' },
-  { id: 'region', label: 'Region' },
+const COLUMNS: AdminColumn[] = [
+  { id: 'server', label: 'Server', required: true, tier: 'essential' },
+  { id: 'health', label: 'Health', required: true, tier: 'essential' },
+  { id: 'host', label: 'Host', tier: 'detail' },
+  { id: 'probe', label: 'Probe', tier: 'detail' },
+  { id: 'process', label: 'Process', tier: 'detail' },
+  { id: 'players', label: 'Players', tier: 'detail' },
+  { id: 'map', label: 'Map', tier: 'detail' },
+  { id: 'region', label: 'Region', tier: 'detail' },
 ]
 
-const RESPONSIVE_COLUMNS = [
-  { id: 'server', width: '15rem', required: true },
-  { id: 'health', width: '9rem', required: true },
-  { id: 'host', width: '10rem', priority: 50 },
-  { id: 'players', width: '7rem', priority: 40 },
-  { id: 'probe', width: '8rem', priority: 30 },
-  { id: 'process', width: '8rem', priority: 25 },
-  { id: 'map', width: '12rem', priority: 20 },
-  { id: 'region', width: '8rem', priority: 10 },
-]
+const LAYOUT: Record<string, { width: string; priority?: number }> = {
+  server: { width: '15rem' },
+  health: { width: '9rem' },
+  host: { width: '10rem', priority: 50 },
+  players: { width: '7rem', priority: 40 },
+  probe: { width: '8rem', priority: 30 },
+  process: { width: '8rem', priority: 25 },
+  map: { width: '12rem', priority: 20 },
+  region: { width: '8rem', priority: 10 },
+}
 
 const STATUS_OPTIONS = [
   { value: 'all', label: 'All servers' },
@@ -148,6 +149,38 @@ function ProbePill({ server }: { server: AdminOperationsServer }) {
   )
 }
 
+function serverCell(id: string, server: AdminOperationsServer): ReactNode {
+  switch (id) {
+    case 'server':
+      return (
+        <div className="min-w-0">
+          <div className="font-medium truncate">{server.name}</div>
+          <div className="text-xs text-muted-foreground tabular-nums">{server.port}</div>
+        </div>
+      )
+    case 'health':
+      return <HealthPill server={server} />
+    case 'host':
+      return server.host_name ?? <span className="text-amber-300/80">Not linked</span>
+    case 'probe':
+      return <ProbePill server={server} />
+    case 'process':
+      return <ProcessCell server={server} />
+    case 'players':
+      return (
+        <span className="tabular-nums">
+          {server.probe.answering ? `${server.probe.num_players ?? 0}/${server.probe.max_players ?? 0}` : '--'}
+        </span>
+      )
+    case 'map':
+      return <span className="truncate block">{server.probe.map_name ?? '--'}</span>
+    case 'region':
+      return server.region ?? '--'
+    default:
+      return null
+  }
+}
+
 export function ServerOperationsSection({ userProfile }: AdminSectionProps) {
   const token = userProfile?.accessToken
   const [data, setData] = useState<AdminServerOperations | null>(null)
@@ -157,7 +190,6 @@ export function ServerOperationsSection({ userProfile }: AdminSectionProps) {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('all')
   const [visibleColumns, setVisibleColumns] = useState<Set<string> | null>(null)
-  const [compact, setCompact] = useState(false)
   const [openAlerts, setOpenAlerts] = useState(0)
 
   const table = useAdminTable('utbt:admin:serverops:cols:v1', COLUMNS, { defaultFiltersOpen: false })
@@ -255,6 +287,10 @@ export function ServerOperationsSection({ userProfile }: AdminSectionProps) {
 
   const columnCount = 2 + (['host', 'probe', 'process', 'players', 'map', 'region'] as const).filter(shows).length
 
+  const columns = table.responsiveColumns<AdminOperationsServer>((id) => ({
+    width: LAYOUT[id]?.width, priority: LAYOUT[id]?.priority, cell: (server) => serverCell(id, server),
+  }))
+
   return (
     <SectionShell
       title="Server Operations"
@@ -281,33 +317,22 @@ export function ServerOperationsSection({ userProfile }: AdminSectionProps) {
       <div className="flex flex-wrap items-center gap-2">
         <SearchInput value={search} onChange={setSearch} placeholder="Search servers, hosts, maps..." className="min-w-[14rem] flex-1" />
         <AdminSelect value={status} onChange={setStatus} options={STATUS_OPTIONS} ariaLabel="Filter by probe status" />
-        {!compact && <TableControls table={table} showFilters={false} />}
+        <TableControls table={table} showFilters={false} />
       </div>
 
       <DataTableShell
         responsive={{
-          columns: RESPONSIVE_COLUMNS.filter((column) => column.required || isVisible(column.id)),
+          columns,
           onResolve: resolveColumns,
-          onCompactChange: setCompact,
+          onCompactChange: table.onCompactChange,
           compactAriaLabel: 'Game servers',
-          compactContent: servers.map((server) => (
-            <div key={server.id} role="listitem" className="p-3 space-y-2 border-b border-hairline/5 last:border-0">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="font-medium truncate">{server.name}</div>
-                  <div className="text-xs text-muted-foreground truncate">{server.host_name ?? 'No host linked'}</div>
-                </div>
-                <HealthPill server={server} />
-              </div>
-              <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                <span>{server.probe.map_name ?? '--'}</span>
-                <span className="tabular-nums">
-                  {server.probe.answering ? `${server.probe.num_players ?? 0}/${server.probe.max_players ?? 0}` : '--'}
-                </span>
-                <span>{server.region ?? '--'}</span>
-              </div>
-            </div>
-          )),
+          cards: {
+            rows: servers,
+            rowKey: (server) => server.id,
+            rowClassName: (server) => (server.active ? undefined : 'opacity-50'),
+            face: (server) => <AdminCardFace columns={columns} row={server} />,
+            placeholder: adminCardsPlaceholder(loading, servers.length === 0, 'No servers match your filters.'),
+          },
         }}
       >
         <DataTableHeaderRow>
@@ -331,33 +356,14 @@ export function ServerOperationsSection({ userProfile }: AdminSectionProps) {
 
           {!loading && servers.map((server) => (
             <DataTableRow key={server.id} className={cn(!server.active && 'opacity-50')}>
-              <DataTableCell width="15rem">
-                <div className="min-w-0">
-                  <div className="font-medium truncate">{server.name}</div>
-                  <div className="text-xs text-muted-foreground tabular-nums">{server.port}</div>
-                </div>
-              </DataTableCell>
-              <DataTableCell align="center" width="9rem"><HealthPill server={server} /></DataTableCell>
-              {shows('host') && (
-                <DataTableCell width="10rem">
-                  {server.host_name ?? <span className="text-amber-300/80">Not linked</span>}
-                </DataTableCell>
-              )}
-              {shows('probe') && (
-                <DataTableCell align="center" width="8rem"><ProbePill server={server} /></DataTableCell>
-              )}
-              {shows('process') && (
-                <DataTableCell align="center" width="8rem"><ProcessCell server={server} /></DataTableCell>
-              )}
-              {shows('players') && (
-                <DataTableCell align="center" width="7rem" className="tabular-nums">
-                  {server.probe.answering ? `${server.probe.num_players ?? 0}/${server.probe.max_players ?? 0}` : '--'}
-                </DataTableCell>
-              )}
-              {shows('map') && (
-                <DataTableCell width="12rem"><span className="truncate block">{server.probe.map_name ?? '--'}</span></DataTableCell>
-              )}
-              {shows('region') && <DataTableCell width="8rem">{server.region ?? '--'}</DataTableCell>}
+              <DataTableCell width="15rem">{serverCell('server', server)}</DataTableCell>
+              <DataTableCell align="center" width="9rem">{serverCell('health', server)}</DataTableCell>
+              {shows('host') && <DataTableCell width="10rem">{serverCell('host', server)}</DataTableCell>}
+              {shows('probe') && <DataTableCell align="center" width="8rem">{serverCell('probe', server)}</DataTableCell>}
+              {shows('process') && <DataTableCell align="center" width="8rem">{serverCell('process', server)}</DataTableCell>}
+              {shows('players') && <DataTableCell align="center" width="7rem">{serverCell('players', server)}</DataTableCell>}
+              {shows('map') && <DataTableCell width="12rem">{serverCell('map', server)}</DataTableCell>}
+              {shows('region') && <DataTableCell width="8rem">{serverCell('region', server)}</DataTableCell>}
             </DataTableRow>
           ))}
         </tbody>

@@ -131,6 +131,8 @@ table's required columns plus its main action; every other column is in the expa
 | Anti-Cheat: High Cap Delta | selection, player, actions | sortable (Delta, Added; descending only, as the header) |
 | Anti-Cheat: Low FPS WRs | selection, player, actions | |
 | Anti-Cheat: cap stats percentiles | percentile, FPS, ping | every column on the face, labelled; no panel |
+| Server Operations | server, health | inactive servers dimmed |
+| Game Hosts | host, actions | disabled hosts dimmed |
 
 **Audit Logs details.** On the table a row click opens the details in a `DataTableExpandRow`
 (the full-width row under it); on cards they open in the card's panel through

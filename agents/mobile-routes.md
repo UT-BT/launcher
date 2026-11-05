@@ -34,7 +34,7 @@ doesn't run on the surfaces it names.
 | `run-compare` | `run-compare` | public | `/compare?runs=258021df-51b1-4ed3-99cc-62d4e75892a7,418b0aec-34c5-40e7-acf4-f2bc33373063` | `run-compare` | 4 | 6 |
 | `home:signed-in` | `home` | role-gated | `/` | `home-signed-in` | 0 | 2 |
 | `maps:signed-in` | `maps` | role-gated | `/maps` | `maps-signed-in` | 0 | 0 |
-| `admin` | `admin` | role-gated | `/admin` | `admin` | 19 | 4 |
+| `admin` | `admin` | role-gated | `/admin` | `admin` | 20 | 4 |
 | `event-detail:manager` | `event-detail` | role-gated | `/events/test-cup-manage?tab=manage` | `event-manager` | 7 | 1 |
 | `match-pickban:captain` | `match-pickban` | role-gated | `/events/test-cup-pickban/matches/5d0c8e2a-7b41-5f93-a6d2-3e9f10b7c4a1` | `match-pickban-captain` | 0 | 0 |
 | `match-pickban:manager` | `match-pickban` | role-gated | `/events/test-cup-pickban/matches/5d0c8e2a-7b41-5f93-a6d2-3e9f10b7c4a1` | `match-pickban-manager` | 0 | 0 |
@@ -612,6 +612,7 @@ No skipped rules.
 | `admin/anti-cheat-low-fps` | Anti-Cheat › Low FPS WRs | a step on `/admin` | none |
 | `admin/audit-logs` | Audit Logs | a step on `/admin` | none |
 | `admin/role-management` | Staff Roles | a step on `/admin` | none |
+| `admin/server-operations` | Server Operations | a step on `/admin` | none |
 | `admin/hosts-management` | Game Hosts | a step on `/admin` | none |
 
 ### Modals

@@ -17,7 +17,8 @@ import { PANEL_LABEL } from '../components/shared'
 import { ActionMenu, type ActionMenuItem } from '../components/ActionMenu'
 import { HostMetricsModal } from './HostMetricsModal'
 import { TableControls } from '../components/TableControls'
-import { useAdminTable } from '../components/useAdminTable'
+import { useAdminTable, type AdminColumn } from '../components/useAdminTable'
+import { AdminCardFace, adminCardsPlaceholder } from '../components/AdminCardFace'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import {
   DataTableCell,
@@ -33,23 +34,23 @@ import type { AdminSectionProps } from '../types'
 const DEFAULT_AGENT_PORT = 80
 const MAX_INLINE_SERVER_CHIPS = 3
 
-const COLUMNS = [
-  { id: 'host', label: 'Host', required: true },
-  { id: 'agent', label: 'Agent' },
-  { id: 'address', label: 'Address' },
-  { id: 'servers', label: 'Servers' },
-  { id: 'token', label: 'Token' },
-  { id: 'actions', label: 'Actions', required: true },
+const COLUMNS: AdminColumn[] = [
+  { id: 'host', label: 'Host', required: true, tier: 'essential' },
+  { id: 'agent', label: 'Agent', tier: 'detail' },
+  { id: 'address', label: 'Address', tier: 'detail' },
+  { id: 'servers', label: 'Servers', tier: 'detail' },
+  { id: 'token', label: 'Token', tier: 'detail' },
+  { id: 'actions', label: 'Actions', required: true, tier: 'essential' },
 ]
 
-const RESPONSIVE_COLUMNS = [
-  { id: 'host', width: '14rem', required: true },
-  { id: 'actions', width: '5rem', required: true },
-  { id: 'agent', width: '10rem', priority: 45 },
-  { id: 'servers', width: '16rem', priority: 40 },
-  { id: 'token', width: '12rem', priority: 30 },
-  { id: 'address', width: '11rem', priority: 20 },
-]
+const LAYOUT: Record<string, { width: string; priority?: number }> = {
+  host: { width: '14rem' },
+  actions: { width: '5rem' },
+  agent: { width: '10rem', priority: 45 },
+  servers: { width: '16rem', priority: 40 },
+  token: { width: '12rem', priority: 30 },
+  address: { width: '11rem', priority: 20 },
+}
 
 const SERVER_STATE_OPTIONS = [
   { value: 'Online', label: 'Online' },
@@ -180,7 +181,6 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
   const [refreshing, setRefreshing] = useState(false)
   const [search, setSearch] = useState('')
   const [visibleColumns, setVisibleColumns] = useState<Set<string> | null>(null)
-  const [compact, setCompact] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
@@ -385,6 +385,61 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
     return <ActionMenu items={items} heading={host.name} busy={busy === `token:${host.id}`} ariaLabel={`Actions for ${host.name}`} />
   }
 
+  const hostCell = (id: string, host: AdminHost): ReactNode => {
+    switch (id) {
+      case 'host':
+        return (
+          <div className="min-w-0 space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-semibold truncate">{host.name}</span>
+              <StatusPill active={host.active} activeLabel="Active" inactiveLabel="Disabled" />
+            </div>
+            {host.region && <div className="text-[11px] text-muted-foreground truncate">{host.region}</div>}
+          </div>
+        )
+      case 'agent':
+        return <AgentCell host={host} />
+      case 'address':
+        return (
+          <span className="tabular-nums text-xs text-muted-foreground">
+            {host.ip ? `${host.ip}:${host.agent_port}` : `port ${host.agent_port}`}
+          </span>
+        )
+      case 'servers': {
+        const linked = serversByHost.get(host.id) ?? []
+        if (linked.length === 0) return <span className="text-xs text-muted-foreground">None linked</span>
+        const shown = linked.slice(0, MAX_INLINE_SERVER_CHIPS)
+        const overflow = linked.length - shown.length
+        return (
+          <div className="flex flex-wrap gap-1.5">
+            {shown.map((server) => (
+              <ServerChip key={server.id} server={server} onClick={() => setEditServer(server)} />
+            ))}
+            {overflow > 0 && (
+              <button
+                type="button"
+                onClick={() => openLinkEditor(host)}
+                className="px-2 py-0.5 rounded-md border border-hairline/20 bg-card/40 text-[11px] text-muted-foreground hover:text-foreground hover:border-hairline/40 transition-colors cursor-pointer"
+              >
+                +{overflow} more
+              </button>
+            )}
+          </div>
+        )
+      }
+      case 'token':
+        return <TokenCell token={host.token} />
+      case 'actions':
+        return hostActions(host)
+      default:
+        return null
+    }
+  }
+
+  const columns = table.responsiveColumns<AdminHost>((id) => ({
+    width: LAYOUT[id]?.width, priority: LAYOUT[id]?.priority, cell: (host) => hostCell(id, host),
+  }))
+
   return (
     <SectionShell
       title="Game Hosts"
@@ -426,42 +481,26 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
 
       <div className="flex flex-wrap items-center gap-2">
         <SearchInput value={search} onChange={setSearch} placeholder="Search hosts by name, region or address..." className="min-w-[14rem] flex-1" />
-        {!compact && <TableControls table={table} showFilters={false} />}
+        <TableControls table={table} showFilters={false} />
       </div>
 
       <DataTableShell
         responsive={{
-          columns: RESPONSIVE_COLUMNS.filter((column) => column.required || isVisible(column.id)),
+          columns,
           onResolve: resolveColumns,
-          onCompactChange: setCompact,
+          onCompactChange: table.onCompactChange,
           compactAriaLabel: 'Game hosts',
-          compactContent: visibleHosts.map((host) => {
-            const linked = serversByHost.get(host.id) ?? []
-            return (
-              <div key={host.id} role="listitem" className="p-3 space-y-2 border-b border-hairline/5 last:border-0">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex flex-wrap items-center gap-2 min-w-0">
-                    <span className="font-medium truncate">{host.name}</span>
-                    <StatusPill active={host.active} activeLabel="Active" inactiveLabel="Disabled" />
-                    {host.region && <span className="text-[11px] text-muted-foreground">{host.region}</span>}
-                  </div>
-                  {hostActions(host)}
-                </div>
-                <div className="text-[11px] text-muted-foreground tabular-nums">
-                  {host.ip ? `${host.ip}:${host.agent_port}` : `agent port ${host.agent_port}`}
-                </div>
-                <AgentCell host={host} />
-                <TokenCell token={host.token} />
-                {linked.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {linked.map((server) => (
-                      <ServerChip key={server.id} server={server} onClick={() => setEditServer(server)} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )
-          }),
+          cards: {
+            rows: visibleHosts,
+            rowKey: (host) => host.id,
+            rowClassName: (host) => (host.active ? undefined : 'opacity-60'),
+            face: (host) => <AdminCardFace columns={columns} row={host} />,
+            placeholder: adminCardsPlaceholder(
+              loading,
+              visibleHosts.length === 0,
+              hosts.length === 0 ? 'No hosts registered yet. Add one for each box that runs game servers, then mint it a token.' : 'No hosts match your search.',
+            ),
+          },
         }}
       >
         <DataTableHeaderRow>
@@ -484,67 +523,18 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
             />
           )}
 
-          {!loading && visibleHosts.map((host) => {
-            const linked = serversByHost.get(host.id) ?? []
-            const shown = linked.slice(0, MAX_INLINE_SERVER_CHIPS)
-            const overflow = linked.length - shown.length
-            return (
-              <DataTableRow key={host.id} className={cn(!host.active && 'opacity-60')}>
-                <DataTableCell width="14rem">
-                  <div className="min-w-0 space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-semibold truncate">{host.name}</span>
-                      <StatusPill active={host.active} activeLabel="Active" inactiveLabel="Disabled" />
-                    </div>
-                    {host.region && <div className="text-[11px] text-muted-foreground truncate">{host.region}</div>}
-                  </div>
-                </DataTableCell>
-
-                {shows('agent') && (
-                  <DataTableCell width="10rem"><AgentCell host={host} /></DataTableCell>
-                )}
-
-                {shows('address') && (
-                  <DataTableCell width="11rem" className="tabular-nums text-xs text-muted-foreground">
-                    {host.ip ? `${host.ip}:${host.agent_port}` : `port ${host.agent_port}`}
-                  </DataTableCell>
-                )}
-
-                {shows('servers') && (
-                  <DataTableCell width="18rem">
-                    {linked.length === 0 ? (
-                      <span className="text-xs text-muted-foreground">None linked</span>
-                    ) : (
-                      <div className="flex flex-wrap gap-1.5">
-                        {shown.map((server) => (
-                          <ServerChip key={server.id} server={server} onClick={() => setEditServer(server)} />
-                        ))}
-                        {overflow > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => openLinkEditor(host)}
-                            className="px-2 py-0.5 rounded-md border border-hairline/20 bg-card/40 text-[11px] text-muted-foreground hover:text-foreground hover:border-hairline/40 transition-colors cursor-pointer"
-                          >
-                            +{overflow} more
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </DataTableCell>
-                )}
-
-                {shows('token') && (
-                  <DataTableCell width="13rem"><TokenCell token={host.token} /></DataTableCell>
-                )}
-
-                <DataTableCell align="right" width="5rem">
-                  <div className="flex items-center justify-end">
-                    {hostActions(host)}
-                  </div>
-                </DataTableCell>
-              </DataTableRow>
-            )
-          })}
+          {!loading && visibleHosts.map((host) => (
+            <DataTableRow key={host.id} className={cn(!host.active && 'opacity-60')}>
+              <DataTableCell width="14rem">{hostCell('host', host)}</DataTableCell>
+              {shows('agent') && <DataTableCell width="10rem">{hostCell('agent', host)}</DataTableCell>}
+              {shows('address') && <DataTableCell width="11rem">{hostCell('address', host)}</DataTableCell>}
+              {shows('servers') && <DataTableCell width="18rem">{hostCell('servers', host)}</DataTableCell>}
+              {shows('token') && <DataTableCell width="13rem">{hostCell('token', host)}</DataTableCell>}
+              <DataTableCell align="right" width="5rem">
+                <div className="flex items-center justify-end">{hostCell('actions', host)}</div>
+              </DataTableCell>
+            </DataTableRow>
+          ))}
         </tbody>
       </DataTableShell>
 
