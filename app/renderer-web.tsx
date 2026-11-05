@@ -9,7 +9,7 @@ import { markPageNoIndex } from './components/stream/noIndex'
 import { pathToNav } from './components/navigation/routes'
 import { prefetchPage } from './components/main/pageLoaders'
 import { SeasonProvider } from './seasonal/SeasonProvider'
-import { captureSeasonOverride } from './seasonal/preferences'
+import { captureHemisphereOverride, captureSeasonOverride } from './seasonal/preferences'
 import { isSeasonalDecorChunkError } from './seasonal/lazyDecor'
 import App from './app'
 import './styles/index.css'
@@ -41,6 +41,7 @@ if (streamRoute) {
   document.documentElement.style.setProperty('--window-titlebar-height', '0px')
 
   captureSeasonOverride(window.location.search)
+  captureHemisphereOverride(window.location.search)
   prefetchPage(pathToNav(window.location.pathname, window.location.search).view)
 
   void handleOAuthCallbackIfPresent().finally(() => {

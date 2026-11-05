@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { resolveAppearance } from './appearance'
+import type { Hemisphere, HemisphereSetting } from './hemisphere'
 import type { EntryId, EntryPreview } from './seasons'
 
 function at(year: number, month: number, day: number, hour = 0, minute = 0): Date {
@@ -7,7 +8,24 @@ function at(year: number, month: number, day: number, hour = 0, minute = 0): Dat
 }
 
 function resolve(now: Date, themeId: string, preview: EntryPreview | null = null) {
-    return resolveAppearance({ now, themeId, preview, hemisphere: 'north' })
+    return resolveAppearance({ now, themeId, preview, timeZone: 'Europe/London', hemisphereSetting: 'auto', hemispherePreview: null })
+}
+
+interface Where {
+    timeZone: string | undefined
+    setting?: HemisphereSetting
+    preview?: Hemisphere | null
+}
+
+function resolveWhere(now: Date, themeId: string, where: Where, preview: EntryPreview | null = null) {
+    return resolveAppearance({
+        now,
+        themeId,
+        preview,
+        timeZone: where.timeZone,
+        hemisphereSetting: where.setting ?? 'auto',
+        hemispherePreview: where.preview ?? null,
+    })
 }
 
 type WindowCase = [string, Date, EntryId | null]
@@ -93,5 +111,49 @@ describe('resolveAppearance until', () => {
 
     it.each(BOUNDARIES)('is the next local midnight either output changes: %s', (_, now, themeId, preview, next) => {
         expect(resolve(now, themeId, preview).until).toBe(next.getTime())
+    })
+})
+
+describe('resolveAppearance across hemispheres', () => {
+    const CHRISTMAS_EVE = at(2026, 12, 24, 12)
+
+    const PLACES: Array<[string, Where, EntryId | null]> = [
+        ['a northern zone', { timeZone: 'Europe/Berlin' }, 'christmas'],
+        ['a North American zone', { timeZone: 'America/New_York' }, 'christmas'],
+        ['an equatorial-north zone', { timeZone: 'Asia/Singapore' }, 'christmas'],
+        ['an unknown zone', { timeZone: 'Mars/Olympus_Mons' }, 'christmas'],
+        ['a missing timezone', { timeZone: undefined }, 'christmas'],
+        ['an Australian zone', { timeZone: 'Australia/Sydney' }, null],
+        ['a New Zealand zone', { timeZone: 'Pacific/Auckland' }, null],
+        ['a South American zone', { timeZone: 'America/Sao_Paulo' }, null],
+        ['a southern African zone', { timeZone: 'Africa/Johannesburg' }, null],
+        ['a legacy southern alias', { timeZone: 'Australia/ACT' }, null],
+        ['the setting over a southern zone', { timeZone: 'Australia/Sydney', setting: 'north' }, 'christmas'],
+        ['the setting over a northern zone', { timeZone: 'Europe/Berlin', setting: 'south' }, null],
+        ['auto over a southern zone', { timeZone: 'Australia/Sydney', setting: 'auto' }, null],
+        ['the preview over the setting', { timeZone: 'Europe/Berlin', setting: 'north', preview: 'south' }, null],
+        ['the preview over a southern setting', { timeZone: 'Australia/Sydney', setting: 'south', preview: 'north' }, 'christmas'],
+    ]
+
+    it.each(PLACES)('Christmas Eve with %s', (_, where, expected) => {
+        expect(resolveWhere(CHRISTMAS_EVE, 'seasonal', where)).toMatchObject({ seasonal: expected, logo: expected })
+        expect(resolveWhere(CHRISTMAS_EVE, 'red', where)).toMatchObject({ seasonal: null, logo: expected })
+    })
+
+    it.each([
+        ['Halloween', at(2026, 10, 31, 20), 'halloween'],
+        ['Easter', at(2026, 4, 5, 12), 'easter'],
+    ] as const)('%s shows in both hemispheres', (_, now, expected) => {
+        expect(resolveWhere(now, 'seasonal', { timeZone: 'Europe/Berlin' }).seasonal).toBe(expected)
+        expect(resolveWhere(now, 'seasonal', { timeZone: 'Australia/Sydney' }).seasonal).toBe(expected)
+    })
+
+    it('an entry preview of Christmas shows in the south, whatever its filter', () => {
+        expect(resolveWhere(at(2026, 7, 1), 'red', { timeZone: 'Australia/Sydney' }, 'christmas')).toMatchObject({ seasonal: 'christmas', logo: 'christmas' })
+    })
+
+    it('until skips the northern-only Christmas in the south', () => {
+        expect(resolveWhere(at(2026, 11, 20), 'seasonal', { timeZone: 'Australia/Sydney' }).until).toBe(at(2027, 3, 21).getTime())
+        expect(resolveWhere(at(2026, 11, 20), 'seasonal', { timeZone: 'Europe/Berlin' }).until).toBe(at(2026, 12, 18).getTime())
     })
 })

@@ -1,5 +1,18 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { parseSeasonParam, readEntryPreview, writeSeasonCache } from './preferences'
+import {
+    captureHemisphereOverride,
+    loadHemisphereSetting,
+    parseHemisphereParam,
+    parseHemisphereSetting,
+    parseSeasonParam,
+    readEntryPreview,
+    readHemisphereOverride,
+    saveHemisphereSetting,
+    subscribeHemisphereOverride,
+    subscribeHemisphereSetting,
+    writeHemisphereOverride,
+    writeSeasonCache,
+} from './preferences'
 import { isSyncedKey } from '@/app/utils/userState'
 
 function fakeStorage(entries: Record<string, string> = {}) {
@@ -80,5 +93,89 @@ describe('seasonal storage keys', () => {
         expect(isSyncedKey('utbt:season:v2')).toBe(false)
         expect(isSyncedKey('utbt:seasonOverride:v1')).toBe(false)
         expect(isSyncedKey('utbt:seasonPin:v1')).toBe(false)
+    })
+
+    it('syncs the hemisphere setting with the account and keeps its preview on this device', () => {
+        expect(isSyncedKey('utbt:hemisphere:v1')).toBe(true)
+        expect(isSyncedKey('utbt:hemisphereOverride:v1')).toBe(false)
+    })
+})
+
+describe('parseHemisphereSetting', () => {
+    it('keeps north, south and auto', () => {
+        expect(parseHemisphereSetting('north')).toBe('north')
+        expect(parseHemisphereSetting('south')).toBe('south')
+        expect(parseHemisphereSetting('auto')).toBe('auto')
+    })
+
+    it.each([null, undefined, '', 'North', 'equator', 1, { id: 'south' }])('defaults %j to auto', stored => {
+        expect(parseHemisphereSetting(stored)).toBe('auto')
+    })
+})
+
+describe('the hemisphere setting', () => {
+    it('defaults to auto with nothing stored', () => {
+        withStorage({}, {})
+        expect(loadHemisphereSetting()).toBe('auto')
+    })
+
+    it('saves a JSON value under its synced key and notifies subscribers', () => {
+        const { localStorage } = withStorage({}, {})
+        const listener = vi.fn()
+        const unsubscribe = subscribeHemisphereSetting(listener)
+        saveHemisphereSetting('south')
+        expect(localStorage.getItem('utbt:hemisphere:v1')).toBe('"south"')
+        expect(loadHemisphereSetting()).toBe('south')
+        expect(listener).toHaveBeenCalledTimes(1)
+        saveHemisphereSetting('auto')
+        expect(localStorage.getItem('utbt:hemisphere:v1')).toBe('"auto"')
+        expect(loadHemisphereSetting()).toBe('auto')
+        unsubscribe()
+        saveHemisphereSetting('north')
+        expect(listener).toHaveBeenCalledTimes(2)
+    })
+})
+
+describe('parseHemisphereParam', () => {
+    it('reads a hemisphere preview from the query string', () => {
+        expect(parseHemisphereParam('?hemisphere=south')).toBe('south')
+        expect(parseHemisphereParam('?season=christmas&hemisphere=north')).toBe('north')
+    })
+
+    it.each(['', '?hemisphere=auto', '?hemisphere=South', '?hemisphere='])('ignores %j', search => {
+        expect(parseHemisphereParam(search)).toBeNull()
+    })
+})
+
+describe('the hemisphere preview', () => {
+    it('is captured into the session from the query string', () => {
+        const { sessionStorage } = withStorage({}, {})
+        captureHemisphereOverride('?hemisphere=south')
+        expect(sessionStorage.getItem('utbt:hemisphereOverride:v1')).toBe('south')
+        expect(readHemisphereOverride()).toBe('south')
+    })
+
+    it('keeps an earlier preview when the query string has none or an invalid one', () => {
+        withStorage({ 'utbt:hemisphereOverride:v1': 'north' }, {})
+        captureHemisphereOverride('?view=maps')
+        captureHemisphereOverride('?hemisphere=auto')
+        expect(readHemisphereOverride()).toBe('north')
+    })
+
+    it('ignores an invalid stored value', () => {
+        withStorage({ 'utbt:hemisphereOverride:v1': '"south"' }, {})
+        expect(readHemisphereOverride()).toBeNull()
+    })
+
+    it('notifies subscribers when written or cleared', () => {
+        const { sessionStorage } = withStorage({}, {})
+        const listener = vi.fn()
+        const unsubscribe = subscribeHemisphereOverride(listener)
+        writeHemisphereOverride('north')
+        expect(sessionStorage.getItem('utbt:hemisphereOverride:v1')).toBe('north')
+        writeHemisphereOverride(null)
+        expect(readHemisphereOverride()).toBeNull()
+        expect(listener).toHaveBeenCalledTimes(2)
+        unsubscribe()
     })
 })

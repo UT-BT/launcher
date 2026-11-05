@@ -1,4 +1,6 @@
-export type Hemisphere = 'north' | 'south'
+import type { Hemisphere } from './hemisphere'
+
+export type { Hemisphere }
 
 export type EntryKind = 'season' | 'holiday'
 
@@ -52,6 +54,7 @@ export const ENTRIES = [
         id: 'christmas',
         label: 'Christmas',
         kind: 'holiday',
+        hemisphere: 'north',
         window: year => ({ start: new Date(year, 11, 18), endExclusive: new Date(year, 11, 31) }),
     },
     {

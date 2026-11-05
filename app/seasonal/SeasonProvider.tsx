@@ -1,18 +1,37 @@
 import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { useTheme } from '@/app/theme/ThemeProvider'
 import { SEASONAL_THEME_ID, resolveAppearance } from './appearance'
-import type { EntryId, Hemisphere } from './seasons'
-import { readEntryPreview, subscribeSeasonOverride, writeSeasonCache } from './preferences'
+import { detectHemisphere, deviceTimeZone, resolveHemisphere, type Hemisphere, type HemisphereSetting } from './hemisphere'
+import type { EntryId } from './seasons'
+import {
+    loadHemisphereSetting,
+    readEntryPreview,
+    readHemisphereOverride,
+    subscribeHemisphereOverride,
+    subscribeHemisphereSetting,
+    subscribeSeasonOverride,
+    writeSeasonCache,
+} from './preferences'
 
 const RECHECK_MS = 60 * 60 * 1000
-const HEMISPHERE: Hemisphere = 'north'
+
+export interface HemisphereState {
+    resolved: Hemisphere
+    detected: Hemisphere
+    setting: HemisphereSetting
+}
 
 interface SeasonContextValue {
     seasonal: EntryId | null
     logo: EntryId | null
+    hemisphere: HemisphereState
 }
 
-const SeasonContext = createContext<SeasonContextValue>({ seasonal: null, logo: null })
+const SeasonContext = createContext<SeasonContextValue>({
+    seasonal: null,
+    logo: null,
+    hemisphere: { resolved: 'north', detected: 'north', setting: 'auto' },
+})
 
 function useNow(): Date {
     const [now, setNow] = useState(() => new Date())
@@ -32,8 +51,13 @@ export function SeasonProvider({ children }: { children: ReactNode }) {
     const now = useNow()
     const { themeId, setPreviewThemeId } = useTheme()
     const preview = useSyncExternalStore(subscribeSeasonOverride, readEntryPreview, () => null)
-    const { seasonal, logo } = resolveAppearance({ now, themeId, preview, hemisphere: HEMISPHERE })
-    const cache = resolveAppearance({ now, themeId: SEASONAL_THEME_ID, preview: null, hemisphere: HEMISPHERE })
+    const hemisphereSetting = useSyncExternalStore(subscribeHemisphereSetting, loadHemisphereSetting, () => 'auto' as const)
+    const hemispherePreview = useSyncExternalStore(subscribeHemisphereOverride, readHemisphereOverride, () => null)
+    const timeZone = deviceTimeZone()
+    const { seasonal, logo } = resolveAppearance({ now, themeId, preview, timeZone, hemisphereSetting, hemispherePreview })
+    const cache = resolveAppearance({ now, themeId: SEASONAL_THEME_ID, preview: null, timeZone, hemisphereSetting, hemispherePreview: null })
+    const detected = detectHemisphere(timeZone)
+    const resolved = resolveHemisphere({ timeZone, setting: hemisphereSetting, preview: hemispherePreview })
     const previewingEntry = preview !== null && preview !== 'none'
 
     useEffect(() => {
@@ -50,7 +74,10 @@ export function SeasonProvider({ children }: { children: ReactNode }) {
         else root.removeAttribute('data-season')
     }, [seasonal])
 
-    const value = useMemo(() => ({ seasonal, logo }), [seasonal, logo])
+    const value = useMemo(
+        () => ({ seasonal, logo, hemisphere: { resolved, detected, setting: hemisphereSetting } }),
+        [seasonal, logo, resolved, detected, hemisphereSetting],
+    )
     return <SeasonContext.Provider value={value}>{children}</SeasonContext.Provider>
 }
 
@@ -60,4 +87,8 @@ export function useSeasonalEntry(): EntryId | null {
 
 export function useLogoEntry(): EntryId | null {
     return useContext(SeasonContext).logo
+}
+
+export function useHemisphere(): HemisphereState {
+    return useContext(SeasonContext).hemisphere
 }

@@ -1,8 +1,12 @@
+import { getSynced, setSynced, subscribeSynced } from '@/app/utils/userState'
+import { isHemisphere, type Hemisphere, type HemisphereSetting } from './hemisphere'
 import { isEntryPreview, type EntryId, type EntryPreview } from './seasons'
 
 const OVERRIDE_KEY = 'utbt:seasonOverride:v1'
 const PIN_KEY = 'utbt:seasonPin:v1'
 const CACHE_KEY = 'utbt:season:v2'
+const HEMISPHERE_KEY = 'utbt:hemisphere:v1'
+const HEMISPHERE_OVERRIDE_KEY = 'utbt:hemisphereOverride:v1'
 
 export interface SeasonCache {
     id: EntryId | null
@@ -10,6 +14,7 @@ export interface SeasonCache {
 }
 
 const overrideListeners = new Set<() => void>()
+const hemisphereOverrideListeners = new Set<() => void>()
 
 export function parseSeasonParam(search: string): EntryPreview | null {
     const value = new URLSearchParams(search).get('season')
@@ -63,4 +68,57 @@ export function writeSeasonCache(cache: SeasonCache): void {
     } catch {
         return
     }
+}
+
+export function parseHemisphereSetting(stored: unknown): HemisphereSetting {
+    return isHemisphere(stored) ? stored : 'auto'
+}
+
+export function loadHemisphereSetting(): HemisphereSetting {
+    return parseHemisphereSetting(getSynced<unknown>(HEMISPHERE_KEY, null))
+}
+
+export function saveHemisphereSetting(setting: HemisphereSetting): void {
+    setSynced(HEMISPHERE_KEY, setting)
+}
+
+export function subscribeHemisphereSetting(callback: () => void): () => void {
+    return subscribeSynced(HEMISPHERE_KEY, callback)
+}
+
+export function parseHemisphereParam(search: string): Hemisphere | null {
+    const value = new URLSearchParams(search).get('hemisphere')
+    return isHemisphere(value) ? value : null
+}
+
+export function readHemisphereOverride(): Hemisphere | null {
+    if (typeof window === 'undefined') return null
+    try {
+        const value = window.sessionStorage.getItem(HEMISPHERE_OVERRIDE_KEY)
+        return isHemisphere(value) ? value : null
+    } catch {
+        return null
+    }
+}
+
+export function writeHemisphereOverride(value: Hemisphere | null): void {
+    if (typeof window === 'undefined') return
+    try {
+        if (value) window.sessionStorage.setItem(HEMISPHERE_OVERRIDE_KEY, value)
+        else window.sessionStorage.removeItem(HEMISPHERE_OVERRIDE_KEY)
+    } catch {
+        return
+    } finally {
+        hemisphereOverrideListeners.forEach(listener => listener())
+    }
+}
+
+export function subscribeHemisphereOverride(callback: () => void): () => void {
+    hemisphereOverrideListeners.add(callback)
+    return () => { hemisphereOverrideListeners.delete(callback) }
+}
+
+export function captureHemisphereOverride(search: string): void {
+    const value = parseHemisphereParam(search)
+    if (value) writeHemisphereOverride(value)
 }

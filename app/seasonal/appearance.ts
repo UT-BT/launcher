@@ -1,4 +1,5 @@
-import { ENTRIES, type Entry, type EntryId, type EntryPreview, type EntryWindow, type Hemisphere } from './seasons'
+import { resolveHemisphere, type Hemisphere, type HemisphereSetting } from './hemisphere'
+import { ENTRIES, type Entry, type EntryId, type EntryPreview, type EntryWindow } from './seasons'
 
 export const SEASONAL_THEME_ID = 'seasonal'
 
@@ -6,7 +7,9 @@ export interface AppearanceInput {
     now: Date
     themeId: string
     preview: EntryPreview | null
-    hemisphere: Hemisphere
+    timeZone: string | undefined
+    hemisphereSetting: HemisphereSetting
+    hemispherePreview: Hemisphere | null
 }
 
 export interface Appearance {
@@ -73,6 +76,7 @@ function previewed(preview: EntryPreview): Omit<Appearance, 'until'> {
 
 export function resolveAppearance(input: AppearanceInput): Appearance {
     const time = input.now.getTime()
-    const outputs = input.preview ? previewed(input.preview) : outputsAt(time, input.themeId, input.hemisphere)
-    return { ...outputs, until: nextChange(time, input.themeId, input.hemisphere) }
+    const hemisphere = resolveHemisphere({ timeZone: input.timeZone, setting: input.hemisphereSetting, preview: input.hemispherePreview })
+    const outputs = input.preview ? previewed(input.preview) : outputsAt(time, input.themeId, hemisphere)
+    return { ...outputs, until: nextChange(time, input.themeId, hemisphere) }
 }
