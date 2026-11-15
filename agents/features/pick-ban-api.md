@@ -245,7 +245,10 @@ and excludes its end.
 - **Start readiness.** In the lobby, `blocking_reason` (all of them in `blocking_reasons`) is
   why Start would be refused right now: one of the seven `PickBanBlockingReason` codes.
 - **Sequence origin.** `sequence` adds `preset_id` and `from_stage_key`, where the session's
-  sequence was copied from.
+  sequence was copied from. A match set to another best-of than its stage gets the shipped
+  ban/pick preset for its own length (`bo3_ban_pick`, `bo5_ban_pick` or `bo7_ban_pick`, with
+  `from_stage_key: null`) when the stage's sequence would not fit it; any other length keeps
+  the stage's sequence and reports `sequence_mismatch`.
 
 ## Capabilities
 
@@ -281,7 +284,9 @@ The vocabulary in `api.ts`: `SideColor` (`SIDE_COLORS`), `MatchSideSource`
   `lower_group_placing`, `lower_pre_cup_seed`, `admin`; `PICK_BAN_CHOOSER_REASONS` is the
   same list). `chooser_basis` (`{ chooser, other }`) gives the numbers behind the reason,
   the chooser first: group finishing positions, pre-cup seeds, or `{ wins, losses }`
-  playoff records. It is `null` for `direct_qualifier` and `admin`.
+  playoff records. It is `null` for `direct_qualifier` and `admin`, and can be `null` for
+  `lower_group_placing` when two teams with the same group finish are told apart by their
+  rank across the groups instead; the copy then words the reason without numbers.
   `pickban/chooserReasonCopy.ts` words a reason with its numbers.
 - `cards`: Red then Blue, each `{ color, letter, steps: [{ n, action, segment }] }`. Empty
   while the match has no plan.

@@ -521,7 +521,9 @@ Per scene, what a change needs to know (the numbers live in the files named):
   clears the lower cams' timer zones. Win pips come from `seriesFlags`, so each counted
   drawn map takes one pip off. The strip never turns
   see-through; past its maximum width it collapses played and skipped cells to number and
-  score, then steps the upcoming-name cap down, then shows number badges only. The
+  score, then steps the upcoming-name cap down, then shows number badges only. If that
+  still overflows (a Bo7 from about map 5), the cell box's font shrinks to fit, never below
+  `STRIP_MIN_SCALE` (75 %), so the current map's name is never clipped. The
   `FT{caps_to_win}` chip sits outside the clipped cell box so it is never cut off.
 - **Next Map** (`scenes/nextMap/`, opaque). A 1280×720 hero (video, or the screenshot with
   a slow pan) with the "Map N" chip in the picker's tone, and a column of the series card

@@ -433,6 +433,7 @@ describe('lobby setup', () => {
             { key: 'preset:bo4_ban_pick', label: 'Bo4 · bans and picks', body: { preset_id: 'bo4_ban_pick' }, current: false },
             { key: 'preset:bo3_ban_pick', label: 'Bo3 · bans, picks, decider', body: { preset_id: 'bo3_ban_pick' }, current: false },
             { key: 'preset:bo5_ban_pick', label: 'Bo5 · bans, picks, bans, decider', body: { preset_id: 'bo5_ban_pick' }, current: false },
+            { key: 'preset:bo7_ban_pick', label: 'Bo7 · bans, picks, bans, decider', body: { preset_id: 'bo7_ban_pick' }, current: false },
             { key: 'stage:groups', label: 'Groups (Bo4)', body: { from_stage_key: 'groups' }, current: false },
         ])
 

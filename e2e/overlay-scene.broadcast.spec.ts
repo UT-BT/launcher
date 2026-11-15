@@ -223,6 +223,47 @@ test('with long team and map names the band stays within its width and the timer
     await expect(strip.locator('[data-overlay-target]')).toBeVisible()
 })
 
+test('at a Bo7 decider every map and the current map name stay inside the band', async ({ page }) => {
+    const names = ['CTF-BT-II-SkaarjInvasionV2', 'CTF-BT-II-DoubleVision-CE', 'CTF-BT-II-SynchronizeV4', 'CTF-BT-II-FuriumMineCE', 'CTF-BT-II-(K)LegendsV2', 'CTF-BT-II-CoZyliciouS', 'CTF-BT-II-Fleurdelys']
+    const scores = names.map((_, ordinal) => (ordinal < 6
+        ? streamMapScore(ordinal, ordinal % 2 === 0 ? [3, 1] : [1, 3], ordinal % 2 === 0 ? 'a' : 'b')
+        : streamMapScore(ordinal, [1, 2])))
+    const hotState = streamHotState({
+        reason: 'current',
+        match: streamMatch({
+            reason: 'current',
+            status: 'in_progress',
+            pick_ban_status: 'complete',
+            side_status: CONFIRMED,
+            best_of: 7,
+            caps_to_win: 3,
+            teams: { a: HAWKS, b: FROST },
+            lineup: {
+                a1: streamUserRef(HAWKS.members[0]),
+                a2: streamUserRef(HAWKS.members[1]),
+                b1: streamUserRef(FROST.members[0]),
+                b2: streamUserRef(FROST.members[1]),
+            },
+            maps: streamMaps(names, ['b', 'a', 'b', 'a', 'b', 'a', null]),
+            score: streamScore(scores),
+        }),
+    })
+    await openScene(page, 'overlay', { hotState })
+
+    await expectClearOfTimers(page)
+    const strip = page.locator('[data-overlay-strip]')
+    expect((await boxOf(page, '[data-overlay-strip]')).width).toBeLessThanOrEqual(BAND.maxWidth)
+    const overflow = await strip.locator('[data-overlay-maps]').evaluate(element => element.scrollWidth - element.clientWidth)
+    expect(overflow).toBeLessThanOrEqual(0)
+    const current = strip.locator('[data-overlay-map="7"]')
+    await expect(current).toHaveAttribute('data-map-state', 'current')
+    await expect(current).toContainText('II-Fleurdelys')
+    const clipped = await current.locator('.truncate').evaluate(element => element.scrollWidth > element.clientWidth)
+    expect(clipped).toBe(false)
+    await expect(strip.locator('[data-overlay-map="6"]')).toHaveText('61–3')
+    await expect(strip.locator('[data-overlay-target]')).toBeVisible()
+})
+
 test('the score rows sit on either side of the seam, with the map strip centred on it', async ({ page }) => {
     await openScene(page, 'overlay', { hotState: LIVE })
     await settleScene(page)
