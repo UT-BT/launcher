@@ -284,7 +284,9 @@ The vocabulary in `api.ts`: `SideColor` (`SIDE_COLORS`), `MatchSideSource`
   `lower_group_placing`, `lower_pre_cup_seed`, `admin`; `PICK_BAN_CHOOSER_REASONS` is the
   same list). `chooser_basis` (`{ chooser, other }`) gives the numbers behind the reason,
   the chooser first: group finishing positions, pre-cup seeds, or `{ wins, losses }`
-  playoff records. It is `null` for `direct_qualifier` and `admin`.
+  playoff records. It is `null` for `direct_qualifier` and `admin`, and can be `null` for
+  `lower_group_placing` when two teams with the same group finish are told apart by their
+  rank across the groups instead; the copy then words the reason without numbers.
   `pickban/chooserReasonCopy.ts` words a reason with its numbers.
 - `cards`: Red then Blue, each `{ color, letter, steps: [{ n, action, segment }] }`. Empty
   while the match has no plan.
