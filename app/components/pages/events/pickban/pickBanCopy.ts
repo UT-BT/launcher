@@ -6,6 +6,7 @@ export const PICK_BAN_PRESET_LABELS: Record<PickBanPresetId, string> = {
     bo4_ban_pick: 'Bo4 · bans and picks',
     bo3_ban_pick: 'Bo3 · bans, picks, decider',
     bo5_ban_pick: 'Bo5 · bans, picks, bans, decider',
+    bo7_ban_pick: 'Bo7 · bans, picks, bans, decider',
 }
 
 export function introCountdownWords(remainingMs: number): string {

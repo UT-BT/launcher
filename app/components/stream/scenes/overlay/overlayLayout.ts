@@ -17,6 +17,8 @@ export const MAP_NAME_MAX_PX = {
 
 export const UPCOMING_NAME_MIN_PX = 40
 
+export const STRIP_MIN_SCALE = 0.75
+
 export const STRIP_ESTIMATE = {
     charPx: 8,
     cellPaddingPx: 23,

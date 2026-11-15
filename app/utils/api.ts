@@ -6615,9 +6615,9 @@ export type PickBanActor = 'A' | 'B'
 
 export type PickBanSequenceAction = 'ban' | 'pick'
 
-export type PickBanPresetId = 'bo4_picks' | 'bo4_ban_pick' | 'bo3_ban_pick' | 'bo5_ban_pick'
+export type PickBanPresetId = 'bo4_picks' | 'bo4_ban_pick' | 'bo3_ban_pick' | 'bo5_ban_pick' | 'bo7_ban_pick'
 
-export const PICK_BAN_PRESET_IDS: PickBanPresetId[] = ['bo4_picks', 'bo4_ban_pick', 'bo3_ban_pick', 'bo5_ban_pick']
+export const PICK_BAN_PRESET_IDS: PickBanPresetId[] = ['bo4_picks', 'bo4_ban_pick', 'bo3_ban_pick', 'bo5_ban_pick', 'bo7_ban_pick']
 
 export interface PickBanSequenceStep {
     actor: PickBanActor

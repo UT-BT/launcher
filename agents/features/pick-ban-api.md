@@ -245,7 +245,10 @@ and excludes its end.
 - **Start readiness.** In the lobby, `blocking_reason` (all of them in `blocking_reasons`) is
   why Start would be refused right now: one of the seven `PickBanBlockingReason` codes.
 - **Sequence origin.** `sequence` adds `preset_id` and `from_stage_key`, where the session's
-  sequence was copied from.
+  sequence was copied from. A match set to another best-of than its stage gets the shipped
+  ban/pick preset for its own length (`bo3_ban_pick`, `bo5_ban_pick` or `bo7_ban_pick`, with
+  `from_stage_key: null`) when the stage's sequence would not fit it; any other length keeps
+  the stage's sequence and reports `sequence_mismatch`.
 
 ## Capabilities
 

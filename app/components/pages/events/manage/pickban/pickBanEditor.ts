@@ -50,6 +50,17 @@ export const PICK_BAN_PRESET_SEQUENCES: Record<PickBanPresetId, PickBanSequence>
         ban_down: true,
         ban_down_order: ['A', 'B', 'B', 'A'],
     },
+    bo7_ban_pick: {
+        steps: [
+            { actor: 'A', action: 'ban' }, { actor: 'B', action: 'ban' },
+            { actor: 'B', action: 'pick' }, { actor: 'A', action: 'pick' },
+            { actor: 'B', action: 'ban' }, { actor: 'A', action: 'ban' },
+            { actor: 'B', action: 'pick' }, { actor: 'A', action: 'pick' },
+            { actor: 'B', action: 'pick' }, { actor: 'A', action: 'pick' },
+        ],
+        ban_down: true,
+        ban_down_order: ['B', 'A'],
+    },
 }
 
 export interface PickBanExclusionDraft {

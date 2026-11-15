@@ -2,7 +2,9 @@ import { displayMapName } from '@/app/utils/format'
 import { SIDES_TBC } from '@/app/utils/sideLabels'
 import type { StreamLineupSlot, StreamMatch, StreamScore, StreamScoreSource, StreamSide } from '../../data/streamHotState'
 import { mapDrawn, mapNumber, seriesFlags, type SeriesFlag } from '../../sceneHelpers'
-import { BAND, LONG_TEAM_NAME_CHARS, MAP_NAME_MAX_PX, STRIP_ESTIMATE, UPCOMING_NAME_MIN_PX, type OverlayMapState } from './overlayLayout'
+import {
+    BAND, LONG_TEAM_NAME_CHARS, MAP_NAME_MAX_PX, STRIP_ESTIMATE, STRIP_MIN_SCALE, UPCOMING_NAME_MIN_PX, type OverlayMapState,
+} from './overlayLayout'
 
 export type OverlayTagPlacement = 'above-seam-left' | 'above-seam-right' | 'below-seam-left' | 'below-seam-right'
 export type OverlayPickTone = StreamSide | 'gold'
@@ -48,6 +50,7 @@ export interface OverlayStrip {
     maps: OverlayStripMap[]
     target: string | null
     compact: boolean
+    scale: number
 }
 
 export interface OverlayView {
@@ -149,12 +152,20 @@ function fitUpcomingNames(maps: OverlayStripMap[], target: string | null): Overl
     return maps.map(map => (map.state === 'upcoming' ? { ...map, showName: false } : map))
 }
 
+function stripScale(maps: OverlayStripMap[], target: string | null): number {
+    const width = bandPx(maps, target)
+    if (width <= BAND.maxWidth) return 1
+    const fixed = bandPx([], target)
+    return Math.max(STRIP_MIN_SCALE, (BAND.maxWidth - fixed) / (width - fixed))
+}
+
 function mapStrip(match: StreamMatch): OverlayStrip {
     const target = match.caps_to_win === null ? null : `FT${match.caps_to_win}`
     const full = stripMaps(match)
-    if (bandPx(full, target) <= BAND.maxWidth) return { maps: full, target, compact: false }
+    if (bandPx(full, target) <= BAND.maxWidth) return { maps: full, target, compact: false, scale: 1 }
     const collapsed = full.map(map => (map.state === 'played' || map.state === 'skipped' ? { ...map, showName: false } : map))
-    return { maps: fitUpcomingNames(collapsed, target), target, compact: true }
+    const fitted = fitUpcomingNames(collapsed, target)
+    return { maps: fitted, target, compact: true, scale: stripScale(fitted, target) }
 }
 
 export function overlayView(match: StreamMatch | null): OverlayView | null {
