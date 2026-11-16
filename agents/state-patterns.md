@@ -178,6 +178,10 @@ The store is a localStorage mirror with a server copy:
   overwrite local ones (subscribers fire), except keys written while the fetch was in
   flight; whitelisted local values the server lacks upload once. `stopUserStateSync()` at
   sign-out flushes and stops.
+- `userStateSettled()` resolves once that sign-in fetch has landed (or failed), and at once when
+  nobody signed in. Await it before a one-time decision that reads a synced key, or a slow
+  fetch makes the device act on its stale local copy and then overwrite the account's value
+  (the champions celebration waits on it, capped at `SYNC_WAIT_MS`).
 
 Rules:
 

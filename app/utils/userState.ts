@@ -147,7 +147,18 @@ function purgeSyncedState(): void {
     }
 }
 
-export async function initUserStateSync(token: string, accountId: string): Promise<void> {
+let initialSync: Promise<void> = Promise.resolve()
+
+export function userStateSettled(): Promise<void> {
+    return initialSync
+}
+
+export function initUserStateSync(token: string, accountId: string): Promise<void> {
+    initialSync = runInitialSync(token, accountId)
+    return initialSync
+}
+
+async function runInitialSync(token: string, accountId: string): Promise<void> {
     if (typeof window !== 'undefined') {
         let previousAccount: string | null = null
         try { previousAccount = window.localStorage.getItem(ACCOUNT_KEY) } catch { /* ignore */ }

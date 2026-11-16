@@ -540,10 +540,14 @@ When an event ends, every visitor gets one celebratory popup with its podium, on
   there is none. The window (two weeks after the event ends) and the "is it decided" rules are the
   server's; never re-derive them from the bracket.
 - **Shown once per person.** `Main.tsx` mounts the lazy `CelebrationHost`
-  (`app/components/celebration/CelebrationHost.tsx`) `CELEBRATION_DELAY_MS` after boot, so the sign-in sync
-  can land and the chunk stays off the first paint. The host asks, and skips a slug already in
-  `utbt:celebrationsSeen:v1` (a synced JSON array of slugs, through `celebrationSeen.ts`). The slug is
+  (`app/components/celebration/CelebrationHost.tsx`) `CELEBRATION_DELAY_MS` after boot, so the chunk stays
+  off the first paint. The host asks, waits for the account's synced state (`userStateSettled()`, at most
+  `SYNC_WAIT_MS`), and skips a slug already in `utbt:celebrationsSeen:v1` (a synced JSON array of slugs,
+  through `celebrationSeen.ts`). Signed in, that list follows the account, so the website and the desktop
+  app show it once between them; a signed-out web visit can only remember the browser. The slug is
   recorded the moment the popup opens, not when it closes.
+- **No horizontal scroll.** The ray fan rotates inside a clipped, non-rotating circle (a rotating square's
+  box grows by √2), and the scroller is `overflow-x-hidden`.
 - **Automated browsers never see it.** `isAutomatedBrowser()` (`navigator.webdriver`) keeps it out of
   every e2e and mobile-suite run, which talk to the live API; `e2e/champions-celebration.spec.ts` opts back
   in by overriding `webdriver`. `CELEBRATION_SHOTS_DIR=<dir>` makes that spec save preview frames.

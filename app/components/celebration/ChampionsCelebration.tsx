@@ -40,7 +40,7 @@ function TrophyMark() {
     const burst = useMemo(() => sparks(BEATS.trophy + 0.12), [])
     return (
         <div className="relative grid size-20 place-items-center sm:size-24">
-            <motion.span variants={rays(0.1)} aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 size-[340%] -translate-x-1/2 -translate-y-1/2">
+            <motion.span variants={rays(0.1)} aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 size-[340%] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full">
                 <motion.span animate={RAYS_TURN} className="champions-rays-fan block size-full rounded-full" />
             </motion.span>
             <motion.span
@@ -199,13 +199,13 @@ export function ChampionsCelebration({ celebration, onClose, onOpenStats }: Cham
                     aria-modal="true"
                     aria-labelledby="champions-title"
                     variants={panel}
-                    className={cn('champions-stage relative flex max-h-full w-full max-w-md flex-col overflow-hidden rounded-xl border border-hairline/10 bg-card shadow-2xl outline-none', light && 'champions-stage-light')}
+                    className={cn('champions-stage relative flex max-h-full w-full max-w-lg flex-col overflow-hidden rounded-xl border border-hairline/10 bg-card shadow-2xl outline-none', light && 'champions-stage-light')}
                 >
                     <span aria-hidden className="champions-wash pointer-events-none absolute inset-0" />
                     <span aria-hidden className="champions-grid pointer-events-none absolute inset-0" />
                     <span aria-hidden className="champions-edge pointer-events-none absolute inset-x-0 top-0 h-px" />
 
-                    <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5 pt-7 sm:px-8 sm:pb-6 sm:pt-8" onClickCapture={closeAfterLink}>
+                    <div className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-5 pb-5 pt-7 sm:px-8 sm:pb-6 sm:pt-8" onClickCapture={closeAfterLink}>
                         <div className="flex flex-col items-center text-center">
                             <TrophyMark />
 
@@ -227,7 +227,7 @@ export function ChampionsCelebration({ celebration, onClose, onOpenStats }: Cham
                                 {champion.team.name}
                             </motion.p>
 
-                            <div className="relative mt-5 grid w-full max-w-xs grid-cols-2 gap-4 sm:mt-6">
+                            <div className="relative mt-5 grid w-full max-w-sm grid-cols-2 gap-4 sm:mt-6">
                                 {champion.team.members.map((member, index) => (
                                     <motion.div key={member.user} variants={rise(BEATS.champions + index * 0.08, 18)} className="min-w-0">
                                         <Champion member={member} />
@@ -252,7 +252,7 @@ export function ChampionsCelebration({ celebration, onClose, onOpenStats }: Cham
                         </div>
 
                         {others.length > 0 && (
-                            <div className="mt-9 grid grid-cols-2 gap-x-3 gap-y-8 sm:mt-10">
+                            <div className="mt-9 grid grid-cols-2 gap-x-3 gap-y-8 sm:mt-10 sm:gap-x-4">
                                 {others.map((place, index) => (
                                     <PodiumCard key={place.team.id} place={place} order={index} wide={others.length === 3 && index === 0} />
                                 ))}
