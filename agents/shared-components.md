@@ -37,9 +37,12 @@ Props are flat primitives; destructure nested user or record shapes at the call 
   (`TeamAvatarStack`); the surrounding component exposes names through a label or
   roster tooltip.
 - `presentation="name"` drops the avatar for narrow cells (the Maps author column).
-  The name links whenever `userId` is set and is plain text otherwise, so linked and
-  string-only authors need no branch. The wrapper is `w-fit`: centre it with `mx-auto`,
+  The name links whenever `userId` is a player id and is plain text otherwise, so linked
+  and string-only authors need no branch. The wrapper is `w-fit`: centre it with `mx-auto`,
   not `justify-center`.
+- `isPlayerLinkable(userId, interactive?)` tells whether a `PlayerInfo` with those props
+  renders as a profile link. Gate anything that promises the link on it, such as the
+  Maps author cell's `View player profile` tooltip, rather than repeating the check.
 - `layout` is `horizontal` or `vertical`; `size` is `sm`, `md` or `lg`.
 
 When a payload lacks `active_title`, get the field added to the API rather than working

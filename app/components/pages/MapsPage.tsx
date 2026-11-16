@@ -19,7 +19,7 @@ import {
 import { MapReviewsModal } from '@/app/components/modals/MapReviewsModal'
 import { ReplayVideoFooter, ReplayVideoPlayer } from '@/app/components/shared/ReplayVideoModal'
 import { CapTimeLink, openCap, openTeamCap } from '@/app/components/shared/CapTimeLink'
-import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { PlayerInfo, isPlayerLinkable } from '@/app/components/shared/PlayerInfo'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { MapNavLink } from '@/app/components/shared/MapNavLink'
@@ -1641,8 +1641,14 @@ export function MapsPage({
                     </div>
                 )
             }
-            case 'author':
-                return <PlayerInfo userId={map.author_ref} presentation="name" alias={author || '—'} size="md" />
+            case 'author': {
+                const authorInfo = <PlayerInfo userId={map.author_ref} presentation="name" alias={author || '—'} size="md" />
+                return isPlayerLinkable(map.author_ref) ? (
+                    <Tooltip content="View player profile" side="top" className="flex w-fit min-w-0 max-w-full">
+                        {authorInfo}
+                    </Tooltip>
+                ) : authorInfo
+            }
             case 'difficulty':
                 return (
                     <div className="flex items-center gap-2">
@@ -1750,17 +1756,19 @@ export function MapsPage({
             }
             case 'replay':
                 return (
-                    <button
-                        ref={isFirstRow ? firstRowReplayRef : undefined}
-                        type="button"
-                        onClick={e => {
-                            e.stopPropagation()
-                            setReplayPickerMap(map.name)
-                        }}
-                        className="inline-flex items-center justify-center px-3 py-1 rounded-md text-xs font-medium border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/25 hover:text-rose-100 hover:border-rose-500/50 transition-colors cursor-pointer"
-                    >
-                        Demos
-                    </button>
+                    <Tooltip content="Browse demos" side="top">
+                        <button
+                            ref={isFirstRow ? firstRowReplayRef : undefined}
+                            type="button"
+                            onClick={e => {
+                                e.stopPropagation()
+                                setReplayPickerMap(map.name)
+                            }}
+                            className="inline-flex items-center justify-center px-3 py-1 rounded-md text-xs font-medium border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/25 hover:text-rose-100 hover:border-rose-500/50 transition-colors cursor-pointer"
+                        >
+                            Demos
+                        </button>
+                    </Tooltip>
                 )
             case 'community_rating':
                 return (
