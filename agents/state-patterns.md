@@ -178,6 +178,10 @@ The store is a localStorage mirror with a server copy:
   overwrite local ones (subscribers fire), except keys written while the fetch was in
   flight; whitelisted local values the server lacks upload once. `stopUserStateSync()` at
   sign-out flushes and stops.
+- `userStateSettled()` resolves once that sign-in fetch has landed (or failed), and at once when
+  nobody signed in. Await it before a one-time decision that reads a synced key, or a slow
+  fetch makes the device act on its stale local copy and then overwrite the account's value
+  (the champions celebration waits on it, capped at `SYNC_WAIT_MS`).
 
 Rules:
 
@@ -259,6 +263,9 @@ as `utbt:login-required`). Page pref keys are the `*_STATE_STORAGE_KEY` constant
   JSON-encoded ISO time it was dismissed, read and written only through
   `app/components/pages/home/seasonalNoticeStorage.ts`, which guards every access and treats a
   wrongly shaped value as not dismissed ([home.md](features/home.md#new-theme-notice)).
+- `utbt:celebrationsSeen:v1` is synced: a JSON array of the event slugs whose champions popup this
+  person has seen, read and written only through `app/components/celebration/celebrationSeen.ts`
+  ([events.md](features/events.md#champions-celebration)).
 - `utbt:syncAccount:v1` is internal to the synced store.
 - The desktop promotion's two keys are device-local and never account-synced, on purpose:
   they describe this browser. `utbt:desktopSeen:v1` holds the last `last_desktop_seen_at`

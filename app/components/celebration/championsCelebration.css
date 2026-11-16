@@ -1,0 +1,133 @@
+.champions-stage {
+  --champions-gold: var(--color-pickban-gold);
+}
+
+.champions-wash {
+  background:
+    radial-gradient(ellipse 75% 42% at 50% 0%, color-mix(in srgb, var(--champions-gold) 24%, transparent), transparent 72%),
+    radial-gradient(ellipse 90% 30% at 50% 100%, color-mix(in srgb, var(--champions-gold) 7%, transparent), transparent 70%);
+}
+
+.champions-stage-light .champions-wash {
+  background:
+    radial-gradient(ellipse 75% 42% at 50% 0%, color-mix(in srgb, var(--champions-gold) 30%, transparent), transparent 72%),
+    radial-gradient(ellipse 90% 30% at 50% 100%, color-mix(in srgb, var(--champions-gold) 10%, transparent), transparent 70%);
+}
+
+.champions-grid {
+  background-image:
+    linear-gradient(rgb(var(--hairline-rgb) / 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(var(--hairline-rgb) / 0.045) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: center top;
+  mask-image: radial-gradient(ellipse 70% 55% at 50% 22%, #000, transparent);
+}
+
+.dark .champions-stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 120px rgb(0 0 0 / 0.55);
+  border-radius: inherit;
+}
+
+.champions-edge {
+  background: linear-gradient(90deg, transparent, var(--champions-gold) 50%, transparent);
+  box-shadow: 0 0 18px 1px color-mix(in srgb, var(--champions-gold) 60%, transparent);
+}
+
+.champions-scroll {
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent);
+}
+
+.champions-rays-fan {
+  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--champions-gold) 30%, transparent) 0deg 4deg, transparent 4deg 15deg);
+  mask-image: radial-gradient(circle, #000 14%, transparent 58%);
+}
+
+.champions-trophy {
+  color: #451a03;
+  background:
+    radial-gradient(circle at 32% 26%, rgb(255 255 255 / 0.65), transparent 38%),
+    linear-gradient(160deg, #fde68a 0%, var(--champions-gold) 46%, #b45309 100%);
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--champions-gold) 22%, transparent),
+    0 0 0 9px color-mix(in srgb, var(--champions-gold) 8%, transparent),
+    0 0 46px color-mix(in srgb, var(--champions-gold) 55%, transparent),
+    inset 0 -6px 14px rgb(120 53 15 / 0.45);
+}
+
+.champions-trophy svg {
+  filter: drop-shadow(0 1px 0 rgb(255 255 255 / 0.4));
+}
+
+.champions-confetti {
+  top: 60px;
+}
+
+@media (min-width: 640px) {
+  .champions-confetti {
+    top: 68px;
+  }
+}
+
+.champions-rule {
+  background: linear-gradient(90deg, transparent, var(--champions-gold));
+}
+
+.champions-rule-right {
+  background: linear-gradient(90deg, var(--champions-gold), transparent);
+}
+
+.champions-spark {
+  background: var(--champions-gold);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--champions-gold) 70%, transparent);
+}
+
+.champions-avatar-ring {
+  display: inline-flex;
+  background: conic-gradient(from 210deg, #fde68a, var(--champions-gold), #b45309, var(--champions-gold), #fde68a);
+  box-shadow: 0 0 28px color-mix(in srgb, var(--champions-gold) 45%, transparent);
+}
+
+.champions-card::before {
+  content: '';
+  position: absolute;
+  inset: -1px -1px auto;
+  height: 1px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent, var(--champions-medal-edge), transparent);
+}
+
+.champions-card-rule {
+  background: linear-gradient(90deg, transparent, var(--champions-medal-edge), transparent);
+}
+
+.champions-card:has(.champions-medal-silver) {
+  --champions-medal-edge: #cbd5e1;
+}
+
+.champions-card:has(.champions-medal-bronze) {
+  --champions-medal-edge: #d97706;
+}
+
+.champions-medal {
+  color: rgb(15 23 42 / 0.85);
+  box-shadow:
+    0 0 0 3px var(--color-card),
+    0 6px 18px rgb(0 0 0 / 0.35),
+    inset 0 -3px 6px rgb(0 0 0 / 0.25);
+}
+
+.champions-medal-silver {
+  background:
+    radial-gradient(circle at 32% 26%, rgb(255 255 255 / 0.8), transparent 40%),
+    linear-gradient(160deg, #f8fafc 0%, #cbd5e1 45%, #64748b 100%);
+}
+
+.champions-medal-bronze {
+  background:
+    radial-gradient(circle at 32% 26%, rgb(255 255 255 / 0.55), transparent 40%),
+    linear-gradient(160deg, #fcd9a8 0%, #d97706 48%, #7c2d12 100%);
+}

@@ -86,6 +86,7 @@ const RunComparePage = lazy(() => import('@/app/components/pages/runCompare/RunC
 const AdminPage = lazy(() => import('@/app/components/pages/admin/AdminPage').then(m => ({ default: m.AdminPage })))
 const ConfirmModal = lazy(() => import('@/app/components/shared/ConfirmModal').then(m => ({ default: m.ConfirmModal })))
 const FavoritesSyncModal = lazy(() => import('@/app/components/shared/FavoritesSyncModal').then(m => ({ default: m.FavoritesSyncModal })))
+const CelebrationHost = lazy(() => import('@/app/components/celebration/CelebrationHost').then(m => ({ default: m.CelebrationHost })))
 import { InstallationBanner } from '@/app/components/InstallationBanner'
 import { UpdateBanner } from '@/app/components/updater/UpdateBanner'
 import { AuthRequiredModal, LOGIN_REQUIRED_EVENT, type LoginRequest } from '@/app/components/shared/AuthRequiredModal'
@@ -124,6 +125,7 @@ const SERVER_PRESETS_STORAGE_KEY = 'utbt:serverPresets:v1'
 
 const HISTORY_CAP = 50
 const EVENT_ATTENTION_REFRESH_MS = 60_000
+const CELEBRATION_DELAY_MS = 1500
 
 const BADGE_SECTIONS = {
   'maps': 'maps',
@@ -245,6 +247,12 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   const achievementsInFlightRef = useRef<Promise<void> | null>(null)
   const [loginRequest, setLoginRequest] = useState<LoginRequest | null>(null)
   const [viewMounts, setViewMounts] = useState(0)
+  const [celebrationArmed, setCelebrationArmed] = useState(false)
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setCelebrationArmed(true), CELEBRATION_DELAY_MS)
+    return () => window.clearTimeout(timer)
+  }, [])
 
   useEffect(() => {
     const onRemountView = () => setViewMounts(count => count + 1)
@@ -998,6 +1006,11 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           </Suspense>
         )}
         <PatreonModal />
+        {celebrationArmed && (
+          <Suspense fallback={null}>
+            <CelebrationHost onOpenStats={eventSlug => navigate('event-detail', { eventSlug, eventTab: 'teams' })} />
+          </Suspense>
+        )}
         <AuthRequiredModal request={loginRequest} onClose={() => setLoginRequest(null)} />
         {import.meta.env.DEV && <DevImpersonateModal />}
         {pendingLeave && (
