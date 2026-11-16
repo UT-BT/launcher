@@ -40,7 +40,8 @@ Props are flat primitives; destructure nested user or record shapes at the call 
   The name links whenever `userId` is set and is plain text otherwise, so linked and
   string-only authors need no branch. The wrapper is `w-fit`: centre it with `mx-auto`,
   not `justify-center`.
-- `layout` is `horizontal` or `vertical`; `size` is `sm`, `md` or `lg`.
+- `layout` is `horizontal` or `vertical`; `size` is `sm`, `md`, `lg` or `xl` (72 px, for a hero
+  such as the champions celebration).
 
 When a payload lacks `active_title`, get the field added to the API rather than working
 around it (skill: consume-api-data).

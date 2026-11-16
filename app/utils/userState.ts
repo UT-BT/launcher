@@ -13,6 +13,7 @@ const SYNCED_KEYS = new Set([
     'utbt:pickBanMotion:v1',
     'utbt:hemisphere:v1',
     'utbt:seasonalEffects:v1',
+    'utbt:celebrationsSeen:v1',
 ])
 
 export function isSyncedKey(key: string): boolean {

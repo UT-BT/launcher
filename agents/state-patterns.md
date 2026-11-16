@@ -259,6 +259,9 @@ as `utbt:login-required`). Page pref keys are the `*_STATE_STORAGE_KEY` constant
   JSON-encoded ISO time it was dismissed, read and written only through
   `app/components/pages/home/seasonalNoticeStorage.ts`, which guards every access and treats a
   wrongly shaped value as not dismissed ([home.md](features/home.md#new-theme-notice)).
+- `utbt:celebrationsSeen:v1` is synced: a JSON array of the event slugs whose champions popup this
+  person has seen, read and written only through `app/components/celebration/celebrationSeen.ts`
+  ([events.md](features/events.md#champions-celebration)).
 - `utbt:syncAccount:v1` is internal to the synced store.
 - The desktop promotion's two keys are device-local and never account-synced, on purpose:
   they describe this browser. `utbt:desktopSeen:v1` holds the last `last_desktop_seen_at`

@@ -1,0 +1,178 @@
+.champions-confetti {
+  position: fixed;
+  left: 50%;
+  top: 28%;
+  width: 0;
+  height: 0;
+  z-index: 51;
+}
+
+.champions-hero {
+  padding-top: 2.25rem;
+}
+
+.champions-trophy-slot {
+  display: grid;
+  place-items: center;
+  width: 5rem;
+  height: 5rem;
+}
+
+.champions-trophy {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 5rem;
+  height: 5rem;
+  border-radius: 9999px;
+  color: #451a03;
+  background: linear-gradient(to bottom, #fde68a, #fbbf24, #d97706);
+  box-shadow: 0 0 48px rgb(250 204 21 / 0.5), 0 0 0 4px rgb(252 211 77 / 0.25);
+}
+
+.champions-trophy svg {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.champions-eyebrow {
+  margin-top: 1.75rem;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+}
+
+.champions-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+
+.champions-player {
+  max-width: 9rem;
+}
+
+.champions-cta {
+  color: #451a03;
+  background: linear-gradient(to bottom, #fcd34d, #f59e0b);
+  transition: filter 150ms;
+}
+
+.champions-cta:hover {
+  filter: brightness(1.1);
+}
+
+.champions-confetti > span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  background: var(--c);
+  animation: champions-confetti 2.8s cubic-bezier(0.15, 0.6, 0.35, 1) var(--delay) forwards;
+}
+
+.champions-glow {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 18rem;
+  background: radial-gradient(ellipse at 50% 0%, rgb(250 204 21 / 0.26), transparent 70%);
+}
+
+.champions-rays {
+  position: absolute;
+  inset: -3rem;
+  border-radius: 9999px;
+  background: repeating-conic-gradient(from 0deg, rgb(250 204 21 / 0.2) 0deg 8deg, transparent 8deg 24deg);
+  mask-image: radial-gradient(circle, #000 25%, transparent 70%);
+  animation: champions-spin 40s linear infinite;
+}
+
+.champions-pop {
+  animation: champions-pop 0.7s cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+
+.champions-rise {
+  animation: champions-rise 0.6s ease-out var(--delay, 0ms) both;
+}
+
+.champions-name {
+  font-size: 2.25rem;
+  line-height: 2.5rem;
+  background-image: linear-gradient(100deg, #fde68a 0%, #facc15 30%, #fffbeb 48%, #f59e0b 66%, #fde68a 100%);
+  background-size: 250% 100%;
+  background-position: 0% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation:
+    champions-rise 0.6s ease-out var(--delay, 0ms) both,
+    champions-shine 2.4s ease-in-out 0.7s both;
+}
+
+@media (min-width: 640px) {
+  .champions-name {
+    font-size: 3rem;
+    line-height: 1;
+  }
+}
+
+.champions-name-light {
+  background-image: linear-gradient(100deg, #b45309 0%, #a16207 30%, #eab308 48%, #92400e 66%, #b45309 100%);
+}
+
+@keyframes champions-confetti {
+  0% {
+    transform: translate(-50%, -50%) scale(0.4) rotate(0deg);
+    opacity: 1;
+  }
+  30% {
+    transform: translate(calc(var(--dx) * 0.75), var(--rise)) scale(1) rotate(calc(var(--spin) * 0.4));
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--dx), var(--fall)) scale(1) rotate(var(--spin));
+    opacity: 0;
+  }
+}
+
+@keyframes champions-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes champions-pop {
+  from {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes champions-rise {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes champions-shine {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0% 0;
+  }
+}

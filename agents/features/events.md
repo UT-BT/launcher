@@ -529,6 +529,30 @@ closes_at, finalised_at, state }` and can only be won off that event.
   It cannot be undone, so it confirms first and uses `apiGet` (not `apiGetOr`) so a refusal reaches the
   manager.
 
+## Champions celebration
+
+When an event ends, every visitor gets one celebratory popup with its podium, on both targets.
+
+- **The server decides what to celebrate.** `fetchCelebration()` reads `GET /tournaments/celebration` →
+  `Celebration | null`: `{ slug, name, ends_at, final_score: { winner, loser }, podium }`, where each
+  `podium` entry is `{ place, team: { id, name, members: [{ user, alias, title }] } }`. Place 1 and 2 come
+  from the final; 3 is the third place match's winner, or both beaten semi-finalists (two entries) when
+  there is none. The window (two weeks after the event ends) and the "is it decided" rules are the
+  server's; never re-derive them from the bracket.
+- **Shown once per person.** `Main.tsx` mounts the lazy `CelebrationHost`
+  (`app/components/celebration/CelebrationHost.tsx`) `CELEBRATION_DELAY_MS` after boot, so the sign-in sync
+  can land and the chunk stays off the first paint. The host asks, and skips a slug already in
+  `utbt:celebrationsSeen:v1` (a synced JSON array of slugs, through `celebrationSeen.ts`). The slug is
+  recorded the moment the popup opens, not when it closes.
+- **Automated browsers never see it.** `isAutomatedBrowser()` (`navigator.webdriver`) keeps it out of
+  every e2e and mobile-suite run, which talk to the live API; `e2e/champions-celebration.spec.ts` opts back
+  in by overriding `webdriver`. `CELEBRATION_SHOTS_DIR=<dir>` makes that spec save preview frames.
+- **The popup** (`ChampionsCelebration.tsx`, lazy, its CSS alongside) is a `useModalBehaviour` overlay:
+  one-shot confetti and rises, one looping ray layer behind the trophy, all cut by reduced motion.
+  Champions render through `PlayerInfo` at `size="xl"`; medal colours follow the placement titles' gold,
+  silver and bronze through `getReadableTitleColor`, so the Light theme stays legible. "See the cup stats"
+  opens the event's Teams (stats) tab.
+
 ## Adding an event tab
 
 Copy the Achievements tab (#287): a lazy component behind an `EventDetail` flag, the smallest complete
