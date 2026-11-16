@@ -37,6 +37,10 @@
   box-shadow: 0 0 18px 1px color-mix(in srgb, var(--champions-gold) 60%, transparent);
 }
 
+.champions-scroll {
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent);
+}
+
 .champions-rays-fan {
   background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--champions-gold) 30%, transparent) 0deg 4deg, transparent 4deg 15deg);
   mask-image: radial-gradient(circle, #000 14%, transparent 58%);
@@ -59,12 +63,12 @@
 }
 
 .champions-confetti {
-  top: 68px;
+  top: 60px;
 }
 
 @media (min-width: 640px) {
   .champions-confetti {
-    top: 80px;
+    top: 68px;
   }
 }
 
@@ -74,6 +78,11 @@
 
 .champions-rule-right {
   background: linear-gradient(90deg, var(--champions-gold), transparent);
+}
+
+.champions-spark {
+  background: var(--champions-gold);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--champions-gold) 70%, transparent);
 }
 
 .champions-avatar-ring {

@@ -33,13 +33,13 @@ interface ChampionsCelebrationProps {
 function nameSize(name: string): string {
     if (name.length > 22) return 'clamp(30px, 9vw, 40px)'
     if (name.length > 14) return 'clamp(36px, 11vw, 52px)'
-    return 'clamp(44px, 14vw, 68px)'
+    return 'clamp(40px, 13vw, 66px)'
 }
 
 function TrophyMark() {
     const burst = useMemo(() => sparks(BEATS.trophy + 0.12), [])
     return (
-        <div className="relative grid size-20 place-items-center sm:size-24">
+        <div className="relative grid size-18 place-items-center sm:size-20">
             <motion.span variants={rays(0.1)} aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 size-[340%] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full">
                 <motion.span animate={RAYS_TURN} className="champions-rays-fan block size-full rounded-full" />
             </motion.span>
@@ -68,8 +68,8 @@ function TrophyMark() {
                     />
                 ))}
             </span>
-            <motion.div variants={slam(BEATS.trophy)} className="champions-trophy relative grid size-20 place-items-center rounded-full sm:size-24">
-                <Trophy aria-hidden className="size-9 sm:size-11" strokeWidth={2} />
+            <motion.div variants={slam(BEATS.trophy)} className="champions-trophy relative grid size-18 place-items-center rounded-full sm:size-20">
+                <Trophy aria-hidden className="size-8 sm:size-9" strokeWidth={2} />
             </motion.div>
         </div>
     )
@@ -134,12 +134,25 @@ function FinalScore({ champion, runnerUp, score }: { champion: string; runnerUp:
     )
 }
 
+function ClosingNote({ text }: { text: string }) {
+    return (
+        <motion.div variants={rise(BEATS.message, 10)} className="mt-5 flex flex-col items-center gap-2 text-center">
+            <span aria-hidden className="flex items-center gap-2">
+                <span className="champions-rule h-px w-8" />
+                <span className="champions-spark size-1.5 rotate-45" />
+                <span className="champions-rule champions-rule-right h-px w-8" />
+            </span>
+            <p data-celebration-note className="max-w-md text-balance text-sm leading-relaxed text-muted-foreground">{text}</p>
+        </motion.div>
+    )
+}
+
 function PodiumCard({ place, order, wide }: { place: CelebrationPlace; order: number; wide: boolean }) {
     const medal = MEDALS[place.place === 2 ? 2 : 3]
     return (
         <motion.div
             variants={rise(BEATS.podium + order * 0.09, 18)}
-            className={cn('champions-card relative flex min-w-0 flex-col items-center rounded-xl border border-hairline/10 bg-card/30 px-3 pb-4 pt-8 text-center', wide && 'col-span-2')}
+            className={cn('champions-card relative flex min-w-0 flex-col items-center rounded-xl border border-hairline/10 bg-card/30 px-3 pb-3 pt-7 text-center sm:pb-4', wide && 'col-span-2')}
         >
             <span className={cn('champions-medal absolute left-1/2 top-0 grid size-10 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full font-pickban text-xl font-black italic', medal.medal)}>
                 {place.place}
@@ -205,11 +218,11 @@ export function ChampionsCelebration({ celebration, onClose, onOpenStats }: Cham
                     <span aria-hidden className="champions-grid pointer-events-none absolute inset-0" />
                     <span aria-hidden className="champions-edge pointer-events-none absolute inset-x-0 top-0 h-px" />
 
-                    <div className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-5 pb-5 pt-7 sm:px-8 sm:pb-6 sm:pt-8" onClickCapture={closeAfterLink}>
+                    <div className="champions-scroll relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-5 pb-6 pt-6 sm:px-8 sm:pt-7" onClickCapture={closeAfterLink}>
                         <div className="flex flex-col items-center text-center">
                             <TrophyMark />
 
-                            <div className="mt-6 w-full sm:mt-7">
+                            <div className="mt-5 w-full">
                                 <Kicker text={celebration.name} />
                             </div>
                             <motion.p id="champions-title" variants={rise(BEATS.kicker + 0.08, 6)} className="mt-3 text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
@@ -227,7 +240,7 @@ export function ChampionsCelebration({ celebration, onClose, onOpenStats }: Cham
                                 {champion.team.name}
                             </motion.p>
 
-                            <div className="relative mt-5 grid w-full max-w-sm grid-cols-2 gap-4 sm:mt-6">
+                            <div className="relative mt-5 grid w-full max-w-sm grid-cols-2 gap-4">
                                 {champion.team.members.map((member, index) => (
                                     <motion.div key={member.user} variants={rise(BEATS.champions + index * 0.08, 18)} className="min-w-0">
                                         <Champion member={member} />
@@ -245,41 +258,43 @@ export function ChampionsCelebration({ celebration, onClose, onOpenStats }: Cham
                             </div>
 
                             {runnerUp && (
-                                <div className="mt-5 w-full sm:mt-6">
+                                <div className="mt-5 w-full">
                                     <FinalScore champion={champion.team.name} runnerUp={runnerUp.team.name} score={celebration.final_score} />
                                 </div>
                             )}
                         </div>
 
                         {others.length > 0 && (
-                            <div className="mt-9 grid grid-cols-2 gap-x-3 gap-y-8 sm:mt-10 sm:gap-x-4">
+                            <div className="mt-8 grid grid-cols-2 gap-x-3 gap-y-8 sm:mt-9 sm:gap-x-4">
                                 {others.map((place, index) => (
                                     <PodiumCard key={place.team.id} place={place} order={index} wide={others.length === 3 && index === 0} />
                                 ))}
                             </div>
                         )}
 
-                        <motion.div variants={rise(BEATS.actions, 8)} className="mt-6 grid grid-cols-2 gap-2 sm:mt-7 sm:flex sm:justify-center">
-                            <button
-                                type="button"
-                                onClick={onClose}
-                                className="inline-flex h-9 w-full items-center justify-center rounded-lg border border-hairline/10 bg-hairline/5 px-4 text-sm font-semibold text-foreground transition-colors hover:border-hairline/20 hover:bg-hairline/10 sm:w-44"
-                            >
-                                Close
-                            </button>
-                            <NavLink
-                                view="event-detail"
-                                params={{ eventSlug: celebration.slug, eventTab: 'teams' }}
-                                onActivate={openStats}
-                                ariaLabel="See the cup stats"
-                                className="inline-flex h-9 w-full items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-promo-gold px-4 text-sm font-semibold text-amber-950 shadow-lg transition duration-200 hover:brightness-110 sm:w-44"
-                            >
-                                <span className="sm:hidden">Cup stats</span>
-                                <span className="hidden sm:inline">See the cup stats</span>
-                                <ArrowRight className="size-4" aria-hidden />
-                            </NavLink>
-                        </motion.div>
+                        {celebration.message && <ClosingNote text={celebration.message} />}
                     </div>
+
+                    <motion.div variants={rise(BEATS.actions, 8)} className="relative grid shrink-0 grid-cols-2 gap-2 border-t border-hairline/5 px-5 py-4 sm:flex sm:justify-center sm:px-8">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="inline-flex h-9 w-full items-center justify-center rounded-lg border border-hairline/10 bg-hairline/5 px-4 text-sm font-semibold text-foreground transition-colors hover:border-hairline/20 hover:bg-hairline/10 sm:w-44"
+                        >
+                            Close
+                        </button>
+                        <NavLink
+                            view="event-detail"
+                            params={{ eventSlug: celebration.slug, eventTab: 'teams' }}
+                            onActivate={openStats}
+                            ariaLabel="See the cup stats"
+                            className="inline-flex h-9 w-full items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-promo-gold px-4 text-sm font-semibold text-amber-950 shadow-lg transition duration-200 hover:brightness-110 sm:w-44"
+                        >
+                            <span className="sm:hidden">Cup stats</span>
+                            <span className="hidden sm:inline">See the cup stats</span>
+                            <ArrowRight className="size-4" aria-hidden />
+                        </NavLink>
+                    </motion.div>
 
                     <ConfettiField />
 

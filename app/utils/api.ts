@@ -4619,6 +4619,7 @@ export interface Celebration {
     ends_at: string
     final_score: { winner: number; loser: number }
     podium: CelebrationPlace[]
+    message: string | null
 }
 
 export async function fetchCelebration(signal?: AbortSignal): Promise<Celebration | null> {

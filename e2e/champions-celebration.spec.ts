@@ -11,6 +11,7 @@ const CELEBRATION: Celebration = {
     name: 'UTBT 2v2 World Cup 2026',
     ends_at: '2026-11-15T22:59:00+00:00',
     final_score: { winner: 4, loser: 2 },
+    message: 'A huge thanks to all the players for making our first team cup a huge success.',
     podium: [
         {
             place: 1,
@@ -114,6 +115,7 @@ test('a visitor sees the champions once, and never again', async ({ page, contex
     await expect(popup.getByText('Third place')).toBeVisible()
     await expect(popup.getByText('Puzzle Masters')).toBeVisible()
     await expect(popup.getByText('Arturek ;)')).toBeVisible()
+    await expect(popup.locator('[data-celebration-note]')).toHaveText(CELEBRATION.message!)
 
     await popup.getByRole('button', { name: 'Close' }).first().click()
     await expect(popup).toBeHidden()

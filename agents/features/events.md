@@ -534,7 +534,7 @@ closes_at, finalised_at, state }` and can only be won off that event.
 When an event ends, every visitor gets one celebratory popup with its podium, on both targets.
 
 - **The server decides what to celebrate.** `fetchCelebration()` reads `GET /tournaments/celebration` →
-  `Celebration | null`: `{ slug, name, ends_at, final_score: { winner, loser }, podium }`, where each
+  `Celebration | null`: `{ slug, name, ends_at, final_score: { winner, loser }, podium, message }`, where each
   `podium` entry is `{ place, team: { id, name, members: [{ user, alias, title }] } }`. Place 1 and 2 come
   from the final; 3 is the third place match's winner, or both beaten semi-finalists (two entries) when
   there is none. The window (two weeks after the event ends) and the "is it decided" rules are the
@@ -546,6 +546,9 @@ When an event ends, every visitor gets one celebratory popup with its podium, on
   through `celebrationSeen.ts`). Signed in, that list follows the account, so the website and the desktop
   app show it once between them; a signed-out web visit can only remember the browser. The slug is
   recorded the moment the popup opens, not when it closes.
+- **The closing note** is `message`, the event's own text (`null` hides it), shown under the podium
+  between a gold rule. The actions sit in a pinned footer outside the scroller, so Close and the stats
+  link stay visible on a short screen while the content scrolls behind a bottom fade.
 - **No horizontal scroll.** The ray fan rotates inside a clipped, non-rotating circle (a rotating square's
   box grows by √2), and the scroller is `overflow-x-hidden`.
 - **Automated browsers never see it.** `isAutomatedBrowser()` (`navigator.webdriver`) keeps it out of

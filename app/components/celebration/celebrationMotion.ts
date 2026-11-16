@@ -8,7 +8,8 @@ export const BEATS = {
     champions: 1.02,
     score: 1.26,
     podium: 1.4,
-    actions: 1.62,
+    message: 1.6,
+    actions: 1.76,
 }
 
 const SPARK_COUNT = 16
