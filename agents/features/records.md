@@ -25,7 +25,7 @@ Hunt, latest records) in [home.md](home.md).
 | `app/components/pages/TeamCapDetailPage.tsx` | one team run: roster, per-member analytics, Watch Team Run and Compare; `capDetail/teamCompareOpponent.ts` picks Compare's opponent (`teamCompareOpponent.test.ts`) |
 | `app/components/pages/capDetail/` | cap-detail cards; `capStats.ts` holds the pure medal-int helpers, signed deltas and checkpoint alignment (no tests) |
 | `app/components/pages/WorldRecordsPage.tsx`, `CapItAllPage.tsx` (+ `.types.ts`) | the two server-paginated record lists |
-| `app/components/pages/MapsPage.tsx`, `maps/medals.ts`, `PlayersPage.tsx` | the list pages; `computeMedalTier` |
+| `app/components/pages/MapsPage.tsx`, `maps/medals.ts`, `maps/wrHolder.ts`, `maps/WRHolderDetails.tsx`, `PlayersPage.tsx` | the list pages; `computeMedalTier`; the WR holder cache shape and holder block |
 | `app/components/modals/` | replay picker (its row cache in `replayPickerCache.ts`, `replayPickerCache.test.ts`), WR progression, cap-time distribution, playtime breakdown, history, review and favourites lists |
 | `app/components/shared/ReplayVideoModal.tsx`, `app/hooks/useReplayWatch.ts`, `useDemoDownload.ts`, `app/utils/replayVideoCache.ts` | replay and demo plumbing every record surface reuses; `replayVideoCache.ts` is `resolveCompareVideo`, the 5-minute replay video cache the compare page shares (`replayVideoCache.test.ts`) |
 | `app/components/shared/CompareLink.tsx` | the link to the compare page every entry point renders ([run-compare.md](run-compare.md#entry-points)) |
@@ -413,7 +413,12 @@ the viewer's best caps (`fetchBestCaps`, `/caps/capped_maps/<userId>`) into `cac
 options, counters, ratings and the medal column use them in every mode. The medal column and
 the capped filter run `computeMedalTier` on those best caps; the medal sort puts uncapped and
 casual maps last in either direction. WR holders load lazily for the visible rows
-(`fetchWorldRecordsForMaps`) and accumulate in `caches.wrHolders`.
+(`fetchWorldRecordsForMaps`) and accumulate in `caches.wrHolders`. `toWRHolder` in
+`maps/wrHolder.ts` keeps each holder's active title and, for a team record, its `members` in API
+order; a team record's top-level `user_id` is `null` and its `alias` is the joined member names,
+so never render it. `maps/WRHolderDetails.tsx` renders a holder through `PlayerInfo`: one line for
+a solo record, one line per member with the split for a team record, fastest first
+(`wrHolderLines`, `wrHolder.test.ts`), and nothing for a team record without `members`.
 
 The table is tiered ([shared-components.md](../shared-components.md#column-tiers-and-phone-cards)).
 Each column declares its tier, label and sort field (`COLUMN_TIER`, `COLUMN_LABELS`,

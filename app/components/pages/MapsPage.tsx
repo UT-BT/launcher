@@ -27,6 +27,7 @@ import { NavLink } from '@/app/components/navigation/NavLink'
 import { Tutorial } from '@/app/components/shared/Tutorial'
 import { useTutorialState } from '@/app/components/shared/useTutorialState'
 import { buildSteps } from '@/app/components/pages/maps/mapsTutorialSteps'
+import { toWRHolder } from '@/app/components/pages/maps/wrHolder'
 import { PaginationBar } from '@/app/components/ui/pagination'
 import { MultiFilterDropdown } from '@/app/components/ui/multi-filter-dropdown'
 import { FilterPanelRow } from '@/app/components/ui/filter-panel-row'
@@ -425,7 +426,7 @@ function getTutorialMockRow(mapName: string): {
         },
         wrHolder: {
             user_id: '0', alias: 'TopPlayer', cap_id: 'tutorial-mock-wr',
-            color_r: 100, color_g: 200, color_b: 255,
+            color_r: 100, color_g: 200, color_b: 255, title: null,
         },
         wr: 42.567,
     }
@@ -1222,16 +1223,7 @@ export function MapsPage({
                 const records = await fetchWorldRecordsForMaps(browseToken, missing)
                 if (cancelled) return
                 const additions: Record<string, WRHolder> = {}
-                for (const r of records) {
-                    additions[r.map] = {
-                        user_id: r.user_id,
-                        alias: r.alias,
-                        cap_id: r.cap_id,
-                        color_r: r.color_r,
-                        color_g: r.color_g,
-                        color_b: r.color_b,
-                    }
-                }
+                for (const r of records) additions[r.map] = toWRHolder(r)
                 onCachesChange(prev => ({
                     ...prev,
                     wrHolders: { ...prev.wrHolders, ...additions },
