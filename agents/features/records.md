@@ -419,6 +419,12 @@ order; a team record's top-level `user_id` is `null` and its `alias` is the join
 so never render it. `maps/WRHolderDetails.tsx` renders a holder through `PlayerInfo`: one line for
 a solo record, one line per member with the split for a team record, fastest first
 (`wrHolderLines`, `wrHolder.test.ts`), and nothing for a team record without `members`.
+`MapsPage` builds that block once per row (`holderDetails` on the row context). On a pointer
+device the WR time's tooltip shows it, and falls back to "View cap details" when the block is
+empty; until the holder loads the time has no cap id, so it is plain text with no tooltip. On
+touch the block renders inline under the time instead (the time keeps its plain tap tooltip), and
+the WR column widens from 9rem to 15rem (`WR_TOUCH_WIDTH`) so a team line fits. A batch of holders
+is never dropped when the effect re-runs mid-fetch, since the re-run skips the maps in flight.
 
 The table is tiered ([shared-components.md](../shared-components.md#column-tiers-and-phone-cards)).
 Each column declares its tier, label and sort field (`COLUMN_TIER`, `COLUMN_LABELS`,
@@ -429,8 +435,9 @@ columns first and a window too narrow for them gets cards; they stay hideable in
 touch rule decides instead.
 
 - **Card face** (a list labelled "Maps"): a small thumbnail, the favourite star, map name and New
-  badge, difficulty, the WR and, signed in, the medal and PB through `CapTimeLink`. Tapping the
-  body opens the map.
+  badge, difficulty, the WR, the WR holder block on its own right-aligned row under the WR (between
+  the WR and the PB) and, signed in, the medal and PB through `CapTimeLink`. Tapping the body opens
+  the map.
 - **Expand panel**: Tags, Author, Added, Demos, Community Review and, signed in, Your Review.
   Demos opens the replay picker and both reviews open the reviews modal, as from the table.
 - **Card sort**: the nine sortable columns (six signed out), on the same `sortBy` / `sortDir` as

@@ -175,7 +175,9 @@ test.describe('hide-on-scroll bars in portrait', () => {
 
     test('navigating brings the bars back, and Back restores the page with them shown', async ({ page }) => {
         await open(page, [maps, mapsDetail])
-        await fingerScroll(page, 400)
+        // Short enough that the map's link (second card, under its WR holder line) stays
+        // in view: a tap on a link scrolled out of view would scroll it back first.
+        await fingerScroll(page, 250)
         await expectBars(page, 'hidden', 'scrolling down hides the bars')
         const left = await mainTop(page)
 
