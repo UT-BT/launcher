@@ -104,13 +104,16 @@ test('a visitor sees the champions once, and never again', async ({ page, contex
     await page.goto('/')
     const popup = dialog(page)
     await expect(popup).toBeVisible()
-    await expect(popup.getByText('BAD BOYS', { exact: true })).toBeVisible()
+    await expect(popup.locator('[data-champion-name]')).toHaveText('BAD BOYS')
     await expect(popup.getByText('Bakica')).toBeVisible()
     await expect(popup.getByText('Dylanbroo')).toBeVisible()
-    await expect(popup.getByText('Grand Final · 4–2 vs 2 guys 1 cap')).toBeVisible()
+    await expect(popup.getByText('Grand Final')).toBeVisible()
+    await expect(popup.locator('[data-final-score]')).toHaveText('4–2')
     await expect(popup.getByText('Runner-up')).toBeVisible()
+    await expect(popup.getByText('2 guys 1 cap', { exact: true }).last()).toBeVisible()
     await expect(popup.getByText('Third place')).toBeVisible()
     await expect(popup.getByText('Puzzle Masters')).toBeVisible()
+    await expect(popup.getByText('Arturek ;)')).toBeVisible()
 
     await popup.getByRole('button', { name: 'Close' }).first().click()
     await expect(popup).toBeHidden()
@@ -138,6 +141,16 @@ test('the stats button opens the cup on its stats tab', async ({ page, context }
     await dialog(page).getByRole('link', { name: 'See the cup stats' }).click()
     await expect(dialog(page)).toBeHidden()
     await expect(page).toHaveURL(/\/events\/2v2-cup-2026/)
+})
+
+test('a champion opens their profile and the celebration steps aside', async ({ page, context }) => {
+    await asAPerson(context)
+    await serveApi(context, CELEBRATION)
+
+    await page.goto('/')
+    await dialog(page).getByRole('link', { name: 'Bakica' }).first().click()
+    await expect(page).toHaveURL(/\/players\/1254416467160596565/)
+    await expect(dialog(page)).toBeHidden()
 })
 
 test('nothing shows when there is nothing to celebrate', async ({ page, context }) => {

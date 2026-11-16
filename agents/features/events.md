@@ -547,11 +547,21 @@ When an event ends, every visitor gets one celebratory popup with its podium, on
 - **Automated browsers never see it.** `isAutomatedBrowser()` (`navigator.webdriver`) keeps it out of
   every e2e and mobile-suite run, which talk to the live API; `e2e/champions-celebration.spec.ts` opts back
   in by overriding `webdriver`. `CELEBRATION_SHOTS_DIR=<dir>` makes that spec save preview frames.
-- **The popup** (`ChampionsCelebration.tsx`, lazy, its CSS alongside) is a `useModalBehaviour` overlay:
-  one-shot confetti and rises, one looping ray layer behind the trophy, all cut by reduced motion.
-  Champions render through `PlayerInfo` at `size="xl"`; medal colours follow the placement titles' gold,
-  silver and bronze through `getReadableTitleColor`, so the Light theme stays legible. "See the cup stats"
-  opens the event's Teams (stats) tab.
+- **The popup** (`ChampionsCelebration.tsx`, lazy, its CSS alongside) is a `useModalBehaviour` overlay in
+  the broadcast language of the post-match Winner scene ([stream-kit.md](stream-kit.md)): `font-pickban`
+  display type (the host waits up to `FONT_WAIT_MS` for `BROADCAST_FONTS` so the name never flashes in the
+  system face), the pick/ban gold `PICK_BAN_HUES.gold` for glows, `tint()` washes and a masked grid on a
+  theme-aware card. Every element is mirrored on the centre line: kicker between two rules, the champions
+  in an equal two-column grid, the grand final as `name | score | name`, two identical podium cards and an
+  equal-width button pair. Medal text uses the fixed tokens (`yellow-300`, which Light remaps); silver and
+  bronze live only in the medallions and card edges, so card labels stay neutral and legible.
+- **Motion** is framer-motion variants in `celebrationMotion.ts` on the broadcast curves (`EASE_OUT`,
+  `SLAM`), timed by `BEATS`: the trophy slams in with two shockwaves, sparks and a confetti burst, then the
+  kicker rules draw, the name stamps and the rest rises in. All one-shot except the slow ray turn behind
+  the trophy (the one looping element). `MotionConfig skipAnimations` follows `usePrefersReducedMotion`, and
+  every effect ends invisible, so reduced motion lands on the same final frame. The panel takes focus on
+  open (not the first link), so no focus ring shows until the keyboard is used. "See the cup stats" (phone:
+  "Cup stats") opens the event's Teams (stats) tab.
 
 ## Adding an event tab
 

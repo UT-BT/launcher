@@ -1,178 +1,124 @@
-.champions-confetti {
-  position: fixed;
-  left: 50%;
-  top: 28%;
-  width: 0;
-  height: 0;
-  z-index: 51;
+.champions-stage {
+  --champions-gold: var(--color-pickban-gold);
 }
 
-.champions-hero {
-  padding-top: 2.25rem;
+.champions-wash {
+  background:
+    radial-gradient(ellipse 75% 42% at 50% 0%, color-mix(in srgb, var(--champions-gold) 24%, transparent), transparent 72%),
+    radial-gradient(ellipse 90% 30% at 50% 100%, color-mix(in srgb, var(--champions-gold) 7%, transparent), transparent 70%);
 }
 
-.champions-trophy-slot {
-  display: grid;
-  place-items: center;
-  width: 5rem;
-  height: 5rem;
+.champions-stage-light .champions-wash {
+  background:
+    radial-gradient(ellipse 75% 42% at 50% 0%, color-mix(in srgb, var(--champions-gold) 30%, transparent), transparent 72%),
+    radial-gradient(ellipse 90% 30% at 50% 100%, color-mix(in srgb, var(--champions-gold) 10%, transparent), transparent 70%);
+}
+
+.champions-grid {
+  background-image:
+    linear-gradient(rgb(var(--hairline-rgb) / 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(var(--hairline-rgb) / 0.045) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: center top;
+  mask-image: radial-gradient(ellipse 70% 55% at 50% 22%, #000, transparent);
+}
+
+.dark .champions-stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 120px rgb(0 0 0 / 0.55);
+  border-radius: inherit;
+}
+
+.champions-edge {
+  background: linear-gradient(90deg, transparent, var(--champions-gold) 50%, transparent);
+  box-shadow: 0 0 18px 1px color-mix(in srgb, var(--champions-gold) 60%, transparent);
+}
+
+.champions-rays-fan {
+  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--champions-gold) 30%, transparent) 0deg 4deg, transparent 4deg 15deg);
+  mask-image: radial-gradient(circle, #000 14%, transparent 58%);
 }
 
 .champions-trophy {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 5rem;
-  height: 5rem;
-  border-radius: 9999px;
   color: #451a03;
-  background: linear-gradient(to bottom, #fde68a, #fbbf24, #d97706);
-  box-shadow: 0 0 48px rgb(250 204 21 / 0.5), 0 0 0 4px rgb(252 211 77 / 0.25);
+  background:
+    radial-gradient(circle at 32% 26%, rgb(255 255 255 / 0.65), transparent 38%),
+    linear-gradient(160deg, #fde68a 0%, var(--champions-gold) 46%, #b45309 100%);
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--champions-gold) 22%, transparent),
+    0 0 0 9px color-mix(in srgb, var(--champions-gold) 8%, transparent),
+    0 0 46px color-mix(in srgb, var(--champions-gold) 55%, transparent),
+    inset 0 -6px 14px rgb(120 53 15 / 0.45);
 }
 
 .champions-trophy svg {
-  width: 2.5rem;
-  height: 2.5rem;
+  filter: drop-shadow(0 1px 0 rgb(255 255 255 / 0.4));
 }
 
-.champions-eyebrow {
-  margin-top: 1.75rem;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.25em;
-}
-
-.champions-label {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-}
-
-.champions-player {
-  max-width: 9rem;
-}
-
-.champions-cta {
-  color: #451a03;
-  background: linear-gradient(to bottom, #fcd34d, #f59e0b);
-  transition: filter 150ms;
-}
-
-.champions-cta:hover {
-  filter: brightness(1.1);
-}
-
-.champions-confetti > span {
-  position: absolute;
-  left: 0;
-  top: 0;
-  opacity: 0;
-  background: var(--c);
-  animation: champions-confetti 2.8s cubic-bezier(0.15, 0.6, 0.35, 1) var(--delay) forwards;
-}
-
-.champions-glow {
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 18rem;
-  background: radial-gradient(ellipse at 50% 0%, rgb(250 204 21 / 0.26), transparent 70%);
-}
-
-.champions-rays {
-  position: absolute;
-  inset: -3rem;
-  border-radius: 9999px;
-  background: repeating-conic-gradient(from 0deg, rgb(250 204 21 / 0.2) 0deg 8deg, transparent 8deg 24deg);
-  mask-image: radial-gradient(circle, #000 25%, transparent 70%);
-  animation: champions-spin 40s linear infinite;
-}
-
-.champions-pop {
-  animation: champions-pop 0.7s cubic-bezier(0.2, 1.5, 0.4, 1) both;
-}
-
-.champions-rise {
-  animation: champions-rise 0.6s ease-out var(--delay, 0ms) both;
-}
-
-.champions-name {
-  font-size: 2.25rem;
-  line-height: 2.5rem;
-  background-image: linear-gradient(100deg, #fde68a 0%, #facc15 30%, #fffbeb 48%, #f59e0b 66%, #fde68a 100%);
-  background-size: 250% 100%;
-  background-position: 0% 0;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation:
-    champions-rise 0.6s ease-out var(--delay, 0ms) both,
-    champions-shine 2.4s ease-in-out 0.7s both;
+.champions-confetti {
+  top: 68px;
 }
 
 @media (min-width: 640px) {
-  .champions-name {
-    font-size: 3rem;
-    line-height: 1;
+  .champions-confetti {
+    top: 80px;
   }
 }
 
-.champions-name-light {
-  background-image: linear-gradient(100deg, #b45309 0%, #a16207 30%, #eab308 48%, #92400e 66%, #b45309 100%);
+.champions-rule {
+  background: linear-gradient(90deg, transparent, var(--champions-gold));
 }
 
-@keyframes champions-confetti {
-  0% {
-    transform: translate(-50%, -50%) scale(0.4) rotate(0deg);
-    opacity: 1;
-  }
-  30% {
-    transform: translate(calc(var(--dx) * 0.75), var(--rise)) scale(1) rotate(calc(var(--spin) * 0.4));
-    opacity: 1;
-  }
-  80% {
-    opacity: 1;
-  }
-  100% {
-    transform: translate(var(--dx), var(--fall)) scale(1) rotate(var(--spin));
-    opacity: 0;
-  }
+.champions-rule-right {
+  background: linear-gradient(90deg, var(--champions-gold), transparent);
 }
 
-@keyframes champions-spin {
-  to {
-    transform: rotate(360deg);
-  }
+.champions-avatar-ring {
+  display: inline-flex;
+  background: conic-gradient(from 210deg, #fde68a, var(--champions-gold), #b45309, var(--champions-gold), #fde68a);
+  box-shadow: 0 0 28px color-mix(in srgb, var(--champions-gold) 45%, transparent);
 }
 
-@keyframes champions-pop {
-  from {
-    transform: scale(0.3);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
+.champions-card::before {
+  content: '';
+  position: absolute;
+  inset: -1px -1px auto;
+  height: 1px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent, var(--champions-medal-edge), transparent);
 }
 
-@keyframes champions-rise {
-  from {
-    transform: translateY(10px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+.champions-card-rule {
+  background: linear-gradient(90deg, transparent, var(--champions-medal-edge), transparent);
 }
 
-@keyframes champions-shine {
-  from {
-    background-position: 100% 0;
-  }
-  to {
-    background-position: 0% 0;
-  }
+.champions-card:has(.champions-medal-silver) {
+  --champions-medal-edge: #cbd5e1;
+}
+
+.champions-card:has(.champions-medal-bronze) {
+  --champions-medal-edge: #d97706;
+}
+
+.champions-medal {
+  color: rgb(15 23 42 / 0.85);
+  box-shadow:
+    0 0 0 3px var(--color-card),
+    0 6px 18px rgb(0 0 0 / 0.35),
+    inset 0 -3px 6px rgb(0 0 0 / 0.25);
+}
+
+.champions-medal-silver {
+  background:
+    radial-gradient(circle at 32% 26%, rgb(255 255 255 / 0.8), transparent 40%),
+    linear-gradient(160deg, #f8fafc 0%, #cbd5e1 45%, #64748b 100%);
+}
+
+.champions-medal-bronze {
+  background:
+    radial-gradient(circle at 32% 26%, rgb(255 255 255 / 0.55), transparent 40%),
+    linear-gradient(160deg, #fcd9a8 0%, #d97706 48%, #7c2d12 100%);
 }

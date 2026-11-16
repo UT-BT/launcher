@@ -609,6 +609,7 @@
     "app/components/celebration/celebrationSeen.ts",
     "app/components/celebration/championsCelebration.css",
     "app/components/celebration/CelebrationHost.tsx",
+    "app/components/celebration/celebrationMotion.ts",
     "app/utils/api.ts",
     "app/utils/fixtures/eventStatsFixtures.ts",
     "e2e/champions-celebration.spec.ts",
