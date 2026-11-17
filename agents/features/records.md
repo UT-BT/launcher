@@ -349,6 +349,9 @@ re-sorting reuses the total.
 - **Favourites only** applies only when signed in: it sends the favourite names, sorted, as
   `maps`, and with no favourites shows an empty table without a request.
 - **Top Rushers** mode reads `fetchRushers` (rows and totals in one call) and takes only search.
+- **Top Rushers podium**: on the first page with no search, the top three sit above the table,
+  three across once the podium's own width reaches 56rem (`@4xl/podium`) and stacked below that,
+  so a tablet's narrower main column never squeezes the names to nothing.
 - **Presets** sync under `utbt:worldRecordsPresets:v1`; apply them sanitised
   ([state-patterns.md](../state-patterns.md)). Persisted prefs: column visibility and order, page
   size, filters panel open.

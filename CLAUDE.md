@@ -72,8 +72,8 @@ table column, add an IPC channel, wire new API data, audit the docs) trigger on 
     cheap.** [mobile.md](agents/mobile.md) defines mobile-ready. Every route has an entry in the
     mobile route manifest (`e2e/mobile/manifest/`; `routes.contract.test.ts` fails without one);
     every table column declares a tier, and tables render phone `cards`, never horizontal scroll;
-    touch behaviour reads the device environment. The mobile gate, `npm run test:mobile` (the
-    `Mobile suite` CI job), must pass: fix what it reports, and never add a ledger entry for a
+    touch behaviour reads the device environment. The mobile gate, `npm run test:mobile` (its Chromium half is
+    the `Mobile suite (chromium)` CI jobs), must pass: fix what it reports, and never add a ledger entry for a
     failure your change caused. Lazy-load anything opened after a user action and keep
     `npm run check:bundle` green; no per-row `backdrop-blur` or infinite animations
     ([styling.md](agents/styling.md), [web-target.md](agents/web-target.md)).

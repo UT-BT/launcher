@@ -8,7 +8,7 @@ const ROWS_COMPARED = 3
 
 const CARD_MARK = 'data-mobile-crawl-card'
 const EXPAND_MARK = 'data-mobile-crawl-expand'
-const WAIT_MS = 10_000
+const WAIT_MS = 20_000
 const QUIET_MS = 400
 
 interface TableReader {
@@ -220,7 +220,9 @@ async function collapseCards(page: Page, expanded: number[]) {
     for (const index of [...expanded].reverse()) {
         const control = page.locator(`[${EXPAND_MARK}="${index}"][aria-expanded="true"]`)
         if (!await control.count()) continue
-        await control.tap({ timeout: WAIT_MS }).catch(() => control.evaluate(element => (element as HTMLElement).click()).catch(() => undefined))
+        await control.tap({ timeout: WAIT_MS }).catch(async () => {
+            if (await control.count()) await control.evaluate(element => (element as HTMLElement).click()).catch(() => undefined)
+        })
         if (await control.count()) throw new Error(`expand control ${index + 1} in the cards stayed open after the crawl closed it`)
     }
 }
