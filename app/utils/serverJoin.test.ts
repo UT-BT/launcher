@@ -13,6 +13,7 @@ function fakeGame({ running = false, ini = {} as Record<string, string> } = {}) 
         isGameRunning: vi.fn(async () => running),
         launchGame: vi.fn(async () => undefined),
         launchGameStandalone: vi.fn(async () => undefined),
+        joinRunningGame: vi.fn(async () => undefined),
     }
     return { port, ini: (key: string) => values.get(key) }
 }
@@ -45,29 +46,25 @@ describe('joinServer', () => {
     it.each([
         ['Join', false],
         ['Spec', true],
-    ])('%s with the game running returns the already-running notice without launching or writing the ini', async (_label, asSpectator) => {
+    ])('%s with the game running hands the link to it without launching or writing the ini', async (_label, asSpectator) => {
         const game = fakeGame({ running: true, ini: { OverrideClass: '' } })
         const result = await joinServer(game.port, SERVER, asSpectator)
-        expect(result).toEqual({
-            status: 'already-running',
-            message: 'UT99 is already running. Close it to join another server.',
-        })
+        expect(result).toEqual({ status: 'joined' })
+        expect(game.port.joinRunningGame).toHaveBeenCalledWith('10.0.0.1', 7777, asSpectator)
         expect(game.port.launchGame).not.toHaveBeenCalled()
         expect(game.port.writeIniValue).not.toHaveBeenCalled()
     })
 
-    it('a second Join while the first is still starting returns the notice and launches once', async () => {
+    it('a second Join while the first is still starting returns busy and launches once', async () => {
         const game = fakeGame()
         const [first, second] = await Promise.all([
             joinServer(game.port, SERVER, false),
             joinServer(game.port, SERVER, true),
         ])
         expect(first).toEqual({ status: 'launched' })
-        expect(second).toEqual({
-            status: 'already-running',
-            message: 'UT99 is already running. Close it to join another server.',
-        })
+        expect(second).toEqual({ status: 'busy' })
         expect(game.port.launchGame).toHaveBeenCalledTimes(1)
+        expect(game.port.joinRunningGame).not.toHaveBeenCalled()
         expect(game.ini('OverrideClass')).toBe('')
     })
 
