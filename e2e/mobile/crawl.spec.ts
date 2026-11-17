@@ -16,6 +16,7 @@ const SCOPE = matrixScope(process.env.MOBILE_MATRIX)
 const WRITING_LEDGER = process.env.MOBILE_LEDGER === 'write'
 const LEDGER = readLedger(LEDGER_DIR, RULE_IDS)
 const CRASHED = Symbol('error screen')
+const BASE_TIMEOUT_MS = 60_000
 const CRAWL_TIMEOUT_MS: Record<Engine, number> = { chromium: 180_000, webkit: 360_000 }
 const STEP_TIMEOUT_MS = 45_000
 
@@ -66,6 +67,8 @@ async function runRule(context: RuleContext, rule: RuleId): Promise<RuleOutcome>
     const verdict = judge({ rule, ...ledgerKey(context), status: result.status }, LEDGER)
     return { rule, status: result.status, verdict, detail: result.detail }
 }
+
+test.describe.configure({ timeout: BASE_TIMEOUT_MS })
 
 test.beforeEach(async ({ page }) => {
     page.setDefaultTimeout(STEP_TIMEOUT_MS)

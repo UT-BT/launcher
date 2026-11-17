@@ -615,7 +615,8 @@ An entry or tab opts in with `stress: { pr: <variant> }`. The full matrix crawls
 ### Rules
 
 Each crawl test opens one surface at one viewport on one engine, with a budget of 180 s on Chromium
-and 360 s on WebKit (`CRAWL_TIMEOUT_MS`). On the Windows runners a WebKit tap takes 6 to 10 s, so a
+and 360 s on WebKit (`CRAWL_TIMEOUT_MS`). Hooks and teardown, where a failed crawl saves its trace,
+keep the 60 s base (`BASE_TIMEOUT_MS`). On the Windows runners a WebKit tap takes 6 to 10 s, so a
 tablet-sized crawl that opens ten cards or expands a table's cards runs past three minutes; the
 nightly's WebKit median is 42 s and Chromium's 9 s. It waits for the layout to settle: fonts
 loaded, on-screen images complete, no finite animation running, and the same layout signature for
@@ -1024,8 +1025,9 @@ The mobile jobs pass `--reporter=list,github,html,./e2e/mobile/gallery-reporter.
   crawl took 25 minutes while others took 4.
   - WebKit gets eight shards and Chromium three, from the same 384 tests each.
   - The nightly full matrix splits the same way: WebKit twelve shards and Chromium four, from about
-    3,660 tests each. A shard ends in 45 to 105 minutes, inside its 150-minute limit (twelve mixed
-    shards left the six WebKit ones cancelled at three hours).
+    3,660 tests each. A green shard ends in 50 to 115 minutes. Each failing test retries and saves a
+    trace, so a shard with a dozen failures took 140, and the jobs allow 240: a cancelled shard
+    uploads no gallery (twelve mixed shards left the six WebKit ones cancelled at three hours).
 
 Open a gallery artifact's `index.html` to see every
 surface the run crawled, and the report's `index.html` for a failing test's error and trace. A

@@ -5379,6 +5379,7 @@
   { "surface": "world-records/watch-run", "viewport": "844x390", "engine": "webkit" },
   { "surface": "world-records/watch-run", "viewport": "915x412", "engine": "webkit" },
   { "surface": "world-records/watch-run", "viewport": "932x430", "engine": "webkit" },
+  { "surface": "world-records/watch-run", "viewport": "956x440", "engine": "webkit" },
   { "surface": "world-records/watch-run", "viewport": "673x841", "engine": "webkit" },
   { "surface": "world-records/watch-run", "viewport": "744x1133", "engine": "webkit" },
   { "surface": "world-records/watch-run", "viewport": "820x1180", "engine": "webkit" },

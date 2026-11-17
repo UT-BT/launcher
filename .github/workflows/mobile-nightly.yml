@@ -21,7 +21,7 @@ jobs:
   webkit:
     name: Mobile full matrix (webkit ${{ matrix.shard }}/12)
     runs-on: windows-latest
-    timeout-minutes: 150
+    timeout-minutes: 240
     strategy:
       fail-fast: false
       matrix:
@@ -70,7 +70,7 @@ jobs:
   chromium:
     name: Mobile full matrix (chromium ${{ matrix.shard }}/4)
     runs-on: windows-latest
-    timeout-minutes: 150
+    timeout-minutes: 240
     strategy:
       fail-fast: false
       matrix:
