@@ -21,6 +21,7 @@ interface Unfinished {
 }
 
 const CRAWL_SPEC = 'crawl.spec.ts'
+const FINISHED: TestResult['status'][] = ['passed', 'failed']
 
 const TALLIES = ['pass', 'known', 'new', 'stale', 'n/a', 'skipped'] as const
 type Tally = (typeof TALLIES)[number]
@@ -95,7 +96,7 @@ export default class GalleryReporter implements Reporter {
 
     onTestEnd(test: TestCase, result: TestResult) {
         const recordAttachment = result.attachments.find(attachment => attachment.name === CRAWL_RECORD)
-        if (recordAttachment?.body) {
+        if (recordAttachment?.body && FINISHED.includes(result.status)) {
             const record = JSON.parse(recordAttachment.body.toString('utf8')) as CrawlRecord
             const shot = result.attachments.find(attachment => attachment.name === CRAWL_SHOT)?.path
             this.crawled.set(test.id, { record, shot, passed: result.status === 'passed', seconds: result.duration / 1000 })

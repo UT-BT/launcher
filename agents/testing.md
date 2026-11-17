@@ -614,17 +614,20 @@ An entry or tab opts in with `stress: { pr: <variant> }`. The full matrix crawls
 
 ### Rules
 
-Each crawl test opens one surface at one viewport on one engine, with a 60 s base timeout (WebKit
-needs about 20 s for a large recorded page, and close to 30 s on a busy machine). It waits for the
-layout to settle: fonts loaded, on-screen images complete, no finite animation running, and the same
-layout signature for three animation frames. Then it runs each rule as a `test.step`: first the
-rules that only measure, then the gallery shot, then the interaction rules, which widen the page,
-close the modal, scroll, navigate or rotate, in the table's order. Crawl tests are marked
-`test.slow()`, which triples that to 180 s. Boxes are measured against `window.visualViewport`. On a
+Each crawl test opens one surface at one viewport on one engine, with a budget of 180 s on Chromium
+and 360 s on WebKit (`CRAWL_TIMEOUT_MS`). On the Windows runners a WebKit tap takes 6 to 10 s, so a
+tablet-sized crawl that opens ten cards or expands a table's cards runs past three minutes; the
+nightly's WebKit median is 42 s and Chromium's 9 s. It waits for the layout to settle: fonts
+loaded, on-screen images complete, no finite animation running, and the same layout signature for
+three animation frames. Then it runs each rule as a `test.step`: first the rules that only measure,
+then the gallery shot, then the interaction rules, which widen the page, close the modal, scroll,
+navigate or rotate, in the table's order. Boxes are measured against `window.visualViewport`. On a
 modal surface, tap targets, form controls, axe, `modal-fits` and the table rules measure only the
 modal's root, and the top bar rule does not apply. An interaction rule that throws, for example
 because a tap target never appears, reports `fail` with "the rule could not finish" instead of
-ending the test.
+ending the test. A crawl that runs out of budget or is interrupted did not finish: the gallery lists
+it, and its rule results, the ones cut short included, stay out of `observations.json` and the
+ledger.
 
 When the error boundary or the dev server's error overlay shows while a surface opens, the crawl
 stops opening it and runs the rules on what is on screen. A crash then fails `no-error-boundary`,
@@ -913,7 +916,7 @@ run stays. Both matrices are seeded for every surface, role-gated ones included;
 was seeded from a nightly run's galleries on 2026-11-17.
 
 **From a nightly run.** `npm run test:mobile:ledger:full` saturates a 20-thread desktop for about
-seven hours; the nightly crawls the same matrix in about an hour. Each shard's gallery holds
+seven hours; the nightly crawls the same matrix in under two hours. Each shard's gallery holds
 `observations.json`, every rule result the shard saw, so regenerate from the galleries instead.
 Run the nightly with its `ledger` input first: it sets `MOBILE_LEDGER=write`, so no crawl fails on a
 rule and nothing retries. A judging run's galleries work too, but each new entry fails and runs
@@ -928,8 +931,8 @@ npm run test:mobile:ledger:galleries -- <folder>
 
 `scripts/mobile-ledger-from-galleries.mjs` applies the reporter's rewrite to every
 `observations.json` under the folders. A surface run that did not finish (a `ready` timeout, a
-cancelled shard) leaves no results, so its entries stay as they were: check each gallery's "Did not
-finish" list first.
+crawl out of budget, a cancelled shard) leaves no results, so its entries stay as they were: check
+each gallery's "Did not finish" list first.
 
 - A fix deletes the entries it fixes, by hand or by regenerating after the fix.
 - Only a failure that predates your change goes in. Fix a regression your change caused instead of
@@ -1006,10 +1009,10 @@ The mobile jobs pass `--reporter=list,github,html,./e2e/mobile/gallery-reporter.
   CI → Run workflow, pick the branch), and `npm run test:mobile` runs both engines locally, so run
   it before merging a UI change.
 - **A stuck step fails fast.** The crawl caps every Playwright wait at 45 s (`STEP_TIMEOUT_MS` in
-  `crawl.spec.ts`, set with `page.setDefaultTimeout`) inside the 180 s budget of a slow-marked crawl
-  test, so a page that never settles fails in under a minute instead of burning the whole budget on
-  every attempt. The error-screen watcher that races the whole surface opts out with `timeout: 0`;
-  the cap is per step, and a surface with many steps can run past 45 s in total.
+  `crawl.spec.ts`, set with `page.setDefaultTimeout`) inside the crawl test's budget, so a page
+  that never settles fails in under a minute instead of burning the whole budget on every attempt.
+  The error-screen watcher that races the whole surface opts out with `timeout: 0`; the cap is per
+  step, and a surface with many steps can run past 45 s in total.
 - **WebKit tests get 60 s.** On the Windows runners a WebKit interaction spec that opens a large
   recorded page takes 25 to 33 s, so under the default 30 s the same few specs (tooltips, card
   taps, hide-on-scroll, Watch) timed out on about every second push to `staging`. The
@@ -1021,7 +1024,7 @@ The mobile jobs pass `--reporter=list,github,html,./e2e/mobile/gallery-reporter.
   crawl took 25 minutes while others took 4.
   - WebKit gets eight shards and Chromium three, from the same 384 tests each.
   - The nightly full matrix splits the same way: WebKit twelve shards and Chromium four, from about
-    3,660 tests each, so each shard ends in about an hour, inside its 150-minute limit (twelve mixed
+    3,660 tests each. A shard ends in 45 to 105 minutes, inside its 150-minute limit (twelve mixed
     shards left the six WebKit ones cancelled at three hours).
 
 Open a gallery artifact's `index.html` to see every
