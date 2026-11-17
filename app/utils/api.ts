@@ -4602,6 +4602,31 @@ export async function fetchEvents(accessToken: string, signal?: AbortSignal): Pr
     return data.items ?? []
 }
 
+export interface CelebrationMember {
+    user: string
+    alias: string | null
+    title: RawActiveTitle | null
+}
+
+export interface CelebrationPlace {
+    place: 1 | 2 | 3
+    team: { id: string; name: string; members: CelebrationMember[] }
+}
+
+export interface Celebration {
+    slug: string
+    name: string
+    ends_at: string
+    final_score: { winner: number; loser: number }
+    podium: CelebrationPlace[]
+    message: string | null
+}
+
+export async function fetchCelebration(signal?: AbortSignal): Promise<Celebration | null> {
+    const data = await apiGet<{ celebration: Celebration | null }>('/tournaments/celebration', { signal })
+    return data.celebration
+}
+
 export async function fetchEvent(accessToken: string, slug: string, signal?: AbortSignal): Promise<EventDetail> {
     const data = await apiGet<{ tournament: EventDetail }>(`/tournaments/${encodeURIComponent(slug)}`, { token: accessToken, signal })
     return data.tournament
@@ -6981,9 +7006,9 @@ export type PickBanActor = 'A' | 'B'
 
 export type PickBanSequenceAction = 'ban' | 'pick'
 
-export type PickBanPresetId = 'bo4_picks' | 'bo4_ban_pick' | 'bo3_ban_pick' | 'bo5_ban_pick'
+export type PickBanPresetId = 'bo4_picks' | 'bo4_ban_pick' | 'bo3_ban_pick' | 'bo5_ban_pick' | 'bo7_ban_pick'
 
-export const PICK_BAN_PRESET_IDS: PickBanPresetId[] = ['bo4_picks', 'bo4_ban_pick', 'bo3_ban_pick', 'bo5_ban_pick']
+export const PICK_BAN_PRESET_IDS: PickBanPresetId[] = ['bo4_picks', 'bo4_ban_pick', 'bo3_ban_pick', 'bo5_ban_pick', 'bo7_ban_pick']
 
 export interface PickBanSequenceStep {
     actor: PickBanActor

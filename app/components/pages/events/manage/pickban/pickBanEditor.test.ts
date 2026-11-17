@@ -55,6 +55,9 @@ describe('sequenceCounts', () => {
         expect(sequenceCounts(PICK_BAN_PRESET_SEQUENCES.bo5_ban_pick)).toEqual({
             lettered_picks: 4, lettered_bans: 4, maps_yielded: 5, full_sequence_minimum: 9, absolute_minimum: 5,
         })
+        expect(sequenceCounts(PICK_BAN_PRESET_SEQUENCES.bo7_ban_pick)).toEqual({
+            lettered_picks: 6, lettered_bans: 4, maps_yielded: 7, full_sequence_minimum: 11, absolute_minimum: 7,
+        })
     })
 
     it('counts a pure ban-down as one map', () => {

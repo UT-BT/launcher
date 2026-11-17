@@ -81,7 +81,11 @@ export function OverlayMapStrip({ strip }: { strip: OverlayStrip }) {
             className="relative z-10 flex items-stretch rounded-lg bg-[#05070c] text-base leading-none shadow-[0_0_0_1px_rgba(255,255,255,0.14)]"
             style={{ height: BAND.height, maxWidth: BAND.maxWidth, paddingInline: BAND.paddingX }}
         >
-            <div className="flex min-w-0 items-stretch overflow-hidden">
+            <div
+                data-overlay-maps
+                className="flex min-w-0 items-stretch overflow-hidden"
+                style={strip.scale < 1 ? { fontSize: `${strip.scale}em` } : undefined}
+            >
                 {strip.maps.map((map, index) => (
                     <MapCell
                         key={map.ordinal}

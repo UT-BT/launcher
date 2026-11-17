@@ -424,3 +424,420 @@
     transform: translate3d(4%, 0, 0);
   }
 }
+
+.seasonal-blossom,
+.seasonal-leaf {
+  position: absolute;
+  top: -24px;
+  left: var(--x);
+  will-change: transform;
+}
+
+.seasonal-blossom {
+  animation: seasonal-drift var(--d) linear var(--delay) infinite;
+}
+
+.seasonal-blossom i {
+  display: block;
+  width: 9px;
+  height: 7px;
+  border-radius: 0 100% 0 100%;
+  background: var(--c);
+  opacity: 0.5;
+  animation: seasonal-tumble var(--tumble) ease-in-out infinite alternate;
+}
+
+@keyframes seasonal-drift {
+  from {
+    transform: translate3d(0, -2vh, 0);
+  }
+  to {
+    transform: translate3d(var(--dx), 104vh, 0);
+  }
+}
+
+.seasonal-leaf {
+  animation: seasonal-fall var(--d) linear var(--delay) infinite;
+}
+
+.seasonal-leaf i {
+  display: block;
+  width: var(--s);
+  height: var(--s);
+  opacity: 0.45;
+  animation: seasonal-swing var(--swing) ease-in-out infinite alternate;
+}
+
+.seasonal-leaf svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.seasonal-leaf path:first-child {
+  fill: var(--c);
+}
+
+.seasonal-leaf path:last-child {
+  fill: none;
+  stroke: rgb(69 26 3 / 0.55);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+}
+
+@keyframes seasonal-swing {
+  from {
+    transform: translate3d(calc(var(--sway) * -1), 0, 0) rotate(-40deg);
+  }
+  to {
+    transform: translate3d(var(--sway), 0, 0) rotate(40deg);
+  }
+}
+
+.seasonal-rays {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 150vmax;
+  height: 150vmax;
+  transform: translate3d(50%, -50%, 0);
+  background:
+    radial-gradient(circle, rgb(253 224 71 / 0.1), transparent 18%),
+    repeating-conic-gradient(from 3deg, rgb(253 230 138 / 0.07) 0deg 3deg, transparent 3deg 11deg);
+  mask-image: radial-gradient(circle, #000 4%, transparent 46%);
+  opacity: 0.5;
+  animation: seasonal-breathe 11s ease-in-out infinite alternate;
+  will-change: opacity;
+}
+
+@keyframes seasonal-breathe {
+  from {
+    opacity: 0.4;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.seasonal-icicles,
+.seasonal-icicles i {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background-repeat: repeat-x;
+}
+
+.seasonal-icicles {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='204' height='40'%3E%3Cdefs%3E%3ClinearGradient id='i' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23e0f2fe' stop-opacity='.45'/%3E%3Cstop offset='1' stop-color='%23bae6fd' stop-opacity='.05'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='204' height='2.5' fill='%23e0f2fe' fill-opacity='.28'/%3E%3Cpath d='M4 2Q7.2 18 8.5 30Q9.9 18 13 2ZM24 2Q26.1 9.6 27 16Q27.9 9.6 30 2ZM41 2Q44.5 22.8 46 38Q47.5 22.8 51 2ZM66 2Q67.8 7.2 68.5 12Q69.2 7.2 71 2ZM80 2Q82.8 14.4 84 24Q85.2 14.4 88 2ZM103 2Q106.8 20.4 108.5 34Q110.2 20.4 114 2ZM129 2Q131.1 10.8 132 18Q132.9 10.8 135 2ZM146 2Q149.2 16.8 150.5 28Q151.8 16.8 155 2ZM171 2Q173.4 8.4 174.5 14Q175.6 8.4 178 2ZM188 2Q190.1 12 191 20Q191.9 12 194 2Z' fill='url(%23i)'/%3E%3C/svg%3E");
+}
+
+.seasonal-icicles i {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='204' height='40'%3E%3Cpath d='M6.9 3L8.2 24M25.9 3L26.8 12.8M44.2 3L45.7 30.4M67.6 3L68.3 9.6M82.6 3L83.8 19.2M106.5 3L108.2 27.2M130.9 3L131.8 14.4M148.9 3L150.2 22.4M173.2 3L174.3 11.2M189.9 3L190.8 16' stroke='%23fff' stroke-opacity='.8' stroke-width='1.2' stroke-linecap='round' fill='none'/%3E%3C/svg%3E");
+  opacity: 0;
+  animation: seasonal-glint 14s ease-in-out infinite;
+  will-change: opacity;
+}
+
+@media (max-width: 1023px) {
+  .seasonal-icicles {
+    top: var(--top-bar-offset);
+  }
+}
+
+@keyframes seasonal-glint {
+  0%,
+  70%,
+  100% {
+    opacity: 0;
+  }
+  82% {
+    opacity: 0.7;
+  }
+}
+
+.seasonal-twinkle {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--s);
+  height: var(--s);
+  opacity: 0;
+  animation: seasonal-twinkle var(--d) ease-in-out var(--delay) infinite;
+  will-change: transform, opacity;
+}
+
+.seasonal-twinkle svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: var(--c);
+  filter: drop-shadow(0 0 3px rgb(250 204 21 / 0.6));
+}
+
+@keyframes seasonal-twinkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.4) rotate(0deg);
+  }
+  50% {
+    opacity: var(--o);
+    transform: scale(1) rotate(45deg);
+  }
+}
+
+.seasonal-bloom {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: 0;
+  height: 0;
+  animation: seasonal-bloom-hop calc(var(--d) * 3) linear var(--delay) infinite;
+  will-change: transform;
+}
+
+.seasonal-bloom i {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  animation: seasonal-bloom var(--d) ease-out var(--delay) infinite;
+  will-change: transform, opacity;
+}
+
+.seasonal-bloom b {
+  position: absolute;
+  left: -1.25px;
+  top: -6px;
+  width: 2.5px;
+  height: 12px;
+  border-radius: 9999px;
+  background: var(--c);
+  box-shadow: 0 0 6px var(--c);
+  transform: rotate(var(--a)) translate3d(0, calc(var(--r) * -1), 0);
+}
+
+@keyframes seasonal-bloom {
+  0% {
+    opacity: 0;
+    transform: scale(0.15);
+  }
+  6% {
+    opacity: var(--o);
+  }
+  24%,
+  100% {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0) scale(1);
+  }
+}
+
+@keyframes seasonal-bloom-hop {
+  0%,
+  19.99% {
+    transform: translate3d(0, 0, 0);
+  }
+  20%,
+  54.99% {
+    transform: translate3d(var(--hx1), var(--hy1), 0);
+  }
+  55%,
+  87.99% {
+    transform: translate3d(var(--hx2), var(--hy2), 0);
+  }
+  88%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.seasonal-lantern {
+  position: absolute;
+  top: 100%;
+  left: var(--x);
+  animation: seasonal-rise var(--d) linear var(--delay) infinite;
+  will-change: transform;
+}
+
+.seasonal-lantern i {
+  display: block;
+  width: var(--s);
+  opacity: var(--o);
+  transform-origin: 50% 0;
+  animation: seasonal-lantern-sway var(--swayd) ease-in-out infinite alternate;
+}
+
+.seasonal-lantern svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  filter: drop-shadow(0 0 4px rgb(251 191 36 / 0.45));
+}
+
+.seasonal-lantern path:nth-child(1) {
+  fill: none;
+  stroke: #facc15;
+  stroke-width: 1.5;
+}
+
+.seasonal-lantern path:nth-child(2) {
+  fill: #dc2626;
+}
+
+.seasonal-lantern path:nth-child(3) {
+  fill: none;
+  stroke: #fbbf24;
+  stroke-opacity: 0.7;
+  stroke-width: 1;
+}
+
+.seasonal-lantern path:nth-child(4) {
+  fill: #facc15;
+}
+
+@keyframes seasonal-rise {
+  from {
+    transform: translate3d(0, 4vh, 0);
+  }
+  to {
+    transform: translate3d(0, -112vh, 0);
+  }
+}
+
+@keyframes seasonal-lantern-sway {
+  from {
+    transform: translate3d(calc(var(--sway) * -1), 0, 0) rotate(-6deg);
+  }
+  to {
+    transform: translate3d(var(--sway), 0, 0) rotate(6deg);
+  }
+}
+
+.seasonal-heart {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  opacity: 0;
+  animation: seasonal-heart-float var(--d) ease-in-out var(--delay) infinite;
+  will-change: transform, opacity;
+}
+
+.seasonal-heart i {
+  display: block;
+  width: var(--s);
+  animation: seasonal-heart-sway var(--swayd) ease-in-out infinite alternate;
+}
+
+.seasonal-heart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  fill: var(--c);
+  filter: drop-shadow(0 0 4px rgb(251 113 133 / 0.45));
+}
+
+@keyframes seasonal-heart-float {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(0.7);
+  }
+  18% {
+    opacity: var(--o);
+  }
+  65% {
+    opacity: calc(var(--o) * 0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, calc(var(--rise) * -1), 0) scale(1);
+  }
+}
+
+@keyframes seasonal-heart-sway {
+  from {
+    transform: translate3d(calc(var(--sway) * -1), 0, 0) rotate(-10deg);
+  }
+  to {
+    transform: translate3d(var(--sway), 0, 0) rotate(10deg);
+  }
+}
+
+.seasonal-shamrock {
+  position: absolute;
+  top: -24px;
+  left: var(--x);
+  animation: seasonal-shamrock-drift var(--d) linear var(--delay) infinite;
+  will-change: transform;
+}
+
+.seasonal-shamrock i {
+  display: block;
+  width: var(--s);
+  opacity: var(--o);
+  animation: seasonal-shamrock-tumble var(--tumble) ease-in-out infinite alternate;
+}
+
+.seasonal-shamrock svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  fill: var(--c);
+  stroke: var(--c);
+}
+
+@keyframes seasonal-shamrock-drift {
+  from {
+    transform: translate3d(0, -2vh, 0);
+  }
+  to {
+    transform: translate3d(var(--dx), 108vh, 0);
+  }
+}
+
+@keyframes seasonal-shamrock-tumble {
+  from {
+    transform: translate3d(calc(var(--sway) * -1), 0, 0) rotate(-35deg);
+  }
+  to {
+    transform: translate3d(var(--sway), 0, 0) rotate(35deg);
+  }
+}
+
+.seasonal-gold-glint {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--s);
+  height: var(--s);
+  opacity: 0;
+  animation: seasonal-gold-glint var(--d) ease-in-out var(--delay) infinite;
+  will-change: transform, opacity;
+}
+
+.seasonal-gold-glint svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: #facc15;
+  filter: drop-shadow(0 0 3px rgb(250 204 21 / 0.6));
+}
+
+@keyframes seasonal-gold-glint {
+  0%,
+  70% {
+    opacity: 0;
+    transform: scale(0.3) rotate(0deg);
+  }
+  82% {
+    opacity: var(--o);
+    transform: scale(1) rotate(45deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.3) rotate(90deg);
+  }
+}

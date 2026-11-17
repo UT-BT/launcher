@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { Titlebar, TitlebarProps } from './Titlebar'
+import { Titlebar } from './Titlebar'
 import { TitlebarContextProvider } from './TitlebarContext'
 import type { ChannelReturn } from '@/lib/conveyor/schemas'
 import { useConveyor } from '@/app/hooks/use-conveyor'
@@ -7,23 +7,12 @@ import { useConveyor } from '@/app/hooks/use-conveyor'
 type WindowInitProps = ChannelReturn<'window-init'>
 
 interface WindowContextProps {
-  titlebar: TitlebarProps
   readonly window: WindowInitProps | undefined
 }
 
 const WindowContext = createContext<WindowContextProps | undefined>(undefined)
 
-export const WindowContextProvider = ({
-  children,
-  titlebar = {
-    title: 'UTBT.net',
-    icon: 'appIcon.png',
-    titleCentered: true,
-  },
-}: {
-  children: React.ReactNode
-  titlebar?: TitlebarProps
-}) => {
+export const WindowContextProvider = ({ children }: { children: React.ReactNode }) => {
   const [initProps, setInitProps] = useState<WindowInitProps>()
   const { windowInit } = useConveyor('window')
 
@@ -35,7 +24,7 @@ export const WindowContextProvider = ({
   }, [windowInit])
 
   return (
-    <WindowContext.Provider value={{ titlebar, window: initProps }}>
+    <WindowContext.Provider value={{ window: initProps }}>
       <TitlebarContextProvider>
         <Titlebar />
       </TitlebarContextProvider>

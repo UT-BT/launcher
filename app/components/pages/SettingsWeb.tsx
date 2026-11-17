@@ -42,7 +42,7 @@ export function WebSettings({ initialSection, unlockExclusive }: WebSettingsProp
             onSectionChange={setSelectedSection}
             isGameValid={false}
             launcherVersion={__APP_VERSION__}
-            initialDetail={requested === 'launcher-privacy'}
+            initialDetail={requested === 'launcher-privacy' || requested === 'launcher-appearance'}
         >
             <Suspense key={currentSection} fallback={<PanelLoading />}>{panel}</Suspense>
         </SettingsLayout>

@@ -6,6 +6,7 @@ export interface ThemeMeta {
   group: 'gradients' | 'solid'
   exclusive?: boolean
   light?: boolean
+  new?: boolean
 }
 
 export const THEMES: ThemeMeta[] = [
@@ -22,6 +23,14 @@ export const THEMES: ThemeMeta[] = [
     description: 'Red team supporters',
     swatch: '#dc2626',
     group: 'gradients',
+  },
+  {
+    id: 'seasonal',
+    label: 'Seasonal',
+    description: 'Follows the seasons and holidays where you are',
+    swatch: '#3b82f6',
+    group: 'gradients',
+    new: true,
   },
   {
     id: 'aurum',

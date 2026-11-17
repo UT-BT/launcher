@@ -400,7 +400,7 @@ On top of the locked tokens in [styling.md](../styling.md):
   medal gold (`yellow`), never the decider gold. A match's Red / Blue tag uses the pick/ban tones via
   `sideColorTag` / `sideColorTone`.
 - **Bespoke rules live in lazy stylesheets.** Tailwind puts every utility it finds into the one entry
-  stylesheet, and the initial CSS budget (37 KiB gzip) has almost no headroom. A rule that needs
+  stylesheet, and the initial CSS budget (38 KiB gzip) has almost no headroom. A rule that needs
   `--team-accent` or a one-off template goes in a stats stylesheet imported by the lazy chunk:
   `teamCards.css` (grid, card glow, avatar ring), `overviewStats.css` (map-table bars, glance tiles, scrim,
   ring, container-query grid). Reuse existing utilities otherwise; a never-used utility can fail
@@ -528,6 +528,47 @@ closes_at, finalised_at, state }` and can only be won off that event.
   `PredictionsManagePanel` only when the admin markets payload reports `achievements.ready_to_finalise`.
   It cannot be undone, so it confirms first and uses `apiGet` (not `apiGetOr`) so a refusal reaches the
   manager.
+
+## Champions celebration
+
+When an event ends, every visitor gets one celebratory popup with its podium, on both targets.
+
+- **The server decides what to celebrate.** `fetchCelebration()` reads `GET /tournaments/celebration` →
+  `Celebration | null`: `{ slug, name, ends_at, final_score: { winner, loser }, podium, message }`, where each
+  `podium` entry is `{ place, team: { id, name, members: [{ user, alias, title }] } }`. Place 1 and 2 come
+  from the final; 3 is the third place match's winner, or both beaten semi-finalists (two entries) when
+  there is none. The window (two weeks after the event ends) and the "is it decided" rules are the
+  server's; never re-derive them from the bracket.
+- **Shown once per person.** `Main.tsx` mounts the lazy `CelebrationHost`
+  (`app/components/celebration/CelebrationHost.tsx`) `CELEBRATION_DELAY_MS` after boot, so the chunk stays
+  off the first paint. The host asks, waits for the account's synced state (`userStateSettled()`, at most
+  `SYNC_WAIT_MS`), and skips a slug already in `utbt:celebrationsSeen:v1` (a synced JSON array of slugs,
+  through `celebrationSeen.ts`). Signed in, that list follows the account, so the website and the desktop
+  app show it once between them; a signed-out web visit can only remember the browser. The slug is
+  recorded the moment the popup opens, not when it closes.
+- **The closing note** is `message`, the event's own text (`null` hides it), shown under the podium
+  between a gold rule. The actions sit in a pinned footer outside the scroller, so Close and the stats
+  link stay visible on a short screen while the content scrolls behind a bottom fade.
+- **No horizontal scroll.** The ray fan rotates inside a clipped, non-rotating circle (a rotating square's
+  box grows by √2), and the scroller is `overflow-x-hidden`.
+- **Automated browsers never see it.** `isAutomatedBrowser()` (`navigator.webdriver`) keeps it out of
+  every e2e and mobile-suite run, which talk to the live API; `e2e/champions-celebration.spec.ts` opts back
+  in by overriding `webdriver`. `CELEBRATION_SHOTS_DIR=<dir>` makes that spec save preview frames.
+- **The popup** (`ChampionsCelebration.tsx`, lazy, its CSS alongside) is a `useModalBehaviour` overlay in
+  the broadcast language of the post-match Winner scene ([stream-kit.md](stream-kit.md)): `font-pickban`
+  display type (the host waits up to `FONT_WAIT_MS` for `BROADCAST_FONTS` so the name never flashes in the
+  system face), the pick/ban gold `PICK_BAN_HUES.gold` for glows, `tint()` washes and a masked grid on a
+  theme-aware card. Every element is mirrored on the centre line: kicker between two rules, the champions
+  in an equal two-column grid, the grand final as `name | score | name`, two identical podium cards and an
+  equal-width button pair. Medal text uses the fixed tokens (`yellow-300`, which Light remaps); silver and
+  bronze live only in the medallions and card edges, so card labels stay neutral and legible.
+- **Motion** is framer-motion variants in `celebrationMotion.ts` on the broadcast curves (`EASE_OUT`,
+  `SLAM`), timed by `BEATS`: the trophy slams in with two shockwaves, sparks and a confetti burst, then the
+  kicker rules draw, the name stamps and the rest rises in. All one-shot except the slow ray turn behind
+  the trophy (the one looping element). `MotionConfig skipAnimations` follows `usePrefersReducedMotion`, and
+  every effect ends invisible, so reduced motion lands on the same final frame. The panel takes focus on
+  open (not the first link), so no focus ring shows until the keyboard is used. "See the cup stats" (phone:
+  "Cup stats") opens the event's Teams (stats) tab.
 
 ## Adding an event tab
 

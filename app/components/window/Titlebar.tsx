@@ -10,16 +10,10 @@ import { DevImpersonateButton } from './DevImpersonateButton'
 import { FaMinus, FaSquare, FaTimes, FaWindowRestore } from 'react-icons/fa'
 
 export const Titlebar = () => {
-  const { icon } = useWindowContext().titlebar
   const { window: wcontext } = useWindowContext()
 
   return (
     <div className={`window-titlebar modern-titlebar ${wcontext?.platform ? `platform-${wcontext.platform}` : ''}`}>
-      <div className="window-titlebar-center-icon">
-        <img src={icon} alt="UTBT" />
-        <span className="window-titlebar-brand-text">UTBT</span>
-      </div>
-
       <div className="window-titlebar-actions">
         <LinksDropdown />
         <AboutButton />
@@ -78,10 +72,4 @@ const TitlebarControlButton = ({ icon: Icon, label }: { icon: React.ComponentTyp
       <Icon />
     </div>
   )
-}
-
-export interface TitlebarProps {
-  title: string
-  titleCentered?: boolean
-  icon?: string
 }

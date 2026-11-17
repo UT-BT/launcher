@@ -31,7 +31,7 @@ import { usePatreonTier } from '@/app/utils/patreon'
 import { isTypingTarget } from '@/app/utils/typingTarget'
 import { IS_WEB, usePlatform } from '@/app/platform'
 import { SeasonalAmbient } from '@/app/seasonal/lazyDecor'
-import { useSeason } from '@/app/seasonal/SeasonProvider'
+import { useLogoEntry, useSeasonalEntry } from '@/app/seasonal/SeasonProvider'
 import { logoFor } from '@/app/seasonal/logos'
 import { SidebarActions } from '@/app/components/layout/sidebar/SidebarActions'
 import { SidebarBrand } from '@/app/components/layout/sidebar/SidebarBrand'
@@ -71,8 +71,8 @@ interface AppLayoutProps {
 export function AppLayout({ children, currentView, onViewChange, getNavBadge, userProfile, installationStatus }: AppLayoutProps) {
     const { capabilities, auth } = usePlatform()
     const desktopPromo = useDesktopPromo()
-    const season = useSeason()
-    const logo = logoFor(season)
+    const seasonal = useSeasonalEntry()
+    const logo = logoFor(useLogoEntry())
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
     const [loginError, setLoginError] = useState<string | null>(() => auth.consumeLoginError())
     const [mobileNavOpen, setMobileNavOpen] = useState(false)
@@ -225,7 +225,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
     return (
         <div className="flex h-full bg-background text-foreground overflow-hidden relative">
             <div className="nebula-bg absolute inset-0 opacity-30 pointer-events-none" />
-            {currentView === 'home' && <SeasonalAmbient />}
+            <SeasonalAmbient />
 
             {/* Mobile top bar */}
             <div
@@ -274,7 +274,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
 
                 <SidebarBrand
                     logo={logo}
-                    season={season}
+                    seasonal={seasonal}
                     collapsed={collapsed}
                     toggle={isMobileViewport ? null : <SidebarCollapseToggle collapsed={collapsed} onToggle={toggleCollapsed} />}
                 />

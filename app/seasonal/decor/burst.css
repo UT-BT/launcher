@@ -35,6 +35,14 @@
   background: var(--c);
 }
 
+.seasonal-burst-spark {
+  width: 3px;
+  height: 10px;
+  border-radius: 9999px;
+  background: linear-gradient(#fef08a, #f59e0b);
+  box-shadow: 0 0 6px rgb(253 224 71 / 0.6);
+}
+
 @keyframes seasonal-pop {
   0% {
     transform: translate(-50%, -50%) scale(0.3) rotate(0deg);
@@ -47,4 +55,20 @@
     transform: translate(-50%, -50%) translate(var(--dx), var(--dy)) scale(1) rotate(var(--r));
     opacity: 0;
   }
+}
+
+.seasonal-burst-bauble {
+  width: var(--s);
+  height: var(--s);
+  border-radius: 9999px;
+  background: radial-gradient(circle at 35% 30%, #fecaca, #dc2626 45%, #991b1b);
+  box-shadow: 0 0 5px rgb(220 38 38 / 0.5);
+}
+
+.seasonal-burst-confetti {
+  width: 4px;
+  height: 9px;
+  border-radius: 1px;
+  background: var(--c);
+  box-shadow: 0 0 4px rgb(253 230 138 / 0.4);
 }

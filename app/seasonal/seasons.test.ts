@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { SEASONS, SEASON_IDS, activeSeason, easterSunday, isSeasonOverride, resolveSeason } from './seasons'
+import { ENTRIES, ENTRY_IDS, easterSunday, isEntryPreview, type Entry } from './seasons'
+
+const REGISTRY: readonly Entry[] = ENTRIES
 
 const WESTERN_EASTER: Array<[number, number, number]> = [
     [2019, 4, 21],
@@ -22,10 +24,6 @@ const WESTERN_EASTER: Array<[number, number, number]> = [
     [2040, 4, 1],
 ]
 
-function at(year: number, month: number, day: number, hour = 0, minute = 0): Date {
-    return new Date(year, month - 1, day, hour, minute)
-}
-
 describe('easterSunday', () => {
     it.each(WESTERN_EASTER)('finds Western Easter %i-%i-%i', (year, month, day) => {
         const sunday = easterSunday(year)
@@ -34,92 +32,105 @@ describe('easterSunday', () => {
     })
 })
 
-describe('activeSeason', () => {
-    it('runs Halloween from Oct 24 through Nov 7', () => {
-        expect(activeSeason(at(2026, 10, 23, 23, 59))).toBeNull()
-        expect(activeSeason(at(2026, 10, 24))?.id).toBe('halloween')
-        expect(activeSeason(at(2026, 10, 31, 20))?.id).toBe('halloween')
-        expect(activeSeason(at(2026, 11, 7, 23, 59))?.id).toBe('halloween')
-        expect(activeSeason(at(2026, 11, 8))).toBeNull()
-    })
-
-    it('runs Christmas from Dec 18 through Jan 15, across the new year', () => {
-        expect(activeSeason(at(2026, 12, 17, 23, 59))).toBeNull()
-        expect(activeSeason(at(2026, 12, 18))?.id).toBe('christmas')
-        expect(activeSeason(at(2026, 12, 31, 23, 59))?.id).toBe('christmas')
-        expect(activeSeason(at(2027, 1, 1))?.id).toBe('christmas')
-        expect(activeSeason(at(2027, 1, 15, 23, 59))?.id).toBe('christmas')
-        expect(activeSeason(at(2027, 1, 16))).toBeNull()
-    })
-
-    it('runs Easter from a week before Easter Sunday to a week after', () => {
-        expect(activeSeason(at(2026, 3, 28, 23, 59))).toBeNull()
-        expect(activeSeason(at(2026, 3, 29))?.id).toBe('easter')
-        expect(activeSeason(at(2026, 4, 5, 12))?.id).toBe('easter')
-        expect(activeSeason(at(2026, 4, 12, 23, 59))?.id).toBe('easter')
-        expect(activeSeason(at(2026, 4, 13))).toBeNull()
-    })
-
-    it('follows the moving Easter date', () => {
-        expect(activeSeason(at(2035, 3, 18))?.id).toBe('easter')
-        expect(activeSeason(at(2038, 5, 2))?.id).toBe('easter')
-        expect(activeSeason(at(2038, 5, 3))).toBeNull()
-    })
-
-    it('reports when the season ends, as the local midnight after its last day', () => {
-        expect(activeSeason(at(2026, 10, 30))?.until).toBe(at(2026, 11, 8).getTime())
-        expect(activeSeason(at(2027, 1, 2))?.until).toBe(at(2027, 1, 16).getTime())
-        expect(activeSeason(at(2026, 4, 1))?.until).toBe(at(2026, 4, 13).getTime())
-    })
-
-    it('is quiet outside every season', () => {
-        expect(activeSeason(at(2026, 2, 14))).toBeNull()
-        expect(activeSeason(at(2026, 7, 1))).toBeNull()
-        expect(activeSeason(at(2026, 12, 1))).toBeNull()
-    })
-})
-
-describe('resolveSeason', () => {
-    it('shows the date season when the viewer keeps seasonal themes on', () => {
-        expect(resolveSeason({ dateSeason: 'christmas', enabled: true, override: null })).toBe('christmas')
-        expect(resolveSeason({ dateSeason: null, enabled: true, override: null })).toBeNull()
-    })
-
-    it('shows nothing when the viewer turned seasonal themes off', () => {
-        expect(resolveSeason({ dateSeason: 'christmas', enabled: false, override: null })).toBeNull()
-    })
-
-    it('lets a preview override beat both the toggle and the date', () => {
-        expect(resolveSeason({ dateSeason: null, enabled: false, override: 'easter' })).toBe('easter')
-        expect(resolveSeason({ dateSeason: 'halloween', enabled: true, override: 'christmas' })).toBe('christmas')
-        expect(resolveSeason({ dateSeason: 'halloween', enabled: true, override: 'none' })).toBeNull()
-    })
-})
-
-describe('SEASONS', () => {
-    it('gives every season a distinct lowercase id and a display label', () => {
-        expect(new Set(SEASON_IDS).size).toBe(SEASON_IDS.length)
-        for (const season of SEASONS) {
-            expect(season.id).toMatch(/^[a-z]+$/)
-            expect(season.label.trim().length).toBeGreaterThan(0)
+describe('ENTRIES', () => {
+    it('gives every entry a distinct lowercase id, a display label and a kind', () => {
+        expect(new Set(ENTRY_IDS).size).toBe(ENTRY_IDS.length)
+        for (const entry of ENTRIES) {
+            expect(entry.id).toMatch(/^[a-z]+(-[a-z]+)*$/)
+            expect(entry.label.trim().length).toBeGreaterThan(0)
+            expect(['season', 'holiday']).toContain(entry.kind)
         }
-        expect(SEASONS.find(season => season.id === 'halloween')?.label).toBe('Halloween')
+        expect(ENTRIES.find(entry => entry.id === 'halloween')?.label).toBe('Halloween')
     })
 
-    it('is where SEASON_IDS comes from', () => {
-        expect(SEASON_IDS).toEqual(SEASONS.map(season => season.id))
+    it('keeps Halloween, Christmas and Easter as holidays', () => {
+        expect(ENTRIES.filter(entry => entry.kind === 'holiday').map(entry => entry.id)).toEqual(expect.arrayContaining(['halloween', 'christmas', 'easter']))
+    })
+
+    it('opens with the four seasons, each for both hemispheres', () => {
+        expect(REGISTRY.slice(0, 4).map(({ id, label, kind }) => ({ id, label, kind }))).toEqual([
+            { id: 'spring', label: 'Spring', kind: 'season' },
+            { id: 'summer', label: 'Summer', kind: 'season' },
+            { id: 'autumn', label: 'Autumn', kind: 'season' },
+            { id: 'winter', label: 'Winter', kind: 'season' },
+        ])
+        const seasons = REGISTRY.filter(entry => entry.kind === 'season')
+        expect(seasons).toHaveLength(4)
+        for (const season of seasons) {
+            expect(season.hemisphere, season.id).toBeUndefined()
+            expect(season.logo, season.id).toBeUndefined()
+        }
+    })
+
+    it('follows the seasons with New Year and Lunar New Year, holidays for both hemispheres with their own logos', () => {
+        expect(REGISTRY.slice(4, 6).map(({ id, label, kind, hemisphere, logo }) => ({ id, label, kind, hemisphere, logo }))).toEqual([
+            { id: 'new-year', label: 'New Year', kind: 'holiday', hemisphere: undefined, logo: undefined },
+            { id: 'lunar-new-year', label: 'Lunar New Year', kind: 'holiday', hemisphere: undefined, logo: undefined },
+        ])
+    })
+
+    it('runs New Year from Dec 31 to Jan 3, across the year change', () => {
+        const newYear = REGISTRY.find(entry => entry.id === 'new-year')
+        expect(newYear?.window(2026, 'north')).toEqual({ start: new Date(2026, 11, 31), endExclusive: new Date(2027, 0, 4) })
+        expect(newYear?.window(2026, 'south')).toEqual(newYear?.window(2026, 'north'))
+    })
+
+    it('runs Lunar New Year from its eve to day 6, in both hemispheres', () => {
+        const lunarNewYear = REGISTRY.find(entry => entry.id === 'lunar-new-year')
+        expect(lunarNewYear?.window(2029, 'north')).toEqual({ start: new Date(2029, 1, 12), endExclusive: new Date(2029, 1, 19) })
+        expect(lunarNewYear?.window(2029, 'south')).toEqual(lunarNewYear?.window(2029, 'north'))
+        expect(lunarNewYear?.window(2051, 'north')).toBeNull()
+    })
+
+    it('follows Lunar New Year with Valentine\'s Day and St Patrick\'s Day, holidays for both hemispheres with their own logos', () => {
+        expect(REGISTRY.slice(6, 8).map(({ id, label, kind, hemisphere, logo }) => ({ id, label, kind, hemisphere, logo }))).toEqual([
+            { id: 'valentines', label: 'Valentine\'s Day', kind: 'holiday', hemisphere: undefined, logo: undefined },
+            { id: 'st-patricks', label: 'St Patrick\'s Day', kind: 'holiday', hemisphere: undefined, logo: undefined },
+        ])
+        expect(REGISTRY[8].id).toBe('easter')
+    })
+
+    it('runs Valentine\'s Day from Feb 12 to 15, in both hemispheres', () => {
+        const valentines = REGISTRY.find(entry => entry.id === 'valentines')
+        expect(valentines?.window(2026, 'north')).toEqual({ start: new Date(2026, 1, 12), endExclusive: new Date(2026, 1, 16) })
+        expect(valentines?.window(2026, 'south')).toEqual(valentines?.window(2026, 'north'))
+    })
+
+    it('runs St Patrick\'s Day from Mar 15 to 17, in both hemispheres', () => {
+        const stPatricks = REGISTRY.find(entry => entry.id === 'st-patricks')
+        expect(stPatricks?.window(2026, 'north')).toEqual({ start: new Date(2026, 2, 15), endExclusive: new Date(2026, 2, 18) })
+        expect(stPatricks?.window(2026, 'south')).toEqual(stPatricks?.window(2026, 'north'))
+    })
+
+    it('closes with Summer Christmas, southern only and on the Christmas logo, while Christmas stays northern', () => {
+        const last = REGISTRY[REGISTRY.length - 1]
+        expect({ id: last.id, label: last.label, kind: last.kind, hemisphere: last.hemisphere, logo: last.logo }).toEqual({
+            id: 'christmas-summer',
+            label: 'Summer Christmas',
+            kind: 'holiday',
+            hemisphere: 'south',
+            logo: 'christmas',
+        })
+        const christmas = REGISTRY.find(entry => entry.id === 'christmas')
+        expect(christmas?.hemisphere).toBe('north')
+        expect(last.window(2026, 'south')).toEqual(christmas?.window(2026, 'north'))
+        expect(last.window(2026, 'south')).toEqual({ start: new Date(2026, 11, 18), endExclusive: new Date(2026, 11, 31) })
+    })
+
+    it('is where ENTRY_IDS comes from', () => {
+        expect(ENTRY_IDS).toEqual(ENTRIES.map(entry => entry.id))
     })
 })
 
-describe('isSeasonOverride', () => {
-    it.each(SEASON_IDS)('accepts the registered season %s', id => {
-        expect(isSeasonOverride(id)).toBe(true)
+describe('isEntryPreview', () => {
+    it.each(ENTRY_IDS)('accepts the registered entry %s', id => {
+        expect(isEntryPreview(id)).toBe(true)
     })
 
     it('accepts none and rejects anything else', () => {
-        expect(isSeasonOverride('halloween')).toBe(true)
-        expect(isSeasonOverride('none')).toBe(true)
-        expect(isSeasonOverride('summer')).toBe(false)
-        expect(isSeasonOverride(null)).toBe(false)
+        expect(isEntryPreview('none')).toBe(true)
+        expect(isEntryPreview('aurora')).toBe(false)
+        expect(isEntryPreview('')).toBe(false)
+        expect(isEntryPreview(null)).toBe(false)
     })
 })

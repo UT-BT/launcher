@@ -8,7 +8,8 @@ Elsewhere: the Medal Hunt endpoint is in [api.md](../api.md); prediction markets
 closing-soon strip in [events.md](events.md); the two-up layout rule in
 [web-target.md](../web-target.md); why a child's data must sit in the page's `caches` in
 [state-patterns.md](../state-patterns.md); server favorites storage in [api.md](../api.md);
-the seasonal ambient layer (Home only) in [styling.md](../styling.md).
+the Seasonal theme and its ambient layer, which runs behind every page of the app shell, not
+only Home, in [styling.md](../styling.md#seasonal-theme).
 
 ## Where the code lives
 
@@ -26,9 +27,14 @@ the seasonal ambient layer (Home only) in [styling.md](../styling.md).
 | `home/LatestRecordsCard.tsx`, `RecentCapsCard.tsx` | tiered `DataTable` widgets ([shared-components.md](../shared-components.md#column-tiers-and-phone-cards)): every column is essential, so a phone card shows them all and has no panel; tapping the card body opens the cap, as a row click does |
 | `home/news/` | `NewsCard`, `ArticleCard`, `CategoryChip`; also used by the News pages and Admin → News |
 | `home/ClosingSoonBanner.tsx` | the "Predictions closing" strip |
+| `home/SeasonalThemeNotice.tsx`, `seasonalNoticeStorage.ts` | the one-time [new-theme notice](#new-theme-notice); its key, dismissal and visibility rule |
+| `e2e/seasonal-notice.spec.ts` | Playwright: the notice shows on Classic, "Try it" and × retire it across a reload, picking Seasonal retires it, never on a saved Seasonal, 360 px fit and 44 px targets |
 | `e2e/home-freshness.spec.ts` | Playwright: the News New pill, a reviewed map leaving Maps to Review, the step back from an emptied page, the silent revisit of cached reviews and counts |
 
 ## What renders for whom
+
+Above both branches, signed in or out and on both targets, the one-time
+[new-theme notice](#new-theme-notice) shows while it is live.
 
 Signed in, top to bottom, two widgets per row:
 
@@ -152,6 +158,31 @@ seen marker (`badgeSeen['news']` in `Main.tsx`); signed out there is no marker a
 section, and renders nothing when no market is open, so it leaves no hole on most days. The
 countdown turns amber inside 30 minutes; each entry links to the event's Predictions tab.
 Market and locking rules: [events.md](events.md).
+
+### New-theme notice
+
+`SeasonalThemeNotice` is a one-line card at the top of the page, above the closing-soon strip:
+a Sparkles icon, "New: Seasonal theme · Follows the seasons and holidays where you are.", a
+"Try it" button and a ×, both 44 px, in the inline notice style with theme tokens only and no
+animation ([styling.md](../styling.md#seasonal-theme)).
+
+- **When it shows** (`seasonalNoticeVisible`): the `seasonal` entry in `THEMES` carries `new`,
+  Seasonal is not the saved theme, and `utbt:seasonalNotice:v1` is unset. It reads no profile,
+  so it shows signed in and signed out.
+- **Retiring it.** "Try it" writes the key and dispatches `open-settings` with
+  `section: 'launcher-appearance'`, which opens Settings → Appearance (on a phone, straight on
+  the panel). The × writes the key, and so does picking Seasonal in Settings. While Seasonal is
+  the saved theme it renders nothing and writes the key, so a Seasonal picked on another device
+  retires it here too.
+- **The key** is device-local, never synced: the JSON-encoded ISO time of the dismissal, read and
+  written only through `seasonalNoticeStorage.ts`, which guards every access; a blocked or wrongly
+  shaped value counts as not dismissed.
+- **It retires with the marker.** Removing `new` from the `seasonal` entry hides it for everyone,
+  with no other edit; `seasonalNoticeStorage.test.ts` covers that rule.
+- `Home.tsx` mounts it lazily inside `Suspense fallback={null}` (Home is in the entry chunk), so
+  a failed load renders nothing, and when it goes it leaves no hole in the page's `space-y-6`.
+- The Playwright storage state and the mobile fixture refresh preset the key as dismissed, so no
+  other spec or screenshot sees it; `e2e/seasonal-notice.spec.ts` clears it once per tab.
 
 ### Community stats
 

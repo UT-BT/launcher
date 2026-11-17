@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { streamDrawnMapScore, streamMapScore, streamMaps, streamMatch, streamScore, streamTeam } from '../../data/streamFixtures'
-import { MAP_NAME_MAX_PX, UPCOMING_NAME_MIN_PX } from './overlayLayout'
+import { MAP_NAME_MAX_PX, STRIP_MIN_SCALE, UPCOMING_NAME_MIN_PX } from './overlayLayout'
 import { overlayView } from './overlayView'
 
 const MAPS = streamMaps(['CTF-BT-Maverick', 'CTF-BT-Mandarin', 'CTF-BT-Letss-Go', 'CTF-BT-Skyfall'], ['a', 'b', 'b', null])
@@ -325,6 +325,36 @@ describe('overlayView', () => {
                 ['upcoming', false],
                 ['upcoming', false],
             ])
+        })
+
+        describe('a series too long for the band once compact', () => {
+            const SERIES = ['CTF-BT-II-SkaarjInvasionV2', 'CTF-BT-II-DoubleVision-CE', 'CTF-BT-II-SynchronizeV4', 'CTF-BT-II-FuriumMineCE', 'CTF-BT-II-(K)LegendsV2', 'CTF-BT-II-CoZyliciouS', 'CTF-BT-II-Fleurdelys']
+
+            function atDecider(bestOf: number) {
+                const names = SERIES.slice(SERIES.length - bestOf)
+                const scores = names.map((_, ordinal) => (ordinal < bestOf - 1
+                    ? streamMapScore(ordinal, ordinal % 2 === 0 ? [3, 1] : [1, 3], ordinal % 2 === 0 ? 'a' : 'b')
+                    : streamMapScore(ordinal, [1, 2])))
+                const pickers = names.map((_, ordinal) => (ordinal === bestOf - 1 ? null : ordinal % 2 === 0 ? 'b' : 'a'))
+                return overlayView(streamMatch({ maps: streamMaps(names, pickers), best_of: bestOf, caps_to_win: 3, score: streamScore(scores) }))?.strip
+            }
+
+            it('shrinks the map list so a Bo7 decider keeps every map and the current name in the band', () => {
+                const strip = atDecider(7)
+
+                expect(strip?.compact).toBe(true)
+                expect(strip?.maps.find(map => map.state === 'current')).toMatchObject({ number: 7, showName: true, nameMaxPx: null })
+                expect(strip?.scale).toBeLessThan(1)
+                expect(strip?.scale).toBeGreaterThanOrEqual(STRIP_MIN_SCALE)
+            })
+
+            it('keeps a Bo5 decider at full size', () => {
+                expect(atDecider(5)?.scale).toBe(1)
+            })
+
+            it('keeps an uncompacted strip at full size', () => {
+                expect(overlayView(midSeries())?.strip.scale).toBe(1)
+            })
         })
     })
 })

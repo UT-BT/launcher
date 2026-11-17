@@ -7,6 +7,7 @@ const STORAGE_KEY = 'utbt:theme:v1'
 interface ThemeContextValue {
   themeId: string
   setThemeId: (id: string) => void
+  setPreviewThemeId: (id: string | null) => void
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
@@ -28,21 +29,27 @@ function applyThemeId(id: string) {
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [themeId, setThemeIdState] = useState<string>(loadThemeId)
+  const [previewThemeId, setPreviewThemeIdState] = useState<string | null>(null)
+  const shownThemeId = previewThemeId ?? themeId
 
   useEffect(() => {
-    applyThemeId(themeId)
-  }, [themeId])
+    applyThemeId(shownThemeId)
+  }, [shownThemeId])
 
   useEffect(() => subscribeSynced(STORAGE_KEY, () => setThemeIdState(loadThemeId())), [])
 
   const setThemeId = useCallback((id: string) => {
     const next = isThemeId(id) ? id : DEFAULT_THEME_ID
-    applyThemeId(next)
+    applyThemeId(previewThemeId ?? next)
     setThemeIdState(next)
     setSynced(STORAGE_KEY, { id: next })
+  }, [previewThemeId])
+
+  const setPreviewThemeId = useCallback((id: string | null) => {
+    setPreviewThemeIdState(isThemeId(id) ? id : null)
   }, [])
 
-  return <ThemeContext.Provider value={{ themeId, setThemeId }}>{children}</ThemeContext.Provider>
+  return <ThemeContext.Provider value={{ themeId, setThemeId, setPreviewThemeId }}>{children}</ThemeContext.Provider>
 }
 
 export function useTheme(): ThemeContextValue {

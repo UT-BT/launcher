@@ -1,4 +1,244 @@
-:root[data-season='halloween']:not([data-theme]) {
+:root[data-theme='seasonal'][data-season='spring'] {
+  --accent-50: oklch(0.975 0.012 355);
+  --accent-100: oklch(0.95 0.028 355);
+  --accent-200: oklch(0.91 0.052 354);
+  --accent-300: oklch(0.86 0.086 354);
+  --accent-400: oklch(0.8 0.118 354);
+  --accent-500: oklch(0.585 0.14 356);
+  --accent-600: oklch(0.53 0.132 357);
+  --accent-700: oklch(0.475 0.118 358);
+  --accent-800: oklch(0.42 0.1 358);
+  --accent-900: oklch(0.37 0.082 358);
+  --accent-950: oklch(0.275 0.055 358);
+
+  --accent-glow-rgb: 249 168 212;
+
+  --nebula-1: 74, 222, 128;
+  --nebula-2: 249, 168, 212;
+  --nebula-3: 21, 128, 61;
+  --nebula-4: 251, 207, 232;
+
+  --background: hsl(240 7% 8%);
+  --card: hsl(240 7% 9.5%);
+  --popover: hsl(240 7% 9.5%);
+  --secondary: hsl(240 6% 17%);
+  --muted: hsl(240 6% 17%);
+  --accent: hsl(240 6% 17%);
+  --border: hsl(240 6% 17%);
+  --input: hsl(240 6% 17%);
+}
+
+:root[data-theme='seasonal'][data-season='summer'] {
+  --accent-50: oklch(0.977 0.014 222);
+  --accent-100: oklch(0.951 0.03 223);
+  --accent-200: oklch(0.905 0.062 224);
+  --accent-300: oklch(0.84 0.104 226);
+  --accent-400: oklch(0.77 0.145 228);
+  --accent-500: oklch(0.56 0.117 234);
+  --accent-600: oklch(0.505 0.109 236);
+  --accent-700: oklch(0.455 0.1 238);
+  --accent-800: oklch(0.41 0.094 240);
+  --accent-900: oklch(0.365 0.086 241);
+  --accent-950: oklch(0.28 0.066 242);
+
+  --accent-glow-rgb: 252 211 77;
+
+  --nebula-1: 6, 182, 212;
+  --nebula-2: 251, 146, 60;
+  --nebula-3: 245, 158, 11;
+  --nebula-4: 249, 115, 22;
+
+  --background: hsl(208 52% 10%);
+  --card: hsl(208 52% 11.5%);
+  --popover: hsl(208 52% 11.5%);
+  --secondary: hsl(208 34% 18.5%);
+  --muted: hsl(208 34% 18.5%);
+  --accent: hsl(208 34% 18.5%);
+  --border: hsl(208 34% 18.5%);
+  --input: hsl(208 34% 18.5%);
+}
+
+:root[data-theme='seasonal'][data-season='autumn'] {
+  --accent-50: oklch(0.978 0.016 74);
+  --accent-100: oklch(0.952 0.034 71);
+  --accent-200: oklch(0.9 0.07 67);
+  --accent-300: oklch(0.835 0.112 63);
+  --accent-400: oklch(0.76 0.145 58);
+  --accent-500: oklch(0.575 0.15 47);
+  --accent-600: oklch(0.52 0.142 44);
+  --accent-700: oklch(0.47 0.128 42);
+  --accent-800: oklch(0.415 0.108 41);
+  --accent-900: oklch(0.37 0.09 40);
+  --accent-950: oklch(0.275 0.062 40);
+
+  --accent-glow-rgb: 234 140 50;
+
+  --nebula-1: 234, 88, 12;
+  --nebula-2: 120, 53, 15;
+  --nebula-3: 185, 28, 28;
+  --nebula-4: 161, 98, 7;
+
+  --background: hsl(24 32% 7.5%);
+  --card: hsl(24 32% 9%);
+  --popover: hsl(24 32% 9%);
+  --secondary: hsl(24 20% 16.5%);
+  --muted: hsl(24 20% 16.5%);
+  --accent: hsl(24 20% 16.5%);
+  --border: hsl(24 20% 16.5%);
+  --input: hsl(24 20% 16.5%);
+}
+
+:root[data-theme='seasonal'][data-season='winter'] {
+  --accent-50: oklch(0.975 0.008 222);
+  --accent-100: oklch(0.945 0.016 222);
+  --accent-200: oklch(0.9 0.032 221);
+  --accent-300: oklch(0.84 0.052 220);
+  --accent-400: oklch(0.77 0.078 220);
+  --accent-500: oklch(0.56 0.085 224);
+  --accent-600: oklch(0.5 0.078 225);
+  --accent-700: oklch(0.44 0.068 226);
+  --accent-800: oklch(0.385 0.056 227);
+  --accent-900: oklch(0.335 0.046 228);
+  --accent-950: oklch(0.255 0.034 228);
+
+  --accent-glow-rgb: 186 230 253;
+
+  --nebula-1: 125, 211, 252;
+  --nebula-2: 51, 65, 85;
+  --nebula-3: 148, 163, 184;
+  --nebula-4: 165, 243, 252;
+
+  --background: hsl(214 16% 10%);
+  --card: hsl(214 16% 11.5%);
+  --popover: hsl(214 16% 11.5%);
+  --secondary: hsl(214 13% 19%);
+  --muted: hsl(214 13% 19%);
+  --accent: hsl(214 13% 19%);
+  --border: hsl(214 13% 19%);
+  --input: hsl(214 13% 19%);
+}
+
+:root[data-theme='seasonal'][data-season='new-year'] {
+  --accent-50: oklch(0.985 0.015 95);
+  --accent-100: oklch(0.962 0.034 93);
+  --accent-200: oklch(0.926 0.06 91);
+  --accent-300: oklch(0.88 0.088 88);
+  --accent-400: oklch(0.82 0.112 85);
+  --accent-500: oklch(0.56 0.118 76);
+  --accent-600: oklch(0.505 0.108 72);
+  --accent-700: oklch(0.455 0.1 68);
+  --accent-800: oklch(0.405 0.085 64);
+  --accent-900: oklch(0.36 0.07 62);
+  --accent-950: oklch(0.27 0.05 60);
+
+  --accent-glow-rgb: 253 230 138;
+
+  --nebula-1: 250, 204, 21;
+  --nebula-2: 79, 70, 229;
+  --nebula-3: 236, 72, 153;
+  --nebula-4: 56, 189, 248;
+
+  --background: hsl(234 34% 8%);
+  --card: hsl(234 34% 9.5%);
+  --popover: hsl(234 34% 9.5%);
+  --secondary: hsl(234 22% 17%);
+  --muted: hsl(234 22% 17%);
+  --accent: hsl(234 22% 17%);
+  --border: hsl(234 22% 17%);
+  --input: hsl(234 22% 17%);
+}
+
+:root[data-theme='seasonal'][data-season='lunar-new-year'] {
+  --accent-50: oklch(0.975 0.011 42);
+  --accent-100: oklch(0.945 0.027 40);
+  --accent-200: oklch(0.895 0.056 38);
+  --accent-300: oklch(0.825 0.099 37);
+  --accent-400: oklch(0.735 0.164 36);
+  --accent-500: oklch(0.59 0.195 33);
+  --accent-600: oklch(0.535 0.185 32);
+  --accent-700: oklch(0.475 0.165 31);
+  --accent-800: oklch(0.415 0.14 30);
+  --accent-900: oklch(0.37 0.11 29);
+  --accent-950: oklch(0.27 0.075 29);
+
+  --accent-glow-rgb: 250 204 21;
+
+  --nebula-1: 220, 38, 38;
+  --nebula-2: 250, 204, 21;
+  --nebula-3: 153, 27, 27;
+  --nebula-4: 245, 158, 11;
+
+  --background: hsl(354 48% 8.5%);
+  --card: hsl(354 48% 10%);
+  --popover: hsl(354 48% 10%);
+  --secondary: hsl(354 28% 17.5%);
+  --muted: hsl(354 28% 17.5%);
+  --accent: hsl(354 28% 17.5%);
+  --border: hsl(354 28% 17.5%);
+  --input: hsl(354 28% 17.5%);
+}
+
+:root[data-theme='seasonal'][data-season='valentines'] {
+  --accent-50: oklch(0.97 0.014 12);
+  --accent-100: oklch(0.94 0.03 12);
+  --accent-200: oklch(0.89 0.058 11);
+  --accent-300: oklch(0.815 0.106 10);
+  --accent-400: oklch(0.72 0.178 10);
+  --accent-500: oklch(0.59 0.205 10);
+  --accent-600: oklch(0.535 0.195 11);
+  --accent-700: oklch(0.475 0.175 12);
+  --accent-800: oklch(0.415 0.148 12);
+  --accent-900: oklch(0.37 0.118 12);
+  --accent-950: oklch(0.27 0.08 12);
+
+  --accent-glow-rgb: 253 164 175;
+
+  --nebula-1: 225, 29, 72;
+  --nebula-2: 251, 113, 133;
+  --nebula-3: 159, 18, 57;
+  --nebula-4: 254, 205, 211;
+
+  --background: hsl(340 38% 10%);
+  --card: hsl(340 38% 11.5%);
+  --popover: hsl(340 38% 11.5%);
+  --secondary: hsl(340 26% 19%);
+  --muted: hsl(340 26% 19%);
+  --accent: hsl(340 26% 19%);
+  --border: hsl(340 26% 19%);
+  --input: hsl(340 26% 19%);
+}
+
+:root[data-theme='seasonal'][data-season='st-patricks'] {
+  --accent-50: oklch(0.98 0.025 150);
+  --accent-100: oklch(0.955 0.06 150);
+  --accent-200: oklch(0.912 0.11 150);
+  --accent-300: oklch(0.857 0.165 149);
+  --accent-400: oklch(0.785 0.2 149);
+  --accent-500: oklch(0.545 0.149 150);
+  --accent-600: oklch(0.495 0.132 151);
+  --accent-700: oklch(0.45 0.118 152);
+  --accent-800: oklch(0.405 0.104 153);
+  --accent-900: oklch(0.36 0.09 154);
+  --accent-950: oklch(0.27 0.06 155);
+
+  --accent-glow-rgb: 74 222 128;
+
+  --nebula-1: 34, 197, 94;
+  --nebula-2: 21, 128, 61;
+  --nebula-3: 250, 204, 21;
+  --nebula-4: 22, 163, 74;
+
+  --background: hsl(138 36% 7.5%);
+  --card: hsl(138 36% 9%);
+  --popover: hsl(138 36% 9%);
+  --secondary: hsl(138 22% 16.5%);
+  --muted: hsl(138 22% 16.5%);
+  --accent: hsl(138 22% 16.5%);
+  --border: hsl(138 22% 16.5%);
+  --input: hsl(138 22% 16.5%);
+}
+
+:root[data-theme='seasonal'][data-season='halloween'] {
   --accent-50: oklch(0.98 0.016 73.684);
   --accent-100: oklch(0.954 0.038 75.164);
   --accent-200: oklch(0.901 0.076 70.697);
@@ -10,14 +250,25 @@
   --accent-800: oklch(0.45 0.15 37);
   --accent-900: oklch(0.4 0.12 38);
   --accent-950: oklch(0.266 0.079 36.259);
+
   --accent-glow-rgb: 251 146 60;
+
   --nebula-1: 249, 115, 22;
   --nebula-2: 88, 28, 135;
   --nebula-3: 147, 51, 234;
   --nebula-4: 194, 65, 12;
+
+  --background: hsl(274 30% 7%);
+  --card: hsl(274 30% 8.5%);
+  --popover: hsl(274 30% 8.5%);
+  --secondary: hsl(274 19% 16%);
+  --muted: hsl(274 19% 16%);
+  --accent: hsl(274 19% 16%);
+  --border: hsl(274 19% 16%);
+  --input: hsl(274 19% 16%);
 }
 
-:root[data-season='christmas']:not([data-theme]) {
+:root[data-theme='seasonal'][data-season='christmas'] {
   --accent-50: oklch(0.971 0.013 16);
   --accent-100: oklch(0.936 0.032 16);
   --accent-200: oklch(0.885 0.062 16);
@@ -29,14 +280,25 @@
   --accent-800: oklch(0.444 0.177 22);
   --accent-900: oklch(0.396 0.141 21);
   --accent-950: oklch(0.258 0.092 21);
+
   --accent-glow-rgb: 250 204 21;
+
   --nebula-1: 22, 163, 74;
   --nebula-2: 20, 83, 45;
   --nebula-3: 220, 38, 38;
   --nebula-4: 234, 179, 8;
+
+  --background: hsl(155 24% 6.5%);
+  --card: hsl(155 24% 8%);
+  --popover: hsl(155 24% 8%);
+  --secondary: hsl(155 16% 15%);
+  --muted: hsl(155 16% 15%);
+  --accent: hsl(155 16% 15%);
+  --border: hsl(155 16% 15%);
+  --input: hsl(155 16% 15%);
 }
 
-:root[data-season='easter']:not([data-theme]) {
+:root[data-theme='seasonal'][data-season='easter'] {
   --accent-50: oklch(0.977 0.014 305);
   --accent-100: oklch(0.946 0.033 305);
   --accent-200: oklch(0.902 0.06 305);
@@ -48,9 +310,50 @@
   --accent-800: oklch(0.43 0.13 300);
   --accent-900: oklch(0.37 0.1 300);
   --accent-950: oklch(0.27 0.07 300);
+
   --accent-glow-rgb: 216 180 254;
+
   --nebula-1: 196, 181, 253;
   --nebula-2: 110, 231, 183;
   --nebula-3: 249, 168, 212;
   --nebula-4: 253, 224, 71;
+
+  --background: hsl(292 16% 9%);
+  --card: hsl(292 16% 10.5%);
+  --popover: hsl(292 16% 10.5%);
+  --secondary: hsl(292 13% 18%);
+  --muted: hsl(292 13% 18%);
+  --accent: hsl(292 13% 18%);
+  --border: hsl(292 13% 18%);
+  --input: hsl(292 13% 18%);
+}
+
+:root[data-theme='seasonal'][data-season='christmas-summer'] {
+  --accent-50: oklch(0.971 0.013 16);
+  --accent-100: oklch(0.936 0.032 16);
+  --accent-200: oklch(0.885 0.062 16);
+  --accent-300: oklch(0.808 0.114 17);
+  --accent-400: oklch(0.704 0.191 19);
+  --accent-500: oklch(0.637 0.237 21);
+  --accent-600: oklch(0.577 0.245 22);
+  --accent-700: oklch(0.505 0.213 22);
+  --accent-800: oklch(0.444 0.177 22);
+  --accent-900: oklch(0.396 0.141 21);
+  --accent-950: oklch(0.258 0.092 21);
+
+  --accent-glow-rgb: 250 204 21;
+
+  --nebula-1: 245, 158, 11;
+  --nebula-2: 56, 189, 248;
+  --nebula-3: 220, 38, 38;
+  --nebula-4: 250, 204, 21;
+
+  --background: hsl(198 38% 10.5%);
+  --card: hsl(198 38% 12%);
+  --popover: hsl(198 38% 12%);
+  --secondary: hsl(198 26% 19.5%);
+  --muted: hsl(198 26% 19.5%);
+  --accent: hsl(198 26% 19.5%);
+  --border: hsl(198 26% 19.5%);
+  --input: hsl(198 26% 19.5%);
 }

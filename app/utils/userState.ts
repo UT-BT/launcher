@@ -11,7 +11,9 @@ const SYNCED_KEYS = new Set([
     'utbt:displayTimezone:v1',
     'utbt:pickBanSound:v1',
     'utbt:pickBanMotion:v1',
-    'utbt:seasonalThemes:v1',
+    'utbt:hemisphere:v1',
+    'utbt:seasonalEffects:v1',
+    'utbt:celebrationsSeen:v1',
 ])
 
 export function isSyncedKey(key: string): boolean {
@@ -145,7 +147,18 @@ function purgeSyncedState(): void {
     }
 }
 
-export async function initUserStateSync(token: string, accountId: string): Promise<void> {
+let initialSync: Promise<void> = Promise.resolve()
+
+export function userStateSettled(): Promise<void> {
+    return initialSync
+}
+
+export function initUserStateSync(token: string, accountId: string): Promise<void> {
+    initialSync = runInitialSync(token, accountId)
+    return initialSync
+}
+
+async function runInitialSync(token: string, accountId: string): Promise<void> {
     if (typeof window !== 'undefined') {
         let previousAccount: string | null = null
         try { previousAccount = window.localStorage.getItem(ACCOUNT_KEY) } catch { /* ignore */ }

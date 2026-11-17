@@ -111,11 +111,75 @@ const MOUSTACHE_LOWER = 'M 416 285 C 406 284 394 288 388 295 C 384 300 385 306 3
 const svg = body => `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">${body}</svg>`
 
 const SEASONS = {
+  spring: {
+    fur: null,
+    swirl: {
+      red: { light: { h: 335, s: 0.75, scale: 0.95, lift: 0.08 }, dark: { h: 330, s: 0.55, scale: 0.8, lift: 0 } },
+      blue: { light: { h: 92, s: 0.7, scale: 0.95, lift: 0.02 }, dark: { h: 118, s: 0.55, scale: 0.7, lift: 0 } },
+    },
+    layers: [],
+  },
+  summer: {
+    fur: null,
+    swirl: {
+      red: { light: { h: 40, s: 0.95, scale: 1, lift: 0.04 }, dark: { h: 22, s: 0.85, scale: 0.9, lift: 0 } },
+      blue: { light: { h: 192, s: 0.85, scale: 1, lift: 0.02 }, dark: { h: 205, s: 0.75, scale: 0.85, lift: 0.03 } },
+    },
+    layers: [],
+  },
+  autumn: {
+    fur: null,
+    swirl: {
+      red: { light: { h: 20, s: 0.9, scale: 1, lift: 0 }, dark: { h: 8, s: 0.75, scale: 1, lift: 0.04 } },
+      blue: { light: { h: 38, s: 0.85, scale: 1, lift: 0.02 }, dark: { h: 25, s: 0.6, scale: 0.85, lift: 0.04 } },
+    },
+    layers: [],
+  },
+  winter: {
+    fur: null,
+    swirl: {
+      red: { light: { h: 200, s: 0.2, scale: 0.7, lift: 0.32 }, dark: { h: 210, s: 0.2, scale: 0.7, lift: 0.12 } },
+      blue: { light: { h: 198, s: 0.7, scale: 0.9, lift: 0.12 }, dark: { h: 212, s: 0.45, scale: 0.85, lift: 0.08 } },
+    },
+    layers: [],
+  },
+  'new-year': {
+    fur: null,
+    swirl: {
+      red: { light: { h: 46, s: 0.9, scale: 1, lift: 0.05 }, dark: { h: 40, s: 0.85, scale: 0.9, lift: 0.02 } },
+      blue: { light: { h: 235, s: 0.65, scale: 1, lift: 0.06 }, dark: { h: 248, s: 0.55, scale: 1, lift: 0.08 } },
+    },
+    layers: [],
+  },
+  'lunar-new-year': {
+    fur: null,
+    swirl: {
+      red: { light: { h: 2, s: 0.9, scale: 1, lift: 0 }, dark: { h: 356, s: 0.8, scale: 1, lift: 0.03 } },
+      blue: { light: { h: 45, s: 0.95, scale: 1, lift: 0.04 }, dark: { h: 30, s: 0.9, scale: 0.95, lift: 0.02 } },
+    },
+    layers: [],
+  },
+  valentines: {
+    fur: null,
+    swirl: {
+      red: { light: { h: 352, s: 0.85, scale: 1, lift: 0 }, dark: { h: 345, s: 0.75, scale: 1, lift: 0.03 } },
+      blue: { light: { h: 330, s: 0.75, scale: 0.9, lift: 0.12 }, dark: { h: 320, s: 0.55, scale: 0.85, lift: 0.08 } },
+    },
+    layers: [],
+  },
+  'st-patricks': {
+    fur: null,
+    swirl: {
+      red: { light: { h: 28, s: 0.95, scale: 1, lift: 0.02 }, dark: { h: 18, s: 0.85, scale: 0.85, lift: 0 } },
+      blue: { light: { h: 135, s: 0.7, scale: 0.95, lift: 0 }, dark: { h: 145, s: 0.65, scale: 0.6, lift: 0 } },
+    },
+    layers: [],
+  },
   halloween: {
     fur: [206, 201, 189],
     swirl: {
-      red: { light: { h: 26, s: 0.95, scale: 1, lift: 0.02 }, dark: { h: 286, s: 0.55, scale: 0.85, lift: 0 } },
-      blue: { light: { h: 272, s: 0.6, scale: 0.95, lift: 0 }, dark: { h: 270, s: 0.45, scale: 0.55, lift: 0 } },
+      red: { light: { h: 26, s: 0.95, scale: 1, lift: 0.02 }, dark: { h: 286, s: 0.55, scale: 1, lift: 0.03 } },
+      blue: { light: { h: 272, s: 0.6, scale: 0.95, lift: 0 }, dark: { h: 270, s: 0.45, scale: 0.8, lift: 0.03 } },
     },
     layers: [
       {
@@ -213,8 +277,8 @@ const SEASONS = {
     fur: null,
     ears: { color: [255, 194, 214], seeds: [[180, 165], [140, 205]], fadeX: [226, 262], fadeY: [226, 244] },
     swirl: {
-      red: { light: { h: 335, s: 0.75, scale: 0.45, lift: 0.45 }, dark: { h: 285, s: 0.45, scale: 0.5, lift: 0.35 } },
-      blue: { light: { h: 160, s: 0.5, scale: 0.4, lift: 0.5 }, dark: { h: 255, s: 0.45, scale: 0.5, lift: 0.33 } },
+      red: { light: { h: 335, s: 0.75, scale: 0.6, lift: 0.3 }, dark: { h: 285, s: 0.45, scale: 0.5, lift: 0.35 } },
+      blue: { light: { h: 160, s: 0.5, scale: 0.55, lift: 0.32 }, dark: { h: 255, s: 0.45, scale: 0.5, lift: 0.33 } },
     },
     layers: [
       {
