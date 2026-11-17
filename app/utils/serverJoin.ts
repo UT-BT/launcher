@@ -1,5 +1,4 @@
 const SPECTATOR_CLASS = 'Botpack.CHSpectator'
-const GAME_ALREADY_RUNNING_MESSAGE = 'UT99 is already running. Close it to join another server.'
 
 let joinInFlight = false
 
@@ -9,6 +8,8 @@ export interface GameLaunchPort {
     isGameRunning: () => Promise<boolean>
     launchGame: (ip: string, port: number) => Promise<void>
     launchGameStandalone: () => Promise<void>
+    /** Hands the server's link to the running game, as a spectator or as a player. */
+    joinRunningGame: (ip: string, port: number, asSpectator: boolean) => Promise<void>
 }
 
 export interface JoinTarget {
@@ -16,9 +17,14 @@ export interface JoinTarget {
     hostport: number
 }
 
+/**
+ * `launched`: the game was closed and started on the server. `joined`: the running game got
+ * the server's link. `busy`: another Join or Spec was still in flight, so nothing happened.
+ */
 export type JoinResult =
     | { status: 'launched' }
-    | { status: 'already-running'; message: string }
+    | { status: 'joined' }
+    | { status: 'busy' }
 
 async function resetToPlayerClass(port: GameLaunchPort): Promise<void> {
     const currentClass = await port.readIniValue('User.ini', 'DefaultPlayer', 'Class')
@@ -28,14 +34,20 @@ async function resetToPlayerClass(port: GameLaunchPort): Promise<void> {
     await port.writeIniValue('User.ini', 'DefaultPlayer', 'OverrideClass', '')
 }
 
+/**
+ * Joins a server as a player or a spectator. A running game gets the link with no ini write,
+ * since it keeps its settings in memory; a closed game gets the class written to `User.ini`
+ * and is launched on the server.
+ */
 export async function joinServer(port: GameLaunchPort, server: JoinTarget, asSpectator: boolean): Promise<JoinResult> {
     if (joinInFlight) {
-        return { status: 'already-running', message: GAME_ALREADY_RUNNING_MESSAGE }
+        return { status: 'busy' }
     }
     joinInFlight = true
     try {
         if (await port.isGameRunning()) {
-            return { status: 'already-running', message: GAME_ALREADY_RUNNING_MESSAGE }
+            await port.joinRunningGame(server.ip, server.hostport, asSpectator)
+            return { status: 'joined' }
         }
         if (asSpectator) {
             await port.writeIniValue('User.ini', 'DefaultPlayer', 'OverrideClass', SPECTATOR_CLASS)
