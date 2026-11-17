@@ -181,8 +181,9 @@ one storage state (`APP_STORAGE_STATE` in `playwright.config.ts`) that preloads:
   specs](#desktop-promotion-specs)); never change the default to make a spec promote.
 
 The config runs 2 workers (6 against the built bundle), spec files in parallel and the tests inside a file in order (the mobile
-suite projects run those in parallel too), with the default 30 s test timeout,
-`trace: 'retain-on-failure'` and `screenshot: 'only-on-failure'`. Retries (2), `forbidOnly` and the
+suite projects run those in parallel too), with the default 30 s test timeout (60 s on
+`mobile-suite-webkit`, [CI](#ci)), `trace: 'retain-on-failure'` and `screenshot: 'only-on-failure'`.
+Retries (1), `forbidOnly` and the
 `github` reporter apply only when `CI` is set; locally there are no retries, the `list` reporter
 prints, and a stray `test.only` silently narrows the run. Every run also loads the mobile gallery
 reporter, which writes nothing unless mobile suite tests ran.
@@ -950,7 +951,7 @@ further steps. A second drop fails the test.
 | `.github/workflows/ci.yml`, jobs `Mobile suite (chromium 1/3)` to `(chromium 3/3)` | the same | Ubuntu, Node 20: `npm ci`, `npx playwright install chromium`, `bash scripts/ci-linux-fonts.sh`, then `npx cross-env E2E_SERVER=build playwright test --project=mobile-suite-chromium --workers=3 --shard=<n>/3`: `npm run test:mobile` (the PR subset on the built bundle, mocked data only, [Mobile suite](#mobile-suite)) narrowed to Chromium. Whatever the result, each shard uploads its gallery as `mobile-gallery-chromium-<n>` and its HTML report as `mobile-playwright-report-chromium-<n>` |
 | `.github/workflows/ci.yml`, jobs `Mobile suite (webkit 1/8)` to `(webkit 8/8)` | push to `staging`, manual (Run workflow); skipped on pull requests | Windows, Node 20: the same with `npx playwright install webkit` and `--project=mobile-suite-webkit --shard=<n>/8`, uploading `mobile-gallery-webkit-<n>` and `mobile-playwright-report-webkit-<n>` |
 | `.github/workflows/ci.yml`, job `Mobile suite` | after the mobile shards | Ubuntu: passes when every Chromium shard passed and the WebKit shards passed or were skipped (on a pull request), so `Mobile suite` is the one check name to require |
-| `.github/workflows/mobile-nightly.yml`, jobs `Mobile full matrix (1/12)` to `(12/12)` | daily at 03:00 UTC on the default branch, manual (Run workflow, any branch) | Windows, Node 20: the same install, then `npm run test:mobile:full -- --workers=3 --shard=<n>/12`; each shard uploads its gallery as `mobile-gallery-full-<n>` and its report as `mobile-playwright-report-full-<n>` |
+| `.github/workflows/mobile-nightly.yml`, jobs `Mobile full matrix (webkit 1/12)` to `(webkit 12/12)` and `(chromium 1/4)` to `(chromium 4/4)` | daily at 03:00 UTC on the default branch, manual (Run workflow, any branch) | Windows, Node 20: `npm ci`, the engine's `npx playwright install`, then `npx cross-env E2E_SERVER=build MOBILE_MATRIX=full playwright test --project=mobile-suite-<engine> --workers=3 --shard=<n>/<count>` (`npm run test:mobile:full` split by engine); each shard uploads its gallery as `mobile-gallery-full-<engine>-<n>` and its report as `mobile-playwright-report-full-<engine>-<n>` |
 | `.github/workflows/web.yml` | push to `main`, manual | Ubuntu, Node 20: `npm ci`, `npm run quality:web` (`typecheck:web`, `typecheck:e2e`, `lint`, `test`, `build:web`, `check:bundle`), then a deploy that waits for approval |
 | `.github/workflows/release.yml` | push to `main` | Windows: builds and publishes the installer when the `package.json` version has no tag yet, plus a copy under the stable name `utbt-launcher-setup.exe` that `DESKTOP_APP_DOWNLOAD_URL` points at; no tests |
 
@@ -994,13 +995,21 @@ The mobile jobs pass `--reporter=list,github,html,./e2e/mobile/gallery-reporter.
   test, so a page that never settles fails in under a minute instead of burning the whole budget on
   every attempt. The error-screen watcher that races the whole surface opts out with `timeout: 0`;
   the cap is per step, and a surface with many steps can run past 45 s in total.
+- **WebKit tests get 60 s.** On the Windows runners a WebKit interaction spec that opens a large
+  recorded page takes 25 to 33 s, so under the default 30 s the same few specs (tooltips, card
+  taps, hide-on-scroll, Watch) timed out on about every second push to `staging`. The
+  `mobile-suite-webkit` project sets `timeout: 60_000`; crawl tests keep their own budget.
 - **Three workers per shard** leave headroom on the runner's four cores.
 - **The shard counts** keep each shard near the Playwright shards' time.
 - **The run splits by engine first.** Playwright splits shards by test count, not duration, and a
   WebKit test takes several times as long as a Chromium one. So mixed shards that drew the WebKit
   crawl took 25 minutes while others took 4.
   - WebKit gets eight shards and Chromium three, from the same 384 tests each.
-  - The nightly full matrix runs as 12 mixed shards. Open a gallery artifact's `index.html` to see every
+  - The nightly full matrix splits the same way: WebKit twelve shards and Chromium four, from about
+    3,660 tests each, so each shard ends in about an hour, inside its 150-minute limit (twelve mixed
+    shards left the six WebKit ones cancelled at three hours).
+
+Open a gallery artifact's `index.html` to see every
 surface the run crawled, and the report's `index.html` for a failing test's error and trace. A
 run splits both across its shards, one gallery and one report per shard. The nightly run gates
 nothing: read its failures as ledger entries the full matrix is missing or new regressions at sizes

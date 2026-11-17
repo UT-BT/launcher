@@ -1232,45 +1232,47 @@ export function WorldRecordsPage({
             )}
 
             {isRushers && showPodium && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 shrink-0">
-                    {PODIUM_SLOTS.map(slot => {
-                        const r = rusherPageRows[slot.rank - 1]
-                        if (!r) return <div key={slot.rank} />
-                        const isSelf = selfId != null && r.user_id === String(selfId)
-                        return (
-                            <div
-                                key={slot.rank}
-                                className={cn(
-                                    'relative flex items-center gap-3 rounded-xl border border-hairline/5 px-4 py-3 overflow-hidden',
-                                    slot.surface, slot.ring,
-                                )}
-                            >
-                                <div className={cn('absolute left-0 inset-y-0 w-0.5', slot.bar)} />
-                                <div className={cn(
-                                    'flex items-center justify-center size-8 rounded-lg border shrink-0 font-mono font-black text-sm tabular-nums',
-                                    slot.chip,
-                                )}>
-                                    {slot.rank}
+                <div className="@container/podium shrink-0">
+                    <div className="grid grid-cols-1 @4xl/podium:grid-cols-3 gap-3">
+                        {PODIUM_SLOTS.map(slot => {
+                            const r = rusherPageRows[slot.rank - 1]
+                            if (!r) return <div key={slot.rank} />
+                            const isSelf = selfId != null && r.user_id === String(selfId)
+                            return (
+                                <div
+                                    key={slot.rank}
+                                    className={cn(
+                                        'relative flex items-center gap-3 rounded-xl border border-hairline/5 px-4 py-3 overflow-hidden',
+                                        slot.surface, slot.ring,
+                                    )}
+                                >
+                                    <div className={cn('absolute left-0 inset-y-0 w-0.5', slot.bar)} />
+                                    <div className={cn(
+                                        'flex items-center justify-center size-8 rounded-lg border shrink-0 font-mono font-black text-sm tabular-nums',
+                                        slot.chip,
+                                    )}>
+                                        {slot.rank}
+                                    </div>
+                                    {slot.rank === 1 && <Crown className="size-4 shrink-0 -ml-1 text-yellow-300" />}
+                                    <PlayerInfo
+                                        userId={r.user_id}
+                                        alias={r.alias}
+                                        title={r.active_title}
+                                        size="md"
+                                        highlight={isSelf}
+                                        showYouBadge={isSelf}
+                                        className="min-w-0"
+                                    />
+                                    <div className="ml-auto flex items-baseline gap-1 shrink-0">
+                                        <span className={cn('font-mono font-black tabular-nums leading-none text-xl', slot.count)}>
+                                            {r.count}
+                                        </span>
+                                        <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold">WRs</span>
+                                    </div>
                                 </div>
-                                {slot.rank === 1 && <Crown className="size-4 shrink-0 -ml-1 text-yellow-300" />}
-                                <PlayerInfo
-                                    userId={r.user_id}
-                                    alias={r.alias}
-                                    title={r.active_title}
-                                    size="md"
-                                    highlight={isSelf}
-                                    showYouBadge={isSelf}
-                                    className="min-w-0"
-                                />
-                                <div className="ml-auto flex items-baseline gap-1 shrink-0">
-                                    <span className={cn('font-mono font-black tabular-nums leading-none text-xl', slot.count)}>
-                                        {r.count}
-                                    </span>
-                                    <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold">WRs</span>
-                                </div>
-                            </div>
-                        )
-                    })}
+                            )
+                        })}
+                    </div>
                 </div>
             )}
 

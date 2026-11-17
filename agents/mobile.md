@@ -224,8 +224,8 @@ manifest by `npm run docs:mobile-routes`, and `npm run docs:check` fails while i
 Chromium at 360×780 and 915×412, plus every interaction spec. The `Mobile suite` job in
 `.github/workflows/ci.yml` is the mobile gate: its Chromium half runs on every pull request and its
 WebKit half on pushes to `staging` and manual runs, and
-`.github/workflows/mobile-nightly.yml` runs the full matrix (`npm run test:mobile:full`) every
-night ([testing.md](testing.md#ci)). While iterating, narrow with `-g "<surface or viewport>"` or
+`.github/workflows/mobile-nightly.yml` runs the full matrix (`npm run test:mobile:full`, split by
+engine) every night ([testing.md](testing.md#ci)). While iterating, narrow with `-g "<surface or viewport>"` or
 run one spec with `npx playwright test e2e/mobile/<spec> --project=mobile-suite-webkit`, which uses
 the dev server.
 
