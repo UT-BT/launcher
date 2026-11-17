@@ -412,10 +412,11 @@ never runs it.
 | `npm run test:mobile` | the PR subset: WebKit at 390×844 and 844×390, Chromium at 360×780 and 915×412, plus every other `e2e/mobile/*.spec.ts` (interaction specs) on both engines |
 | `npm run test:mobile:full` | every viewport in `e2e/mobile/viewports.ts` on both engines, with every stress variant: several hours locally, so narrow it with `-g` |
 | `npm run test:mobile:ledger`, `npm run test:mobile:ledger:full` | the same two runs in ledger mode: a rule result never fails a test, and the run rewrites `e2e/mobile/ledger/` ([Known-violations ledger](#known-violations-ledger)) |
+| `npm run test:mobile:ledger:galleries -- <folder>` | no run: rewrites `e2e/mobile/ledger/` from the `observations.json` of downloaded nightly galleries ([From a nightly run](#known-violations-ledger)) |
 | `npm run test:mobile:refresh-fixtures` | re-records the public fixture sets from the live public API ([Test data](#test-data)) |
 
 Narrow a run with `-- -g <surface or viewport>`, for example `npm run test:mobile -- -g cap-detail`
-or `-g 390x844`. All five read `E2E_PORT` through the config. The four `test:mobile` and
+or `-g 390x844`. The five that run Playwright read `E2E_PORT` through the config. The four `test:mobile` and
 `test:mobile:ledger` scripts crawl the built bundle ([Built bundle](#how-specs-reach-the-app));
 `test:mobile:refresh-fixtures` and `npx playwright test e2e/mobile/...` without a script use the
 dev server. WebKit must be installed: `npx playwright install webkit chromium`, and on Linux
@@ -908,13 +909,27 @@ a duplicate, and on a file for an unknown rule.
 matrix, narrowed with `-- -g` if you like. The gallery reporter writes the ledger, so a `--reporter`
 override must keep `./e2e/mobile/gallery-reporter.ts`. The run rewrites only the surface, rule,
 viewport and engine combinations it ran: failures go in, passes come out, and everything it did not
-run stays. The PR subset is seeded for every surface, role-gated ones included. The full matrix is
-seeded only for `home`, `maps`, `maps/new`, `cap-detail` and the `news`
-stress variants at the viewports outside the PR subset, and those entries predate the modal,
-rotation, scroll, table and card rules and, for all but the `news` variants, the recorded data.
-Role-gated surfaces have no full-matrix entries yet. The other stress variants the PR subset does
-not crawl hold only the entries of a partial run. Seed the rest with
-`npm run test:mobile:ledger:full` before a full run gates anything.
+run stays. Both matrices are seeded for every surface, role-gated ones included; the full matrix
+was seeded from a nightly run's galleries on 2026-11-17.
+
+**From a nightly run.** `npm run test:mobile:ledger:full` saturates a 20-thread desktop for about
+seven hours; the nightly crawls the same matrix in about an hour. Each shard's gallery holds
+`observations.json`, every rule result the shard saw, so regenerate from the galleries instead.
+Run the nightly with its `ledger` input first: it sets `MOBILE_LEDGER=write`, so no crawl fails on a
+rule and nothing retries. A judging run's galleries work too, but each new entry fails and runs
+twice, and an unseeded matrix fails about 60% of its tests that way, long enough to cancel shards
+at the limit.
+
+```
+gh workflow run mobile-nightly.yml --ref <branch> -f ledger=true
+gh run download <run id> -p "mobile-gallery-full-*" -D <folder>
+npm run test:mobile:ledger:galleries -- <folder>
+```
+
+`scripts/mobile-ledger-from-galleries.mjs` applies the reporter's rewrite to every
+`observations.json` under the folders. A surface run that did not finish (a `ready` timeout, a
+cancelled shard) leaves no results, so its entries stay as they were: check each gallery's "Did not
+finish" list first.
 
 - A fix deletes the entries it fixes, by hand or by regenerating after the fix.
 - Only a failure that predates your change goes in. Fix a regression your change caused instead of
@@ -951,7 +966,7 @@ further steps. A second drop fails the test.
 | `.github/workflows/ci.yml`, jobs `Mobile suite (chromium 1/3)` to `(chromium 3/3)` | the same | Ubuntu, Node 20: `npm ci`, `npx playwright install chromium`, `bash scripts/ci-linux-fonts.sh`, then `npx cross-env E2E_SERVER=build playwright test --project=mobile-suite-chromium --workers=3 --shard=<n>/3`: `npm run test:mobile` (the PR subset on the built bundle, mocked data only, [Mobile suite](#mobile-suite)) narrowed to Chromium. Whatever the result, each shard uploads its gallery as `mobile-gallery-chromium-<n>` and its HTML report as `mobile-playwright-report-chromium-<n>` |
 | `.github/workflows/ci.yml`, jobs `Mobile suite (webkit 1/8)` to `(webkit 8/8)` | push to `staging`, manual (Run workflow); skipped on pull requests | Windows, Node 20: the same with `npx playwright install webkit` and `--project=mobile-suite-webkit --shard=<n>/8`, uploading `mobile-gallery-webkit-<n>` and `mobile-playwright-report-webkit-<n>` |
 | `.github/workflows/ci.yml`, job `Mobile suite` | after the mobile shards | Ubuntu: passes when every Chromium shard passed and the WebKit shards passed or were skipped (on a pull request), so `Mobile suite` is the one check name to require |
-| `.github/workflows/mobile-nightly.yml`, jobs `Mobile full matrix (webkit 1/12)` to `(webkit 12/12)` and `(chromium 1/4)` to `(chromium 4/4)` | daily at 03:00 UTC on the default branch, manual (Run workflow, any branch) | Windows, Node 20: `npm ci`, the engine's `npx playwright install`, then `npx cross-env E2E_SERVER=build MOBILE_MATRIX=full playwright test --project=mobile-suite-<engine> --workers=3 --shard=<n>/<count>` (`npm run test:mobile:full` split by engine); each shard uploads its gallery as `mobile-gallery-full-<engine>-<n>` and its report as `mobile-playwright-report-full-<engine>-<n>` |
+| `.github/workflows/mobile-nightly.yml`, jobs `Mobile full matrix (webkit 1/12)` to `(webkit 12/12)` and `(chromium 1/4)` to `(chromium 4/4)` | daily at 03:00 UTC on the default branch, manual (Run workflow, any branch; its `ledger` input sets `MOBILE_LEDGER=write`, [From a nightly run](#known-violations-ledger)) | Windows, Node 20: `npm ci`, the engine's `npx playwright install`, then `npx cross-env E2E_SERVER=build MOBILE_MATRIX=full playwright test --project=mobile-suite-<engine> --workers=3 --shard=<n>/<count>` (`npm run test:mobile:full` split by engine); each shard uploads its gallery as `mobile-gallery-full-<engine>-<n>` and its report as `mobile-playwright-report-full-<engine>-<n>` |
 | `.github/workflows/web.yml` | push to `main`, manual | Ubuntu, Node 20: `npm ci`, `npm run quality:web` (`typecheck:web`, `typecheck:e2e`, `lint`, `test`, `build:web`, `check:bundle`), then a deploy that waits for approval |
 | `.github/workflows/release.yml` | push to `main` | Windows: builds and publishes the installer when the `package.json` version has no tag yet, plus a copy under the stable name `utbt-launcher-setup.exe` that `DESKTOP_APP_DOWNLOAD_URL` points at; no tests |
 

@@ -13,7 +13,7 @@ The commands you need and the gate every commit passes. `package.json` `scripts`
 | `npm run lint` | ESLint over the repo: `app/`, `lib/`, `e2e/`, `scripts/` and the configs (`lint:fix` to auto-fix) |
 | `npm test` | Vitest unit tests |
 | `npm run test:e2e` | Playwright: the app projects and the OBS scene baselines |
-| `npm run test:mobile` | the mobile suite's PR subset on WebKit and Chromium; `test:mobile:full` runs the full viewport matrix, `test:mobile:refresh-fixtures` re-records its public test data ([testing.md](testing.md#mobile-suite)) |
+| `npm run test:mobile` | the mobile suite's PR subset on WebKit and Chromium; `test:mobile:full` runs the full viewport matrix, `test:mobile:ledger:galleries` rebuilds the ledger from a nightly run's galleries, `test:mobile:refresh-fixtures` re-records its public test data ([testing.md](testing.md#mobile-suite)) |
 | `npm run build:web` then `npm run check:bundle` | static web build into `dist-web/`, then the bundle budget |
 | `npm run build:win` | per-user Windows installer into `dist/` |
 | `node scripts/render-app-icons.mjs` | rebuild `resources/build/icon.ico` (one frame per Windows size, 16 to 256 px) from `resources/build/icon.png`; run it after changing the logo and commit both |

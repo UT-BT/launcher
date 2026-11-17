@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '0 3 * * *'
   workflow_dispatch:
+    inputs:
+      ledger:
+        description: Record every rule result for the ledger instead of judging against it
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -44,6 +49,7 @@ jobs:
         run: npx cross-env E2E_SERVER=build MOBILE_MATRIX=full playwright test --project=mobile-suite-webkit --workers=3 --shard=${{ matrix.shard }}/12 --reporter=list,github,html,./e2e/mobile/gallery-reporter.ts
         env:
           PLAYWRIGHT_HTML_OPEN: never
+          MOBILE_LEDGER: ${{ inputs.ledger && 'write' || '' }}
 
       - name: Upload mobile gallery
         if: ${{ !cancelled() }}
@@ -92,6 +98,7 @@ jobs:
         run: npx cross-env E2E_SERVER=build MOBILE_MATRIX=full playwright test --project=mobile-suite-chromium --workers=3 --shard=${{ matrix.shard }}/4 --reporter=list,github,html,./e2e/mobile/gallery-reporter.ts
         env:
           PLAYWRIGHT_HTML_OPEN: never
+          MOBILE_LEDGER: ${{ inputs.ledger && 'write' || '' }}
 
       - name: Upload mobile gallery
         if: ${{ !cancelled() }}
