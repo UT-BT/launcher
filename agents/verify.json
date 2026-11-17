@@ -235,7 +235,7 @@
   ],
   "agents/testing.md": [
     ".github/workflows/ci.yml",
-    ".github/workflows/mobile-nightly.yml",
+    ".github/workflows/mobile-report.yml",
     ".github/workflows/release.yml",
     ".github/workflows/web.yml",
     ".prettierignore",
@@ -368,6 +368,7 @@
     "package.json",
     "playwright.config.ts",
     "scripts/check-web-bundle.mjs",
+    "scripts/mobile-ledger-from-galleries.mjs",
     "tsconfig.e2e.json",
     "tsconfig.json",
     "tsconfig.web.json",
@@ -449,7 +450,7 @@
   ],
   "agents/mobile.md": [
     ".github/workflows/ci.yml",
-    ".github/workflows/mobile-nightly.yml",
+    ".github/workflows/mobile-report.yml",
     "app/components/layout/AppLayout.tsx",
     "app/components/layout/BottomTabBar.tsx",
     "app/components/layout/HideOnScrollBars.tsx",
