@@ -14,12 +14,12 @@ launcher packaging, not the game: lib/main/README.md.
 
 | Path | Holds |
 |---|---|
-| `lib/main/game-service.ts` | install validation, standalone launch, `isGameRunning`, game profiles; Vitest covers Browse profiles and reserved names |
+| `lib/main/game-service.ts` | install validation, standalone launch, `isGameRunning`, `joinRunningGame` (hands a link to the running game), game profiles; Vitest covers Browse profiles and reserved names |
 | `lib/main/installation-service.ts`, `lib/main/patch-service.ts` | UT99 ISO download (cancel tested in Vitest) and setup, patch download, verify and extract |
 | `app/utils/ut99Install.ts` | the download-then-install flow behind a `Ut99InstallPort`, the cancel error and `isUt99DownloadCancelled`; Vitest |
 | `lib/main/demo-watcher-service.ts` | the demo watcher: detection, cap checks, upload, durable retry, upload log; Vitest covers the upload's sign-in refresh and outcome |
-| `lib/main/game-processes.ts` | pure `tasklist` parsing that keeps cam PIDs out of `isGameRunning`; Vitest |
-| `lib/conveyor/handlers/` | `game-handler.ts` (join, ping), `app-handler.ts` (install, patches, profiles, demo log), `maps-handler.ts` and `demos-handler.ts` (writes into the install), `window-handler.ts` |
+| `lib/main/game-processes.ts` | pure `tasklist` parsing that keeps cam PIDs out of `isGameRunning`, and `runningGameJoinUrl` for the running-game link; Vitest |
+| `lib/conveyor/handlers/` | `game-handler.ts` (launch, running-game join, ping), `app-handler.ts` (install, patches, profiles, demo log), `maps-handler.ts` and `demos-handler.ts` (writes into the install), `window-handler.ts` |
 | `app/components/main/Main.tsx` | `installationStatus`, `validateInstallation`, the install banner |
 | `app/components/pages/GameInstallationSettings.tsx` | Settings → Installation: ISO installer, folder picker, patch list |
 | `app/utils/serverJoin.ts` | pure Join/Spec/Play decisions (running check, `User.ini` class writes) behind a `GameLaunchPort`; Vitest |

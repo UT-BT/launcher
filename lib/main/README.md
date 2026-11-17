@@ -43,6 +43,33 @@ Map ZIPs (`maps-handler.ts`) extract into the install root and never overwrite: 
 files come back in `skipped`. Demos (`demos-handler.ts`) are written to `{install}/System`
 under a sanitized filename. Both refuse with `no-install` unless the install validates.
 
+## Connect URLs for the player's game
+
+`launchGame` spawns `System\UnrealTournament.exe unreal://<ip>:<port>`; the class comes
+from `User.ini` (`OverrideClass`, `Class`), which the renderer writes before the launch.
+
+`joinRunningGame` hands a server to a game that already runs. UT99 469 forwards a link
+itself: a second `UnrealTournament.exe <url>` started without `-NewWindow` finds the open
+game window, sends it the URL as `WM_COPYDATA` (the game logs `WM_COPYDATA: <url>`, then
+`Browse:`), and exits with code 0 within about 100 ms. No second client stays open. So
+`gameService.joinRunningGame` spawns the exe with the URL, waits for that exit, and throws
+a readable `Error` if the game is not running, if stream cams run, or if the spawned
+process does not exit with 0 in 10 s (it is then killed, since it became a client of its
+own).
+
+- **Class options switch a running game.** Options in the link replace the ones the game
+  holds, so Spec sends `?OverrideClass=Botpack.CHSpectator` and Join sends an empty
+  `?OverrideClass=`. Tested on 469f: a game started with
+  `OverrideClass=Botpack.CHSpectator` in `User.ini` joined as a player on Join, and as a
+  spectator on Spec. A `Class=Botpack.CHSpectator` left in `User.ini` is not cleared by
+  the link; only the closed-game path resets it.
+- **The game saves the joined options.** After a Join, the running game wrote
+  `OverrideClass=` to its `User.ini`, as it does for any travel URL. The channel itself
+  writes no ini file.
+- **Cams take the link too.** The forwarder picks one open UT window, and stream cams
+  (started with `-NewWindow`) are UT windows: with a cam open, the link went to the cam,
+  not the player's game. So the channel refuses while cams run.
+
 ## Opening URLs
 
 Open external URLs with `openExternalSafe(url)` (`url-safety.ts`), which opens only
