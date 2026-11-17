@@ -1,4 +1,4 @@
-import type { BestCap, Map, MapMetadata, MapReview } from '@/app/utils/api'
+import type { ActiveTitle, BestCap, Map, MapMetadata, MapReview } from '@/app/utils/api'
 
 export type RatingTier = 'all' | 'excellent' | 'good' | 'average' | 'poor'
 export type LuckTier = 'all' | 'low' | 'fair' | 'some' | 'high'
@@ -26,13 +26,22 @@ export interface AvgRatings {
     luck: number
 }
 
-export interface WRHolder {
+export interface WRHolderMember {
     user_id: string
+    alias: string
+    title: ActiveTitle | null
+    cap_time_seconds: number
+}
+
+export interface WRHolder {
+    user_id: string            // '' for a team record
     alias: string
     cap_id?: string
     color_r?: number
     color_g?: number
     color_b?: number
+    title?: ActiveTitle | null // solo holder's active title
+    members?: WRHolderMember[] // team record only; in API order
 }
 
 export interface MapsPageState {

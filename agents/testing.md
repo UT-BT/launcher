@@ -837,7 +837,8 @@ spec that is red today is marked `test.fail()`, with a note naming the ticket th
   bar out of the visible area together, a scroll back up brings both back, and an 8 px nudge
   leaves them, as does a tap followed at once by a scroll made by code. Scrolling `main` to its
   top by code shows them; tapping a map opens its page with
-  both shown, and Back restores Maps' position with them still shown; closing the Playtime modal
+  both shown, and Back restores Maps' position with them still shown (the scroll before the tap
+  stays short, 250 px, so the map's link is still in view and the tap doesn't scroll it back); closing the Playtime modal
   on a map page shows them. At 844×390 the top bar hides and comes back the same way. On
   Chromium the scroll is real touch input (`Input.dispatchTouchEvent`), held still before the
   finger lifts so no fling swallows the next tap; on WebKit it is a synthetic `touchstart` and
@@ -874,6 +875,15 @@ spec that is red today is marked `test.fail()`, with a note naming the ticket th
   card sort flips the shown ranks, and a field picked on the cards shows as the header's
   `aria-sort` at 1920 px. A team card's panel holds Status and Date, and its sort lists Rank, Team
   Time and Date.
+- `maps-wr-holder.spec.ts`: the WR holder on Maps, from the recorded `maps` set (it holds the
+  solo Qamariya-v2 and the team II-Pacey-CE records). At 360×780 a solo card shows the holder and
+  title under the WR time with no split, and a team card lists each member with the split, fastest
+  first, inside its card and with no page overflow; tapping the time opens the cap or the team cap.
+  At 1920×1080 on touch the table's WR cell shows the block inline, inside the cell, and the time's
+  tap tooltip stays "View cap details". `e2e/maps-wr-holder.spec.ts` covers the pointer tooltip on
+  `desktop-chromium`: the solo and team holder, the fallback for a team record served without
+  `members`, no holder while the world record read is pending, the click targets, and the tutorial's
+  mock holder.
 - `home-records-cards.spec.ts`: Home's Latest World Records on a phone. It takes a team record
   with more than one member from the recorded `home` set, and checks that its card names every
   member.

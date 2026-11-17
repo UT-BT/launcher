@@ -33,6 +33,13 @@ function isAvatarableUserId(userId?: string | number): userId is string | number
     return String(userId).length > 5
 }
 
+/**
+ * Whether a `PlayerInfo` with this `userId` and `interactive` flag renders as a link to the player profile.
+ */
+export function isPlayerLinkable(userId?: string | number, interactive = true): boolean {
+    return isAvatarableUserId(userId) && interactive
+}
+
 export function PlayerAvatar({ userId, alias, title, sizePx, isLight, priority = false, className }: {
     userId: string | number
     alias?: string | null
@@ -86,7 +93,7 @@ export function PlayerInfo({
     const nameSizeClass = size === 'xl' ? 'text-lg' : size === 'lg' ? 'text-base' : size === 'sm' ? 'text-xs' : 'text-sm'
     const titleSizeClass = size === 'xl' || size === 'lg' ? 'text-xs' : 'text-[11px]'
 
-    const isClickable = isAvatarable && interactive
+    const isClickable = isPlayerLinkable(userId, interactive)
 
     const wrapperClass = cn(
         presentation === 'avatar'
