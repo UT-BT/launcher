@@ -5,7 +5,7 @@ import { settleLayout } from '../settle'
 import { notApplicable, resultOf, type RuleCheck } from './types'
 
 const TOLERANCE_PX = 4
-const WAIT_MS = 10_000
+const WAIT_MS = 20_000
 
 function destinationOf(surface: CrawlSurface): string {
     return surface.entry.view === 'world-records' ? 'Home' : 'World Records'

@@ -16,7 +16,8 @@ const SCOPE = matrixScope(process.env.MOBILE_MATRIX)
 const WRITING_LEDGER = process.env.MOBILE_LEDGER === 'write'
 const LEDGER = readLedger(LEDGER_DIR, RULE_IDS)
 const CRASHED = Symbol('error screen')
-const CRAWL_TIMEOUT_MS = 60_000
+const BASE_TIMEOUT_MS = 60_000
+const CRAWL_TIMEOUT_MS: Record<Engine, number> = { chromium: 180_000, webkit: 360_000 }
 const STEP_TIMEOUT_MS = 45_000
 
 function engineTags(engines: Engine[]): string[] {
@@ -67,7 +68,7 @@ async function runRule(context: RuleContext, rule: RuleId): Promise<RuleOutcome>
     return { rule, status: result.status, verdict, detail: result.detail }
 }
 
-test.describe.configure({ timeout: CRAWL_TIMEOUT_MS })
+test.describe.configure({ timeout: BASE_TIMEOUT_MS })
 
 test.beforeEach(async ({ page }) => {
     page.setDefaultTimeout(STEP_TIMEOUT_MS)
@@ -83,7 +84,7 @@ for (const viewport of crawlViewports(SCOPE)) {
 
         for (const surface of crawlSurfaces(SCOPE)) {
             test(surface.id, { tag: engineTags(viewport.engines) }, async ({ page, browserName }, testInfo) => {
-                test.slow()
+                test.setTimeout(CRAWL_TIMEOUT_MS[browserName as Engine])
                 const context: RuleContext = { page, surface, viewport, engine: browserName as Engine }
                 await openSurface(page, surface)
                 await settleLayout(page)

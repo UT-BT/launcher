@@ -505,7 +505,9 @@ sidebar entry on purpose: people arrive from a map, a record or a run.
 The page is in the mobile route manifest (`e2e/mobile/manifest/run-compare.ts`) with the `runs`
 drawer sheet modal, the `pov` (eight runs, plus the `run-menu` modal on the first roster row), `teams`, `start`
 (`/compare`) and `start-map` (`/compare?map=…`) sub-views
-([mobile-routes.md](../mobile-routes.md)). On a phone only the visible tiles stream: a hidden tile
+([mobile-routes.md](../mobile-routes.md)). Under the `empty` stress variant `start` and `start-map`
+are ready on their empty texts, and `teams` on the start page: its team runs come back without
+members, so the page drops them. On a phone only the visible tiles stream: a hidden tile
 drops its `src` and reloads empty, and a revealed one is seeked to the master clock. The captions
 of the visible tiles sit in a row under the stage. The POV switcher (`PovSwitcher`, a
 `Point of View` group of 44 px chips, grouped per team run) and a horizontal swipe on the stage

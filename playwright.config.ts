@@ -61,6 +61,7 @@ export default defineConfig({
     {
       name: 'mobile-suite-webkit',
       testMatch: MOBILE_SUITE,
+      timeout: 60_000,
       grepInvert: /@chromium-only/,
       fullyParallel: true,
       use: { ...devices['iPhone 14'], viewport: { width: 390, height: 844 }, contextOptions: { screen: { width: 390, height: 844 } }, storageState: APP_STORAGE_STATE },

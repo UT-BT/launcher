@@ -1,7 +1,7 @@
 import { EIGHT_RUN_IDS, START_MAP, TEAM_RUN_IDS } from '../fixtures/synthetic/run-compare'
 import { CAP_ID } from './cap-detail'
-import { heading, opens, settledStage, shows, steps, tap } from './steps'
-import type { MobileModal, MobileRouteEntry } from './types'
+import { heading, opens, rowsOf, settledStage, shows, steps, tap } from './steps'
+import type { MobileModal, MobileRouteEntry, PageStep } from './types'
 
 const RIVAL_ID = '418b0aec-34c5-40e7-acf4-f2bc33373063'
 
@@ -27,6 +27,18 @@ const runMenu: MobileModal = {
         { rule: 'modal-fits', reason: 'a dropdown menu has no close control: an outside tap or Escape closes it, and Radix keeps it inside the viewport' },
         { rule: 'rotation-recovers', reason: 'it measures and taps the close control after the rotation, and a dropdown menu has none' },
     ],
+}
+
+const startReady = steps(
+    heading('Pick a Map'),
+    shows(page => page.getByRole('list', { name: 'Latest World Records' })
+        .or(page.getByText('No recent records to show', { exact: true }))
+        .first()),
+)
+
+const teamStageReady: PageStep = async (page, data) => {
+    const members = rowsOf(data?.api(`/caps/team_caps/${TEAM_RUN_IDS[0]}/detail`), 'members')
+    await (members?.length === 0 ? startReady : settledStage)(page, data)
 }
 
 const compareHelp = (trigger: string): MobileModal => ({
@@ -57,7 +69,7 @@ export const runCompare: MobileRouteEntry = {
             id: 'teams',
             label: 'Two team runs, POVs grouped by team',
             path: `/compare?runs=${TEAM_RUN_IDS.join(',')}`,
-            ready: settledStage,
+            ready: teamStageReady,
             modals: [runsDrawer],
             stress: { pr: 'long-text' },
         },
@@ -65,7 +77,7 @@ export const runCompare: MobileRouteEntry = {
             id: 'start',
             label: 'Start: pick a map',
             path: '/compare',
-            ready: steps(heading('Pick a Map'), shows(page => page.getByRole('list', { name: 'Latest World Records' }))),
+            ready: startReady,
             modals: [compareHelp('How it works')],
             stress: { pr: 'long-text' },
         },
@@ -73,7 +85,12 @@ export const runCompare: MobileRouteEntry = {
             id: 'start-map',
             label: 'Start: pick runs on a map',
             path: `/compare?map=${START_MAP}`,
-            ready: steps(heading('Pick Runs'), shows(page => page.getByRole('list', { name: 'Leaderboard' }))),
+            ready: steps(
+                heading('Pick Runs'),
+                shows(page => page.getByRole('list', { name: 'Leaderboard' })
+                    .or(page.getByText('No runs on this map yet', { exact: true }))
+                    .first()),
+            ),
             modals: [compareHelp('About these runs')],
             stress: { pr: 'long-text' },
         },
