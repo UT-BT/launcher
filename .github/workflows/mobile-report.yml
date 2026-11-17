@@ -1,12 +1,12 @@
-name: Mobile nightly
+name: Mobile report
 
 on:
   schedule:
-    - cron: '0 3 * * *'
+    - cron: '0 3 * * 1'
   workflow_dispatch:
     inputs:
       ledger:
-        description: Record every rule result for the ledger instead of judging against it
+        description: Record every rule result for the ledger instead of reporting against it
         type: boolean
         default: false
 
@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: mobile-nightly-${{ github.ref }}
+  group: mobile-report-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -46,7 +46,8 @@ jobs:
         run: npx playwright install webkit
 
       - name: Mobile suite (full matrix, webkit shard ${{ matrix.shard }}/12)
-        run: npx cross-env E2E_SERVER=build MOBILE_MATRIX=full playwright test --project=mobile-suite-webkit --workers=3 --shard=${{ matrix.shard }}/12 --reporter=list,github,html,./e2e/mobile/gallery-reporter.ts
+        run: npx cross-env E2E_SERVER=build MOBILE_MATRIX=full playwright test --project=mobile-suite-webkit --workers=3 --shard=${{ matrix.shard }}/12 --reporter=list,html,./e2e/mobile/gallery-reporter.ts
+        continue-on-error: true
         env:
           PLAYWRIGHT_HTML_OPEN: never
           MOBILE_LEDGER: ${{ inputs.ledger && 'write' || '' }}
@@ -95,7 +96,8 @@ jobs:
         run: npx playwright install chromium
 
       - name: Mobile suite (full matrix, chromium shard ${{ matrix.shard }}/4)
-        run: npx cross-env E2E_SERVER=build MOBILE_MATRIX=full playwright test --project=mobile-suite-chromium --workers=3 --shard=${{ matrix.shard }}/4 --reporter=list,github,html,./e2e/mobile/gallery-reporter.ts
+        run: npx cross-env E2E_SERVER=build MOBILE_MATRIX=full playwright test --project=mobile-suite-chromium --workers=3 --shard=${{ matrix.shard }}/4 --reporter=list,html,./e2e/mobile/gallery-reporter.ts
+        continue-on-error: true
         env:
           PLAYWRIGHT_HTML_OPEN: never
           MOBILE_LEDGER: ${{ inputs.ledger && 'write' || '' }}

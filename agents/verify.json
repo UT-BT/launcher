@@ -235,7 +235,7 @@
   ],
   "agents/testing.md": [
     ".github/workflows/ci.yml",
-    ".github/workflows/mobile-nightly.yml",
+    ".github/workflows/mobile-report.yml",
     ".github/workflows/release.yml",
     ".github/workflows/web.yml",
     ".prettierignore",
@@ -450,7 +450,7 @@
   ],
   "agents/mobile.md": [
     ".github/workflows/ci.yml",
-    ".github/workflows/mobile-nightly.yml",
+    ".github/workflows/mobile-report.yml",
     "app/components/layout/AppLayout.tsx",
     "app/components/layout/BottomTabBar.tsx",
     "app/components/layout/HideOnScrollBars.tsx",

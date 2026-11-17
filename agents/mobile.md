@@ -221,11 +221,11 @@ manifest by `npm run docs:mobile-routes`, and `npm run docs:check` fails while i
   each rule's outcome. Nothing is compared against baselines.
 
 `npm run test:mobile` runs the PR subset on the built bundle: WebKit at 390×844 and 844×390,
-Chromium at 360×780 and 915×412, plus every interaction spec. The `Mobile suite` job in
-`.github/workflows/ci.yml` is the mobile gate: its Chromium half runs on every pull request and its
-WebKit half on pushes to `staging` and manual runs, and
-`.github/workflows/mobile-nightly.yml` runs the full matrix (`npm run test:mobile:full`, split by
-engine) every night ([testing.md](testing.md#ci)). While iterating, narrow with `-g "<surface or viewport>"` or
+Chromium at 360×780 and 915×412, plus every interaction spec. The `Mobile suite (chromium)` jobs in
+`.github/workflows/ci.yml` are the mobile gate: they run the Chromium half on every pull request and
+push to `staging`. `.github/workflows/mobile-report.yml` runs the full matrix on both engines
+(`npm run test:mobile:full`, split by engine) every Monday and reports in its job summaries
+without failing ([testing.md](testing.md#ci)). While iterating, narrow with `-g "<surface or viewport>"` or
 run one spec with `npx playwright test e2e/mobile/<spec> --project=mobile-suite-webkit`, which uses
 the dev server.
 

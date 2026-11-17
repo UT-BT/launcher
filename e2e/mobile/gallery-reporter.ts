@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { appendFileSync, copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { basename, join, relative } from 'node:path'
 import type { FullConfig, Reporter, TestCase, TestResult } from '@playwright/test/reporter'
 import { LEDGER_DIR, readLedger, regenerateLedger, writeLedger } from './ledger'
@@ -22,6 +22,7 @@ interface Unfinished {
 
 const CRAWL_SPEC = 'crawl.spec.ts'
 const FINISHED: TestResult['status'][] = ['passed', 'failed']
+const SUMMARY_ROWS = 200
 
 const TALLIES = ['pass', 'known', 'new', 'stale', 'n/a', 'skipped'] as const
 type Tally = (typeof TALLIES)[number]
@@ -85,6 +86,7 @@ export default class GalleryReporter implements Reporter {
     private folder = ''
     private readonly crawled = new Map<string, Crawled>()
     private readonly unfinished = new Map<string, Unfinished>()
+    private readonly failedSpecs = new Map<string, Unfinished>()
 
     printsToStdio(): boolean {
         return false
@@ -104,17 +106,23 @@ export default class GalleryReporter implements Reporter {
             return
         }
         const project = test.parent.project()?.name ?? ''
-        if (!project.startsWith('mobile-suite') || basename(test.location.file) !== CRAWL_SPEC) return
-        if (result.status === 'passed' || result.status === 'skipped') return
+        if (!project.startsWith('mobile-suite')) return
+        const crawl = basename(test.location.file) === CRAWL_SPEC
+        if (result.status === 'passed' || result.status === 'skipped') {
+            this.failedSpecs.delete(test.id)
+            return
+        }
+        const entry = { title: test.titlePath().slice(3).join(' › '), project, error: result.error?.message ?? result.status }
+        if (!crawl) {
+            this.failedSpecs.set(test.id, entry)
+            return
+        }
         this.crawled.delete(test.id)
-        this.unfinished.set(test.id, {
-            title: test.titlePath().slice(3).join(' › '),
-            project,
-            error: result.error?.message ?? result.status,
-        })
+        this.unfinished.set(test.id, entry)
     }
 
     onEnd() {
+        this.writeSummary()
         if (!this.crawled.size && !this.unfinished.size) return
         const shots = join(this.folder, 'shots')
         mkdirSync(shots, { recursive: true })
@@ -140,6 +148,28 @@ export default class GalleryReporter implements Reporter {
             lines.push(`Ledger rewritten from ${observations.length} rule results in ${relative(process.cwd(), LEDGER_DIR)}`)
         }
         process.stdout.write(`${lines.join('\n')}\n`)
+    }
+
+    private writeSummary() {
+        const summaryPath = process.env.GITHUB_STEP_SUMMARY
+        if (!summaryPath) return
+        const records = [...this.crawled.values()].map(entry => entry.record)
+        if (!records.length && !this.unfinished.size && !this.failedSpecs.size) return
+        const flagged = records.flatMap(record => record.outcomes
+            .filter(outcome => outcome.verdict === 'new' || outcome.verdict === 'stale')
+            .map(outcome => `| ${outcome.verdict} | ${outcome.rule} | ${record.surface} | ${record.viewport.width}×${record.viewport.height} | ${record.engine} |`))
+        const lines = [`### Mobile report: ${records.length} surface runs`, '']
+        if (flagged.length) {
+            lines.push('| Verdict | Rule | Surface | Viewport | Engine |', '| --- | --- | --- | --- | --- |', ...flagged.slice(0, SUMMARY_ROWS))
+            if (flagged.length > SUMMARY_ROWS) lines.push('', `${flagged.length - SUMMARY_ROWS} more in the gallery.`)
+        } else {
+            lines.push('Every rule result matches the ledger.')
+        }
+        for (const [heading, entries] of [['Did not finish', this.unfinished], ['Failed specs', this.failedSpecs]] as const) {
+            if (!entries.size) continue
+            lines.push('', `**${heading}**`, '', ...[...entries.values()].map(entry => `- ${entry.title} (${entry.project})`))
+        }
+        appendFileSync(summaryPath, `${lines.join('\n')}\n`)
     }
 
     private tallies(records: CrawlRecord[]): Map<string, Record<Tally, number>> {
