@@ -141,7 +141,7 @@ achievements carry a Team chip.
   with `capabilities.game` and enable on `installationStatus === 'valid'` (Join also needs a
   free slot).
 - Join and Spec call `useServerJoin`, the same hook the server browser uses; Home shows its
-  notice (launch error or game already running) in a modal. The behaviour is in
+  notice (a launch error) in a modal. The behaviour is in
   [game.md](game.md).
 - `Main.tsx` renders Home from both `case 'home'` and the `default` case; both pass
   `installationStatus` and `newsSeenIso`, so keep their props in step.

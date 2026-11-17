@@ -14,12 +14,12 @@ launcher packaging, not the game: lib/main/README.md.
 
 | Path | Holds |
 |---|---|
-| `lib/main/game-service.ts` | install validation, standalone launch, `isGameRunning`, game profiles; Vitest covers Browse profiles and reserved names |
+| `lib/main/game-service.ts` | install validation, standalone launch, `isGameRunning`, `joinRunningGame` (hands a link to the running game), game profiles; Vitest covers Browse profiles and reserved names |
 | `lib/main/installation-service.ts`, `lib/main/patch-service.ts` | UT99 ISO download (cancel tested in Vitest) and setup, patch download, verify and extract |
 | `app/utils/ut99Install.ts` | the download-then-install flow behind a `Ut99InstallPort`, the cancel error and `isUt99DownloadCancelled`; Vitest |
 | `lib/main/demo-watcher-service.ts` | the demo watcher: detection, cap checks, upload, durable retry, upload log; Vitest covers the upload's sign-in refresh and outcome |
-| `lib/main/game-processes.ts` | pure `tasklist` parsing that keeps cam PIDs out of `isGameRunning`; Vitest |
-| `lib/conveyor/handlers/` | `game-handler.ts` (join, ping), `app-handler.ts` (install, patches, profiles, demo log), `maps-handler.ts` and `demos-handler.ts` (writes into the install), `window-handler.ts` |
+| `lib/main/game-processes.ts` | pure `tasklist` parsing that keeps cam PIDs out of `isGameRunning`, and `runningGameJoinUrl` for the running-game link; Vitest |
+| `lib/conveyor/handlers/` | `game-handler.ts` (launch, running-game join, ping), `app-handler.ts` (install, patches, profiles, demo log), `maps-handler.ts` and `demos-handler.ts` (writes into the install), `window-handler.ts` |
 | `app/components/main/Main.tsx` | `installationStatus`, `validateInstallation`, the install banner |
 | `app/components/pages/GameInstallationSettings.tsx` | Settings → Installation: ISO installer, folder picker, patch list |
 | `app/utils/serverJoin.ts` | pure Join/Spec/Play decisions (running check, `User.ini` class writes) behind a `GameLaunchPort`; Vitest |
@@ -115,8 +115,8 @@ is `'Unsupported'`.
   `game.launchGameStandalone()` spawns `System/UnrealTournament.exe` detached, with
   `System` as the working directory. A launch failure only logs.
 - **Join / Spec** (server browser rows and compact cards, Home's favorite servers card)
-  check that the game is not running (below), write `User.ini` `[DefaultPlayer]`, then call
-  `game.launchGame(ip, hostport)`:
+  hand the link to the game when it runs (below). With the game closed, they write
+  `User.ini` `[DefaultPlayer]`, then call `game.launchGame(ip, hostport)`:
   - Spec sets `OverrideClass=Botpack.CHSpectator`.
   - Join and Play clear `OverrideClass`, and clear `Class` when it is `Botpack.CHSpectator`,
     so a Spec never carries over into a later Join or Play.
@@ -125,9 +125,10 @@ is `'Unsupported'`.
   The schema requires a positive integer port, so a server whose `hostport` normalised to
   `0` fails before main runs. Join passes no password or URL options; the stream cams are
   the only launch that sends a server password (lib/main/README.md).
-- `useServerJoin` holds one `notice` (`{ title, message }`): a launch error ("Launch Error")
-  or the already-running notice ("Game Already Running"). The server browser shows it in its
-  `ErrorModal`, Home in a `Modal`.
+- `joinServer` returns `launched` (game was closed), `joined` (link handed to the running
+  game) or `busy` (another Join or Spec is still in flight). `useServerJoin` shows no notice
+  for any of them. It holds one `notice` (`{ title, message }`) for a thrown error only
+  ("Launch Error"). The server browser shows it in its `ErrorModal`, Home in a `Modal`.
 - **Ping.** `pingServer` accepts IPv4 only (schema) and runs one `ping` with a 1 s
   timeout; `999` means failed. The server browser pings unique IPs six at a time after
   each fetch, behind `capabilities.ping`.
@@ -150,9 +151,15 @@ is `'Unsupported'`.
 - `startBackgroundGamePoller` (`favorites-handler.ts`, every 5 s from main) sends
   `favorites:game-closed` on a running → stopped edge; map favorites re-read the ini then
   ([api.md](../api.md)).
-- Join and Spec check it first. While the game runs, or while another Join or Spec is still
-  starting it, they write nothing and launch nothing, and show "UT99 is already running.
-  Close it to join another server." instead.
+- Join and Spec check it first. While the game runs, they write no ini and call
+  `game.joinRunningGame(ip, hostport, asSpectator)`, which hands the running game the link
+  and starts no second client (lib/main/README.md). The link carries the class: Spec joins
+  as a spectator, Join as a player, even in a game that started as a spectator.
+- Limit: the link sends only `OverrideClass`. A game that holds `Class=Botpack.CHSpectator`
+  keeps it on a running-game Join; only the closed-game path resets `Class`.
+- The channel refuses while stream cams run, since the link could reach a cam instead of
+  the player's game; its error shows as the "Launch Error" notice.
+- While another Join or Spec is still in flight, a click returns `busy` and does nothing.
 - Nothing checks it before Play, a profile switch or a settings write, so a second Play
   still starts a second client.
 

@@ -16,6 +16,7 @@ function desktopGamePort(): GameLaunchPort {
         isGameRunning: () => game.isGameRunning(),
         launchGame: (ip, port) => game.launchGame(ip, port),
         launchGameStandalone: () => game.launchGameStandalone(),
+        joinRunningGame: (ip, port, asSpectator) => game.joinRunningGame(ip, port, asSpectator),
     }
 }
 
@@ -35,10 +36,7 @@ export function useServerJoin() {
     const join = useCallback(async (server: JoinTarget, asSpectator: boolean) => {
         if (!capabilities.game) return
         try {
-            const result = await joinServer(desktopGamePort(), server, asSpectator)
-            if (result.status === 'already-running') {
-                setNotice({ title: 'Game Already Running', message: result.message })
-            }
+            await joinServer(desktopGamePort(), server, asSpectator)
         } catch (err) {
             logger.error('Failed to launch game', { error: err })
             setNotice({

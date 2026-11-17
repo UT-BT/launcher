@@ -7,6 +7,7 @@ import { spawn } from 'child_process'
 import { join } from 'path'
 import { existsSync } from 'fs'
 import { gameService } from '@/lib/main/game-service'
+import { runningGameJoinUrl } from '@/lib/main/game-processes'
 
 export const registerGameHandlers = (_window: BrowserWindow) => {
     loggingService.info('Registering game IPC handlers', 'MainProcess')
@@ -37,6 +38,10 @@ export const registerGameHandlers = (_window: BrowserWindow) => {
         })
 
         gameProcess.unref()
+    })
+
+    handle('joinRunningGame', async (ip: string, port: number, asSpectator: boolean) => {
+        await gameService.joinRunningGame(runningGameJoinUrl(ip, port, asSpectator))
     })
 
     handle('launchGameStandalone', async () => {

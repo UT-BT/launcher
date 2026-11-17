@@ -1,5 +1,5 @@
 import { join, resolve } from 'path'
-import { exec, spawn } from 'child_process'
+import { exec, spawn, type ChildProcess } from 'child_process'
 import { existsSync, createReadStream, createWriteStream, mkdirSync, copyFileSync, readdirSync, rmSync, renameSync, statSync, readFileSync, writeFileSync } from 'fs'
 import { app, BrowserWindow, dialog, net } from 'electron'
 import { createHash } from 'crypto'
@@ -13,6 +13,23 @@ import { camService } from '@/lib/main/cam-service'
 import { hasPlayerGameProcess, parseTasklistPids } from '@/lib/main/game-processes'
 
 const INSTALL_PROFILE_MARKER = 'install.json'
+const LINK_HANDOFF_TIMEOUT_MS = 10000
+
+/** Resolves with the exit code of `child`, or `null` when it fails to start or does not exit within `timeoutMs`. */
+function waitForExit(child: ChildProcess, timeoutMs: number): Promise<number | null> {
+    return new Promise((resolveExit) => {
+        const timer = setTimeout(() => resolveExit(null), timeoutMs)
+        child.once('exit', (code) => {
+            clearTimeout(timer)
+            resolveExit(code)
+        })
+        child.once('error', (error) => {
+            clearTimeout(timer)
+            loggingService.error('Could not start the link hand-off', 'GameService', error)
+            resolveExit(null)
+        })
+    })
+}
 
 type InstallProfileRole = 'original' | 'default'
 
@@ -584,6 +601,45 @@ export class GameService {
         })
 
         gameProcess.unref()
+    }
+
+    /**
+     * Hands `url` to the UT99 game that already runs. A second `UnrealTournament.exe <url>` started without
+     * `-NewWindow` forwards the link to the open game window and exits with 0, so no second client stays.
+     * Throws an `Error` a player can read when the link cannot reach the player's game.
+     */
+    async joinRunningGame(url: string): Promise<void> {
+        const installPath = getUt99InstallPath()
+        if (!installPath) {
+            throw new Error('UT99 install path not found')
+        }
+
+        const exePath = join(installPath, 'System', 'UnrealTournament.exe')
+        if (!existsSync(exePath)) {
+            throw new Error('UnrealTournament.exe not found')
+        }
+
+        if (!(await this.isGameRunning())) {
+            throw new Error('UT99 is not running anymore, so it could not join the server. Click Join again to start it.')
+        }
+
+        // The forwarder picks any open UT window, and a cam is one, so the link could move a cam instead.
+        if (camService.runningPids().size > 0) {
+            throw new Error('Stop the stream cams first: while they run, UT99 may send the server link to a cam instead of your game.')
+        }
+
+        loggingService.info(`Handing URL to the running game: ${url}`, 'GameService')
+
+        const forwarder = spawn(exePath, [url], {
+            cwd: join(installPath, 'System'),
+            stdio: 'ignore',
+        })
+
+        if ((await waitForExit(forwarder, LINK_HANDOFF_TIMEOUT_MS)) !== 0) {
+            // Still running means it found no game window and became a client of its own.
+            forwarder.kill()
+            throw new Error('UT99 did not take the server link. Close the game and click Join again.')
+        }
     }
 
     async isGameRunning(): Promise<boolean> {

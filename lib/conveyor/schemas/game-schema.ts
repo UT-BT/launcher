@@ -8,6 +8,14 @@ export const gameIpcSchema = {
         ]),
         return: z.void(),
     },
+    joinRunningGame: {
+        args: z.tuple([
+            z.string().min(1), // ip
+            z.number().int().positive(), // port
+            z.boolean(), // asSpectator
+        ]),
+        return: z.void(),
+    },
     launchGameStandalone: {
         args: z.tuple([]),
         return: z.void(),
