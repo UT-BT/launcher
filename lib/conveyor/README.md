@@ -93,6 +93,11 @@ first value of a duplicated key, `readIniSection` returns the section as
 through `app/platform/gateway.ts`, which normalises the server list and takes the web
 path on the web build.
 
+`launchGame(ip, port)` starts UT99 on a server; `joinRunningGame(ip, port, asSpectator)`
+hands the server to the game that already runs, as a spectator or a player, and never
+starts a second client. It throws a readable `Error` when it cannot
+([lib/main/README.md](../main/README.md#connect-urls-for-the-players-game)).
+
 ### `streamKit` (Windows desktop only)
 
 Every call refuses with `unsupported-platform` off Windows; the renderer gates the UI on

@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type BrowserContext, type Page } from '@playwright/test'
 import type { PickBanState } from '../app/utils/api'
 import {
     ELIGIBLE_MAPS,
@@ -26,6 +26,7 @@ const INTRO_START = T0 + LEAD_MS
 const INTRO_END = INTRO_START + INTRO_MS
 const FIRST_LOCK = INTRO_END + 10_000
 const HOLD_MS = 600_000
+const STEP_MS = 100
 const STAGE_WIDTHS = [360, 1024, 1440, 1920, 2240, 2560, 3840]
 const CORS = {
     'access-control-allow-origin': '*',
@@ -41,10 +42,41 @@ interface FakeServer {
     servedUnchanged: number
     firstServed: Map<number, number>
     authorized: boolean
+    now: () => number
+}
+
+interface TestClock {
+    now: () => number
+    pauseAt: (at: number) => Promise<void>
+    runFor: (ms: number) => Promise<void>
+}
+
+async function installClock(context: BrowserContext): Promise<TestClock> {
+    let pausedAt: number | null = null
+    await context.clock.install({ time: Date.now() })
+    return {
+        now: () => pausedAt ?? Date.now(),
+        async pauseAt(at) {
+            pausedAt = at
+            await context.clock.pauseAt(at)
+        },
+        async runFor(ms) {
+            pausedAt = (pausedAt ?? Date.now()) + ms
+            await context.clock.runFor(ms)
+        },
+    }
+}
+
+function drainTasks(page: Page): Promise<void> {
+    return page.evaluate(() => new Promise<void>(resolve => {
+        const channel = new MessageChannel()
+        channel.port1.onmessage = () => resolve()
+        channel.port2.postMessage(null)
+    }))
 }
 
 function serverTimeOf(server: FakeServer): number {
-    return server.anchor + (Date.now() - server.startedAt)
+    return server.anchor + (server.now() - server.startedAt)
 }
 
 async function serve(page: Page, server: FakeServer) {
@@ -60,7 +92,7 @@ async function serve(page: Page, server: FakeServer) {
         const now = serverTimeOf(server)
         const state = asSpectator({ ...server.stateAt(now), server_now: new Date(now).toISOString() })
         const etag = `"v${state.version}"`
-        if (!server.firstServed.has(state.version)) server.firstServed.set(state.version, Date.now())
+        if (!server.firstServed.has(state.version)) server.firstServed.set(state.version, server.now())
         const headers = { ...CORS, etag, 'x-server-now': state.server_now }
         if (request.headers()['if-none-match'] === etag) {
             server.servedUnchanged += 1
@@ -71,8 +103,8 @@ async function serve(page: Page, server: FakeServer) {
     })
 }
 
-function fakeServer(anchor: number, stateAt: (serverTime: number) => PickBanState): FakeServer {
-    return { stateAt, anchor, startedAt: Date.now(), servedFresh: 0, servedUnchanged: 0, firstServed: new Map(), authorized: false }
+function fakeServer(anchor: number, stateAt: (serverTime: number) => PickBanState, now = Date.now): FakeServer {
+    return { stateAt, anchor, startedAt: now(), servedFresh: 0, servedUnchanged: 0, firstServed: new Map(), authorized: false, now }
 }
 
 async function setAnimations(page: Page, animations: 'on' | 'off') {
@@ -163,36 +195,31 @@ test('the match banner names the team currently choosing', async ({ page }) => {
 test('a lock-in delivered early is revealed at its reveal_at, at the same moment on two screens', async ({ browser, isMobile }) => {
     test.skip(isMobile)
 
-    const beforeLock = readAt(started(), FIRST_LOCK - 5_000)
     const afterLock = locked(started(), ALPHA, FIRST_LOCK)
-    const server = fakeServer(FIRST_LOCK - 15_000, serverTime => (serverTime < FIRST_LOCK ? beforeLock : afterLock))
+    const context = await browser.newContext()
+    const clock = await installClock(context)
+    await clock.pauseAt(clock.now() + 1_000)
+    const server = fakeServer(FIRST_LOCK - 15_000, () => afterLock, clock.now)
     const revealAtLocal = server.startedAt + (FIRST_LOCK + LEAD_MS - server.anchor)
 
-    const context = await browser.newContext()
     const screens = [await context.newPage(), await context.newPage()]
+    const step = async () => {
+        await clock.runFor(STEP_MS)
+        await Promise.all(screens.map(drainTasks))
+    }
     for (const screen of screens) {
         await serve(screen, server)
         await screen.goto(PAGE_PATH)
-        await expect(stage(screen)).toContainText('Crimson Cats')
+        await expect(async () => {
+            await step()
+            await expect(stage(screen)).toContainText('Crimson Cats', { timeout: 100 })
+        }).toPass({ timeout: 20_000 })
     }
 
-    const revealedAt = await Promise.all(screens.map(async screen => {
-        const handle = await screen.waitForFunction(
-            () => (document.querySelector('section[aria-label="Picks & Bans Stage"]')?.textContent?.includes('BANNED') ? Date.now() : 0),
-            null,
-            { polling: 'raf', timeout: 30_000 },
-        )
-        return Number(await handle.jsonValue())
-    }))
-
-    const deliveredAt = server.firstServed.get(afterLock.version)
-    expect(deliveredAt).toBeDefined()
-    expect(deliveredAt!).toBeLessThan(revealAtLocal - 250)
-    for (const at of revealedAt) {
-        expect(at).toBeGreaterThanOrEqual(revealAtLocal - 100)
-        expect(at).toBeLessThan(revealAtLocal + 400)
-    }
-    expect(Math.abs(revealedAt[0] - revealedAt[1])).toBeLessThan(150)
+    while (clock.now() < revealAtLocal - 300) await step()
+    for (const screen of screens) await expect(stage(screen)).not.toContainText('BANNED')
+    while (clock.now() < revealAtLocal + 200) await step()
+    for (const screen of screens) await expect(stage(screen)).toContainText('BANNED')
 
     await context.close()
 })
@@ -265,34 +292,29 @@ test('the stage keeps one height per width and fits every state inside it', asyn
     }
 })
 
-test('the countdown bar glides, and steps once a second with animations off', async ({ page, isMobile }) => {
-    test.skip(isMobile)
+for (const animations of ['on', 'off'] as const) {
+    const motion = animations === 'on' ? 'glides' : 'steps once a second with animations off'
+    test(`the countdown bar ${motion}`, async ({ page, isMobile }) => {
+        test.skip(isMobile)
 
-    const intro = { ...held(started()), intro_ends_at: iso(INTRO_START + HOLD_MS) }
-    const barPositions = () => page.evaluate(() => new Promise<number>(resolve => {
-        const bar = document.querySelector('section[aria-label="Picks & Bans Stage"] .origin-left.will-change-transform') as HTMLElement
-        const seen = new Set<string>()
-        const startedAt = performance.now()
-        const sample = () => {
-            seen.add(bar.style.transform)
-            if (performance.now() - startedAt < 2_500) requestAnimationFrame(sample)
-            else resolve(seen.size)
-        }
-        requestAnimationFrame(sample)
-    }))
-
-    for (const animations of ['on', 'off'] as const) {
+        const intro = { ...held(started()), intro_ends_at: iso(INTRO_START + HOLD_MS) }
+        const clock = await installClock(page.context())
         await setAnimations(page, animations)
-        await page.unrouteAll()
-        await serve(page, fakeServer(INTRO_START + 1_000, () => intro))
+        await serve(page, fakeServer(INTRO_START + 1_000, () => intro, clock.now))
         await page.goto(PAGE_PATH)
         await expect(stage(page)).toContainText(/until Picks & Bans start/)
 
-        const positions = await barPositions()
-        if (animations === 'off') expect(positions).toBeLessThanOrEqual(4)
-        else expect(positions).toBeGreaterThan(10)
-    }
-})
+        const bar = stage(page).locator('.origin-left.will-change-transform')
+        const positions = new Set<string>()
+        await clock.pauseAt(clock.now() + 500)
+        for (let step = 0; step < 25; step += 1) {
+            await clock.runFor(100)
+            positions.add(await bar.evaluate(element => (element as HTMLElement).style.transform))
+        }
+        if (animations === 'off') expect(positions.size).toBeLessThanOrEqual(4)
+        else expect(positions.size).toBeGreaterThan(20)
+    })
+}
 
 function sampleStageOpacity(page: Page, part: 'reveal' | 'paused', durationMs: number) {
     return page.evaluate(([part, durationMs]) => new Promise<number[]>(resolve => {

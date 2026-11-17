@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { hasPlayerGameProcess, parseTasklistPids } from './game-processes'
+import { hasPlayerGameProcess, parseTasklistPids, runningGameJoinUrl } from './game-processes'
 
 const TASKLIST = [
     '"UnrealTournament.exe","4120","Console","1","412,300 K"',
@@ -32,5 +32,20 @@ describe('hasPlayerGameProcess', () => {
 
     it('is false when nothing runs', () => {
         expect(hasPlayerGameProcess([], new Set())).toBe(false)
+    })
+})
+
+describe('runningGameJoinUrl', () => {
+    it.each([
+        { button: 'Spec', asSpectator: true, url: 'unreal://203.0.113.10:7777?OverrideClass=Botpack.CHSpectator' },
+        { button: 'Join', asSpectator: false, url: 'unreal://203.0.113.10:7777?OverrideClass=' },
+    ])('sets the class option for $button', ({ asSpectator, url }) => {
+        expect(runningGameJoinUrl('203.0.113.10', 7777, asSpectator)).toBe(url)
+    })
+
+    it('refuses an address that could carry extra options', () => {
+        expect(() => runningGameJoinUrl('203.0.113.10?Class=x', 7777, false)).toThrow(
+            'Invalid server address: 203.0.113.10?Class=x',
+        )
     })
 })

@@ -19,7 +19,7 @@ import {
 import { MapReviewsModal } from '@/app/components/modals/MapReviewsModal'
 import { ReplayVideoFooter, ReplayVideoPlayer } from '@/app/components/shared/ReplayVideoModal'
 import { CapTimeLink, openCap, openTeamCap } from '@/app/components/shared/CapTimeLink'
-import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { PlayerInfo, isPlayerLinkable } from '@/app/components/shared/PlayerInfo'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { MapNavLink } from '@/app/components/shared/MapNavLink'
@@ -27,6 +27,9 @@ import { NavLink } from '@/app/components/navigation/NavLink'
 import { Tutorial } from '@/app/components/shared/Tutorial'
 import { useTutorialState } from '@/app/components/shared/useTutorialState'
 import { buildSteps } from '@/app/components/pages/maps/mapsTutorialSteps'
+import { toWRHolder, wrHolderLines } from '@/app/components/pages/maps/wrHolder'
+import { WRHolderDetails } from '@/app/components/pages/maps/WRHolderDetails'
+import { useDeviceEnvironment } from '@/app/device/useDeviceEnvironment'
 import { PaginationBar } from '@/app/components/ui/pagination'
 import { MultiFilterDropdown } from '@/app/components/ui/multi-filter-dropdown'
 import { FilterPanelRow } from '@/app/components/ui/filter-panel-row'
@@ -171,6 +174,10 @@ const COLUMN_WIDTH: Partial<Record<ColumnId, string>> = {
     community_rating: '11rem',
     my_rating: '8rem',
 }
+
+// On touch the WR cell shows the record holder inline under the time, so the
+// column needs room for a team member line: avatar, name and split.
+const WR_TOUCH_WIDTH = '15rem'
 
 const COLUMN_PRIORITY: Partial<Record<ColumnId, number>> = {
     world_record: 90,
@@ -425,7 +432,7 @@ function getTutorialMockRow(mapName: string): {
         },
         wrHolder: {
             user_id: '0', alias: 'TopPlayer', cap_id: 'tutorial-mock-wr',
-            color_r: 100, color_g: 200, color_b: 255,
+            color_r: 100, color_g: 200, color_b: 255, title: null,
         },
         wr: 42.567,
     }
@@ -612,6 +619,7 @@ export function MapsPage({
     favoriteMapNames, onToggleFavorite, initialNewOnly,
 }: MapsPageProps) {
     const accessToken = userProfile?.accessToken
+    const touch = useDeviceEnvironment(env => env.touch)
     const browseToken = accessToken ?? ''
     const autoPageSize = useAutoPageSize(computePageSize)
     const pageSize = state.pageSizePreference === 'auto' ? autoPageSize : state.pageSizePreference
@@ -1216,22 +1224,14 @@ export function MapsPage({
         }
         if (missing.length === 0) return
         missing.forEach(name => inFlight.add(name))
-        let cancelled = false
+        // No cancel on cleanup: a re-run while this batch is in flight skips its
+        // maps, so dropping the result would leave them without a holder for good.
+        // Holders are keyed by map name, so a late result is still correct.
         ;(async () => {
             try {
                 const records = await fetchWorldRecordsForMaps(browseToken, missing)
-                if (cancelled) return
                 const additions: Record<string, WRHolder> = {}
-                for (const r of records) {
-                    additions[r.map] = {
-                        user_id: r.user_id,
-                        alias: r.alias,
-                        cap_id: r.cap_id,
-                        color_r: r.color_r,
-                        color_g: r.color_g,
-                        color_b: r.color_b,
-                    }
-                }
+                for (const r of records) additions[r.map] = toWRHolder(r)
                 onCachesChange(prev => ({
                     ...prev,
                     wrHolders: { ...prev.wrHolders, ...additions },
@@ -1241,9 +1241,6 @@ export function MapsPage({
                 missing.forEach(name => inFlight.delete(name))
             }
         })()
-        return () => {
-            cancelled = true
-        }
     }, [pageItems, browseToken, caches.wrHoldersFetched, onCachesChange])
 
     const uniqueAuthors = caches.authors
@@ -1476,7 +1473,7 @@ export function MapsPage({
                     <DataTableHeaderCell
                         key={id}
                         align="center"
-                        width="9rem"
+                        width={touch ? WR_TOUCH_WIDTH : COLUMN_WIDTH.world_record}
                         sortable
                         sortDirection={directionFor('world_record')}
                         onSort={() => handleSort('world_record')}
@@ -1554,6 +1551,7 @@ export function MapsPage({
         wr: number | undefined
         bestCap: BestCap | undefined
         wrHolder: WRHolder | undefined
+        holderDetails: React.ReactNode
         medalTier: MedalTier
         isFirstRow: boolean
         hot: boolean
@@ -1577,7 +1575,7 @@ export function MapsPage({
     }
 
     const mapCell = (id: ColumnId, ctx: RowCtx): React.ReactNode => {
-        const { map, author, tags, ratings, myReview, mapNew, wr, bestCap, wrHolder, medalTier, isFirstRow } = ctx
+        const { map, author, tags, ratings, myReview, mapNew, wr, bestCap, wrHolder, holderDetails, medalTier, isFirstRow } = ctx
         switch (id) {
             case 'thumbnail':
                 return <MapThumbnail mapName={map.name} version={map.screenshot_updated} className="w-12 h-12" />
@@ -1643,8 +1641,14 @@ export function MapsPage({
                     </div>
                 )
             }
-            case 'author':
-                return <PlayerInfo userId={map.author_ref} presentation="name" alias={author || '—'} size="md" />
+            case 'author': {
+                const authorInfo = <PlayerInfo userId={map.author_ref} presentation="name" alias={author || '—'} size="md" />
+                return isPlayerLinkable(map.author_ref) ? (
+                    <Tooltip content="View player profile" side="top" className="flex w-fit min-w-0 max-w-full">
+                        {authorInfo}
+                    </Tooltip>
+                ) : authorInfo
+            }
             case 'difficulty':
                 return (
                     <div className="flex items-center gap-2">
@@ -1678,28 +1682,30 @@ export function MapsPage({
                         {formatCapTime(wr)}
                     </span>
                 )
-                const timeButton = clickable ? (
-                    <Tooltip content="View cap details" side="top">
-                        <NavLink
-                            elementRef={isFirstRow ? firstRowWrRef : undefined}
-                            view={isTeamMap ? 'team-cap-detail' : 'cap-detail'}
-                            params={isTeamMap ? { teamCapId: capId ?? '' } : { capId: capId ?? '' }}
-                            onActivate={() => {
-                                if (!capId) return
-                                if (isTeamMap) openTeamCap(capId)
-                                else openCap(capId)
-                            }}
-                            className="text-left cursor-pointer group/wr"
-                        >
-                            {timeNode}
-                        </NavLink>
-                    </Tooltip>
+                const timeLink = clickable ? (
+                    <NavLink
+                        elementRef={isFirstRow ? firstRowWrRef : undefined}
+                        view={isTeamMap ? 'team-cap-detail' : 'cap-detail'}
+                        params={isTeamMap ? { teamCapId: capId ?? '' } : { capId: capId ?? '' }}
+                        onActivate={() => {
+                            if (!capId) return
+                            if (isTeamMap) openTeamCap(capId)
+                            else openCap(capId)
+                        }}
+                        className="text-left cursor-pointer group/wr"
+                    >
+                        {timeNode}
+                    </NavLink>
+                ) : null
+                const timeButton = timeLink ? (
+                    <Tooltip content={(!touch && holderDetails) || 'View cap details'} side="top">{timeLink}</Tooltip>
                 ) : (
                     <div ref={isFirstRow ? (firstRowWrRef as unknown as React.RefObject<HTMLDivElement | null>) : undefined} className="text-left">{timeNode}</div>
                 )
                 return (
-                    <div className="inline-flex flex-col items-center leading-tight">
+                    <div className="inline-flex max-w-full flex-col items-center gap-1 leading-tight">
                         {timeButton}
+                        {touch && holderDetails && <div className="min-w-0 max-w-full font-sans text-left">{holderDetails}</div>}
                     </div>
                 )
             }
@@ -1750,17 +1756,19 @@ export function MapsPage({
             }
             case 'replay':
                 return (
-                    <button
-                        ref={isFirstRow ? firstRowReplayRef : undefined}
-                        type="button"
-                        onClick={e => {
-                            e.stopPropagation()
-                            setReplayPickerMap(map.name)
-                        }}
-                        className="inline-flex items-center justify-center px-3 py-1 rounded-md text-xs font-medium border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/25 hover:text-rose-100 hover:border-rose-500/50 transition-colors cursor-pointer"
-                    >
-                        Demos
-                    </button>
+                    <Tooltip content="Browse demos" side="top">
+                        <button
+                            ref={isFirstRow ? firstRowReplayRef : undefined}
+                            type="button"
+                            onClick={e => {
+                                e.stopPropagation()
+                                setReplayPickerMap(map.name)
+                            }}
+                            className="inline-flex items-center justify-center px-3 py-1 rounded-md text-xs font-medium border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/25 hover:text-rose-100 hover:border-rose-500/50 transition-colors cursor-pointer"
+                        >
+                            Demos
+                        </button>
+                    </Tooltip>
                 )
             case 'community_rating':
                 return (
@@ -1856,10 +1864,12 @@ export function MapsPage({
             bestCap = mock.bestCap
             wrHolder = mock.wrHolder
         }
+        const isTeam = (map.required_players ?? 0) > 1
         return {
             map, author, tags, ratings, myReview,
             mapNew: isNew(map.added),
             wr, bestCap, wrHolder,
+            holderDetails: wrHolder && wrHolderLines(wrHolder, isTeam) && <WRHolderDetails holder={wrHolder} isTeam={isTeam} />,
             medalTier: computeMedalTier(bestCap, map as MapMetadata),
             isFirstRow: index === 0,
             hot: highlight.isNew(map.added),
@@ -1868,7 +1878,7 @@ export function MapsPage({
     })
 
     const mapFace = (ctx: RowCtx): React.ReactNode => {
-        const { map, mapNew, wr, bestCap, wrHolder, medalTier, isFirstRow } = ctx
+        const { map, mapNew, wr, bestCap, wrHolder, holderDetails, medalTier, isFirstRow } = ctx
         const isTeamMap = (map.required_players ?? 0) > 1
         const wrCapId = wrHolder?.cap_id
         const pbSeconds = bestCap && bestCap.cap_time_seconds > 0 ? bestCap.cap_time_seconds : null
@@ -1900,42 +1910,45 @@ export function MapsPage({
                     </div>
                     <div className="flex items-start justify-between gap-3">
                         {mapCell('difficulty', ctx)}
-                        <div className="flex flex-col items-end gap-1 font-mono text-sm tabular-nums">
-                            <div className="flex items-center gap-1.5">
-                                <span className={timeLabel}>WR</span>
-                                {wr != null && wr > 0 ? (
-                                    <span ref={isFirstRow ? (firstRowWrRef as React.RefObject<HTMLSpanElement | null>) : undefined}>
-                                        <CapTimeLink
-                                            capId={isTeamMap ? undefined : wrCapId}
-                                            teamCapId={isTeamMap ? wrCapId : undefined}
-                                            seconds={wr}
-                                            className="text-amber-300"
-                                        />
-                                    </span>
-                                ) : (
-                                    <span className="opacity-30">—</span>
-                                )}
-                            </div>
-                            {accessToken && (
-                                <div className="flex items-center gap-1.5">
-                                    <MedalIndicator tier={medalTier} bestCap={bestCap} />
-                                    <span className={timeLabel}>PB</span>
-                                    {pbSeconds != null ? (
-                                        <span ref={isFirstRow ? (firstRowPbRef as React.RefObject<HTMLSpanElement | null>) : undefined}>
-                                            <CapTimeLink
-                                                capId={isTeamMap ? undefined : pbCapId}
-                                                teamCapId={isTeamMap ? pbCapId : undefined}
-                                                seconds={pbSeconds}
-                                                className={pbTextColor(medalTier, isWR)}
-                                            />
-                                        </span>
-                                    ) : (
-                                        <span className="opacity-30">—</span>
-                                    )}
-                                </div>
+                        <div className="flex items-center gap-1.5 font-mono text-sm tabular-nums">
+                            <span className={timeLabel}>WR</span>
+                            {wr != null && wr > 0 ? (
+                                <span ref={isFirstRow ? (firstRowWrRef as React.RefObject<HTMLSpanElement | null>) : undefined}>
+                                    <CapTimeLink
+                                        capId={isTeamMap ? undefined : wrCapId}
+                                        teamCapId={isTeamMap ? wrCapId : undefined}
+                                        seconds={wr}
+                                        className="text-amber-300"
+                                    />
+                                </span>
+                            ) : (
+                                <span className="opacity-30">—</span>
                             )}
                         </div>
                     </div>
+                    {wr != null && wr > 0 && holderDetails && (
+                        <div className="flex justify-end">
+                            <div className="min-w-0 max-w-full">{holderDetails}</div>
+                        </div>
+                    )}
+                    {accessToken && (
+                        <div className="flex items-center justify-end gap-1.5 font-mono text-sm tabular-nums">
+                            <MedalIndicator tier={medalTier} bestCap={bestCap} />
+                            <span className={timeLabel}>PB</span>
+                            {pbSeconds != null ? (
+                                <span ref={isFirstRow ? (firstRowPbRef as React.RefObject<HTMLSpanElement | null>) : undefined}>
+                                    <CapTimeLink
+                                        capId={isTeamMap ? undefined : pbCapId}
+                                        teamCapId={isTeamMap ? pbCapId : undefined}
+                                        seconds={pbSeconds}
+                                        className={pbTextColor(medalTier, isWR)}
+                                    />
+                                </span>
+                            ) : (
+                                <span className="opacity-30">—</span>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
         )
@@ -1947,7 +1960,7 @@ export function MapsPage({
         .map(id => ({
             id,
             hiddenByUser: !isColumnVisible(id),
-            width: COLUMN_WIDTH[id],
+            width: id === 'world_record' && touch ? WR_TOUCH_WIDTH : COLUMN_WIDTH[id],
             priority: COLUMN_PRIORITY[id],
             required: REQUIRED_COLUMNS.has(id) || CORE_COLUMNS.has(id),
             tier: COLUMN_TIER[id],

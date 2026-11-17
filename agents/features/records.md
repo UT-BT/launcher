@@ -25,7 +25,7 @@ Hunt, latest records) in [home.md](home.md).
 | `app/components/pages/TeamCapDetailPage.tsx` | one team run: roster, per-member analytics, Watch Team Run and Compare; `capDetail/teamCompareOpponent.ts` picks Compare's opponent (`teamCompareOpponent.test.ts`) |
 | `app/components/pages/capDetail/` | cap-detail cards; `capStats.ts` holds the pure medal-int helpers, signed deltas and checkpoint alignment (no tests) |
 | `app/components/pages/WorldRecordsPage.tsx`, `CapItAllPage.tsx` (+ `.types.ts`) | the two server-paginated record lists |
-| `app/components/pages/MapsPage.tsx`, `maps/medals.ts`, `PlayersPage.tsx` | the list pages; `computeMedalTier` |
+| `app/components/pages/MapsPage.tsx`, `maps/medals.ts`, `maps/wrHolder.ts`, `maps/WRHolderDetails.tsx`, `PlayersPage.tsx` | the list pages; `computeMedalTier`; the WR holder cache shape and holder block |
 | `app/components/modals/` | replay picker (its row cache in `replayPickerCache.ts`, `replayPickerCache.test.ts`), WR progression, cap-time distribution, playtime breakdown, history, review and favourites lists |
 | `app/components/shared/ReplayVideoModal.tsx`, `app/hooks/useReplayWatch.ts`, `useDemoDownload.ts`, `app/utils/replayVideoCache.ts` | replay and demo plumbing every record surface reuses; `replayVideoCache.ts` is `resolveCompareVideo`, the 5-minute replay video cache the compare page shares (`replayVideoCache.test.ts`) |
 | `app/components/shared/CompareLink.tsx` | the link to the compare page every entry point renders ([run-compare.md](run-compare.md#entry-points)) |
@@ -349,6 +349,9 @@ re-sorting reuses the total.
 - **Favourites only** applies only when signed in: it sends the favourite names, sorted, as
   `maps`, and with no favourites shows an empty table without a request.
 - **Top Rushers** mode reads `fetchRushers` (rows and totals in one call) and takes only search.
+- **Top Rushers podium**: on the first page with no search, the top three sit above the table,
+  three across once the podium's own width reaches 56rem (`@4xl/podium`) and stacked below that,
+  so a tablet's narrower main column never squeezes the names to nothing.
 - **Presets** sync under `utbt:worldRecordsPresets:v1`; apply them sanitised
   ([state-patterns.md](../state-patterns.md)). Persisted prefs: column visibility and order, page
   size, filters panel open.
@@ -413,7 +416,18 @@ the viewer's best caps (`fetchBestCaps`, `/caps/capped_maps/<userId>`) into `cac
 options, counters, ratings and the medal column use them in every mode. The medal column and
 the capped filter run `computeMedalTier` on those best caps; the medal sort puts uncapped and
 casual maps last in either direction. WR holders load lazily for the visible rows
-(`fetchWorldRecordsForMaps`) and accumulate in `caches.wrHolders`.
+(`fetchWorldRecordsForMaps`) and accumulate in `caches.wrHolders`. `toWRHolder` in
+`maps/wrHolder.ts` keeps each holder's active title and, for a team record, its `members` in API
+order; a team record's top-level `user_id` is `null` and its `alias` is the joined member names,
+so never render it. `maps/WRHolderDetails.tsx` renders a holder through `PlayerInfo`: one line for
+a solo record, one line per member with the split for a team record, fastest first
+(`wrHolderLines`, `wrHolder.test.ts`), and nothing for a team record without `members`.
+`MapsPage` builds that block once per row (`holderDetails` on the row context). On a pointer
+device the WR time's tooltip shows it, and falls back to "View cap details" when the block is
+empty; until the holder loads the time has no cap id, so it is plain text with no tooltip. On
+touch the block renders inline under the time instead (the time keeps its plain tap tooltip), and
+the WR column widens from 9rem to 15rem (`WR_TOUCH_WIDTH`) so a team line fits. A batch of holders
+is never dropped when the effect re-runs mid-fetch, since the re-run skips the maps in flight.
 
 The table is tiered ([shared-components.md](../shared-components.md#column-tiers-and-phone-cards)).
 Each column declares its tier, label and sort field (`COLUMN_TIER`, `COLUMN_LABELS`,
@@ -424,8 +438,9 @@ columns first and a window too narrow for them gets cards; they stay hideable in
 touch rule decides instead.
 
 - **Card face** (a list labelled "Maps"): a small thumbnail, the favourite star, map name and New
-  badge, difficulty, the WR and, signed in, the medal and PB through `CapTimeLink`. Tapping the
-  body opens the map.
+  badge, difficulty, the WR, the WR holder block on its own right-aligned row under the WR (between
+  the WR and the PB) and, signed in, the medal and PB through `CapTimeLink`. Tapping the body opens
+  the map.
 - **Expand panel**: Tags, Author, Added, Demos, Community Review and, signed in, Your Review.
   Demos opens the replay picker and both reviews open the reviews modal, as from the table.
 - **Card sort**: the nine sortable columns (six signed out), on the same `sortBy` / `sortDir` as
