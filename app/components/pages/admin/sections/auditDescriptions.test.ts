@@ -145,3 +145,51 @@ describe('rollback', () => {
     expect(isNotReversible(new Error('boom'))).toBe(false)
   })
 })
+
+describe('the rollback, unmanaged region and cutover seed rows', () => {
+  const rollbacks = auditServerConfigFixture('auditServerConfigRollback')
+  const regions = auditServerConfigFixture('auditServerConfigUnmanagedRegion')
+  const [cutoverSeed] = auditServerConfigFixture('auditServerConfigCutoverSeed')
+
+  function rollbackOf(action: string): AuditEntry {
+    const found = rollbacks.find((e) => e.action === action && e.reverts)
+    if (!found) throw new Error(`no ${action} rollback in the fixture`)
+    return found
+  }
+
+  it('describes a rollback by the change it made, and shows only the changed settings', () => {
+    expect(serverAuditDescription(rollbackOf('server.ruleset'))).toBe(
+      'Changed ruleset of server 7c3e9d14 from certified to casual',
+    )
+    expect(serverAuditDescription(rollbackOf('server.config'))).toBe('Changed 1 setting on server 7c3e9d14')
+    expect(diffRows(rollbackOf('server.config'))).toEqual([
+      { key: 'motd_1', before: 'Cup qualifiers tonight at 20:00 UTC', after: 'Welcome to the test server', changed: true, masked: false },
+    ])
+    expect(diffRows(rollbackOf('server.ruleset')).map((r) => r.key)).toEqual(['ruleset'])
+  })
+
+  it('offers no rollback of a rollback or of a reverted row', () => {
+    expect(rollbacks.map((e) => [e.reverts !== null, e.reverted, e.can_rollback])).toEqual([
+      [true, false, false], [false, true, false], [true, false, false], [false, true, false],
+    ])
+    expect(rollbacks.filter((e) => e.reverts).map(auditActorName)).toEqual(['AdminUser', 'AdminUser'])
+  })
+
+  it('shows a region change with a null version as one setting, without the version', () => {
+    for (const e of regions) {
+      expect(serverAuditDescription(e)).toBe('Changed 1 setting on server 7c3e9d14')
+      expect(diffRows(e).map((r) => r.key)).toEqual(['region'])
+    }
+    expect(diffRows(regions[1])[0]).toEqual({ key: 'region', before: 'United States', after: 'Canada', changed: true, masked: false })
+  })
+
+  it('shows the cutover seed as a System seed of its cutover settings, with no password row', () => {
+    expect(isSystemActor(cutoverSeed)).toBe(true)
+    expect(auditActorName(cutoverSeed)).toBe('System')
+    expect(serverAuditDescription(cutoverSeed)).toBe('Seeded settings for server 7c3e9d14')
+    const shown = diffRows(cutoverSeed)
+    expect(shown.some((r) => r.key === 'game_password' || r.masked)).toBe(false)
+    expect(shown.every((r) => r.before === '—' && r.changed)).toBe(true)
+    expect(shown.find((r) => r.key === 'board_label_color')?.after).toBe('{"a":0,"b":55,"g":175,"r":212}')
+  })
+})

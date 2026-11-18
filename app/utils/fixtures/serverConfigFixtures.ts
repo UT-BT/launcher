@@ -1,4 +1,7 @@
 import auditServerConfig from './serverConfig/audit_server_config.json'
+import auditServerConfigCutoverSeed from './serverConfig/audit_server_config_cutover_seed.json'
+import auditServerConfigRollback from './serverConfig/audit_server_config_rollback.json'
+import auditServerConfigUnmanagedRegion from './serverConfig/audit_server_config_unmanaged_region.json'
 import operationsResponse from './serverConfig/operations_response.json'
 import serverConfigPatchAfterCutover from './serverConfig/server_config_patch_after_cutover.json'
 import serverConfigPatchForbiddenKey from './serverConfig/server_config_patch_forbidden_key.json'
@@ -41,13 +44,19 @@ export type ServerConfigReadFixtureName =
 
 export type ServerConfigPatchFixtureName = 'serverConfigPatchOk' | 'serverConfigPatchNextMap'
 
+export type AuditFixtureName =
+    | 'auditServerConfig'
+    | 'auditServerConfigRollback'
+    | 'auditServerConfigUnmanagedRegion'
+    | 'auditServerConfigCutoverSeed'
+
 export type ServerConfigFixtureName =
     | ServerConfigReadFixtureName
     | ServerConfigPatchFixtureName
     | ServerConfigErrorFixtureName
+    | AuditFixtureName
     | 'operationsResponse'
     | 'serverInfoResponse'
-    | 'auditServerConfig'
 
 export type ServerInfoRow = Omit<Server, 'ping' | 'players'> &
     ServerListingFields & { players: Array<Server['players'][number] & { slot: number }> }
@@ -60,14 +69,33 @@ interface FixtureEntry {
 }
 
 const CONFIG_ROUTE = 'GET /admin/servers/:id/config'
+const AUDIT_ROUTE = 'GET /admin/audit'
 const PATCH_ROUTE = 'PATCH /admin/servers/:id/config'
 
 export const SERVER_CONFIG_FIXTURES: Record<ServerConfigFixtureName, FixtureEntry> = {
     auditServerConfig: {
         file: 'audit_server_config.json',
-        route: 'GET /admin/audit',
+        route: AUDIT_ROUTE,
         status: 200,
         body: auditServerConfig,
+    },
+    auditServerConfigCutoverSeed: {
+        file: 'audit_server_config_cutover_seed.json',
+        route: AUDIT_ROUTE,
+        status: 200,
+        body: auditServerConfigCutoverSeed,
+    },
+    auditServerConfigRollback: {
+        file: 'audit_server_config_rollback.json',
+        route: AUDIT_ROUTE,
+        status: 200,
+        body: auditServerConfigRollback,
+    },
+    auditServerConfigUnmanagedRegion: {
+        file: 'audit_server_config_unmanaged_region.json',
+        route: AUDIT_ROUTE,
+        status: 200,
+        body: auditServerConfigUnmanagedRegion,
     },
     operationsResponse: {
         file: 'operations_response.json',
@@ -185,8 +213,8 @@ export function serverInfoFixture(): ServerInfoRow[] {
     return structuredClone(SERVER_CONFIG_FIXTURES.serverInfoResponse.body as ServerInfoRow[])
 }
 
-export function auditServerConfigFixture(): AuditEntry[] {
-    return data<{ items: AuditEntry[] }>('auditServerConfig').items
+export function auditServerConfigFixture(name: AuditFixtureName = 'auditServerConfig'): AuditEntry[] {
+    return data<{ items: AuditEntry[] }>(name).items
 }
 
 export function serverConfigFixtureText(name: ServerConfigFixtureName): string {

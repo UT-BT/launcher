@@ -12,6 +12,7 @@ import {
     serverConfigOperationsFixture,
     serverConfigPatchFixture,
     serverInfoFixture,
+    type AuditFixtureName,
     type ServerConfigErrorFixtureName,
     type ServerConfigFixtureName,
     type ServerInfoRow,
@@ -138,6 +139,40 @@ const UNIT_STATES = keysOf<ServerUnitState>({
 })
 const UNAVAILABLE = keysOf<ServerControlUnavailable>({ not_managed: true, agent_unreachable: true })
 const CERTIFIED_LOCKS: ServerConfigKeyId[] = ['max_players', 'player_collisions', 'allow_boosted_caps']
+const CUTOVER_KEY_IDS = [
+    'sudden_death',
+    'checkpoints',
+    'player_collisions',
+    'spectate_after_cap',
+    'allow_boosted_caps',
+    'idle_to_spec_minutes',
+    'board_label_text',
+    'board_label_color',
+    'allowed_teams',
+    'winter_scoreboard',
+    'spectator_votes',
+    'mid_game_vote_percent',
+    'vote_time_limit',
+    'scoreboard_delay',
+    'switch_on_empty',
+    'empty_minutes',
+    'random_map',
+    'default_map',
+] as const satisfies readonly ServerConfigKeyId[]
+const APPLY_CHOICES = ['when_empty', 'now'] as const
+
+type CutoverKeyId = (typeof CUTOVER_KEY_IDS)[number]
+type Reverting<T> = T & { reverts: string }
+type RegionOnly = { region: string }
+type RegionOnlyAuditDetails = Omit<ServerConfigAuditDetails, 'before' | 'after' | 'version'> & {
+    before: RegionOnly
+    after: RegionOnly
+    version: null
+}
+type CutoverSeedAuditDetails = Omit<ServerConfigSeedAuditDetails, 'after' | 'renamed'> & {
+    after: Partial<Pick<ServerConfigValueMap, CutoverKeyId>>
+    layout: 'cutover'
+}
 
 function keysOf<K extends string>(record: Record<K, true>): K[] {
     return Object.keys(record) as K[]
@@ -156,6 +191,12 @@ const str: Check<string> = (value, path) => {
 
 const int: Check<number> = (value, path) => {
     if (!Number.isInteger(value)) fail(path, `expected an integer, got ${JSON.stringify(value)}`)
+}
+
+const positiveInt: Check<number> = (value, path) => {
+    if (!Number.isInteger(value) || (value as number) < 1) {
+        fail(path, `expected a positive integer, got ${JSON.stringify(value)}`)
+    }
 }
 
 const num: Check<number> = (value, path) => {
@@ -507,21 +548,50 @@ const serverInfoRow = object<ServerInfoRow>({
     password_protected: nullable(bool),
 })
 
+function maybeReverting<T>(schema: Schema<T>): Check<T | Reverting<T>> {
+    return anyOf<T | Reverting<T>>(object<T>(schema), object<Reverting<T>>({ ...schema, reverts: uuid } as Schema<Reverting<T>>))
+}
+
+const regionOnly = object<RegionOnly>({ region: str })
+
+const cutoverSchema = Object.fromEntries(CUTOVER_KEY_IDS.map((id) => [id, valueSchema[id]])) as Schema<
+    Pick<ServerConfigValueMap, CutoverKeyId>
+>
+
+const cutoverValues: Check<Partial<Pick<ServerConfigValueMap, CutoverKeyId>>> = (value, path) => {
+    partialObject(cutoverSchema)(value, path)
+    if (Object.keys(record(value, path)).length === 0) fail(path, 'a cutover seed seeds at least one cutover key')
+}
+
 const AUDIT_DETAILS: Record<string, Check<unknown>> = {
-    'server.ruleset': object<ServerRulesetAuditDetails>({
+    'server.ruleset': maybeReverting<ServerRulesetAuditDetails>({
         before: object<{ ruleset: ServerRuleset }>({ ruleset: oneOf(RULESETS) }),
         after: object<{ ruleset: ServerRuleset }>({ ruleset: oneOf(RULESETS) }),
     }),
-    'server.config': object<ServerConfigAuditDetails>({
-        before: values,
-        after: values,
-        version: int,
-        apply: oneOf(['when_empty', 'now'] as const),
-    }),
+    'server.config': anyOf<unknown>(
+        maybeReverting<ServerConfigAuditDetails>({
+            before: values,
+            after: values,
+            version: positiveInt,
+            apply: oneOf(APPLY_CHOICES),
+        }),
+        maybeReverting<RegionOnlyAuditDetails>({
+            before: regionOnly,
+            after: regionOnly,
+            version: literal(null),
+            apply: oneOf(APPLY_CHOICES),
+        })
+    ),
     'server.config.seed': (value, path) => {
         const fields = record(value, path)
-        const base = { after: values, version: int }
-        if ('renamed' in fields) {
+        const base = { after: values, version: positiveInt }
+        if ('layout' in fields) {
+            object<CutoverSeedAuditDetails>({
+                after: cutoverValues,
+                version: positiveInt,
+                layout: literal('cutover'),
+            })(value, path)
+        } else if ('renamed' in fields) {
             object<ServerConfigSeedAuditDetails>({
                 ...base,
                 renamed: object<{ before: string; after: string }>({ before: str, after: str }),
@@ -554,6 +624,9 @@ const auditEntry: Check<AuditEntry> = (value, path) => {
     })(value, path)
     const entry = value as AuditEntry
     AUDIT_DETAILS[entry.action](entry.details, `${path}.details`)
+    const reverts = (entry.details as { reverts?: string }).reverts ?? null
+    if (entry.reverts !== reverts) fail(`${path}.reverts`, 'must be the details.reverts of a rollback row, else null')
+    if (entry.reverts !== null && entry.can_rollback) fail(`${path}.can_rollback`, 'a rollback row cannot be rolled back')
 }
 
 const ERROR_FIXTURE_CODES: Record<ServerConfigErrorFixtureName, ServerConfigErrorCode> = {
@@ -567,6 +640,8 @@ const ERROR_FIXTURE_CODES: Record<ServerConfigErrorFixtureName, ServerConfigErro
     serverConfigPatchLockedKey: 'locked_key',
 }
 
+const auditList = envelope(object<{ items: AuditEntry[] }>({ items: arrayOf(auditEntry) }))
+
 const SCHEMAS: Record<ServerConfigFixtureName, Check<unknown>> = {
     serverConfigResponse: envelope(object(configFields)),
     serverConfigResponseLegacy: envelope(object(configFields)),
@@ -578,7 +653,10 @@ const SCHEMAS: Record<ServerConfigFixtureName, Check<unknown>> = {
     ) as Record<ServerConfigErrorFixtureName, Check<unknown>>),
     operationsResponse: envelope(operations),
     serverInfoResponse: arrayOf(serverInfoRow),
-    auditServerConfig: envelope(object<{ items: AuditEntry[] }>({ items: arrayOf(auditEntry) })),
+    auditServerConfig: auditList,
+    auditServerConfigRollback: auditList,
+    auditServerConfigUnmanagedRegion: auditList,
+    auditServerConfigCutoverSeed: auditList,
 }
 
 const NAMES = Object.keys(SERVER_CONFIG_FIXTURES) as ServerConfigFixtureName[]
@@ -758,6 +836,69 @@ describe('server config fixtures', () => {
         )
         expect(byAction['server.ruleset'].reason).toBeTruthy()
         expect(fileBytes('audit_server_config.json').toString('ascii')).not.toContain('example-pass')
+    })
+
+    it('pairs each rollback row with the row it reverts', () => {
+        const rows = auditServerConfigFixture('auditServerConfigRollback')
+        const rollbacks = rows.filter((row) => row.reverts !== null)
+
+        expect(rollbacks.map((row) => row.action).sort()).toEqual(['server.config', 'server.ruleset'])
+        for (const rollback of rollbacks) {
+            const original = rows.find((row) => row.id === rollback.reverts)
+            expect(original?.action).toBe(rollback.action)
+            expect(original?.reverted).toBe(true)
+            expect((rollback.details as { reverts: string }).reverts).toBe(rollback.reverts)
+        }
+        expect(rows.every((row) => !row.can_rollback)).toBe(true)
+    })
+
+    it('has a null version only on region changes of a server whose settings are not managed', () => {
+        for (const row of auditServerConfigFixture('auditServerConfigUnmanagedRegion')) {
+            const details = row.details as RegionOnlyAuditDetails
+            expect(details.version).toBeNull()
+            expect(Object.keys(details.before)).toEqual(['region'])
+            expect(Object.keys(details.after)).toEqual(['region'])
+        }
+    })
+
+    it('seeds only the cutover settings, with the System actor and no password, on the cutover seed row', () => {
+        const [row] = auditServerConfigFixture('auditServerConfigCutoverSeed')
+        const details = row.details as CutoverSeedAuditDetails
+
+        expect([row.action, row.actor_id, row.actor_alias, details.layout]).toEqual([
+            'server.config.seed',
+            null,
+            null,
+            'cutover',
+        ])
+        expect(Object.keys(details.after).sort()).toEqual([...CUTOVER_KEY_IDS].sort())
+        expect('game_password' in details.after).toBe(false)
+    })
+
+    it('accepts the three audit shapes and nothing wider', () => {
+        const widened = (name: AuditFixtureName, index: number, change: (row: Record<string, any>) => void) => {
+            const body = structuredClone(SERVER_CONFIG_FIXTURES[name].body) as {
+                data: { items: Array<Record<string, any>> }
+            }
+            change(body.data.items[index])
+            return () => SCHEMAS[name](body, name)
+        }
+
+        expect(widened('auditServerConfig', 0, (row) => (row.details.version = null))).toThrow(/no allowed shape/)
+        expect(
+            widened('auditServerConfigUnmanagedRegion', 1, (row) => {
+                row.details.before = { motd_1: 'a' }
+                row.details.after = { motd_1: 'b' }
+            })
+        ).toThrow(/no allowed shape/)
+        expect(
+            widened('auditServerConfigCutoverSeed', 0, (row) => (row.details.after.game_password = 'hidden'))
+        ).toThrow(/game_password/)
+        expect(widened('auditServerConfigCutoverSeed', 0, (row) => (row.details.layout = 'legacy'))).toThrow(/legacy/)
+        expect(widened('auditServerConfigCutoverSeed', 0, (row) => (row.details.version = 0))).toThrow(/positive integer/)
+        expect(widened('auditServerConfig', 2, (row) => (row.details.reverts = row.id))).toThrow(/reverts/)
+        expect(widened('auditServerConfigRollback', 0, (row) => delete row.details.reverts)).toThrow(/details.reverts/)
+        expect(widened('auditServerConfigRollback', 0, (row) => (row.can_rollback = true))).toThrow(/rolled back/)
     })
 
     it('hands out copies, so a test cannot change the fixture for the next one', () => {
