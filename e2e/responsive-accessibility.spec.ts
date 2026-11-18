@@ -241,9 +241,9 @@ const publicRoutes = [
   '/team-caps/test-team-cap', '/achievements', '/news', '/news/1', '/compare',
 ]
 
-test('every public route renders without the application error boundary', async ({ page }) => {
-  for (const path of publicRoutes) {
+for (const path of publicRoutes) {
+  test(`the public route ${path} renders without the application error boundary`, async ({ page }) => {
     await page.goto(path)
     await expect(page.getByRole('heading', { name: 'Something went wrong' })).toHaveCount(0)
-  }
-})
+  })
+}
