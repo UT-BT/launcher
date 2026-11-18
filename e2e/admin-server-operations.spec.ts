@@ -197,6 +197,18 @@ test('a restart that fails after a save stays reported once the rows reload', as
     )).toBeVisible()
 })
 
+test('the row action menu stays 32 px with a mouse and grows to a 44 px tap target on touch', async ({ page, hasTouch }) => {
+    await mockApi(page)
+    await page.goto('/admin')
+    await expect(page.getByRole('heading', { name: 'Server Operations', exact: true })).toBeVisible()
+    const trigger = page.getByRole('button', { name: 'Actions for BT Test Server 2 | EU' }).filter({ visible: true }).first()
+    await expect(trigger).toBeVisible()
+    const side = hasTouch ? 44 : 32
+    const box = await trigger.boundingBox()
+    expect(box?.width).toBe(side)
+    expect(box?.height).toBe(side)
+})
+
 test('a moderator sees max players read-only and changes the ruleset with a reason, applying now', async ({ page }) => {
     const server = await mockApi(page, { role: ROLE.MODERATOR })
     const dialog = await openSettings(page, 'BT Test Server | EU')

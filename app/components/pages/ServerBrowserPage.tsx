@@ -40,6 +40,7 @@ import { capabilities, fetchGatewayServers } from '@/app/platform'
 import { useServerJoin } from '@/app/hooks/useServerJoin'
 import { DesktopAppNotice } from '@/app/components/desktopPromo/DesktopAppNotice'
 import { useDesktopPromo } from '@/app/components/desktopPromo/useDesktopPromo'
+import { useDeviceEnvironment } from '@/app/device/useDeviceEnvironment'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { ActiveFilterChip } from '@/app/components/shared/ActiveFilterChip'
 import { avatarSizeFor, getAvatarUrl } from '@/app/utils/api'
@@ -164,8 +165,14 @@ const TypeIcon = ({ type, className = 'size-4' }: { type: ServerType, className?
 
 const PASSWORD_REQUIRED = 'Password required'
 
-const PasswordLock = ({ server, withTooltip = true }: { server: Server; withTooltip?: boolean }) => {
+const PasswordLock = ({ server, withTooltip = true, withText = false }: { server: Server; withTooltip?: boolean; withText?: boolean }) => {
     if (server.password_protected !== true) return null
+    if (withText) return (
+        <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-amber-300">
+            <Lock aria-hidden className="size-3.5" />
+            {PASSWORD_REQUIRED}
+        </span>
+    )
     const lock = (
         <span role="img" aria-label={PASSWORD_REQUIRED} className="inline-flex shrink-0">
             <Lock aria-hidden className="size-3.5 text-amber-300" />
@@ -402,6 +409,7 @@ export function ServerBrowserPage({
     const [error, setError] = useState<string | null>(null)
     const { join: handleJoin, notice: launchNotice, clearNotice: clearLaunchNotice } = useServerJoin()
     const desktopPromo = useDesktopPromo()
+    const touch = useDeviceEnvironment(env => env.touch)
     const [activePresetId, setActivePresetId] = useState<string | null>(null)
 
     const filtersButtonRef = useRef<HTMLButtonElement | null>(null)
@@ -820,7 +828,7 @@ export function ServerBrowserPage({
                     <span className="inline-flex items-center gap-1.5">
                         <TypeIcon type={type} />
                         {type}
-                        <PasswordLock server={server} />
+                        <PasswordLock server={server} withText={touch} />
                     </span>
                 )
             }
@@ -901,11 +909,12 @@ export function ServerBrowserPage({
                     />
                     <span role="img" aria-label={type} className="inline-flex shrink-0"><TypeIcon type={type} /></span>
                     <span className="text-sm font-bold text-foreground truncate">{trimmed}</span>
-                    <PasswordLock server={server} withTooltip={false} />
+                    {!touch && <PasswordLock server={server} withTooltip={false} />}
                     <span className={cn('ml-auto shrink-0 text-sm font-bold tabular-nums', playerCountColor(server))}>
                         {server.player_count}/{server.max_players}
                     </span>
                 </div>
+                {touch && <PasswordLock server={server} withText />}
                 <div className="flex items-center gap-2 min-w-0">
                     {server.region && <RegionFlag region={server.region} className="shrink-0" />}
                     {onMapSelect ? (

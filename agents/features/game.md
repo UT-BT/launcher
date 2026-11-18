@@ -140,12 +140,14 @@ is `'Unsupported'`.
   has no flag and sorts after the servers with one in ascending order. `displayServerName`
   still strips a trailing `(region)` from the name, because existing names carry one. A lock labelled "Password required" shows on the
   row, the card face and the panel's type when `password_protected` is true, and nothing
-  shows for false or null. `e2e/desktop-promo-servers.spec.ts` checks the row and
-  `e2e/mobile/player-server-cards.spec.ts` the card.
+  shows for false or null. On the row it is an icon with a tooltip. On touch, the card face
+  shows the lock and "Password required" as text on a line under the name, and the panel's
+  type has the same text after it; a mouse keeps the icon. `e2e/desktop-promo-servers.spec.ts`
+  checks the row and `e2e/mobile/player-server-cards.spec.ts` the card.
 - **Server browser phone cards.** The table is tiered
   ([shared-components.md](../shared-components.md#column-tiers-and-phone-cards)). The face holds
-  the favourite, the type icon, the server name, the lock, players n/max, the region flag, the
-  map, the status and, with `capabilities.game`, Join and Spec. The expand panel holds the type in words,
+  the favourite, the type icon, the server name, the lock (on touch, a "Password required"
+  line), players n/max, the region flag, the map, the status and, with `capabilities.game`, Join and Spec. The expand panel holds the type in words,
   ping (desktop), and the player and spectator lists: each shows its count, then every name in
   the same rows as the desktop dropdowns (`PlayerInfo`, or the spectator bot's Twitch row). Players and spectators are detail
   columns for that reason, although the n/max count is on the face too; the thumbnail is

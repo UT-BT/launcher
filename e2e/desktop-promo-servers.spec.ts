@@ -276,6 +276,7 @@ test('a row takes its badge, flag and lock from the server fields', async ({ pag
     await expect(locked.getByRole('img', { name: 'Casual', exact: true })).toBeVisible()
     await expect(locked.getByRole('img', { name: 'Australia', exact: true })).toBeVisible()
     await expect(locked.getByRole('img', { name: 'Password required' })).toBeVisible()
+    await expect(locked.getByText('Password required')).toHaveCount(0)
 })
 
 test('an Android phone sees no strip', async ({ page, isMobile }) => {

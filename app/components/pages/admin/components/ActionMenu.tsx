@@ -50,7 +50,7 @@ export function ActionMenu({ items, busy, ariaLabel = 'Actions', heading, align 
           title={ariaLabel}
           disabled={busy}
           className={cn(
-            'size-8 rounded-md border border-hairline/10 bg-card/30 inline-flex items-center justify-center shrink-0',
+            'size-8 touch:size-11 rounded-md border border-hairline/10 bg-card/30 inline-flex items-center justify-center shrink-0',
             'text-muted-foreground hover:text-foreground hover:bg-card/60 hover:border-hairline/25',
             'data-[state=open]:bg-card/70 data-[state=open]:border-hairline/30 data-[state=open]:text-foreground',
             'transition-colors cursor-pointer outline-none disabled:opacity-40 disabled:cursor-not-allowed',

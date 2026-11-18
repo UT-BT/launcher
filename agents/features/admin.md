@@ -197,7 +197,10 @@ The map-author fetchers back `MapAuthorsModal`, opened from Maps Management.
   the poller has not been round recently. Neither means down; do not draw them as down.
 - Game Hosts row actions go through `ActionMenu`
   (`admin/components/`). An action a row cannot take is shown disabled, with the reason
-  as its title.
+  as its title. Its trigger is 32 px with a mouse and a 44 px tap target on touch
+  (`touch:size-11`), on Server Operations and Game Hosts alike; the icon keeps its size.
+  `e2e/admin-server-operations.spec.ts` checks both sizes and `e2e/mobile/admin-cards.spec.ts`
+  the cards of both sections.
 
 - Each server row carries a `control` block: `managed`, `unit_state` (`active`, `activating`,
   `failed`, `held`, `inactive`, or null), `held`, `restarts`, `started_at`, `actions` (what the

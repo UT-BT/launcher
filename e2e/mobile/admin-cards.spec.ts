@@ -331,6 +331,20 @@ test.describe('Admin cards', () => {
         await expect(held.getByRole('definition').nth(6)).toHaveText('Legacy')
     })
 
+    for (const [section, list] of [['server-operations', 'Game servers'], ['hosts-management', 'Game hosts']] as const) {
+        test(`${section}: every card's action menu is a 44 px tap target`, async ({ page }) => {
+            await openSection(page, section)
+            const cards = await cardsOf(page, list)
+            const triggers = cards.getByRole('button', { name: /^Actions for / }).filter({ visible: true })
+            await expect(triggers.first()).toBeVisible()
+            for (const trigger of await triggers.all()) {
+                const box = await trigger.boundingBox()
+                expect(box?.width).toBeGreaterThanOrEqual(44)
+                expect(box?.height).toBeGreaterThanOrEqual(44)
+            }
+        })
+    }
+
     test('Game Hosts: the server editor has no name, region or records field, and saves none of them', async ({ page }) => {
         await openSection(page, 'hosts-management')
         let body: Record<string, unknown> | null = null
