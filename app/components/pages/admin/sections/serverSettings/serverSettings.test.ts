@@ -197,6 +197,13 @@ describe('settingsChange', () => {
     expect(settingsChange(certified, draft, ROLE.ADMIN)).toEqual({})
   })
 
+  it('leaves out the lines the box never had when only one line changed', () => {
+    const absent: ServerConfigKeyId[] = ['motd_2', 'motd_3', 'motd_4', 'admin_name', 'admin_email']
+    const stock = { ...certified, values: Object.fromEntries(Object.entries(certified.values).filter(([id]) => !absent.includes(id as ServerConfigKeyId))) }
+    const draft = edited(stock, { motd_1: 'Cup qualifiers tonight' })
+    expect(settingsChange(stock, draft, ROLE.ADMIN)).toEqual({ motd_1: 'Cup qualifiers tonight' })
+  })
+
   it('carries the ruleset when it changed', () => {
     expect(settingsChange(certified, edited(certified, {}, 'casual'), ROLE.MODERATOR)).toEqual({ ruleset: 'casual' })
   })

@@ -183,7 +183,7 @@ export function changedSettings(config: AdminServerConfig, draft: SettingsDraft,
     .map((key) => key.id)
     .filter((id) => {
       const value = draft.values[id]
-      return value !== undefined && !sameValue(wireValue(id, value), config.values[id])
+      return value !== undefined && !sameValue(wireValue(id, value), wireValue(id, draftValueOf(id, config)))
     })
 }
 
