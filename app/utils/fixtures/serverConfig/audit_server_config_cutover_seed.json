@@ -32,8 +32,7 @@
             "spectator_votes": false,
             "sudden_death": true,
             "switch_on_empty": true,
-            "vote_time_limit": 60,
-            "winter_scoreboard": false
+            "vote_time_limit": 60
           },
           "layout": "cutover",
           "version": 4

@@ -158,12 +158,6 @@
       },
       {
         "editable_by": "admin",
-        "group": "gameplay",
-        "id": "winter_scoreboard",
-        "state": "after_cutover"
-      },
-      {
-        "editable_by": "admin",
         "group": "mapvote",
         "id": "spectator_votes",
         "state": "after_cutover"

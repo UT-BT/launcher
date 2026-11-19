@@ -55,7 +55,6 @@ export const SETTING_SPECS: Record<ServerConfigKeyId, SettingSpec> = {
   board_label_text: { kind: 'text', label: 'Board label text', minLength: 0, maxLength: 64, chars: 'strict' },
   board_label_color: { kind: 'color', label: 'Board label colour' },
   allowed_teams: number('Allowed teams', 0, 2, '0 both, 1 red only, 2 blue only'),
-  winter_scoreboard: bool('Winter scoreboard'),
   spectator_votes: bool('Spectators can vote'),
   mid_game_vote_percent: number('Mid-game vote (%)', 0, 100),
   vote_time_limit: number('Vote time (seconds)', 1, 999),

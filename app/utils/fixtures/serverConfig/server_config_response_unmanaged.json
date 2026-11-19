@@ -154,12 +154,6 @@
       },
       {
         "editable_by": "admin",
-        "group": "gameplay",
-        "id": "winter_scoreboard",
-        "state": "not_managed"
-      },
-      {
-        "editable_by": "admin",
         "group": "mapvote",
         "id": "spectator_votes",
         "state": "not_managed"

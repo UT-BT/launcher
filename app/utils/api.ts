@@ -5224,7 +5224,6 @@ export interface ServerConfigValueMap {
     board_label_text: string
     board_label_color: ServerConfigColor
     allowed_teams: number
-    winter_scoreboard: boolean
     spectator_votes: boolean
     mid_game_vote_percent: number
     vote_time_limit: number

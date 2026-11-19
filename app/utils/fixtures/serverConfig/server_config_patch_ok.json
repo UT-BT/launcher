@@ -165,12 +165,6 @@
       },
       {
         "editable_by": "admin",
-        "group": "gameplay",
-        "id": "winter_scoreboard",
-        "state": "editable"
-      },
-      {
-        "editable_by": "admin",
         "group": "mapvote",
         "id": "spectator_votes",
         "state": "editable"
@@ -260,8 +254,7 @@
       "switch_on_empty": true,
       "time_limit": 0,
       "tournament": false,
-      "vote_time_limit": 60,
-      "winter_scoreboard": false
+      "vote_time_limit": 60
     },
     "version": 5
   },
