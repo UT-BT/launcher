@@ -5,6 +5,9 @@ export default defineConfig({
   define: {
     __WEB_TARGET__: 'false',
   },
+  esbuild: {
+    jsx: 'automatic',
+  },
   resolve: {
     alias: {
       '@/app': resolve(__dirname, 'app'),

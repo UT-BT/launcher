@@ -29,7 +29,9 @@ gate goes red. Commands and the pre-commit gate are in [build.md](build.md).
 
 `vitest.config.ts` collects `app/**/*.test.{ts,tsx}`, `lib/**/*.test.ts` and `e2e/mobile/**/*.test.ts` and runs them in Node;
 no DOM library is installed. It defines `__WEB_TARGET__` as `false`, so platform code under test
-takes the desktop branch, and resolves the `@/app`, `@/lib` and `@/resources` aliases.
+takes the desktop branch, and resolves the `@/app`, `@/lib` and `@/resources` aliases. It compiles
+JSX with the automatic runtime, so a test can render a component with `react-dom/server`'s
+`renderToStaticMarkup` to check what its render output carries (`ReplayVideoModal.test.ts`).
 
 ### What gets a unit test
 
