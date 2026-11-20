@@ -39,6 +39,7 @@ export function ReplayVideoPlayer({ url, className }: { url: string; className?:
         const el = videoRef.current
         if (!el) return
         el.volume = loadReplayVideoVolume()
+        el.src = url
         const onVolumeChange = () => saveReplayVideoVolume(el.volume)
         el.addEventListener('volumechange', onVolumeChange)
         return () => el.removeEventListener('volumechange', onVolumeChange)
@@ -48,7 +49,6 @@ export function ReplayVideoPlayer({ url, className }: { url: string; className?:
         <video
             ref={videoRef}
             key={url}
-            src={url}
             controls
             autoPlay
             playsInline
