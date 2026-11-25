@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { serverInfoFixture } from '@/app/utils/fixtures/serverConfigFixtures'
 import { normaliseGatewayServers } from './gateway'
 
 describe('normaliseGatewayServers', () => {
@@ -50,5 +51,42 @@ describe('normaliseGatewayServers', () => {
     it('derives an id from ip and port when id is missing', () => {
         const [server] = normaliseGatewayServers([{ ip: '10.0.0.1', hostport: 7777 }])
         expect(server.id).toBe('10.0.0.1:7777')
+    })
+
+    it('reads a row without the listing fields as casual, no region, no lock', () => {
+        const [server] = normaliseGatewayServers([{ id: 1, hostname: 'BunnyTrack Certified Server #1 (Germany)', certified_records: true }])
+        expect(server.ruleset).toBe('casual')
+        expect(server.region).toBeNull()
+        expect(server.tournament).toBeNull()
+        expect(server.password_protected).toBeNull()
+    })
+
+    it('keeps the known rulesets and reads anything else as casual', () => {
+        const rulesets = ['certified', 'casual', 'Certified', 'duel', '', 1, true, null, { ruleset: 'certified' }]
+        const servers = normaliseGatewayServers(rulesets.map((ruleset, id) => ({ id, ruleset })))
+        expect(servers.map(server => server.ruleset)).toEqual([
+            'certified', 'casual', 'casual', 'casual', 'casual', 'casual', 'casual', 'casual', 'casual',
+        ])
+    })
+
+    it('keeps a region string and reads anything else, or an empty one, as no region', () => {
+        const regions = ['Germany', 'US Miami', '', 7, true, null, ['Germany']]
+        const servers = normaliseGatewayServers(regions.map((region, id) => ({ id, region })))
+        expect(servers.map(server => server.region)).toEqual(['Germany', 'US Miami', null, null, null, null, null])
+    })
+
+    it('keeps tournament and password_protected only as booleans or null', () => {
+        const flags = [true, false, null, 'true', 1, 0, 'yes', {}]
+        const servers = normaliseGatewayServers(flags.map((flag, id) => ({ id, tournament: flag, password_protected: flag })))
+        const expected = [true, false, null, null, null, null, null, null]
+        expect(servers.map(server => server.tournament)).toEqual(expected)
+        expect(servers.map(server => server.password_protected)).toEqual(expected)
+    })
+
+    it('reads the pinned /server-info rows field for field', () => {
+        const servers = normaliseGatewayServers(serverInfoFixture())
+        expect(servers.map(({ ruleset, region, tournament, password_protected }) => ({ ruleset, region, tournament, password_protected }))).toEqual(
+            serverInfoFixture().map(({ ruleset, region, tournament, password_protected }) => ({ ruleset, region, tournament, password_protected })),
+        )
     })
 })

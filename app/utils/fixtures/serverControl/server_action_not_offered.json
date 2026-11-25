@@ -1,0 +1,11 @@
+{
+  "code": "action_not_offered",
+  "data": {
+    "actions": [
+      "start"
+    ],
+    "unit_state": "held"
+  },
+  "error": "That action is not available in the server's current state.",
+  "success": false
+}

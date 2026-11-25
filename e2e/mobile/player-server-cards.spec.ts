@@ -74,6 +74,32 @@ test.describe('Players, Cap It All and Servers cards', () => {
         await expect(panelValue(spectated, 'Players')).toHaveText('0/2')
     })
 
+    test('the server card takes its badge, flag and lock from the server fields, not the name', async ({ page }) => {
+        await open(page, servers)
+        const cards = await cardsShown(page, 'Servers')
+        const lock = 'Password required'
+
+        const locked = cards.filter({ hasText: lock })
+        await expect(locked).toHaveCount(1)
+        await expect(locked).toContainText('Certified #4')
+        await expect(locked.getByText(lock, { exact: true })).toBeVisible()
+        await expect(locked.getByRole('img', { name: lock })).toHaveCount(0)
+        await expect(locked.getByRole('img', { name: 'Casual', exact: true })).toBeVisible()
+        await expect(locked.getByRole('img', { name: 'US Seattle', exact: true })).toBeVisible()
+        await expect(locked.getByText('0/12', { exact: true })).toBeVisible()
+        await openPanel(locked)
+        await expect(panelValue(locked, 'Type')).toHaveText(`Casual${lock}`)
+        await expect(panelValue(locked, 'Type').getByText(lock, { exact: true })).toBeVisible()
+
+        const duel = cards.filter({ hasText: 'Duel #1' })
+        await expect(duel).toHaveCount(1)
+        await expect(duel.getByRole('img', { name: 'Duel', exact: true })).toBeVisible()
+        await expect(duel.getByRole('img', { name: 'Germany', exact: true })).toBeVisible()
+        await expect(duel.getByText(lock)).toHaveCount(0)
+        await openPanel(duel)
+        await expect(panelValue(duel, 'Type')).toHaveText('Duel')
+    })
+
     test('servers sort by a field picked on the cards, and the table header shows the same sort', async ({ page }) => {
         await open(page, servers)
         const cards = await cardsShown(page, 'Servers')

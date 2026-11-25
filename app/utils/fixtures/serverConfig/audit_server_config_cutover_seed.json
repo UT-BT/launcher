@@ -1,0 +1,54 @@
+{
+  "data": {
+    "items": [
+      {
+        "action": "server.config.seed",
+        "actor_alias": null,
+        "actor_id": null,
+        "actor_role": 0,
+        "actor_title": null,
+        "can_rollback": false,
+        "created_at": "2026-11-05T15:00:00+00:00",
+        "details": {
+          "after": {
+            "allow_boosted_caps": false,
+            "allowed_teams": 0,
+            "board_label_color": {
+              "a": 0,
+              "b": 55,
+              "g": 175,
+              "r": 212
+            },
+            "board_label_text": "Certified Server",
+            "checkpoints": true,
+            "default_map": "",
+            "empty_minutes": 10,
+            "idle_to_spec_minutes": 5,
+            "mid_game_vote_percent": 50,
+            "player_collisions": false,
+            "random_map": true,
+            "scoreboard_delay": 10,
+            "spectate_after_cap": false,
+            "spectator_votes": false,
+            "sudden_death": true,
+            "switch_on_empty": true,
+            "vote_time_limit": 60,
+            "winter_scoreboard": false
+          },
+          "layout": "cutover",
+          "version": 4
+        },
+        "id": "5d0c2b7a-1e3f-4a9b-8c6d-2f1e0a9b8c31",
+        "ip": null,
+        "reason": null,
+        "reverted": false,
+        "reverts": null,
+        "summary": "Seeded the cutover settings of [BT] Test Server #2 (EU) from its host",
+        "target_alias": null,
+        "target_id": "7c3e9d14-2a5b-4f68-8e01-3b9c4d5e6f03",
+        "target_type": "public_server"
+      }
+    ]
+  },
+  "success": true
+}

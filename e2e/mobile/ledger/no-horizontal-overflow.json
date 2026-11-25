@@ -1,7 +1,6 @@
 [
   { "surface": "admin", "viewport": "1024x1366", "engine": "chromium" },
   { "surface": "admin", "viewport": "1024x1366", "engine": "webkit" },
-  { "surface": "admin/hosts-management", "viewport": "360x780", "engine": "chromium" },
   { "surface": "admin/hosts-management", "viewport": "390x844", "engine": "chromium" },
   { "surface": "admin/hosts-management", "viewport": "393x852", "engine": "chromium" },
   { "surface": "admin/hosts-management", "viewport": "402x874", "engine": "chromium" },
@@ -10,7 +9,6 @@
   { "surface": "admin/hosts-management", "viewport": "440x956", "engine": "chromium" },
   { "surface": "admin/hosts-management", "viewport": "1024x1366", "engine": "chromium" },
   { "surface": "admin/hosts-management", "viewport": "360x780", "engine": "webkit" },
-  { "surface": "admin/hosts-management", "viewport": "390x844", "engine": "webkit" },
   { "surface": "admin/hosts-management", "viewport": "393x852", "engine": "webkit" },
   { "surface": "admin/hosts-management", "viewport": "402x874", "engine": "webkit" },
   { "surface": "admin/hosts-management", "viewport": "412x915", "engine": "webkit" },

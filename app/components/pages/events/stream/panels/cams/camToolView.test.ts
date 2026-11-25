@@ -44,6 +44,10 @@ function server(id: string, ip: string, hostport: number, playerIds: string[], e
         red_team_score: 0,
         blue_team_score: 0,
         certified_records: true,
+        ruleset: 'certified',
+        region: null,
+        tournament: null,
+        password_protected: null,
         players: playerIds.map(playerId => ({ id: playerId, name: playerId, ping: 0, time: 0, team: 0, deaths: 0, is_spectator: false })),
         ...extra,
     }

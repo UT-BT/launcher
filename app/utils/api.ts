@@ -300,7 +300,7 @@ export class ApiError extends Error {
     }
 }
 
-function apiErrorFromBody(status: number, body: unknown): ApiError {
+export function apiErrorFromBody(status: number, body: unknown): ApiError {
     const fields = body && typeof body === 'object' ? (body as { error?: string; reason?: string; code?: string }) : undefined
     const message = fields?.error || fields?.reason || undefined
     const reason = fields?.code || undefined
@@ -933,8 +933,8 @@ export async function fetchAuditLogCount(token: string, params: AuditParams = {}
     return data.count
 }
 
-export async function rollbackAudit(token: string, auditId: string): Promise<{ ok: boolean }> {
-    return apiGet(`/admin/audit/${encodeURIComponent(auditId)}/rollback`, { token, method: 'POST' })
+export async function rollbackAudit(token: string, auditId: string, reason?: string): Promise<{ ok: boolean; skipped?: string[] }> {
+    return apiGet(`/admin/audit/${encodeURIComponent(auditId)}/rollback`, { token, method: 'POST', body: reason ? { reason } : undefined })
 }
 
 export interface AdminMapRow {
@@ -5000,15 +5000,38 @@ export interface AdminHostToken {
     last_seen_at: string | null
 }
 
+export interface AdminHostRuntime {
+    known: boolean
+    reachable: boolean | null
+    agent_version?: string | null
+    polled_at: string | null
+    last_success_at?: string | null
+    last_error?: string | null
+    seconds_since_poll?: number | null
+    uptime_seconds?: number | null
+    cpu_percent?: number | null
+    load?: (number | null)[]
+    memory_percent?: number | null
+    memory_total_mb?: number | null
+    disk_percent?: number | null
+    disk_total_mb?: number | null
+    net_rx_bytes_sec?: number | null
+    net_tx_bytes_sec?: number | null
+    server_count?: number | null
+    servers_up?: number | null
+}
+
 export interface AdminHost {
     id: string
     name: string
     region: string | null
     ip: string | null
     agent_port: number
+    control_port: number | null
     active: boolean
     created_at: string | null
     token: AdminHostToken | null
+    runtime?: AdminHostRuntime
 }
 
 export interface AdminHostServer {
@@ -5024,12 +5047,9 @@ export interface AdminHostServer {
 }
 
 export interface AdminServerUpdate {
-    name?: string
-    region?: string
     ip?: string
     port?: number
     active?: boolean
-    certified_records?: boolean
     state?: string
     host_ref?: string | null
 }
@@ -5045,6 +5065,7 @@ export interface AdminHostInput {
     region?: string | null
     ip?: string | null
     agent_port?: number
+    control_port?: number | null
     active?: boolean
 }
 
@@ -5088,6 +5109,351 @@ export async function updateAdminServer(
     input: AdminServerUpdate,
 ): Promise<{ server: AdminHostServer; changed: string[] }> {
     return apiGet(`/admin/servers/${encodeURIComponent(serverId)}`, { token: accessToken, method: 'PATCH', body: input })
+}
+
+export interface AdminServerProbe {
+    answering: boolean
+    map_name: string | null
+    num_players: number | null
+    max_players: number | null
+    updated_at: string | null
+    seconds_stale: number | null
+}
+
+export interface AdminServerRuntime {
+    known: boolean
+    process_up: boolean | null
+    stale: boolean
+    matched_by: string | null
+    pid: number | null
+    cpu_percent: number | null
+    memory_mb: number | null
+    uptime_seconds: number | null
+    observed_at: string | null
+    changed_at: string | null
+}
+
+export type ServerAction = 'restart' | 'start' | 'stop'
+
+export type ServerUnitState = 'active' | 'activating' | 'failed' | 'held' | 'inactive'
+
+export type ServerControlUnavailable = 'not_managed' | 'agent_unreachable'
+
+export interface ServerControl {
+    managed: boolean
+    unit_state: ServerUnitState | null
+    held: boolean
+    restarts: number | null
+    started_at: string | null
+    actions: ServerAction[]
+    unavailable: ServerControlUnavailable | null
+}
+
+export interface ServerActionResult {
+    server_id: string
+    action: ServerAction
+    unit_state: ServerUnitState
+    held: boolean
+}
+
+export type ServerActionErrorCode = 'not_managed' | 'action_not_offered' | 'rate_limited' | 'agent_error'
+
+export interface ServerActionNotOffered {
+    unit_state: ServerUnitState
+    actions: ServerAction[]
+}
+
+export interface ServerActionRateLimited {
+    retry_after: number
+}
+
+export type ServerActionErrorBody =
+    | { success: false; error: string; code: 'not_managed' | 'agent_error' }
+    | { success: false; error: string; code: 'action_not_offered'; data: ServerActionNotOffered }
+    | { success: false; error: string; code: 'rate_limited'; data: ServerActionRateLimited }
+
+export interface AdminOperationsServer extends AdminHostServer {
+    host_name: string | null
+    probe: AdminServerProbe
+    runtime: AdminServerRuntime
+    control?: ServerControl
+    ruleset?: ServerOperationsRuleset
+    config?: ServerOperationsConfig
+    build?: ServerOperationsBuild
+    players?: string[] | null
+}
+
+export interface AdminServerOperations {
+    hosts: AdminHost[]
+    servers: AdminOperationsServer[]
+    generated_at: string | null
+}
+
+export type ServerRuleset = 'casual' | 'certified'
+
+export interface ServerConfigColor {
+    r: number
+    g: number
+    b: number
+    a: number
+}
+
+export interface ServerConfigValueMap {
+    server_name: string
+    region: string
+    admin_name: string
+    admin_email: string
+    motd_1: string
+    motd_2: string
+    motd_3: string
+    motd_4: string
+    max_players: number
+    max_spectators: number
+    game_password: string
+    mute_spectators: boolean
+    tournament: boolean
+    start_map: string
+    time_limit: number
+    goal_team_score: number
+    sudden_death: boolean
+    checkpoints: boolean
+    player_collisions: boolean
+    spectate_after_cap: boolean
+    allow_boosted_caps: boolean
+    idle_to_spec_minutes: number
+    board_label_text: string
+    board_label_color: ServerConfigColor
+    allowed_teams: number
+    winter_scoreboard: boolean
+    spectator_votes: boolean
+    mid_game_vote_percent: number
+    vote_time_limit: number
+    scoreboard_delay: number
+    switch_on_empty: boolean
+    empty_minutes: number
+    random_map: boolean
+    default_map: string
+}
+
+export type ServerConfigKeyId = keyof ServerConfigValueMap
+
+export type ServerConfigValues = Partial<ServerConfigValueMap>
+
+export type ServerConfigGroup = 'listing' | 'access' | 'match' | 'start_map' | 'gameplay' | 'mapvote'
+
+export type ServerConfigEditor = 'staff' | 'admin'
+
+export type ServerConfigKeyState = 'editable' | 'locked' | 'after_cutover' | 'not_managed'
+
+export type ServerConfigLayout = 'cutover' | 'legacy'
+
+export interface ServerConfigKey {
+    id: ServerConfigKeyId
+    group: ServerConfigGroup
+    editable_by: ServerConfigEditor
+    state: ServerConfigKeyState
+}
+
+export interface ServerConfigRuntime {
+    cached_version: number | null
+    applied_version: number | null
+    drift: ServerConfigKeyId[]
+}
+
+export interface AdminServerConfig {
+    server_id: string
+    managed: boolean
+    layout: ServerConfigLayout | null
+    version: number | null
+    ruleset: ServerRuleset
+    values: ServerConfigValues
+    keys: ServerConfigKey[]
+    config: ServerConfigRuntime | null
+}
+
+export type ServerConfigApplyChoice = 'when_empty' | 'now'
+
+export type ServerConfigApplyMode = ServerConfigApplyChoice | 'next_map'
+
+export interface ServerConfigChange {
+    changes: ServerConfigValues & { ruleset?: ServerRuleset }
+    apply?: ServerConfigApplyChoice
+    reason?: string
+}
+
+export type ServerConfigRestart =
+    | { unit_state: ServerUnitState; held: boolean }
+    | { error: 'rate_limited'; retry_after: number }
+    | { error: 'agent_error' }
+
+export interface ServerConfigApply {
+    mode: ServerConfigApplyMode
+    restart: ServerConfigRestart | null
+}
+
+export interface ServerConfigPatchResult extends AdminServerConfig {
+    apply: ServerConfigApply
+}
+
+export type ServerConfigKeysErrorCode =
+    | 'unknown_key'
+    | 'invalid_value'
+    | 'forbidden_key'
+    | 'not_managed'
+    | 'after_cutover'
+    | 'locked_key'
+
+export type ServerConfigErrorCode = ServerConfigKeysErrorCode | 'reason_required' | 'no_changes'
+
+export interface ServerConfigErrorKeys {
+    keys: string[]
+}
+
+export type ServerConfigErrorBody =
+    | { success: false; error: string; code: ServerConfigKeysErrorCode; data: ServerConfigErrorKeys }
+    | { success: false; error: string; code: 'reason_required' | 'no_changes' }
+
+export interface ServerOperationsRuleset {
+    desired: ServerRuleset
+    in_force: ServerRuleset | null
+    pending: boolean
+    team_run_active: boolean | null
+}
+
+export type ServerConfigState = 'applied' | 'pending' | 'drift' | 'not_managed'
+
+export interface ServerOperationsConfig {
+    state: ServerConfigState
+    version: number | null
+    cached_version: number | null
+    applied_version: number | null
+    drift: ServerConfigKeyId[]
+}
+
+export interface ServerOperationsBuild {
+    utbt_build: string | null
+    server_packages: string[]
+}
+
+export interface ServerListingFields {
+    ruleset: ServerRuleset
+    region: string | null
+    tournament: boolean | null
+    password_protected: boolean | null
+}
+
+export interface ServerRulesetAuditDetails {
+    before: { ruleset: ServerRuleset }
+    after: { ruleset: ServerRuleset }
+}
+
+export interface ServerConfigAuditDetails {
+    before: ServerConfigValues
+    after: ServerConfigValues
+    version: number
+    apply: ServerConfigApplyChoice
+}
+
+export interface ServerConfigSeedAuditDetails {
+    after: ServerConfigValues
+    version: number
+    renamed?: { before: string; after: string }
+}
+
+export interface AdminHostMetricPoint {
+    at: string
+    cpu_percent: number | null
+    cpu_percent_max?: number | null
+    memory_percent: number | null
+    memory_percent_max?: number | null
+    disk_percent: number | null
+    load_1: number | null
+    net_rx_bytes_sec: number | null
+    net_tx_bytes_sec: number | null
+    servers_up: number | null
+}
+
+export type AdminMetricWindow = '24h' | '1w' | '1m'
+
+export interface AdminHostMetrics {
+    host: AdminHost
+    window: AdminMetricWindow
+    bucket: 'sample' | 'hour'
+    points: AdminHostMetricPoint[]
+}
+
+export interface AdminHealthEvent {
+    id: number
+    kind: string
+    host_ref: string | null
+    host_name: string | null
+    server_ref: string | null
+    server_name: string | null
+    observed_at: string
+    detail: { [key: string]: unknown } | null
+}
+
+export interface AdminAlert {
+    id: string
+    kind: string
+    severity: 'warning' | 'critical'
+    status: 'open' | 'acknowledged' | 'resolved'
+    host_ref: string | null
+    host_name: string | null
+    server_ref: string | null
+    server_name: string | null
+    raw_server: string | null
+    port: number | null
+    map_name: string | null
+    summary: string
+    details: { [key: string]: unknown } | null
+    occurrences: number
+    first_seen_at: string | null
+    last_seen_at: string | null
+    acknowledged_by: string | null
+    acknowledged_at: string | null
+    resolved_at: string | null
+    resolution: string | null
+}
+
+export interface AdminAlertsResponse {
+    items: AdminAlert[]
+    open_count: number
+    unresolved_count: number
+    kinds: string[]
+    limit: number
+    offset: number
+}
+
+export async function fetchAdminHostMetrics(
+    accessToken: string,
+    hostId: string,
+    window: AdminMetricWindow,
+    signal?: AbortSignal,
+): Promise<AdminHostMetrics> {
+    return apiGet(`/admin/hosts/${encodeURIComponent(hostId)}/metrics?window=${window}`, { token: accessToken, signal })
+}
+
+export async function fetchAdminHealthEvents(
+    accessToken: string,
+    params: { server?: string; host?: string; kind?: string; limit?: number; offset?: number } = {},
+    signal?: AbortSignal,
+): Promise<{ items: AdminHealthEvent[]; limit: number; offset: number }> {
+    const query = new URLSearchParams()
+    if (params.server) query.set('server', params.server)
+    if (params.host) query.set('host', params.host)
+    if (params.kind) query.set('kind', params.kind)
+    if (params.limit !== undefined) query.set('limit', String(params.limit))
+    if (params.offset !== undefined) query.set('offset', String(params.offset))
+    const suffix = query.toString() ? `?${query.toString()}` : ''
+    return apiGet(`/admin/health-events${suffix}`, { token: accessToken, signal })
+}
+
+export async function fetchAdminServerOperations(
+    accessToken: string,
+    signal?: AbortSignal,
+): Promise<AdminServerOperations> {
+    return apiGet('/admin/servers/operations', { token: accessToken, signal })
 }
 
 export async function fetchAdminRoles(accessToken: string, signal?: AbortSignal): Promise<AdminRoleRow[]> {

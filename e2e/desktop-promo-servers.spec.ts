@@ -19,8 +19,14 @@ const DISMISS_LABEL = 'Dismiss the desktop app suggestion'
 const NAV_ROW_LABEL = 'Get the desktop app'
 
 const GATEWAY_SERVERS = [
-    { id: 'bt-1', ip: '192.0.2.10', hostport: 7777, hostname: 'UTBT Test Server One', map_name: 'CTF-BT-Test', max_players: 12, players: [] },
-    { id: 'bt-2', ip: '192.0.2.11', hostport: 7777, hostname: 'UTBT Test Server Two', map_name: 'CTF-BT-Other', max_players: 12, players: [] },
+    {
+        id: 'bt-1', ip: '192.0.2.10', hostport: 7777, hostname: 'UTBT Test Server One', map_name: 'CTF-BT-Test', max_players: 12, players: [],
+        ruleset: 'certified', region: 'Germany', tournament: true, password_protected: false,
+    },
+    {
+        id: 'bt-2', ip: '192.0.2.11', hostport: 7777, hostname: 'UTBT Test Server Two', map_name: 'CTF-BT-Other', max_players: 12, players: [],
+        ruleset: 'casual', region: 'Australia', tournament: false, password_protected: true,
+    },
 ]
 
 async function mockServers(page: Page) {
@@ -255,6 +261,22 @@ test.describe('on macOS', () => {
         await openServers(page)
         await expectNoStripOnceLoaded(page)
     })
+})
+
+test('a row takes its badge, flag and lock from the server fields', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'the phone cards spec covers the card face')
+    await openServers(page)
+    const duel = page.getByRole('row').filter({ hasText: 'UTBT Test Server One' })
+    const locked = page.getByRole('row').filter({ hasText: 'UTBT Test Server Two' })
+
+    await expect(duel.getByRole('img', { name: 'Duel', exact: true })).toBeVisible()
+    await expect(duel.getByRole('img', { name: 'Germany', exact: true })).toBeVisible()
+    await expect(duel.getByRole('img', { name: 'Password required' })).toHaveCount(0)
+
+    await expect(locked.getByRole('img', { name: 'Casual', exact: true })).toBeVisible()
+    await expect(locked.getByRole('img', { name: 'Australia', exact: true })).toBeVisible()
+    await expect(locked.getByRole('img', { name: 'Password required' })).toBeVisible()
+    await expect(locked.getByText('Password required')).toHaveCount(0)
 })
 
 test('an Android phone sees no strip', async ({ page, isMobile }) => {

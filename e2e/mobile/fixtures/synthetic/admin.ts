@@ -7,7 +7,11 @@ import type {
     AcSharedGroup,
     AdminActiveTitle,
     AdminCapRow,
+    AdminAlertsResponse,
     AdminHostsResponse,
+    AdminServerOperations,
+    AdminOperationsServer,
+    ServerControl,
     AdminMapRow,
     AdminOverview,
     AdminPatch,
@@ -28,10 +32,12 @@ import type {
     MapvoteStatus,
     RosterStreamer,
     RosterSuggestion,
+    ServerRuleset,
     TitleHolder,
 } from '../../../../app/utils/api'
 import { ROLE } from '../../../../app/utils/roles'
 import { MAP_UPLOAD_FIXTURES } from '../../../../app/utils/fixtures/mapUploadFixtures'
+import { auditServerConfigFixture, serverConfigFixture, serverConfigPatchFixture } from '../../../../app/utils/fixtures/serverConfigFixtures'
 import { ok, type FixtureReply, type FixtureRoute, type FixtureSet } from '../types'
 import { daysAgo, documentationIp, fakeBtpog, fakeHwid, hoursAgo, person, syntheticId, syntheticMap, TITLE, VIEWER } from './people'
 import { sessionRoutes } from './session'
@@ -592,6 +598,14 @@ function auditRow(index: number): AuditEntry {
     }
 }
 
+const SERVER_CONFIG_AUDIT = JSON.parse(
+    JSON.stringify(withSyntheticIds(auditServerConfigFixture())).replace(/[\w.+-]+@[\w-]+\.[\w.]+/g, 'staff mailbox'),
+) as AuditEntry[]
+
+function auditEntry(index: number): AuditEntry {
+    return SERVER_CONFIG_AUDIT[index] ?? auditRow(index - SERVER_CONFIG_AUDIT.length)
+}
+
 const roles: AdminRoleRow[] = Array.from({ length: 7 }, (_, index) => ({
     user: person(index + 30).id,
     alias: person(index + 30).alias,
@@ -612,6 +626,7 @@ const hosts: AdminHostsResponse = {
         region,
         ip: documentationIp(index + 400),
         agent_port: 7000 + index,
+        control_port: index === 0 ? 8080 : null,
         active: index !== 3,
         created_at: daysAgo(400 - index * 50),
         token: index === 2 ? null : {
@@ -635,6 +650,155 @@ const hosts: AdminHostsResponse = {
         host_ref: index < 6 ? `synthetic-host-${(index % 4) + 1}` : null,
     })),
     available_scopes: ['records:write', 'status:write', 'demos:write'],
+}
+
+const hostsWithRuleset = {
+    ...hosts,
+    servers: hosts.servers.map(server => ({
+        ...server,
+        ruleset: (server.certified_records ? 'certified' : 'casual') satisfies ServerRuleset,
+    })),
+}
+
+const NOT_MANAGED: ServerControl = {
+    managed: false,
+    unit_state: null,
+    held: false,
+    restarts: null,
+    started_at: null,
+    actions: [],
+    unavailable: 'not_managed',
+}
+
+const SERVER_CONTROL: { [serverId: string]: ServerControl } = {
+    'synthetic-server-1': {
+        managed: true,
+        unit_state: 'active',
+        held: false,
+        restarts: 0,
+        started_at: daysAgo(1),
+        actions: ['restart', 'stop'],
+        unavailable: null,
+    },
+    'synthetic-server-5': {
+        managed: true,
+        unit_state: 'held',
+        held: true,
+        restarts: 0,
+        started_at: null,
+        actions: ['start'],
+        unavailable: null,
+    },
+}
+
+type OperationsBlocks = Pick<AdminOperationsServer, 'ruleset' | 'config' | 'build' | 'players'> & { control?: ServerControl }
+
+const OPERATIONS_BLOCKS: { [serverId: string]: OperationsBlocks } = {
+    'synthetic-server-1': {
+        ruleset: { desired: 'certified', in_force: 'certified', pending: false, team_run_active: true },
+        config: { state: 'applied', version: 7, cached_version: 7, applied_version: 7, drift: [] },
+        build: { utbt_build: 'UTBT_v3', server_packages: ['Botpack', 'UTBT_v3', 'UTBT_Fonts', 'CountryFlags3'] },
+        players: [],
+    },
+    'synthetic-server-2': {
+        control: {
+            managed: true,
+            unit_state: 'active',
+            held: false,
+            restarts: 2,
+            started_at: daysAgo(3),
+            actions: ['restart', 'stop'],
+            unavailable: null,
+        },
+        ruleset: { desired: 'certified', in_force: 'casual', pending: true, team_run_active: false },
+        config: { state: 'drift', version: 4, cached_version: 4, applied_version: 4, drift: ['max_players', 'motd_1'] },
+        build: { utbt_build: 'UTBT_v3', server_packages: ['Botpack', 'UTBT_v3', 'UTBT_Fonts', 'CountryFlags3'] },
+        players: [person(60).alias],
+    },
+    'synthetic-server-5': {
+        ruleset: { desired: 'certified', in_force: null, pending: false, team_run_active: null },
+        config: { state: 'pending', version: 3, cached_version: 3, applied_version: 2, drift: [] },
+        build: { utbt_build: null, server_packages: ['Botpack', 'CountryFlags3'] },
+        players: [],
+    },
+}
+
+function operationsBlocks(server: { id: string; certified_records: boolean }): OperationsBlocks {
+    return OPERATIONS_BLOCKS[server.id] ?? {
+        ruleset: { desired: server.certified_records ? 'certified' : 'casual', in_force: null, pending: false, team_run_active: null },
+        config: { state: 'not_managed', version: null, cached_version: null, applied_version: null, drift: [] },
+        build: { utbt_build: null, server_packages: [] },
+        players: null,
+    }
+}
+
+const serverOperations: AdminServerOperations = {
+    hosts: hosts.hosts,
+    servers: hosts.servers.map((server, index) => {
+        const control = SERVER_CONTROL[server.id] ?? NOT_MANAGED
+        const stopped = control.unit_state === 'held'
+        const answering = index % 4 !== 2 && !stopped
+        const processUp = index % 4 !== 3 && !stopped
+        return {
+            ...server,
+            host_name: hosts.hosts.find(host => host.id === server.host_ref)?.name ?? null,
+            probe: {
+                answering,
+                map_name: answering ? syntheticMap(index + 1) : null,
+                num_players: answering ? index % 3 : null,
+                max_players: answering ? 16 : null,
+                updated_at: answering ? hoursAgo(0) : null,
+                seconds_stale: answering ? 12 : null,
+            },
+            runtime: {
+                known: server.host_ref !== null,
+                process_up: server.host_ref !== null ? processUp : null,
+                stale: false,
+                matched_by: server.host_ref !== null ? 'process' : null,
+                pid: server.host_ref !== null && processUp ? 4100 + index : null,
+                cpu_percent: processUp ? 1.5 + index : null,
+                memory_mb: processUp ? 110 + index * 4 : null,
+                uptime_seconds: processUp ? 3600 * (index + 1) : null,
+                observed_at: hoursAgo(0),
+                changed_at: daysAgo(index + 1),
+            },
+            control,
+            ...operationsBlocks(server),
+        }
+    }),
+    generated_at: hoursAgo(0),
+}
+
+const serverAlerts: AdminAlertsResponse = {
+    items: [
+        {
+            id: 'synthetic-alert-1',
+            kind: 'map.switch_failed',
+            severity: 'warning',
+            status: 'open',
+            host_ref: 'synthetic-host-1',
+            host_name: 'test-host-eu',
+            server_ref: 'synthetic-server-1',
+            server_name: 'Test BT Server #1 | EU',
+            raw_server: null,
+            port: 7777,
+            map_name: syntheticMap(3),
+            summary: `Map switch to ${syntheticMap(3)} failed`,
+            details: null,
+            occurrences: 3,
+            first_seen_at: hoursAgo(5),
+            last_seen_at: hoursAgo(1),
+            acknowledged_by: null,
+            acknowledged_at: null,
+            resolved_at: null,
+            resolution: null,
+        },
+    ],
+    open_count: 1,
+    unresolved_count: 1,
+    kinds: ['map.switch_failed'],
+    limit: 50,
+    offset: 0,
 }
 
 function withSyntheticIds(value: unknown): unknown {
@@ -687,8 +851,26 @@ export const ADMIN_SET: FixtureSet = {
         { host: 'api', path: '/admin/anti-cheat/identifier', reply: identifierDetail },
         { host: 'api', path: /^\/admin\/anti-cheat\/cap\/[^/]+\/map-comparison$/, reply: ok(mapComparison) },
         { host: 'api', path: /^\/admin\/anti-cheat\/cap\/[^/]+$/, reply: capStats },
-        ...paged('/admin/audit', auditRow, 18342),
+        ...paged('/admin/audit', auditEntry, 18342),
         items('/admin/roles', roles),
-        { host: 'api', path: '/admin/hosts', reply: ok(hosts) },
+        { host: 'api', path: '/admin/hosts', reply: ok(hostsWithRuleset) },
+        { host: 'api', path: '/admin/servers/operations', reply: ok(serverOperations) },
+        { host: 'api', path: '/admin/alerts', reply: ok(serverAlerts) },
+        {
+            host: 'api',
+            path: /^\/admin\/servers\/[^/]+\/config$/,
+            reply: url => {
+                const config = serverConfigFixture('serverConfigResponse')
+                return ok({ ...config, server_id: url.pathname.split('/')[3], values: { ...config.values, admin_email: '' } })
+            },
+        },
+        {
+            host: 'api',
+            path: /^\/admin\/servers\/[^/]+\/config\/basic$/,
+            reply: () => {
+                const saved = serverConfigPatchFixture('serverConfigPatchOk')
+                return ok({ ...saved, values: { ...saved.values, admin_email: '' } })
+            },
+        },
     ],
 }

@@ -1,0 +1,128 @@
+{
+  "data": {
+    "items": [
+      {
+        "action": "server.config",
+        "actor_alias": "AdminUser",
+        "actor_id": "184467440737095516",
+        "actor_role": 2,
+        "actor_title": null,
+        "can_rollback": true,
+        "created_at": "2026-11-05T13:00:00+00:00",
+        "details": {
+          "after": {
+            "game_password": "changed",
+            "motd_1": "Cup qualifiers tonight at 20:00 UTC"
+          },
+          "apply": "when_empty",
+          "before": {
+            "game_password": "changed",
+            "motd_1": "Welcome to the test server"
+          },
+          "version": 5
+        },
+        "id": "5d0c2b7a-1e3f-4a9b-8c6d-2f1e0a9b8c03",
+        "ip": "192.0.2.50",
+        "reason": null,
+        "reverted": false,
+        "reverts": null,
+        "summary": "Changed 2 settings on [BT] Test Server #1 (EU)",
+        "target_alias": null,
+        "target_id": "7c3e9d14-2a5b-4f68-8e01-3b9c4d5e6f01",
+        "target_type": "public_server"
+      },
+      {
+        "action": "server.ruleset",
+        "actor_alias": "ModUser",
+        "actor_id": "284467440737095516",
+        "actor_role": 1,
+        "actor_title": null,
+        "can_rollback": true,
+        "created_at": "2026-11-05T12:30:00+00:00",
+        "details": {
+          "after": {
+            "ruleset": "certified"
+          },
+          "before": {
+            "ruleset": "casual"
+          }
+        },
+        "id": "5d0c2b7a-1e3f-4a9b-8c6d-2f1e0a9b8c02",
+        "ip": "192.0.2.51",
+        "reason": "Duel server for the cup",
+        "reverted": false,
+        "reverts": null,
+        "summary": "Changed the ruleset of [BT] Test Server #1 (EU) to certified",
+        "target_alias": null,
+        "target_id": "7c3e9d14-2a5b-4f68-8e01-3b9c4d5e6f01",
+        "target_type": "public_server"
+      },
+      {
+        "action": "server.config.seed",
+        "actor_alias": null,
+        "actor_id": null,
+        "actor_role": 0,
+        "actor_title": null,
+        "can_rollback": false,
+        "created_at": "2026-11-05T12:00:00+00:00",
+        "details": {
+          "after": {
+            "admin_email": "admins@example.com",
+            "admin_name": "BT Admins",
+            "allow_boosted_caps": false,
+            "allowed_teams": 0,
+            "board_label_color": {
+              "a": 0,
+              "b": 55,
+              "g": 175,
+              "r": 212
+            },
+            "board_label_text": "Certified Server",
+            "checkpoints": true,
+            "default_map": "",
+            "empty_minutes": 10,
+            "game_password": "hidden",
+            "goal_team_score": 0,
+            "idle_to_spec_minutes": 5,
+            "max_players": 2,
+            "max_spectators": 10,
+            "mid_game_vote_percent": 50,
+            "motd_1": "Welcome to the test server",
+            "motd_2": "",
+            "motd_3": "Join us on Discord",
+            "motd_4": "https://example.com/",
+            "mute_spectators": false,
+            "player_collisions": false,
+            "random_map": true,
+            "scoreboard_delay": 10,
+            "server_name": "[BT] Test Server #1 (EU)",
+            "spectate_after_cap": false,
+            "spectator_votes": false,
+            "start_map": "CTF-BT-andACTION-dbl",
+            "sudden_death": true,
+            "switch_on_empty": true,
+            "time_limit": 0,
+            "tournament": false,
+            "vote_time_limit": 60,
+            "winter_scoreboard": false
+          },
+          "renamed": {
+            "after": "[BT] Test Server #1 (EU)",
+            "before": "BT Test Server | EU"
+          },
+          "version": 1
+        },
+        "id": "5d0c2b7a-1e3f-4a9b-8c6d-2f1e0a9b8c01",
+        "ip": null,
+        "reason": null,
+        "reverted": false,
+        "reverts": null,
+        "summary": "Seeded the settings of [BT] Test Server #1 (EU) from its host",
+        "target_alias": null,
+        "target_id": "7c3e9d14-2a5b-4f68-8e01-3b9c4d5e6f01",
+        "target_type": "public_server"
+      }
+    ]
+  },
+  "success": true
+}

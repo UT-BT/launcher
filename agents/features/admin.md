@@ -16,9 +16,10 @@ Paths starting `admin/` are under `app/components/pages/`.
 | `admin/components/` | the kit every section is built from: `SectionShell`, `TableControls` + `useAdminTable`, `AdminCardFace`, `controls.tsx`, `useAdminFilterPresets`, `AuthorPicker`, `TagEditor` |
 | `admin/sections/` | one `<Name>Section.tsx` per section, its modals, and pure helpers with tests (`streamerRoster.ts`, `mapVideoFile.ts`) |
 | `admin/sections/mapUploads/` | Map Uploads ([map-uploads.md](map-uploads.md)) |
+| `admin/sections/serverSettings/` | the Server Settings dialog, its fetchers and its pure state ([Server settings](#server-settings)) |
 | `app/utils/roles.ts` | `ROLE`, `isStaff` and the role allow-lists |
 | `app/utils/api.ts`, `app/utils/chartBuckets.ts` | the admin fetchers, each next to its domain; the Overview chart's ranges and buckets |
-| `e2e/admin-streamers.spec.ts`, `e2e/admin-maps-video.spec.ts` | Playwright with a mocked staff session |
+| `e2e/admin-streamers.spec.ts`, `e2e/admin-maps-video.spec.ts`, `e2e/admin-server-operations.spec.ts` | Playwright with a mocked staff session |
 | `e2e/mobile/admin-cards.spec.ts` | the phone cards of the tiered admin tables ([Tables on phones](#tables-on-phones)) |
 
 ## Access
@@ -131,6 +132,8 @@ table's required columns plus its main action; every other column is in the expa
 | Anti-Cheat: High Cap Delta | selection, player, actions | sortable (Delta, Added; descending only, as the header) |
 | Anti-Cheat: Low FPS WRs | selection, player, actions | |
 | Anti-Cheat: cap stats percentiles | percentile, FPS, ping | every column on the face, labelled; no panel |
+| Server Operations | server, health, ruleset, actions | inactive servers dimmed; the panel adds the [server details](#server-operations-moderators-and-admins) |
+| Game Hosts | host, actions | disabled hosts dimmed |
 
 **Audit Logs details.** On the table a row click opens the details in a `DataTableExpandRow`
 (the full-width row under it); on cards they open in the card's panel through
@@ -170,6 +173,152 @@ The map-author fetchers back `MapAuthorsModal`, opened from Maps Management.
 - A video does not affect the mapvote, so a change reloads the row through `onReload`, not
   `onSaved`, and raises no "regenerate mapvote" banner.
 
+## Server operations (Moderators and Admins)
+
+- `fetchAdminServerOperations` returns every registered game server with the host it is
+  linked to and a `probe` block (`answering`, `map_name`, `num_players`, `max_players`,
+  `updated_at`, `seconds_stale`).
+- `answering` is computed by the server. Do not re-derive it from `seconds_stale`.
+- A server with no host link is shown as unlinked, never hidden.
+- Moderators and Admins both read this section; only Admins also see Game Hosts next to it
+  in the Infrastructure group.
+
+- `fetchAdminHostMetrics(token, hostId, window)` returns `{ window, bucket, points[] }`.
+  `bucket` is `sample` for 24h and `hour` for longer windows. Hourly points are averages,
+  so short spikes are smoothed away; the UI says so instead of implying the spike never
+  happened. The chart sits in `HostMetricsModal`, opened from the host's action menu.
+- `fetchAdminHealthEvents` is the append-only feed of state changes (`host.unreachable`,
+  `host.recovered`, `server.process_down`, `server.process_up`).
+- A server carries two independent liveness readings: `probe` (does it answer players) and
+  `runtime` (is the process alive on its host). Render both and never reconcile them.
+  `runtime.process_up` true with `probe.answering` false is a hung server, and that
+  disagreement is the point.
+- `runtime.known` false means the server was never polled and `runtime.stale` true means
+  the poller has not been round recently. Neither means down; do not draw them as down.
+- Game Hosts row actions go through `ActionMenu`
+  (`admin/components/`). An action a row cannot take is shown disabled, with the reason
+  as its title. Its trigger is 32 px with a mouse and a 44 px tap target on touch
+  (`touch:size-11`), on Server Operations and Game Hosts alike; the icon keeps its size.
+  `e2e/admin-server-operations.spec.ts` checks both sizes and `e2e/mobile/admin-cards.spec.ts`
+  the cards of both sections.
+
+- Each server row carries a `control` block: `managed`, `unit_state` (`active`, `activating`,
+  `failed`, `held`, `inactive`, or null), `held`, `restarts`, `started_at`, `actions` (what the
+  server offers right now) and `unavailable` (`not_managed`, `agent_unreachable`, or null).
+  A row without the block is treated as not managed.
+- Server actions sit in the row's `ActionMenu` (table rows and phone cards). Restart is there
+  for every staff role; Start and Stop only for Admins, and are not rendered for Moderators.
+  `restartServer`, `startServer` and `stopServer` (`POST /admin/servers/<id>/<action>`, empty
+  body) answer a `ServerActionOutcome`: the result, or a typed failure (`rate_limited` with
+  `retry_after`, `action_not_offered` with the current `unit_state` and `actions`,
+  `not_managed`, `agent_error`). Anything else throws an `ApiError`. They live in
+  `sections/serverActions.ts`, not `api.ts`, so they load with the admin chunk instead of the
+  web entry, which has no room for them.
+- The launcher never works the state machine out itself. An item is enabled exactly when its
+  action is in `control.actions`; otherwise it is disabled with the reason as its title and
+  hint: "Host not managed", "Host agent unreachable", or "Not available while <state>"
+  (running, starting, held, crash loop, stopped). `serverActionsFor` in
+  `sections/serverControl.ts` holds these rules and is unit-tested.
+- Every action asks first. The confirm names the server and shows the probe's player count
+  ("3 of 16 players", or "player count unknown" when the probe is stale or missing); Stop's
+  confirm says the server stays stopped across restarts until someone starts it. On success the
+  section reloads; failures show "Try again in N s", the state, or a generic host agent error.
+- Health ranks three states ahead of the probe and process readings: Held (`unit_state` is
+  `held`), Crash loop (`failed`), then Hung (watchdog): an unresolved
+  `server.watchdog_gave_up` alert for that server, taken from the alerts `AlertsPanel`
+  loads. "Problems only" includes all three; the Hung filter and card include Hung
+  (watchdog), and the Down card includes Crash loop.
+
+- Each row also carries four blocks, all optional on `AdminOperationsServer` (a row without one
+  shows "—"):
+  - `ruleset`: `desired`, `in_force` (what the game reports, or null), `pending` and
+    `team_run_active`;
+  - `config`: `state` (`applied`, `pending`, `drift`, `not_managed`), `version`,
+    `cached_version`, `applied_version` and `drift` (the key ids that differ from the saved
+    settings);
+  - `build`: `utbt_build` and `server_packages`;
+  - `players`: the names on the server, or null when it is not managed or never reported.
+- The columns that show them:
+  - **Ruleset** (`essential`, on the phone card face): "Certified" or "Casual" from `desired`.
+    A "pending" marker, titled "Applies at the next map (in force: casual)", shows while
+    `pending`, and a certified server running a team run shows a "team run" marker.
+  - **Config** (`detail`): "Applied v4", "Pending v4" (titled "Applies when the server is empty
+    or restarts"), "Drift (N)" (titled with the drifted settings' labels from `SETTING_SPECS`,
+    never the key ids) or "Not managed".
+  - **Build** (`detail`, lowest priority after Map): `utbt_build`, "Legacy" when a managed
+    server reports none, "—" when the host is not managed.
+- **Details.** A chevron at the start of each table row ("Details for <server>") opens a
+  `DataTableExpandRow`; on a phone card the same `ServerDetail` renders through `cards.panel`,
+  without the map, which the panel's grid already lists. It shows who is playing (each
+  in-game name through `PlayerInfo` with no `userId`, so plain text; "Nobody playing" or
+  "Unknown"), the map, the uptime from `runtime.uptime_seconds` ("3 d 4 h", "5 h 7 min"),
+  the loaded packages, the pending ruleset or settings with their explanation (pending
+  settings also name the running version, "Running v4"), and the drifted settings by label
+  with "Changed on the server; will be overwritten at the next start."
+- `rulesetCell`, `configStateText`, `configStateHint`, `runningConfigText`, `driftLabels`,
+  `buildText`, `packagesText`, `uptimeText` and `playersText` in `sections/serverControl.ts`
+  hold these strings and are unit-tested against the operations contract fixture.
+
+- Alerts: `fetchAdminAlerts`, `acknowledgeAdminAlert`, `unacknowledgeAdminAlert`,
+  `resolveAdminAlert`, shown in `AlertsPanel` at the top of Server Operations. Hosts raise
+  them (map switch failed, anti-cheat did not start, map vote data not serving, hung server
+  restarted, hung and the watchdog gave up, crash loop) and so does
+  the server's own polling (host unreachable, server process down). The fetchers live in
+  `sections/alertsApi.ts`, not `api.ts`, so they load with the admin chunk instead of the web
+  entry.
+- Alerts are deduplicated by the server: one open alert per target, with `occurrences`
+  counting repeats. Never render each occurrence as its own row.
+- `status` is `open`, `acknowledged` or `resolved`. Resolving claims it was dealt with; it
+  fixes nothing, and a recurrence opens a fresh alert, so resolving early costs nothing.
+  Acknowledge and resolve are audited, and resolve takes a reason.
+
+### Server settings
+
+- **Settings** in a row's `ActionMenu` (table rows and phone cards, Moderators and Admins) opens
+  `ServerSettingsDialog` (`sections/serverSettings/`). `fetchServerConfig` reads
+  `GET /admin/servers/<id>/config`; `saveServerConfig` saves. Both live in `serverConfigApi.ts`, not
+  `api.ts`, for the same bundle reason as `serverActions.ts`.
+- **One route per role.** Admins save through `PATCH /admin/servers/<id>/config`, Moderators through
+  `PATCH /admin/servers/<id>/config/basic` (server name, game password and ruleset only);
+  `saveRoute(role)` picks it. The server authorises every key; the client only decides what is
+  enabled and which route to call.
+- **Keys.** The read lists every key, in the server's order, with its `group`, `editable_by`
+  (`staff` or `admin`) and `state`. The dialog groups them Listing, Access, Match, Start map,
+  Gameplay and MapVote, with the ruleset (Casual / Certified) on top. `SETTING_SPECS` (`serverSettings.ts`) holds
+  each key's plain-word label, control (text, password, map name, number, switch, colour) and limits.
+- **States**, worked out by `settingMode`:
+  - `editable` and the role may change it: enabled;
+  - `editable` but Admin only, for a Moderator: read-only, with one notice at the top naming what
+    they can change;
+  - `locked`: disabled, "Set by certified". The certified ruleset sets max players, boosted caps and
+    player collisions. The locks follow the ruleset being edited: switching to Casual in the dialog
+    unlocks them before saving, and back;
+  - `after_cutover`: greyed in its group under "Available after cutover";
+  - `not_managed`: disabled, under the notice "This server is not managed yet; only the ruleset and
+    region can change".
+- **Values.** The game password is masked with a Show toggle; staff may see it. The client checks
+  mirror the server's, so most errors show inline: the length limits, printable ASCII (32 to 126),
+  no `=` or `"` in the server name, admin, message lines and game password, no `[ ] = "` in the
+  region and board label, and for map names also no spaces, `'`, `\`, `$` or backticks; whole numbers
+  in range; colour components 0 to 255. Only changed keys are checked and sent, so a value already on
+  the server never blocks another save. A 400 or 409 answer with `keys` marks those fields
+  (`serverConfigFieldErrors`) and shows the server's message.
+- **Save** stays disabled until something changed, and opens a `ConfirmDialog` with the server name
+  and the player count (`playerCountText`):
+  - **Apply when the server is empty** (the default) or **Apply now (restarts the server)**, for the
+    roles that may restart (`canApplyNow`). A change of only the ruleset or region restarts nothing,
+    so the choice is not shown.
+  - A ruleset change requires a written reason and says whether a certified team run is in progress:
+    "A team run is in progress", "No team run in progress" or "Team run state unknown" (`teamRunText`,
+    from the row's `ruleset.team_run_active`). Other changes need no reason.
+- **Outcome** (`saveOutcome`, from the answer's `apply` and the change): "Saved. Applies when the
+  server is empty", "Saved. Restarting", "Saved. Applies at the next map" (only the ruleset, or the
+  ruleset and region, changed), "Saved" (only the region changed) or "Saved, but the restart failed:
+  …" (the save stands). The section then reloads its rows.
+- Tests: `serverSettings.test.ts`, `serverConfigApi.test.ts` (on the `serverConfig/` fixtures),
+  `e2e/admin-server-operations.spec.ts` and the `admin/server-operations/settings` modal in the
+  mobile manifest.
+
 ## Game hosts (Admin only)
 
 - A host holds exactly one token. `issueAdminHostToken` (`PUT /admin/hosts/<id>/token`)
@@ -181,7 +330,33 @@ The map-author fetchers back `MapAuthorsModal`, opened from Maps Management.
   consequence (players on that host lose their personal bests in the mapvote until the
   host runs with a new token; the map list keeps working).
 - Server chips in the section are buttons that open the server's registry entry for
-  editing through `updateAdminServer`.
+  editing through `updateAdminServer`. The chips show the server name.
+- The editor changes only the address, port, state, status and game host. Name, region and
+  ruleset belong to Server Settings under Server Operations, and the editor says so. The
+  `AdminServerUpdate` body has no `name`, `region` or `certified_records`, and the server
+  refuses them on this route. The hosts list still sends `certified_records` and `ruleset`
+  on each server.
+
+## Audit log
+
+- The Action filter lists the three server actions. Their descriptions (`auditDescriptions.ts`,
+  pinned by `auditDescriptions.test.ts` against the contract fixture) are:
+  - `server.ruleset`: "Changed ruleset of <server> from casual to certified", with the reason
+    on the row;
+  - `server.config`: "Changed <n> settings on <server>", counting the changed keys only;
+  - `server.config.seed`: "Seeded settings for <server>", plus ", renamed from <old name>" when
+    `details.renamed` is set.
+- `<server>` is the row's `target_alias`, else the name in its details, else `server` and the
+  first 8 characters of its id. The row's tooltip keeps the server-written summary.
+- The game password never shows as a value. The diff shows `game_password` as "Changed" on a
+  settings change and "Hidden" on a seed, whatever the row holds.
+- A row with no actor (`actor_id` and `actor_alias` null) was written by the system. The row,
+  the card and the expanded detail show "System", with no role badge.
+- Roll back shows when the server says `can_rollback`; the server re-checks roles. A
+  `server.ruleset` rollback asks for a required reason and sends it as `{reason}`. When the
+  answer lists `skipped: ["game_password"]`, the section says "Rolled back. The game password
+  was not changed". A `not_reversible` answer (only the password changed) closes the dialog
+  and shows the server's message.
 
 ## Streamer roster (Admin → Streamers)
 

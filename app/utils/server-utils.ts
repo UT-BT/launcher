@@ -1,4 +1,4 @@
-import { asStringArray, type ActiveTitle } from '@/app/utils/api'
+import { asStringArray, type ActiveTitle, type ServerListingFields } from '@/app/utils/api'
 
 export interface ServerPlayer {
     id: string
@@ -12,7 +12,7 @@ export interface ServerPlayer {
     active_title?: ActiveTitle | null
 }
 
-export interface Server {
+export interface Server extends ServerListingFields {
     id: string
     ip: string
     hostname: string
@@ -31,7 +31,7 @@ export interface Server {
     ping?: number
 }
 
-export type ServerType = 'Certified' | 'Duel' | 'Casual' | 'Unknown'
+export type ServerType = 'Certified' | 'Duel' | 'Casual'
 export type ServerSortField =
     | 'type' | 'name' | 'map' | 'region' | 'ping' | 'players' | 'spectators'
 export type SortDir = 'asc' | 'desc'
@@ -51,7 +51,7 @@ export const DEFAULT_FILTERS: FilterState = {
     favoritesOnly: false,
 }
 
-const SERVER_TYPE_VALUES = new Set<string>(['Certified', 'Duel', 'Casual', 'Unknown'])
+const SERVER_TYPE_VALUES = new Set<string>(['Certified', 'Duel', 'Casual'])
 const CAPACITY_VALUES = new Set<string>(['empty', 'full', 'has-players'])
 
 export function sanitizeServerFilters(v: unknown): FilterState {
@@ -81,7 +81,6 @@ const TYPE_RANK: Record<ServerType, number> = {
     Certified: 0,
     Duel: 1,
     Casual: 2,
-    Unknown: 3,
 }
 
 export const trimServerName = (originalName: string): string => {
@@ -93,17 +92,19 @@ export const trimServerName = (originalName: string): string => {
     return originalName.replace(/^\[UTBT\.NET\]\s*-\s*/i, '').trim()
 }
 
-export const getServerType = (name: string): ServerType => {
-    const lowerName = name.toLowerCase()
-    if (lowerName.includes('certified')) return 'Certified'
-    if (lowerName.includes('duel')) return 'Duel'
-    if (lowerName.includes('casual')) return 'Casual'
-    return 'Unknown'
+export const isCertifiedServer = (server: Pick<Server, 'ruleset'>): boolean =>
+    server.ruleset === 'certified'
+
+export const getServerType = (server: Pick<Server, 'ruleset' | 'tournament'>): ServerType => {
+    if (!isCertifiedServer(server)) return 'Casual'
+    return server.tournament === true ? 'Duel' : 'Certified'
 }
 
-export const getServerRegion = (name: string): string => {
-    const match = name.match(/\(([^)]+)\)$/)
-    return match ? match[1] : 'Unknown'
+const compareRegions = (a: string | null, b: string | null): number => {
+    if (a === b) return 0
+    if (a === null) return 1
+    if (b === null) return -1
+    return a.localeCompare(b)
 }
 
 export const sortServers = (
@@ -116,7 +117,7 @@ export const sortServers = (
         let cmp = 0
         switch (sortBy) {
             case 'type': {
-                cmp = TYPE_RANK[getServerType(a.hostname)] - TYPE_RANK[getServerType(b.hostname)]
+                cmp = TYPE_RANK[getServerType(a)] - TYPE_RANK[getServerType(b)]
                 break
             }
             case 'name':
@@ -126,7 +127,7 @@ export const sortServers = (
                 cmp = a.map_name.localeCompare(b.map_name)
                 break
             case 'region':
-                cmp = getServerRegion(a.hostname).localeCompare(getServerRegion(b.hostname))
+                cmp = compareRegions(a.region, b.region)
                 break
             case 'ping':
                 cmp = (a.ping ?? Number.POSITIVE_INFINITY) - (b.ping ?? Number.POSITIVE_INFINITY)
@@ -151,13 +152,11 @@ export const filterServers = (
 ): Server[] => {
     return servers.filter(server => {
         if (filters.types.length > 0) {
-            const type = getServerType(server.hostname)
-            if (!filters.types.includes(type)) return false
+            if (!filters.types.includes(getServerType(server))) return false
         }
 
         if (filters.regions.length > 0) {
-            const region = getServerRegion(server.hostname)
-            if (!filters.regions.includes(region)) return false
+            if (server.region === null || !filters.regions.includes(server.region)) return false
         }
 
         if (filters.capacity.length > 0) {
@@ -234,23 +233,20 @@ export const getRegionFlag = (region: string): string => {
 }
 
 export const getGameStatusText = (
-    remainingTime: number,
-    isCertified: boolean,
-    type: ServerType,
-    redScore: number,
-    blueScore: number
+    server: Pick<Server, 'remaining_time_seconds' | 'ruleset' | 'red_team_score' | 'blue_team_score'>,
 ): string => {
+    const remainingTime = server.remaining_time_seconds
     if (remainingTime > 0) {
         const m = Math.floor(remainingTime / 60)
         const s = remainingTime % 60
         return `${m}:${s.toString().padStart(2, '0')} left`
     }
 
-    if (isCertified) {
+    if (isCertifiedServer(server)) {
         return 'Overtime'
     }
 
-    if ((type === 'Duel' || type === 'Casual') && redScore === blueScore) {
+    if (server.red_team_score === server.blue_team_score) {
         return 'Overtime'
     }
 

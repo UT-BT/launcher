@@ -1,0 +1,638 @@
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { BellRing, ChevronDown, ChevronRight, CircleCheck, CircleHelp, CirclePause, CircleSlash, Play, RefreshCw, RotateCcw, Server, ServerCog, Settings, Square, TriangleAlert } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import {
+  fetchAdminServerOperations,
+  type AdminAlert,
+  type AdminOperationsServer,
+  type AdminServerOperations,
+  type ServerAction,
+  type ServerConfigState,
+} from '@/app/utils/api'
+import { capabilities } from '@/app/platform'
+import { restartServer, startServer, stopServer, type ServerActionOutcome } from './serverActions'
+import { cn } from '@/lib/utils'
+import type { AdminSectionProps, Tone } from '../types'
+import { SectionShell } from '../components/SectionShell'
+import { StatCard } from '../components/StatCard'
+import { TableControls } from '../components/TableControls'
+import { useAdminTable, type AdminColumn } from '../components/useAdminTable'
+import { AdminCardFace, adminCardsPlaceholder } from '../components/AdminCardFace'
+import { AdminSelect, ConfirmDialog, Feedback, SearchInput, errMessage, relTime } from '../components/controls'
+import { ActionMenu, type ActionMenuItem } from '../components/ActionMenu'
+import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
+import { useNavState } from '@/app/components/navigation/useNavState'
+import { PANEL_LABEL } from '../components/shared'
+import { AlertsPanel } from './AlertsPanel'
+import { ServerSettingsDialog, type ServerSettingsSaved } from './serverSettings/ServerSettingsDialog'
+import { canOpenServerSettings } from './serverSettings/serverSettings'
+import {
+  SERVER_ACTION_LABELS,
+  buildText,
+  configStateHint,
+  configStateText,
+  driftLabels,
+  isDownHealth,
+  isHungHealth,
+  isProblemHealth,
+  packagesText,
+  playersText,
+  rulesetCell,
+  runningConfigText,
+  serverActionConfirm,
+  serverActionFailureMessage,
+  serverActionSuccessMessage,
+  serverActionsFor,
+  serverHealth,
+  uptimeText,
+  type Health,
+  type HealthKey,
+} from './serverControl'
+import {
+  DataTableCell,
+  DataTableEmpty,
+  DataTableHeaderCell,
+  DataTableHeaderRow,
+  DataTableRow,
+  DataTableShell,
+  DataTableSkeletonRow,
+} from '@/app/components/shared/DataTable'
+import { DataTableExpandRow } from '@/app/components/shared/DataTableExpandRow'
+import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+
+const AUTO_REFRESH_MS = 30_000
+
+const COLUMNS: AdminColumn[] = [
+  { id: 'server', label: 'Server', required: true, tier: 'essential' },
+  { id: 'health', label: 'Health', required: true, tier: 'essential' },
+  { id: 'ruleset', label: 'Ruleset', tier: 'essential' },
+  { id: 'config', label: 'Config', tier: 'detail' },
+  { id: 'host', label: 'Host', tier: 'detail' },
+  { id: 'probe', label: 'Probe', tier: 'detail' },
+  { id: 'process', label: 'Process', tier: 'detail' },
+  { id: 'players', label: 'Players', tier: 'detail' },
+  { id: 'map', label: 'Map', tier: 'detail' },
+  { id: 'build', label: 'Build', tier: 'detail' },
+  { id: 'region', label: 'Region', tier: 'detail' },
+  { id: 'actions', label: 'Actions', required: true, tier: 'essential' },
+]
+
+const LAYOUT: Record<string, { width: string; priority?: number }> = {
+  server: { width: '15rem' },
+  health: { width: '9rem' },
+  ruleset: { width: '8rem', priority: 70 },
+  config: { width: '8rem', priority: 60 },
+  host: { width: '10rem', priority: 50 },
+  players: { width: '7rem', priority: 40 },
+  probe: { width: '8rem', priority: 30 },
+  process: { width: '8rem', priority: 25 },
+  map: { width: '12rem', priority: 20 },
+  build: { width: '8rem', priority: 15 },
+  region: { width: '8rem', priority: 10 },
+  actions: { width: '5rem' },
+}
+
+const CHEVRON_WIDTH_REM = 2.75
+const CHEVRON_WIDTH = `${CHEVRON_WIDTH_REM}rem`
+
+const STATUS_OPTIONS = [
+  { value: 'all', label: 'All servers' },
+  { value: 'problems', label: 'Problems only' },
+  { value: 'hung', label: 'Hung' },
+  { value: 'answering', label: 'Answering' },
+  { value: 'down', label: 'Not answering' },
+  { value: 'unlinked', label: 'Not linked to a host' },
+]
+
+const HEALTH_ICON: Record<HealthKey, LucideIcon> = {
+  held: CirclePause,
+  crash_loop: RotateCcw,
+  watchdog: TriangleAlert,
+  healthy: CircleCheck,
+  hung: TriangleAlert,
+  down: CircleSlash,
+  unknown: CircleHelp,
+  unlisted: CircleHelp,
+}
+
+const HEALTH_CLASS: Record<Tone, string> = {
+  emerald: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300',
+  amber: 'bg-amber-500/10 border-amber-500/30 text-amber-300',
+  red: 'bg-red-500/10 border-red-500/30 text-red-300',
+  accent: 'bg-card/40 border-hairline/20 text-muted-foreground',
+}
+
+const MARKER = 'px-1.5 py-0.5 rounded border text-[10px] font-medium uppercase tracking-wide'
+
+const CONFIG_CLASS: Record<ServerConfigState, string> = {
+  applied: 'text-emerald-300',
+  pending: 'text-amber-300',
+  drift: 'text-red-300',
+  not_managed: 'text-muted-foreground',
+}
+
+const ACTION_ICON: Record<ServerAction, LucideIcon> = { restart: RefreshCw, start: Play, stop: Square }
+
+const SEND_ACTION: Record<ServerAction, (token: string, serverId: string) => Promise<ServerActionOutcome>> = {
+  restart: restartServer,
+  start: startServer,
+  stop: stopServer,
+}
+
+function HealthPill({ health }: { health: Health }) {
+  const Icon = HEALTH_ICON[health.key]
+  return (
+    <span
+      title={health.hint}
+      className={cn(
+        'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[11px] font-medium',
+        HEALTH_CLASS[health.tone],
+      )}
+    >
+      <Icon className="size-3" />
+      {health.label}
+    </span>
+  )
+}
+
+function ProcessCell({ server }: { server: AdminOperationsServer }) {
+  const runtime = server.runtime
+  if (!runtime?.known) return <span className="text-xs text-muted-foreground">Not polled</span>
+  if (runtime.stale) {
+    return <span className="text-xs text-muted-foreground" title={`Last seen ${relTime(runtime.observed_at)}`}>Stale</span>
+  }
+  return (
+    <span
+      className={cn('text-xs', runtime.process_up ? 'text-emerald-300' : 'text-red-300')}
+      title={runtime.matched_by ? `Matched by ${runtime.matched_by}` : undefined}
+    >
+      {runtime.process_up ? 'Running' : 'Stopped'}
+    </span>
+  )
+}
+
+function ProbePill({ server }: { server: AdminOperationsServer }) {
+  const { answering, updated_at } = server.probe
+  const label = answering ? 'Answering' : updated_at ? 'Stale' : 'No reply'
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[11px] font-medium',
+        answering
+          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+          : 'bg-red-500/10 border-red-500/30 text-red-300',
+      )}
+      title={updated_at ? `Last probe ${relTime(updated_at)}` : 'Never probed, or the probe record was dropped'}
+    >
+      {answering ? <CircleCheck className="size-3" /> : <CircleSlash className="size-3" />}
+      {label}
+    </span>
+  )
+}
+
+function RulesetBadge({ server }: { server: AdminOperationsServer }) {
+  const ruleset = rulesetCell(server)
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1.5">
+      <span>{ruleset.label}</span>
+      {ruleset.pending && <span title={ruleset.pending} className={cn(MARKER, HEALTH_CLASS.amber)}>pending</span>}
+      {ruleset.teamRun && <span title="A team run is in progress" className={cn(MARKER, HEALTH_CLASS.emerald)}>team run</span>}
+    </span>
+  )
+}
+
+function ConfigState({ server }: { server: AdminOperationsServer }) {
+  const state = server.config?.state
+  return (
+    <span className={cn('text-xs', state ? CONFIG_CLASS[state] : 'text-muted-foreground')} title={configStateHint(server) ?? undefined}>
+      {configStateText(server)}
+    </span>
+  )
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="space-y-1 min-w-0">
+      <div className={PANEL_LABEL}>{label}</div>
+      <div className="text-sm text-foreground break-words">{children}</div>
+    </div>
+  )
+}
+
+function WhoIsPlaying({ server }: { server: AdminOperationsServer }) {
+  const players = server.players
+  if (!players || players.length === 0) return <>{playersText(server)}</>
+  return (
+    <ul className="flex flex-wrap gap-x-3 gap-y-1">
+      {players.map((name, i) => (
+        <li key={`${i}-${name}`} className="min-w-0">
+          <PlayerInfo alias={name} size="sm" presentation="name" />
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function explained(lead: string, hint: string): string {
+  return `${lead}: ${hint.charAt(0).toLowerCase()}${hint.slice(1)}`
+}
+
+function ServerDetail({ server, inCard = false }: { server: AdminOperationsServer; inCard?: boolean }) {
+  const ruleset = rulesetCell(server)
+  const configHint = server.config?.state === 'pending' ? configStateHint(server) : null
+  const running = runningConfigText(server)
+  const drift = driftLabels(server)
+  return (
+    <div className={cn('bg-card/30 border border-hairline/5 rounded-xl', inCard ? 'p-3 space-y-4' : 'p-5 space-y-5')}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+        <Field label="Who is playing"><WhoIsPlaying server={server} /></Field>
+        {!inCard && <Field label="Map">{server.probe.map_name ?? '—'}</Field>}
+        <Field label="Uptime"><span className="tabular-nums">{uptimeText(server.runtime?.uptime_seconds)}</span></Field>
+        <Field label="Packages">{packagesText(server)}</Field>
+        {ruleset.pending && <Field label="Ruleset">{explained(ruleset.label, ruleset.pending)}</Field>}
+        {configHint && (
+          <Field label="Settings">
+            <p>{explained(configStateText(server), configHint)}</p>
+            {running && <p className="text-xs text-muted-foreground">{running}</p>}
+          </Field>
+        )}
+      </div>
+      {drift.length > 0 && (
+        <Field label="Drift">
+          <p>{drift.join(', ')}</p>
+          <p className="text-xs text-muted-foreground">Changed on the server; will be overwritten at the next start.</p>
+        </Field>
+      )}
+    </div>
+  )
+}
+
+function serverCell(id: string, server: AdminOperationsServer, health: Health, actions: ReactNode): ReactNode {
+  switch (id) {
+    case 'server':
+      return (
+        <div className="min-w-0">
+          <div className="font-medium truncate">{server.name}</div>
+          <div className="text-xs text-muted-foreground tabular-nums">{server.port}</div>
+        </div>
+      )
+    case 'health':
+      return <HealthPill health={health} />
+    case 'ruleset':
+      return <RulesetBadge server={server} />
+    case 'config':
+      return <ConfigState server={server} />
+    case 'host':
+      return server.host_name ?? <span className="text-amber-300/80">Not linked</span>
+    case 'probe':
+      return <ProbePill server={server} />
+    case 'process':
+      return <ProcessCell server={server} />
+    case 'players':
+      return (
+        <span className="tabular-nums">
+          {server.probe.answering ? `${server.probe.num_players ?? 0}/${server.probe.max_players ?? 0}` : '--'}
+        </span>
+      )
+    case 'map':
+      return <span className="truncate block">{server.probe.map_name ?? '--'}</span>
+    case 'build':
+      return <span className="text-xs">{buildText(server)}</span>
+    case 'region':
+      return server.region ?? '--'
+    case 'actions':
+      return actions
+    default:
+      return null
+  }
+}
+
+export function ServerOperationsSection({ userProfile }: AdminSectionProps) {
+  const token = userProfile?.accessToken
+  const [data, setData] = useState<AdminServerOperations | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+  const [status, setStatus] = useState('all')
+  const [visibleColumns, setVisibleColumns] = useState<Set<string> | null>(null)
+  const [openAlerts, setOpenAlerts] = useState(0)
+  const [alerts, setAlerts] = useState<AdminAlert[]>([])
+  const [pending, setPending] = useState<{ server: AdminOperationsServer; action: ServerAction } | null>(null)
+  const [busy, setBusy] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [settingsId, setSettingsId] = useState<string | null>(null)
+  const [expanded, setExpanded] = useNavState<string | null>('admin.serverops.expanded', null)
+  const role = userProfile?.utbt_role
+
+  const table = useAdminTable('utbt:admin:serverops:cols:v2', COLUMNS, { defaultFiltersOpen: false })
+  const abortRef = useRef<AbortController | null>(null)
+
+  const resolveColumns = useCallback((ids: Set<string>) => setVisibleColumns(ids), [])
+  const isVisible = table.isVisible
+  const shows = useCallback(
+    (id: string) => isVisible(id) && (!visibleColumns || visibleColumns.has(id)),
+    [isVisible, visibleColumns],
+  )
+
+  const load = useCallback(async (opts: { silent?: boolean } = {}) => {
+    if (!token) return
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    if (opts.silent) setRefreshing(true)
+    else setLoading(true)
+
+    try {
+      const next = await fetchAdminServerOperations(token, controller.signal)
+      setData(next)
+      setError(null)
+    } catch (e) {
+      if (controller.signal.aborted) return
+      setError(errMessage(e))
+    } finally {
+      if (!controller.signal.aborted) {
+        setLoading(false)
+        setRefreshing(false)
+      }
+    }
+  }, [token])
+
+  useEffect(() => {
+    load()
+    return () => abortRef.current?.abort()
+  }, [load])
+
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (capabilities.game) {
+        try {
+          if (await window.conveyor.game.isGameRunning()) return
+        } catch {
+          /* fall through and refresh anyway */
+        }
+      }
+      load({ silent: true })
+    }, AUTO_REFRESH_MS)
+    return () => clearInterval(interval)
+  }, [load])
+
+  useRegisterPageRefresh({
+    onRefresh: () => load({ silent: true }),
+    refreshing,
+    disabled: !token,
+    tooltip: 'Refresh server status',
+  })
+
+  const healthById = useMemo(
+    () => new Map((data?.servers ?? []).map((server) => [server.id, serverHealth(server, alerts)])),
+    [data, alerts],
+  )
+  const healthOf = useCallback(
+    (server: AdminOperationsServer) => healthById.get(server.id) ?? serverHealth(server, alerts),
+    [healthById, alerts],
+  )
+
+  const servers = useMemo(() => {
+    const rows = data?.servers ?? []
+    const needle = search.trim().toLowerCase()
+    return rows.filter((server) => {
+      const health = healthOf(server)
+      if (status === 'problems' && !isProblemHealth(health.key)) return false
+      if (status === 'hung' && !isHungHealth(health.key)) return false
+      if (status === 'answering' && !server.probe.answering) return false
+      if (status === 'down' && server.probe.answering) return false
+      if (status === 'unlinked' && server.host_ref) return false
+      if (!needle) return true
+      return (
+        server.name.toLowerCase().includes(needle) ||
+        (server.host_name ?? '').toLowerCase().includes(needle) ||
+        (server.probe.map_name ?? '').toLowerCase().includes(needle) ||
+        (server.region ?? '').toLowerCase().includes(needle)
+      )
+    })
+  }, [data, search, status, healthOf])
+
+  const totals = useMemo(() => {
+    const rows = data?.servers ?? []
+    const active = rows.filter((server) => server.active)
+    const hosts = data?.hosts ?? []
+    return {
+      up: active.filter((server) => healthOf(server).key === 'healthy').length,
+      hung: active.filter((server) => isHungHealth(healthOf(server).key)).length,
+      down: active.filter((server) => isDownHealth(healthOf(server).key)).length,
+      hostsOnline: hosts.filter((host) => host.active && host.runtime?.reachable).length,
+      hostsActive: hosts.filter((host) => host.active).length,
+    }
+  }, [data, healthOf])
+
+  const runAction = async () => {
+    if (!pending || !token) return
+    const { server, action } = pending
+    setBusy(server.id)
+    setError(null)
+    setNotice(null)
+    try {
+      const outcome = await SEND_ACTION[action](token, server.id)
+      if (outcome.ok) {
+        setNotice(serverActionSuccessMessage(action, server, outcome.result.unit_state))
+        load({ silent: true })
+      } else {
+        setError(serverActionFailureMessage(action, outcome.failure))
+      }
+    } catch (e) {
+      setError(errMessage(e))
+    } finally {
+      setBusy(null)
+      setPending(null)
+    }
+  }
+
+  const serverActions = (server: AdminOperationsServer) => {
+    const items: ActionMenuItem[] = serverActionsFor(role, server.control).map((item) => ({
+      key: item.action,
+      label: SERVER_ACTION_LABELS[item.action],
+      icon: ACTION_ICON[item.action],
+      tone: item.action === 'stop' ? 'red' : undefined,
+      disabled: !item.enabled,
+      title: item.reason ?? undefined,
+      hint: item.reason ?? undefined,
+      onSelect: () => setPending({ server, action: item.action }),
+    }))
+    if (canOpenServerSettings(role)) {
+      items.push({ key: 'settings', label: 'Settings', icon: Settings, separatorBefore: items.length > 0, onSelect: () => setSettingsId(server.id) })
+    }
+    return <ActionMenu items={items} heading={server.name} busy={busy === server.id} ariaLabel={`Actions for ${server.name}`} />
+  }
+
+  const cell = (id: string, server: AdminOperationsServer) =>
+    serverCell(id, server, healthOf(server), id === 'actions' ? serverActions(server) : null)
+
+  const confirm = pending ? serverActionConfirm(pending.action, pending.server) : null
+
+  const settingsServer = settingsId ? data?.servers.find((server) => server.id === settingsId) ?? null : null
+
+  const settingsSaved = async (saved: ServerSettingsSaved) => {
+    setSettingsId(null)
+    setError(null)
+    setNotice(saved.failed ? null : saved.message)
+    await load({ silent: true })
+    if (saved.failed) setError(saved.message)
+  }
+
+  const columnCount = 4 + (['ruleset', 'config', 'host', 'probe', 'process', 'players', 'map', 'build', 'region'] as const).filter(shows).length
+
+  const columns = table.responsiveColumns<AdminOperationsServer>((id) => ({
+    width: LAYOUT[id]?.width, priority: LAYOUT[id]?.priority, cell: (server) => cell(id, server),
+  }))
+
+  return (
+    <SectionShell
+      title="Server Operations"
+      description="Every registered game server, the host it runs on, and whether it is answering."
+      icon={ServerCog}
+    >
+      <Feedback message={error} tone="red" onDismiss={() => setError(null)} />
+      <Feedback message={notice} tone="emerald" onDismiss={() => setNotice(null)} />
+
+      <AlertsPanel token={token} onCountChange={setOpenAlerts} onAlertsChange={setAlerts} />
+
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <StatCard label="Healthy" value={totals.up} icon={CircleCheck} tone="emerald" />
+        <StatCard label="Hung" value={totals.hung} icon={TriangleAlert} tone={totals.hung > 0 ? 'amber' : 'accent'} hint="Running but not answering" />
+        <StatCard label="Down" value={totals.down} icon={CircleSlash} tone={totals.down > 0 ? 'red' : 'accent'} />
+        <StatCard
+          label="Hosts online"
+          value={`${totals.hostsOnline}/${totals.hostsActive}`}
+          icon={Server}
+          tone={totals.hostsOnline < totals.hostsActive ? 'amber' : 'accent'}
+        />
+        <StatCard label="Open alerts" value={openAlerts} icon={BellRing} tone={openAlerts > 0 ? 'amber' : 'accent'} />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <SearchInput value={search} onChange={setSearch} placeholder="Search servers, hosts, maps..." className="min-w-[14rem] flex-1" />
+        <AdminSelect value={status} onChange={setStatus} options={STATUS_OPTIONS} ariaLabel="Filter by probe status" />
+        <TableControls table={table} showFilters={false} />
+      </div>
+
+      <DataTableShell
+        responsive={{
+          columns,
+          onResolve: resolveColumns,
+          extraRem: CHEVRON_WIDTH_REM,
+          onCompactChange: table.onCompactChange,
+          compactAriaLabel: 'Game servers',
+          cards: {
+            rows: servers,
+            rowKey: (server) => server.id,
+            rowClassName: (server) => (server.active ? undefined : 'opacity-50'),
+            face: (server) => <AdminCardFace columns={columns} row={server} />,
+            panel: (server) => <ServerDetail server={server} inCard />,
+            placeholder: adminCardsPlaceholder(loading, servers.length === 0, 'No servers match your filters.'),
+          },
+        }}
+      >
+        <DataTableHeaderRow>
+          <DataTableHeaderCell width={CHEVRON_WIDTH}> </DataTableHeaderCell>
+          <DataTableHeaderCell width="15rem">Server</DataTableHeaderCell>
+          <DataTableHeaderCell align="center" width="9rem">Health</DataTableHeaderCell>
+          {shows('ruleset') && <DataTableHeaderCell width="8rem">Ruleset</DataTableHeaderCell>}
+          {shows('config') && <DataTableHeaderCell width="8rem">Config</DataTableHeaderCell>}
+          {shows('host') && <DataTableHeaderCell width="10rem">Host</DataTableHeaderCell>}
+          {shows('probe') && <DataTableHeaderCell align="center" width="8rem">Probe</DataTableHeaderCell>}
+          {shows('process') && <DataTableHeaderCell align="center" width="8rem">Process</DataTableHeaderCell>}
+          {shows('players') && <DataTableHeaderCell align="center" width="7rem">Players</DataTableHeaderCell>}
+          {shows('map') && <DataTableHeaderCell width="12rem">Map</DataTableHeaderCell>}
+          {shows('build') && <DataTableHeaderCell width="8rem">Build</DataTableHeaderCell>}
+          {shows('region') && <DataTableHeaderCell width="8rem">Region</DataTableHeaderCell>}
+          <DataTableHeaderCell align="right" width="5rem">Actions</DataTableHeaderCell>
+        </DataTableHeaderRow>
+        <tbody>
+          {loading && Array.from({ length: 6 }).map((_, index) => (
+            <DataTableSkeletonRow key={index} columnCount={columnCount} />
+          ))}
+
+          {!loading && servers.length === 0 && (
+            <DataTableEmpty colSpan={columnCount} message="No servers match your filters." />
+          )}
+
+          {!loading && servers.map((server) => {
+            const open = expanded === server.id
+            const detailId = `serverops-detail-${server.id}`
+            return (
+              <Fragment key={server.id}>
+                <DataTableRow className={cn(!server.active && 'opacity-50', open && 'bg-hairline/[0.04]')}>
+                  <DataTableCell align="center" width={CHEVRON_WIDTH}>
+                    <button
+                      type="button"
+                      aria-label={`Details for ${server.name}`}
+                      aria-expanded={open}
+                      aria-controls={open ? detailId : undefined}
+                      onClick={() => setExpanded(open ? null : server.id)}
+                      className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-hairline/5 hover:text-foreground transition-colors cursor-pointer"
+                    >
+                      {open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+                    </button>
+                  </DataTableCell>
+                  <DataTableCell width="15rem">{cell('server', server)}</DataTableCell>
+                  <DataTableCell align="center" width="9rem">{cell('health', server)}</DataTableCell>
+                  {shows('ruleset') && <DataTableCell width="8rem">{cell('ruleset', server)}</DataTableCell>}
+                  {shows('config') && <DataTableCell width="8rem">{cell('config', server)}</DataTableCell>}
+                  {shows('host') && <DataTableCell width="10rem">{cell('host', server)}</DataTableCell>}
+                  {shows('probe') && <DataTableCell align="center" width="8rem">{cell('probe', server)}</DataTableCell>}
+                  {shows('process') && <DataTableCell align="center" width="8rem">{cell('process', server)}</DataTableCell>}
+                  {shows('players') && <DataTableCell align="center" width="7rem">{cell('players', server)}</DataTableCell>}
+                  {shows('map') && <DataTableCell width="12rem">{cell('map', server)}</DataTableCell>}
+                  {shows('build') && <DataTableCell width="8rem">{cell('build', server)}</DataTableCell>}
+                  {shows('region') && <DataTableCell width="8rem">{cell('region', server)}</DataTableCell>}
+                  <DataTableCell align="right" width="5rem">
+                    <div className="flex items-center justify-end">{cell('actions', server)}</div>
+                  </DataTableCell>
+                </DataTableRow>
+                {open && (
+                  <DataTableExpandRow id={detailId} colSpan={columnCount}>
+                    <ServerDetail server={server} />
+                  </DataTableExpandRow>
+                )}
+              </Fragment>
+            )
+          })}
+        </tbody>
+      </DataTableShell>
+
+      {data?.generated_at && (
+        <div className="text-xs text-muted-foreground">Updated {relTime(data.generated_at)}</div>
+      )}
+
+      <ConfirmDialog
+        open={!!pending}
+        title={confirm?.title ?? ''}
+        message={confirm && (
+          <>
+            <p>
+              <span className="font-medium text-foreground">{confirm.server}</span> · {confirm.players}
+            </p>
+            <p className="mt-2">{confirm.detail}</p>
+          </>
+        )}
+        confirmLabel={confirm?.confirmLabel}
+        tone={confirm?.tone}
+        busy={!!pending && busy === pending.server.id}
+        onConfirm={runAction}
+        onCancel={() => setPending(null)}
+      />
+
+      {settingsServer && token && (
+        <ServerSettingsDialog
+          server={settingsServer}
+          token={token}
+          role={role}
+          onClose={() => setSettingsId(null)}
+          onSaved={settingsSaved}
+        />
+      )}
+    </SectionShell>
+  )
+}

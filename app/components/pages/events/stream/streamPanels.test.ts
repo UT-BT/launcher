@@ -29,6 +29,10 @@ const LAZY_MODULES = [
     'panels/match/CountdownSection', 'StreamTab',
 ]
 
+const LAZY_ENTRIES = [...STREAM_PANELS, ...MATCH_SECTIONS]
+const loadedComponents = await Promise.all(LAZY_ENTRIES.map(async entry => (await entry.load()).default))
+const appSourceFiles = sourceFiles(APP_ROOT)
+
 describe('Stream tab panels', () => {
     it('lists every panel in the order the tab shows them', () => {
         expect(STREAM_PANELS.map(panel => [panel.id, panel.label])).toEqual([
@@ -61,17 +65,14 @@ describe('Stream tab panels', () => {
         ])
     })
 
-    it('loads each panel and section as a component from its own module', async () => {
-        const entries = [...STREAM_PANELS, ...MATCH_SECTIONS]
-        const components = await Promise.all(entries.map(async entry => (await entry.load()).default))
-
-        for (const component of components) expect(typeof component).toBe('function')
-        expect(new Set(components).size).toBe(entries.length)
+    it('loads each panel and section as a component from its own module', () => {
+        for (const component of loadedComponents) expect(typeof component).toBe('function')
+        expect(new Set(loadedComponents).size).toBe(LAZY_ENTRIES.length)
     })
 
     it('never pulls a panel, section or the tab itself in through a static import', () => {
         const lazyTargets = new Set(LAZY_MODULES.map(module => resolve(__dirname, module)))
-        const offenders = sourceFiles(APP_ROOT).flatMap(file => staticImportTargets(file)
+        const offenders = appSourceFiles.flatMap(file => staticImportTargets(file)
             .filter(target => lazyTargets.has(target))
             .map(target => `${file} -> ${target}`))
 

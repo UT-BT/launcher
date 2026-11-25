@@ -25,7 +25,11 @@ loads on first paint. Build commands are in [build.md](build.md).
   `window.conveyor.game.*`, web fetches the gateway's `/server-info` and `/patreon`
   directly. Both server branches run through `normaliseGatewayServers`, which fills
   defaults on partial rows and drops rows with no `id`, `ip` or `hostname`, so pages always
-  get a typed `Server[]`.
+  get a typed `Server[]`. It coerces the listing fields: `ruleset` keeps `certified` or
+  `casual` and reads anything else as `casual`; `region` keeps a non-empty string, else
+  `null`; `tournament` and `password_protected` keep a boolean, else `null`. A row from a
+  gateway without them reads as casual, no region, no lock. Desktop's IPC handler passes rows
+  through untouched, so the normaliser is the one place they are typed.
 - `external.ts`: `openExternal(url)`. Desktop calls the `web-open-url` channel (main's
   `openExternalSafe`); web calls `window.open` with `noopener,noreferrer`.
 - `downloads.ts`: `saveDemoFile` / `saveMapZip`. Desktop writes into the game install; web
@@ -544,7 +548,7 @@ platform gates.
 
 | Budget | Limit |
 |---|---|
-| Initial JS | 192 KiB |
+| Initial JS | 193 KiB |
 | Initial CSS | 38 KiB |
 | Initial total | 230 KiB |
 | Largest lazy chunk (and each stream scene chunk) | 120 KiB |

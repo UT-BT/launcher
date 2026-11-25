@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { reopenOnDroppedModule } from './dev-server'
 import { serveFixtureSet } from './fixtures/router'
+import { person } from './fixtures/synthetic/people'
 import { crawlSurfaces, surfaceSteps } from './manifest'
 import { admin } from './manifest/admin'
 import { CONSENT_KEY } from './manifest/overlays'
@@ -263,6 +264,103 @@ test.describe('Admin cards', () => {
         await expect(terms(card)).toHaveText(['Time', 'Actor', 'Action'])
         await expect(card.getByText('Actor', { exact: true })).toHaveCount(1)
         await expect(card.getByText('Action', { exact: true })).toHaveCount(1)
+    })
+
+    test('Audit Logs: a seed row shows the System actor, the password never shows, and a ruleset rollback needs a reason', async ({ page }) => {
+        const rollbacks: { path: string; body: unknown }[] = []
+        await openSection(page, 'audit-logs')
+        await page.route(/\/admin\/audit\/[^/]+\/rollback$/, async route => {
+            const path = new URL(route.request().url()).pathname
+            rollbacks.push({ path, body: route.request().postDataJSON() })
+            const skipped = path.includes('8c03') ? ['game_password'] : []
+            await route.fulfill({ json: { success: true, data: { ok: true, skipped } } })
+        })
+        const cards = await cardsOf(page, 'Audit entries')
+
+        const seed = cards.filter({ hasText: 'Seeded settings for [BT] Test Server #1 (EU), renamed from BT Test Server | EU' })
+        await openPanel(seed)
+        await expect(seed.getByRole('definition').filter({ hasText: 'System' })).toHaveCount(1)
+        await expect(seed.getByText('Hidden', { exact: true })).toBeVisible()
+        await expect(seed.getByRole('button', { name: 'Roll back' })).toHaveCount(0)
+
+        const config = cards.filter({ hasText: 'Changed 2 settings on' })
+        await openPanel(config)
+        await expect(config.getByText('game_password', { exact: true })).toBeVisible()
+        await expect(config.getByText('Changed', { exact: true })).toBeVisible()
+
+        const ruleset = cards.filter({ hasText: 'from casual to certified' })
+        await openPanel(ruleset)
+        await ruleset.getByRole('button', { name: 'Roll back' }).tap()
+        const confirm = modal(page, 'Roll back this action?')
+        await expect(confirm.getByRole('button', { name: 'Roll back' })).toBeDisabled()
+        await confirm.getByPlaceholder('Why roll back this ruleset change?').fill('Cup is over')
+        await confirm.getByRole('button', { name: 'Roll back' }).tap()
+        await expect(modal(page)).toHaveCount(0)
+        expect(rollbacks.at(-1)?.body).toEqual({ reason: 'Cup is over' })
+
+        if (await config.getByRole('button', { name: 'Details' }).getAttribute('aria-expanded') !== 'true') await openPanel(config)
+        await config.getByRole('button', { name: 'Roll back' }).tap()
+        await expect(modal(page, 'Roll back this action?').getByPlaceholder('Why roll back this ruleset change?')).toHaveCount(0)
+        await modal(page).getByRole('button', { name: 'Roll back' }).tap()
+        await expect(page.getByText('Rolled back. The game password was not changed')).toBeVisible()
+        expect(rollbacks.at(-1)?.body).toBeNull()
+    })
+
+    test('Server Operations: the card face shows the ruleset, and the panel shows who is playing and the config state', async ({ page }) => {
+        await openSection(page, 'server-operations')
+        const cards = await cardsOf(page, 'Game servers')
+        await expect(cards.filter({ hasText: 'Test BT Server #1 | EU' }).getByText('team run', { exact: true })).toBeVisible()
+        const card = cards.filter({ hasText: 'Test BT Server #2 | NA' })
+        await expect(card.getByText('Certified', { exact: true })).toBeVisible()
+        await expect(card.getByText('pending', { exact: true })).toBeVisible()
+        await openPanel(card)
+        await expect(terms(card)).toHaveText(['Config', 'Host', 'Probe', 'Process', 'Players', 'Map', 'Build', 'Region'])
+        await expect(card.getByRole('definition').first()).toHaveText('Drift (2)')
+        await expect(card.getByText('Who is playing')).toBeVisible()
+        await expect(card.getByText(person(60).alias, { exact: true })).toBeVisible()
+        await expect(card.getByText('Max players, Message of the day, line 1', { exact: true })).toBeVisible()
+        await expect(card.getByText('Changed on the server; will be overwritten at the next start.')).toBeVisible()
+        await expect(card.getByText('Certified: applies at the next map (in force: casual)')).toBeVisible()
+        await expectNoSidewaysScroll(page.getByRole('main').getByRole('list', { name: 'Game servers' }))
+
+        const held = cards.filter({ hasText: 'Test BT Server #5 | EU' })
+        await openPanel(held)
+        await expect(held.getByRole('definition').first()).toHaveText('Pending v3')
+        await expect(held.getByText('Pending v3: applies when the server is empty or restarts')).toBeVisible()
+        await expect(held.getByText('Running v2', { exact: true })).toBeVisible()
+        await expect(held.getByRole('definition').nth(6)).toHaveText('Legacy')
+    })
+
+    for (const [section, list] of [['server-operations', 'Game servers'], ['hosts-management', 'Game hosts']] as const) {
+        test(`${section}: every card's action menu is a 44 px tap target`, async ({ page }) => {
+            await openSection(page, section)
+            const cards = await cardsOf(page, list)
+            const triggers = cards.getByRole('button', { name: /^Actions for / }).filter({ visible: true })
+            await expect(triggers.first()).toBeVisible()
+            for (const trigger of await triggers.all()) {
+                const box = await trigger.boundingBox()
+                expect(box?.width).toBeGreaterThanOrEqual(44)
+                expect(box?.height).toBeGreaterThanOrEqual(44)
+            }
+        })
+    }
+
+    test('Game Hosts: the server editor has no name, region or records field, and saves none of them', async ({ page }) => {
+        await openSection(page, 'hosts-management')
+        let body: Record<string, unknown> | null = null
+        await page.route(/\/admin\/servers\/synthetic-server-7$/, async route => {
+            body = route.request().postDataJSON()
+            await route.fulfill({ json: { success: true, data: { server: { id: 'synthetic-server-7', name: 'Test BT Server #7 | SA' }, changed: [] } } })
+        })
+        await page.getByRole('main').getByRole('button', { name: /Test BT Server #7 \| SA/ }).first().tap()
+        const editor = modal(page, 'Test BT Server #7 | SA')
+        await expect(editor).toBeVisible()
+        for (const label of ['Name', 'Region', 'Records']) await expect(editor.getByText(label, { exact: true })).toHaveCount(0)
+        await expect(editor.getByRole('combobox', { name: 'Record certification' })).toHaveCount(0)
+        await expect(editor.getByText('Name, region and ruleset are in Server Settings, under Server Operations.')).toBeVisible()
+        await editor.getByRole('button', { name: 'Save' }).tap()
+        await expect(modal(page)).toHaveCount(0)
+        expect(Object.keys(body ?? {}).sort()).toEqual(['active', 'host_ref', 'ip', 'port', 'state'])
     })
 
     test('Maps Management: Edit opens the map editor from the card, the card sort drives the header sort, and the body opens the map', async ({ page }) => {

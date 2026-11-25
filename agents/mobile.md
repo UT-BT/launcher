@@ -160,7 +160,9 @@ matters. Details: [state-patterns.md](state-patterns.md#refresh-handlers-and-pul
 - **Tooltips** (`ui/tooltip.tsx`) open on tap and close on an outside tap or a scroll. Information
   that matters goes inline on touch, read from the device environment at the call site
   ([shared-components.md](shared-components.md#ui-primitives-appcomponentsui);
-  `e2e/mobile/tap-tooltips.spec.ts`).
+  `e2e/mobile/tap-tooltips.spec.ts`). For example, a password-protected server says
+  "Password required" in text on its touch card face and panel, where a mouse gets a lock icon
+  ([game.md](features/game.md#launching-and-joining)).
 - **Video and effects.** Every `<video>` plays inline. Compare page videos start muted and at
   most one plays sound; on a phone, and on a tablet in portrait, only the visible tiles stream: a
   hidden tile drops its `src` and reloads empty, and a revealed one seeks to the master clock. A

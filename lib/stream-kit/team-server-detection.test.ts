@@ -137,6 +137,10 @@ describe('detectTeamServers', () => {
             red_team_score: 0,
             blue_team_score: 0,
             certified_records: true,
+            ruleset: 'certified',
+            region: null,
+            tournament: null,
+            password_protected: null,
             players: [
                 { id: ALICE, name: 'alice', ping: 40, time: 60, team: 0, deaths: 0, is_spectator: false },
                 { id: '3', name: 'guest', ping: 80, time: 30, team: 1, deaths: 1, is_spectator: false },

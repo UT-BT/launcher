@@ -92,9 +92,10 @@ add `-t "<test name>"`. `npm test -- pickBan` runs every file whose path contain
 ### Golden contract fixtures
 
 Each area under `app/utils/fixtures/` (`eventStats/`, `mapUploads/`, `pickBanVeto/`,
-`runCompare/`, `streamSides/`) holds API responses as JSON, frozen byte for byte. `runCompare/`
-holds the pairwise comparison bodies and the team comparison bodies (`team_compare_*.json`), each
-a copy of the API's own contract example ([api.md](api.md#team-comparison)):
+`runCompare/`, `serverConfig/`, `serverControl/`, `streamSides/`) holds API responses as JSON,
+frozen byte for byte. `runCompare/` holds the pairwise comparison bodies and the team comparison
+bodies (`team_compare_*.json`), each a copy of the API's own contract example
+([api.md](api.md#team-comparison)):
 
 - `<area>Fixtures.ts` imports every file into a registry (`file`, `route`, `status`, `body` per
   name) typed against `app/utils/api.ts`, and exports `<area>Fixture(name)` (the success data),
@@ -103,6 +104,14 @@ a copy of the API's own contract example ([api.md](api.md#team-comparison)):
   in `PINNED_SHA256`, checks the envelope, and (except `mapUploads`) checks the contract's keys
   both ways through `satisfies Record<keyof T, true>` maps, so a field added on one side fails
   until both agree.
+- `serverControl/` pins its files in a `SHA256SUMS` file beside them instead of `PINNED_SHA256`,
+  because the API repo holds byte-identical copies with the same lines; change a file only together
+  with every copy and its `SHA256SUMS` line. Its floats always carry a fraction (`2.5`, never `2.0`),
+  so every JSON serializer writes the same bytes.
+- `serverConfig/` (server settings, rulesets, the operations rows with their ruleset, config,
+  build and players blocks, the public server rows and the settings audit rows) follows the same
+  `SHA256SUMS` rule. The operations field-for-field check runs on its `operations_response.json`;
+  the `serverControl/` copy stays as it is and is checked without those four blocks.
 - The folder's `.gitattributes` (`*.json -text`) keeps git from rewriting line endings, which
   would break the pins. `.prettierignore` keeps Prettier off them for the same reason.
 
@@ -513,7 +522,7 @@ both.
 
 | Entry | Signed in as | Crawls |
 |---|---|---|
-| `admin` | Admin, so every section shows | Overview, then one sub-view per section in `ADMIN_SECTIONS`, picked in the section `<select>` (or the side nav from `lg`), plus the Anti-Cheat High Cap Delta and Low FPS WRs tabs and the Map Uploads Publishing / Recent and Drift tabs; modals: Maps Management's Difficulty Sync and Map authors (both tabs), Anti-Cheat's shared-identifier detail |
+| `admin` | Admin, so every section shows | Overview, then one sub-view per section in `ADMIN_SECTIONS`, picked in the section `<select>` (or the side nav from `lg`), plus the Anti-Cheat High Cap Delta and Low FPS WRs tabs and the Map Uploads Publishing / Recent and Drift tabs; modals: Maps Management's Difficulty Sync and Map authors (both tabs), Anti-Cheat's shared-identifier detail, Server Operations' Server settings |
 | `home:signed-in` | a user | the signed-in Home, the Recent Caps History modal (See More) and Settings (drawer, user card menu) |
 | `maps:signed-in` | a user | the Maps page with the viewer's medals, PBs and reviews in the cards and table |
 | `event-detail:manager` | an event manager (`/tournaments/<slug>/me` with `can_manage`) | the Manage tab and its Signups, Format, Bracket, Matches (plus the match editor), Picks & Bans, Schedule and Predictions sub-tabs, and the Stream tab as a manager sees it |

@@ -1,0 +1,10 @@
+{
+  "code": "forbidden_key",
+  "data": {
+    "keys": [
+      "max_players"
+    ]
+  },
+  "error": "Only an admin can change these settings.",
+  "success": false
+}

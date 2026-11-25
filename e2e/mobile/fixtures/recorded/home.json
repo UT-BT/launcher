@@ -465,16 +465,20 @@
           "ip": "192.0.2.1",
           "map_name": "CTF-BT-II-CoZyliciouS",
           "max_players": 2,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 4,
+          "region": "United Kingdom",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
-          "certified_records": false,
+          "certified_records": true,
           "goal_team_score": 1,
           "hostname": "[UTBT.NET] - BunnyTrack Duel Server #1 (Germany)",
           "hostport": 1234,
@@ -482,12 +486,16 @@
           "ip": "192.0.2.2",
           "map_name": "CTF-BT-andACTION-dbl",
           "max_players": 2,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "Germany",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": true
         },
         {
           "blue_team_score": 0,
@@ -499,12 +507,16 @@
           "ip": "192.0.2.2",
           "map_name": "CTF-BT-PisoMojado-v3",
           "max_players": 1,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "Germany",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -516,12 +528,16 @@
           "ip": "192.0.2.2",
           "map_name": "CTF-BT-Adronis",
           "max_players": 128,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "Germany",
           "remaining_time_seconds": 0,
+          "ruleset": "casual",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -533,12 +549,16 @@
           "ip": "192.0.2.1",
           "map_name": "CTF-BT-II-FleurdelysV2",
           "max_players": 2,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 1,
+          "region": "United Kingdom",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -550,12 +570,16 @@
           "ip": "192.0.2.3",
           "map_name": "CTF-BT-II-AztecCE",
           "max_players": 2,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "Netherlands",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -567,12 +591,16 @@
           "ip": "192.0.2.2",
           "map_name": "CTF-BT-II-Synchronize-vF2",
           "max_players": 4,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "Germany",
           "remaining_time_seconds": 1200,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -584,12 +612,16 @@
           "ip": "192.0.2.4",
           "map_name": "CTF-BT-II-Pacey-CE",
           "max_players": 2,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "US Seattle",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -601,12 +633,16 @@
           "ip": "192.0.2.2",
           "map_name": "CTF-BT-andACTION-dbl",
           "max_players": 2,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "Germany",
           "remaining_time_seconds": 1200,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 20
+          "time_limit_minutes": 20,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -618,12 +654,16 @@
           "ip": "192.0.2.2",
           "map_name": "CTF-BT-HumanResources",
           "max_players": 1,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "Germany",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -635,12 +675,16 @@
           "ip": "192.0.2.5",
           "map_name": "CTF-BT-Qamariya-v2",
           "max_players": 1,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "Norway",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -652,12 +696,16 @@
           "ip": "192.0.2.6",
           "map_name": "CTF-BT-II-AztecCE",
           "max_players": 2,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "Poland",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -669,12 +717,16 @@
           "ip": "192.0.2.1",
           "map_name": "CTF-BT-II-FaithCB",
           "max_players": 2,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 2,
+          "region": "United Kingdom",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -686,12 +738,16 @@
           "ip": "192.0.2.2",
           "map_name": "CTF-BT-[ZL]SlidingToTheHell-v3",
           "max_players": 1,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "Germany",
           "remaining_time_seconds": 1200,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -703,12 +759,16 @@
           "ip": "192.0.2.2",
           "map_name": "CTF-BT-II-FleurdelysV2",
           "max_players": 2,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "Germany",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -720,12 +780,16 @@
           "ip": "192.0.2.2",
           "map_name": "CTF-BT-Soar-CE2",
           "max_players": 128,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "Germany",
           "remaining_time_seconds": 0,
+          "ruleset": "casual",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -737,12 +801,16 @@
           "ip": "192.0.2.7",
           "map_name": "CTF-BT-andACTION-dbl",
           "max_players": 1,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "Australia",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -754,12 +822,16 @@
           "ip": "192.0.2.8",
           "map_name": "CTF-BT-XMAS2026",
           "max_players": 1,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "United States",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -771,12 +843,16 @@
           "ip": "192.0.2.8",
           "map_name": "CTF-BT-II-AztecCE",
           "max_players": 128,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "United States",
           "remaining_time_seconds": 0,
+          "ruleset": "casual",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -788,12 +864,16 @@
           "ip": "192.0.2.2",
           "map_name": "CTF-BT-andACTION-dbl",
           "max_players": 128,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "Germany",
           "remaining_time_seconds": 1800,
+          "ruleset": "casual",
           "spectators": 0,
-          "time_limit_minutes": 30
+          "time_limit_minutes": 30,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -805,12 +885,16 @@
           "ip": "192.0.2.2",
           "map_name": "CTF-BT-(ow)Rusheng",
           "max_players": 1,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "Germany",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -822,12 +906,16 @@
           "ip": "192.0.2.9",
           "map_name": "CTF-BT-Galvanizev2",
           "max_players": 1,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "US Miami",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -839,12 +927,16 @@
           "ip": "192.0.2.6",
           "map_name": "CTF-BT-(ow)RushengIV-v3",
           "max_players": 1,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "Poland",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -856,16 +948,20 @@
           "ip": "192.0.2.9",
           "map_name": "CTF-BT-SkyRunner-fix",
           "max_players": 12,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 1,
+          "region": "US Miami",
           "remaining_time_seconds": 0,
+          "ruleset": "casual",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
-          "certified_records": false,
+          "certified_records": true,
           "goal_team_score": 3,
           "hostname": "[UTBT.NET] - BunnyTrack Duel Server #2 (Germany)",
           "hostport": 2345,
@@ -873,12 +969,16 @@
           "ip": "192.0.2.2",
           "map_name": "CTF-BT-andACTION-dbl",
           "max_players": 2,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "Germany",
           "remaining_time_seconds": 900,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 15
+          "time_limit_minutes": 15,
+          "tournament": true
         },
         {
           "blue_team_score": 0,
@@ -890,12 +990,16 @@
           "ip": "192.0.2.4",
           "map_name": "CTF-BT-andACTION-dbl",
           "max_players": 1,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "US Seattle",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -907,12 +1011,16 @@
           "ip": "192.0.2.1",
           "map_name": "CTF-BT-andACTION-dbl",
           "max_players": 1,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "United Kingdom",
           "remaining_time_seconds": 1200,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -924,12 +1032,16 @@
           "ip": "192.0.2.10",
           "map_name": "CTF-BT-II-FuriumMineCE2",
           "max_players": 2,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "Hungary",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 1,
@@ -941,12 +1053,16 @@
           "ip": "192.0.2.9",
           "map_name": "CTF-BT-[T-BiG]Egypte-dbl",
           "max_players": 1,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "US Miami",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -958,12 +1074,16 @@
           "ip": "192.0.2.9",
           "map_name": "CTF-BT-KG-Galvanize",
           "max_players": 1,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "US Miami",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 9,
@@ -975,12 +1095,16 @@
           "ip": "192.0.2.6",
           "map_name": "CTF-BT-Qamariya-v2",
           "max_players": 1,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "Poland",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -992,12 +1116,16 @@
           "ip": "192.0.2.6",
           "map_name": "CTF-BT-II-AztecCE",
           "max_players": 4,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "Poland",
           "remaining_time_seconds": 1200,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -1009,12 +1137,16 @@
           "ip": "192.0.2.8",
           "map_name": "CTF-BT-DSILLFER-V2",
           "max_players": 1,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 3,
+          "region": "United States",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -1026,12 +1158,16 @@
           "ip": "192.0.2.10",
           "map_name": "CTF-BT-Qamariya-v2",
           "max_players": 1,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 3,
+          "region": "Hungary",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -1043,12 +1179,16 @@
           "ip": "192.0.2.10",
           "map_name": "CTF-BT-(XX)SuperNoobvice",
           "max_players": 1,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 3,
+          "region": "Hungary",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -1060,12 +1200,16 @@
           "ip": "192.0.2.4",
           "map_name": "CTF-BT-andACTION-dbl",
           "max_players": 1,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "US Seattle",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -1077,12 +1221,16 @@
           "ip": "192.0.2.5",
           "map_name": "CTF-BT-Qamariya-v2",
           "max_players": 1,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 14,
+          "region": "Norway",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -1094,6 +1242,7 @@
           "ip": "192.0.2.3",
           "map_name": "CTF-BT-(Fran)PureJump",
           "max_players": 1,
+          "password_protected": false,
           "player_count": 1,
           "players": [
             {
@@ -1128,9 +1277,12 @@
             }
           ],
           "red_team_score": 0,
+          "region": "Netherlands",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 1,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -1142,12 +1294,16 @@
           "ip": "192.0.2.5",
           "map_name": "CTF-BT-(Cal)Bounce!-i4g",
           "max_players": 1,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 42,
+          "region": "Norway",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 7,
@@ -1159,12 +1315,16 @@
           "ip": "192.0.2.4",
           "map_name": "CTF-BT-NoobShit-HV",
           "max_players": 1,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "US Seattle",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -1176,12 +1336,16 @@
           "ip": "192.0.2.7",
           "map_name": "CTF-BT-andACTION-dbl",
           "max_players": 12,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "Australia",
           "remaining_time_seconds": 1800,
+          "ruleset": "casual",
           "spectators": 0,
-          "time_limit_minutes": 30
+          "time_limit_minutes": 30,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -1193,12 +1357,16 @@
           "ip": "192.0.2.4",
           "map_name": "CTF-BT-andACTION-dbl",
           "max_players": 12,
+          "password_protected": true,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "US Seattle",
           "remaining_time_seconds": 0,
+          "ruleset": "casual",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 1,
@@ -1210,12 +1378,16 @@
           "ip": "192.0.2.10",
           "map_name": "CTF-BT-[KAI]-ParadiseRush",
           "max_players": 1,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "Hungary",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -1227,12 +1399,16 @@
           "ip": "192.0.2.7",
           "map_name": "CTF-BT-andACTION-dbl",
           "max_players": 1,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "Australia",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 1,
@@ -1244,12 +1420,16 @@
           "ip": "192.0.2.2",
           "map_name": "CTF-BT-II-FaithCB",
           "max_players": 2,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "Germany",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -1261,12 +1441,16 @@
           "ip": "192.0.2.8",
           "map_name": "CTF-BT-PolarBlast",
           "max_players": 2,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "United States",
           "remaining_time_seconds": 1200,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -1278,12 +1462,16 @@
           "ip": "192.0.2.5",
           "map_name": "CTF-BT-[DQ]-Flooded-i4g",
           "max_players": 1,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "Norway",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -1295,12 +1483,16 @@
           "ip": "192.0.2.3",
           "map_name": "CTF-BT-BunnyDungeon",
           "max_players": 1,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "Netherlands",
           "remaining_time_seconds": 1200,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 20
+          "time_limit_minutes": 20,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -1312,12 +1504,16 @@
           "ip": "192.0.2.3",
           "map_name": "CTF-BT-II-(K)LegendsV4",
           "max_players": 2,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "Netherlands",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -1329,12 +1525,16 @@
           "ip": "192.0.2.2",
           "map_name": "CTF-BT-andACTION-dbl",
           "max_players": 1,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 1,
+          "region": "Germany",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -1346,6 +1546,7 @@
           "ip": "192.0.2.8",
           "map_name": "CTF-BT-XMAS2026",
           "max_players": 1,
+          "password_protected": false,
           "player_count": 1,
           "players": [
             {
@@ -1380,9 +1581,12 @@
             }
           ],
           "red_team_score": 0,
+          "region": "United States",
           "remaining_time_seconds": 0,
+          "ruleset": "certified",
           "spectators": 1,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         },
         {
           "blue_team_score": 0,
@@ -1394,12 +1598,16 @@
           "ip": "192.0.2.9",
           "map_name": "CTF-BT-(meg)Logout",
           "max_players": 1,
+          "password_protected": false,
           "player_count": 0,
           "players": [],
           "red_team_score": 0,
+          "region": "US Miami",
           "remaining_time_seconds": 1200,
+          "ruleset": "certified",
           "spectators": 0,
-          "time_limit_minutes": 0
+          "time_limit_minutes": 0,
+          "tournament": false
         }
       ]
     }
