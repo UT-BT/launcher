@@ -99,6 +99,7 @@ export const admin: MobileRouteEntry = {
         section('map-uploads', 'Map Uploads', 'Map Uploads', /Baz/),
         mapUploadsTab('publishing', 'Publishing / Recent', 'CTF-BT-Foo'),
         mapUploadsTab('drift', 'Drift', 'FooTex.utx'),
+        section('featured-tags', 'Featured Tags', 'Featured Tags', 'Test Winter Cup'),
         section('patches-management', 'Patch Releases', 'Patch Releases', 'v4.8.0'),
         { ...section('anti-cheat', 'Anti-Cheat', 'Anti-Cheat', fakeHwid(0)), modals: ANTI_CHEAT_MODALS },
         antiCheatTab('cap-delta', 'High Cap Delta', person(6).alias),

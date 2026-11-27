@@ -1045,6 +1045,19 @@ export async function regenerateMapvote(token: string, announcement?: string): P
     return apiGet('/admin/mapvote/regenerate', { token, method: 'POST', body: announcement != null ? { announcement } : {} })
 }
 
+export interface MapvoteFeatured {
+    tags: string[]
+    available: string[]
+}
+
+export async function fetchMapvoteFeatured(token: string, signal?: AbortSignal): Promise<MapvoteFeatured> {
+    return apiGet<MapvoteFeatured>('/admin/mapvote/featured', { token, signal })
+}
+
+export async function saveMapvoteFeatured(token: string, tags: string[]): Promise<{ tags: string[] }> {
+    return apiGet('/admin/mapvote/featured', { token, method: 'PUT', body: { tags } })
+}
+
 export interface AcPlayer {
     id: string
     alias: string | null

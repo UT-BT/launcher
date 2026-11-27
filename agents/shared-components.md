@@ -392,6 +392,8 @@ shell ([teams.md](features/teams.md)).
   `AdminCardFace`, and the controls in `controls.tsx` (search, pager, select, confirm
   dialog, date range); reuse them in a new section. `useAdminTable` builds a tiered
   table's columns and tracks card mode ([admin.md](features/admin.md#tables-on-phones)).
+  `ActionButton` is 32 px tall; its optional `className` is merged last, so a section that
+  needs 44 px touch targets passes `touch:h-11` (Featured Tags does).
 
 ## Utilities
 

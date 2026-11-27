@@ -14,11 +14,11 @@ Paths starting `admin/` are under `app/components/pages/`.
 | `admin/registry.tsx`, `admin/types.ts` | `ADMIN_GROUPS`, `ADMIN_SECTIONS`, the `AdminSectionId` union and `AdminSectionProps`; `registry.test.ts` pins groups, order and roles |
 | `admin/AdminLayout.tsx`, `admin/AdminGuard.tsx` | the grouped section nav (a `<select>` below `lg`); the Restricted card |
 | `admin/components/` | the kit every section is built from: `SectionShell`, `TableControls` + `useAdminTable`, `AdminCardFace`, `controls.tsx`, `useAdminFilterPresets`, `AuthorPicker`, `TagEditor` |
-| `admin/sections/` | one `<Name>Section.tsx` per section, its modals, and pure helpers with tests (`streamerRoster.ts`, `mapVideoFile.ts`) |
+| `admin/sections/` | one `<Name>Section.tsx` per section, its modals, and pure helpers with tests (`streamerRoster.ts`, `mapVideoFile.ts`, `featuredTags.ts`) |
 | `admin/sections/mapUploads/` | Map Uploads ([map-uploads.md](map-uploads.md)) |
 | `app/utils/roles.ts` | `ROLE`, `isStaff` and the role allow-lists |
 | `app/utils/api.ts`, `app/utils/chartBuckets.ts` | the admin fetchers, each next to its domain; the Overview chart's ranges and buckets |
-| `e2e/admin-streamers.spec.ts`, `e2e/admin-maps-video.spec.ts` | Playwright with a mocked staff session |
+| `e2e/admin-streamers.spec.ts`, `e2e/admin-maps-video.spec.ts`, `e2e/admin-featured-tags.spec.ts` | Playwright with a mocked staff session |
 | `e2e/mobile/admin-cards.spec.ts` | the phone cards of the tiered admin tables ([Tables on phones](#tables-on-phones)) |
 
 ## Access
@@ -169,6 +169,30 @@ The map-author fetchers back `MapAuthorsModal`, opened from Maps Management.
   behind a `ConfirmDialog`.
 - A video does not affect the mapvote, so a change reloads the row through `onReload`, not
   `onSaved`, and raises no "regenerate mapvote" banner.
+
+## Featured Tags
+
+The tags the in-game mapvote lists first, in this order, for events and seasons. Section id
+`featured-tags` in Game Content, after Map Uploads; Moderators and Admins only.
+
+| Route | Function | Contract |
+|---|---|---|
+| `GET /admin/mapvote/featured` | `fetchMapvoteFeatured` | `{ tags, available }`. `tags` is the featured list in display order. `available` is every tag an active map carries, sorted case-insensitively; only these can be saved |
+| `PUT /admin/mapvote/featured`, body `{ tags }` | `saveMapvoteFeatured(token, tags)` | Replaces the whole list (empty clears it) and answers `{ tags }`, the saved list, trimmed. 400 with a message for a body that is not a list, an empty name, a name over 200 characters, more than `FEATURED_TAGS_MAX` (128) tags, a repeated tag, or a tag no active map carries ("No active map carries these tags: X.") |
+
+- A save reaches players' mapvote within about a minute, and at once when someone opens
+  the mapvote. It needs no regenerate, so it raises no "regenerate mapvote" banner.
+- `FeaturedTagsSection` (`admin/sections/`) edits a draft of the loaded list: rows reorder
+  by a drag on the handle (pointer events on the window, `touch-none` on the handle, as
+  Seeding does) or ArrowUp/ArrowDown on the focused handle, and each row has a remove
+  button. Save is enabled only while the draft differs from the loaded list, order
+  included; Discard goes back to it. A save replaces both with the answer.
+- Adding is a type-ahead over `available` minus the featured tags, matched
+  case-insensitively, prefix matches first, keeping each tag's exact name. There is no
+  "add new tag" row: Enter or Add takes the tag the query names, or the only match.
+- A featured tag missing from `available` (its maps were deactivated) gets an amber
+  "No active map" chip, since saving the list with it is refused.
+- Pure helpers and their tests: `sections/featuredTags.ts`.
 
 ## Game hosts (Admin only)
 

@@ -25,6 +25,7 @@ import type {
     LinkedMapAuthorRow,
     MapAuthorPreview,
     MapAuthorRow,
+    MapvoteFeatured,
     MapvoteStatus,
     RosterStreamer,
     RosterSuggestion,
@@ -385,6 +386,11 @@ const mapvote: MapvoteStatus = {
     can_regenerate: true,
 }
 
+const featuredTags: MapvoteFeatured = {
+    tags: ['Test Winter Cup', 'halloween', 'classic', 'remake'],
+    available: [...MAP_TAGS, 'halloween', 'Test Winter Cup'].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })),
+}
+
 const difficultySync: DifficultySyncChange[] = Array.from({ length: 6 }, (_, index) => ({
     name: syntheticMap(index * 3),
     current: (index % 10) + 1,
@@ -672,6 +678,7 @@ export const ADMIN_SET: FixtureSet = {
         ...paged('/admin/maps', mapRow, 612),
         items('/admin/maps/tags', MAP_TAGS),
         { host: 'api', path: '/admin/mapvote', reply: ok(mapvote) },
+        { host: 'api', path: '/admin/mapvote/featured', reply: ok(featuredTags) },
         { host: 'api', path: '/admin/maps/difficulty-sync/preview', reply: ok({ changes: difficultySync }) },
         ...paged('/admin/maps/authors', mapAuthorRow, 37),
         items('/admin/maps/authors/linked', linkedAuthors),
