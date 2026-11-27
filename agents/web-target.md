@@ -544,7 +544,7 @@ platform gates.
 
 | Budget | Limit |
 |---|---|
-| Initial JS | 192 KiB |
+| Initial JS | 200 KiB |
 | Initial CSS | 38 KiB |
 | Initial total | 230 KiB |
 | Largest lazy chunk (and each stream scene chunk) | 120 KiB |

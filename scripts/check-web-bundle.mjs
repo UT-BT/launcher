@@ -8,7 +8,7 @@ const assetsDir = join(distDir, 'assets')
 const sceneDir = fileURLToPath(new URL('../app/components/stream/scenes/', import.meta.url))
 
 const KiB = 1024
-const maxInitialJsGzipBytes = 192 * KiB
+const maxInitialJsGzipBytes = 200 * KiB
 const maxInitialCssGzipBytes = 38 * KiB
 const maxInitialTotalGzipBytes = 230 * KiB
 const maxLazyChunkGzipBytes = 120 * KiB

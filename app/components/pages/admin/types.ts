@@ -18,6 +18,7 @@ export type AdminSectionId =
   | 'caps-management'
   | 'maps-management'
   | 'map-uploads'
+  | 'featured-tags'
   | 'patches-management'
   | 'anti-cheat'
   | 'audit-logs'

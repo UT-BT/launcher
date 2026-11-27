@@ -31,3 +31,19 @@ describe('the Map Uploads section', () => {
     expect(visibleSections(role).map((section) => section.id)).not.toContain('map-uploads')
   })
 })
+
+describe('the Featured Tags section', () => {
+  it('sits in the Game Content group, right after Map Uploads', () => {
+    const ids = ADMIN_SECTIONS.map((section) => section.id)
+    expect(findSection('featured-tags')?.group).toBe('game-content')
+    expect(ids.indexOf('featured-tags')).toBe(ids.indexOf('map-uploads') + 1)
+  })
+
+  it.each([ROLE.MODERATOR, ROLE.ADMIN])('is visible to staff role %i', (role) => {
+    expect(visibleSections(role).map((section) => section.id)).toContain('featured-tags')
+  })
+
+  it.each([ROLE.CUP_ADMIN, ROLE.USER])('is hidden from role %i', (role) => {
+    expect(visibleSections(role).map((section) => section.id)).not.toContain('featured-tags')
+  })
+})

@@ -11,7 +11,7 @@ import {
 import type { Tone } from '../types'
 import { TONE_BTN } from './tone'
 
-export function ActionButton({ tone = 'accent', icon: Icon, children, onClick, disabled, loading, title }: {
+export function ActionButton({ tone = 'accent', icon: Icon, children, onClick, disabled, loading, title, className }: {
   tone?: Tone
   icon?: LucideIcon
   children?: ReactNode
@@ -19,6 +19,7 @@ export function ActionButton({ tone = 'accent', icon: Icon, children, onClick, d
   disabled?: boolean
   loading?: boolean
   title?: string
+  className?: string
 }) {
   return (
     <button
@@ -30,6 +31,7 @@ export function ActionButton({ tone = 'accent', icon: Icon, children, onClick, d
         'h-8 px-3 rounded-md text-xs font-medium border flex items-center gap-2 transition-all cursor-pointer',
         'hover:brightness-125 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:brightness-100',
         TONE_BTN[tone],
+        className,
       )}
     >
       {loading ? <Spinner className="size-3.5" /> : Icon ? <Icon className="size-3.5" /> : null}

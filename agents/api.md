@@ -35,7 +35,7 @@ IPC: see [lib/conveyor/README.md](../lib/conveyor/README.md).
 | Event scheduling, streamer and match-admin assignment | [event-scheduling.md](features/event-scheduling.md) |
 | Pick/ban sessions, setup, public Maps tab pools, sides, hard-map veto | [pick-ban-api.md](features/pick-ban-api.md) |
 | Stream kit desk and scene data | [stream-kit.md](features/stream-kit.md) |
-| Admin dashboard slice, streamer roster, map video uploads | [admin.md](features/admin.md) |
+| Admin dashboard slice, streamer roster, map video uploads, mapvote featured tags | [admin.md](features/admin.md) |
 | Admin → Map Uploads | [map-uploads.md](features/map-uploads.md) |
 | Account state blob (`fetchUserState` / `mergeUserState`, used only by `app/utils/userState.ts`) | [state-patterns.md](state-patterns.md) |
 | Sidebar "new" badges (`fetchNavBadges` / `markSectionSeen`) | [navigation.md](navigation.md) |
